@@ -137,6 +137,7 @@ namespace Hekatan.Wpf
         private bool _scrollOutput;
         private double _scrollY;
         private bool _autoRun;
+        private bool _autoRunPending; // True when AutoRun was requested but semaphore was busy
         private double _screenScaleFactor;
         private bool _calculateOnActivate;
         private bool _isWebView2Focused;
@@ -562,7 +563,11 @@ namespace Hekatan.Wpf
         private async Task AutoRun(bool syncScroll = false)
         {
             if (_isParsing)
+            {
+                // Mark pending so it re-triggers after current calculation finishes
+                _autoRunPending = true;
                 return;
+            }
 
             IsCalculated = true;
             if (syncScroll)
@@ -1715,6 +1720,9 @@ namespace Hekatan.Wpf
             if (!await _parsingSemaphore.WaitAsync(0))
             {
                 HekatanTelemetry.LogEvent("CALCULATE", "Skipped - already parsing (semaphore busy)");
+                // Mark pending so AutoRun re-triggers after current calculation finishes
+                if (IsAutoRun)
+                    _autoRunPending = true;
                 return;
             }
 
@@ -2109,6 +2117,14 @@ namespace Hekatan.Wpf
                 // Always reset parsing flag and release the semaphore when done
                 _isParsing = false;
                 _parsingSemaphore.Release();
+
+                // If AutoRun was requested while we were busy, re-trigger now
+                if (_autoRunPending)
+                {
+                    _autoRunPending = false;
+                    HekatanTelemetry.LogEvent("CALCULATE", "Re-triggering AutoRun (was pending during previous calculation)");
+                    Dispatcher.InvokeAsync(async () => await AutoRun(), System.Windows.Threading.DispatcherPriority.Background);
+                }
             }
         }
 

@@ -604,6 +604,9 @@ namespace Hekatan.Common.MultLangCode
                     StandardErrorEncoding = Encoding.UTF8
                 };
 
+                // Tell pyhekatan (and other Hekatan-aware libs) to emit @@HEKATAN markers
+                startInfo.EnvironmentVariables["HEKATAN_RENDER"] = "1";
+
                 // Add DLL paths to PATH for compiled executables
                 if (command.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 {
