@@ -27,6 +27,13 @@ namespace Hekatan.Common.MultLangCode
             if (result.IsHtmlOutput && result.Success)
                 return result.Output;
 
+            // Check for @@DSL commands (pyhekatan protocol) — parse DSL before HTML
+            if (result.Success && !string.IsNullOrWhiteSpace(result.Output) &&
+                HekatanDslParser.ContainsDslCommands(result.Output))
+            {
+                return HekatanDslParser.ProcessOutput(result.Output);
+            }
+
             var template = MultLangTemplateManager.GetTemplate(language);
             var displayName = template.DisplayName;
             var containerClass = template.ContainerClass;
