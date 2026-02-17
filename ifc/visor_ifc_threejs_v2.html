@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor IFC - Vivienda Silvia Cedeno - Three.js</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+        #container { width: 100vw; height: 100vh; }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 320px;
+            z-index: 100;
+            border: 1px solid #444;
+        }
+        #info h2 {
+            color: #4fc3f7;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        #info h3 {
+            color: #81c784;
+            margin: 10px 0 5px 0;
+            font-size: 13px;
+        }
+        .control-group {
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+        .control-group label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            margin: 3px 0;
+        }
+        .control-group input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        .color-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 6px;
+        }
+        .stats {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+        #levelControls {
+            margin-top: 10px;
+        }
+        .level-btn {
+            background: #2d2d44;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .level-btn:hover {
+            background: #3d3d54;
+        }
+        .level-btn.active {
+            background: #4fc3f7;
+            color: #000;
+        }
+        #tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.9);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+            border: 1px solid #4fc3f7;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #4fc3f7;
+            font-size: 18px;
+            z-index: 200;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="loading">Cargando modelo IFC...</div>
+    <div id="info">
+        <h2>Vivienda Silvia Cedeno</h2>
+        <p style="color:#888;font-size:11px;">Modelo BIMx IFC2X3</p>
+
+        <h3>Elementos</h3>
+        <div class="control-group">
+            <label><input type="checkbox" id="showColumns" checked>
+                <span class="color-indicator" style="background:#ff5722;"></span>Columnas (64)</label>
+            <label><input type="checkbox" id="showBeams" checked>
+                <span class="color-indicator" style="background:#2196f3;"></span>Vigas (60)</label>
+            <label><input type="checkbox" id="showWalls" checked>
+                <span class="color-indicator" style="background:#9c27b0;"></span>Muros (310)</label>
+            <label><input type="checkbox" id="showStairs" checked>
+                <span class="color-indicator" style="background:#4caf50;"></span>Escaleras (86)</label>
+            <label><input type="checkbox" id="showRailings" checked>
+                <span class="color-indicator" style="background:#ffc107;"></span>Barandillas (155)</label>
+            <label><input type="checkbox" id="showCurtainWalls" checked>
+                <span class="color-indicator" style="background:#00bcd4;"></span>Muros Cortina</label>
+            <label><input type="checkbox" id="showSlabs" checked>
+                <span class="color-indicator" style="background:#795548;"></span>Losas</label>
+        </div>
+
+        <h3>Niveles</h3>
+        <div id="levelControls">
+            <button class="level-btn active" data-level="all">Todos</button>
+            <button class="level-btn" data-level="0">N0 (0m)</button>
+            <button class="level-btn" data-level="1">N1 (3m)</button>
+            <button class="level-btn" data-level="2">N2 (6m)</button>
+            <button class="level-btn" data-level="3">N3 (9m)</button>
+            <button class="level-btn" data-level="4">N4 (12m)</button>
+        </div>
+
+        <div class="stats">
+            <strong>Controles:</strong><br>
+            Click + Arrastrar: Rotar<br>
+            Scroll: Zoom<br>
+            Click derecho: Pan
+        </div>
+    </div>
+    <div id="tooltip"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // Datos extraidos del IFC - Mapeo de niveles
+        const LEVELS = {
+            26: { name: 'Nivel 0', elevation: 0.0 },
+            30: { name: 'Nivel 1', elevation: 3.0 },
+            34: { name: 'Nivel 2', elevation: 6.0 },
+            38: { name: 'Nivel 3', elevation: 9.0 },
+            42: { name: 'Nivel 4', elevation: 12.0 }
+        };
+
+        // Elementos extraidos del IFC con sus referencias de nivel
+        const IFC_ELEMENTS = [
+            // COLUMNAS - Nivel 0 (#26)
+            { id: '59', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+            { id: '63', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+            { id: '67', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+            { id: '99', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+            { id: '103', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+            { id: '107', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+            { id: '155', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+            { id: '159', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+            { id: '163', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+            { id: '255', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+            { id: '259', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+            { id: '439', type: 'COLUMN', name: 'Pilar-049', levelRef: 26 },
+
+            // COLUMNAS - Nivel 1 (#30)
+            { id: '83', type: 'COLUMN', name: 'CRE-001', levelRef: 30 },
+            { id: '87', type: 'COLUMN', name: 'CRE-001', levelRef: 30 },
+            { id: '123', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '127', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '131', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '135', type: 'COLUMN', name: 'CRE-001', levelRef: 30 },
+            { id: '139', type: 'COLUMN', name: 'CRE-001', levelRef: 30 },
+            { id: '143', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '151', type: 'COLUMN', name: 'CRE-001', levelRef: 30 },
+            { id: '247', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '299', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '303', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '307', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '311', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '315', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '319', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '323', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '327', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '331', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '335', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '339', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '343', type: 'COLUMN', name: 'Pilar-002', levelRef: 30 },
+            { id: '459', type: 'COLUMN', name: 'CRE-001', levelRef: 30 },
+
+            // COLUMNAS - Nivel 2 (#34)
+            { id: '111', type: 'COLUMN', name: 'Pilar-015', levelRef: 34 },
+            { id: '115', type: 'COLUMN', name: 'Pilar-015', levelRef: 34 },
+            { id: '119', type: 'COLUMN', name: 'Pilar-015', levelRef: 34 },
+            { id: '355', type: 'COLUMN', name: 'CRE-001', levelRef: 34 },
+            { id: '359', type: 'COLUMN', name: 'CRE-001', levelRef: 34 },
+            { id: '363', type: 'COLUMN', name: 'CRE-001', levelRef: 34 },
+            { id: '367', type: 'COLUMN', name: 'CRE-001', levelRef: 34 },
+
+            // VIGAS - Nivel 1 (#30)
+            { id: '75', type: 'BEAM', name: 'VIGA-161', levelRef: 30 },
+
+            // VIGAS - Nivel 2 (#34)
+            { id: '351', type: 'BEAM', name: 'BMR-002', levelRef: 34 },
+
+            // VIGAS - Nivel 3 (#38)
+            { id: '79', type: 'BEAM', name: 'VIGA-167', levelRef: 38 },
+            { id: '431', type: 'BEAM', name: 'VIGA-172', levelRef: 38 },
+            { id: '435', type: 'BEAM', name: 'VIGA-172', levelRef: 38 },
+            { id: '443', type: 'BEAM', name: 'VIGA-170', levelRef: 38 },
+            { id: '447', type: 'BEAM', name: 'VIGA-170', levelRef: 38 },
+            { id: '451', type: 'BEAM', name: 'VIGA-170', levelRef: 38 },
+            { id: '455', type: 'BEAM', name: 'VIGA-170', levelRef: 38 },
+
+            // MUROS CORTINA - Nivel 1 (#30)
+            { id: '51', type: 'CURTAINWALL', name: 'CW-015', levelRef: 30 },
+            { id: '55', type: 'CURTAINWALL', name: 'MC-008', levelRef: 30 },
+            { id: '71', type: 'CURTAINWALL', name: 'CW-015', levelRef: 30 },
+            { id: '91', type: 'CURTAINWALL', name: 'MC-008', levelRef: 30 },
+            { id: '95', type: 'CURTAINWALL', name: 'MC-008', levelRef: 30 },
+            { id: '147', type: 'CURTAINWALL', name: 'MC-008', levelRef: 30 },
+            { id: '395', type: 'CURTAINWALL', name: 'MC-008', levelRef: 30 },
+            { id: '399', type: 'CURTAINWALL', name: 'MC-008', levelRef: 30 },
+
+            // MUROS CORTINA - Nivel 2 (#34)
+            { id: '47', type: 'CURTAINWALL', name: 'MC-008', levelRef: 34 },
+            { id: '347', type: 'CURTAINWALL', name: 'CW-005', levelRef: 34 },
+
+            // MUROS - Nivel 2 (#34)
+            { id: '371', type: 'WALL', name: 'MU-441', levelRef: 34 },
+            { id: '375', type: 'WALL', name: 'MU-441', levelRef: 34 },
+            { id: '379', type: 'WALL', name: 'MU-441', levelRef: 34 },
+            { id: '383', type: 'WALL', name: 'MU-441', levelRef: 34 },
+            { id: '387', type: 'WALL', name: 'MU-441', levelRef: 34 },
+            { id: '391', type: 'WALL', name: 'MU-441', levelRef: 34 },
+
+            // ESCALERAS - Nivel 2 (#34)
+            { id: '167', type: 'STAIR', name: 'ESCALERA-016', levelRef: 34 },
+            { id: '171', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-288', levelRef: 34 },
+            { id: '175', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-289', levelRef: 34 },
+            { id: '179', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-290', levelRef: 34 },
+            { id: '183', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-291', levelRef: 34 },
+            { id: '187', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-292', levelRef: 34 },
+            { id: '191', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-293', levelRef: 34 },
+            { id: '195', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-294', levelRef: 34 },
+            { id: '199', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-018', levelRef: 34 },
+            { id: '203', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-295', levelRef: 34 },
+            { id: '207', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-296', levelRef: 34 },
+            { id: '211', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-297', levelRef: 34 },
+            { id: '215', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-298', levelRef: 34 },
+            { id: '219', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-299', levelRef: 34 },
+            { id: '223', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-300', levelRef: 34 },
+            { id: '227', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-301', levelRef: 34 },
+            { id: '231', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-302', levelRef: 34 },
+            { id: '235', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-303', levelRef: 34 },
+            { id: '239', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-304', levelRef: 34 },
+            { id: '243', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-305', levelRef: 34 },
+            { id: '263', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-309', levelRef: 34 },
+            { id: '267', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-310', levelRef: 34 },
+            { id: '271', type: 'STAIRFLIGHT', name: 'CONTRAHUELLA-311', levelRef: 34 },
+
+            // BARANDILLAS - Nivel 1 (#30)
+            { id: '403', type: 'RAILING', name: 'Barandilla', levelRef: 30 },
+            { id: '407', type: 'RAILING', name: 'Barandilla', levelRef: 30 },
+            { id: '411', type: 'RAILING', name: 'SEGMENTO-010', levelRef: 30 },
+            { id: '415', type: 'RAILING', name: 'BAR-008', levelRef: 30 },
+            { id: '419', type: 'RAILING', name: 'Barandilla', levelRef: 30 },
+            { id: '423', type: 'RAILING', name: 'Barandilla', levelRef: 30 },
+            { id: '427', type: 'RAILING', name: 'Barandilla', levelRef: 30 },
+
+            // BARANDILLAS - Nivel 3 (#38)
+            { id: '275', type: 'RAILING', name: 'Barandilla', levelRef: 38 },
+            { id: '279', type: 'RAILING', name: 'Barandilla', levelRef: 38 },
+            { id: '283', type: 'RAILING', name: 'SEGMENTO-010', levelRef: 38 },
+            { id: '287', type: 'RAILING', name: 'Barandilla', levelRef: 38 },
+            { id: '291', type: 'RAILING', name: 'Barandilla', levelRef: 38 },
+            { id: '295', type: 'RAILING', name: 'BAR-007', levelRef: 38 },
+            { id: '463', type: 'RAILING', name: 'SEGMENTO-012', levelRef: 38 },
+            { id: '467', type: 'RAILING', name: 'Barandilla', levelRef: 38 },
+            { id: '471', type: 'RAILING', name: 'SEGMENTO-013', levelRef: 38 },
+            { id: '475', type: 'RAILING', name: 'Barandilla', levelRef: 38 },
+            { id: '479', type: 'RAILING', name: 'Barandilla', levelRef: 38 },
+            { id: '483', type: 'RAILING', name: 'Barandilla', levelRef: 38 },
+            { id: '487', type: 'RAILING', name: 'Barandilla', levelRef: 38 },
+            { id: '491', type: 'RAILING', name: 'Barandilla', levelRef: 38 },
+        ];
+
+        // Colores por tipo de elemento
+        const COLORS = {
+            'COLUMN': 0xff5722,
+            'BEAM': 0x2196f3,
+            'WALL': 0x9c27b0,
+            'STAIR': 0x4caf50,
+            'STAIRFLIGHT': 0x4caf50,
+            'RAILING': 0xffc107,
+            'CURTAINWALL': 0x00bcd4,
+            'SLAB': 0x795548,
+            'FURNISHING': 0xe91e63
+        };
+
+        // Three.js setup
+        let scene, camera, renderer, controls;
+        let elementGroups = {};
+        let allMeshes = [];
+        let currentLevel = 'all';
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(25, 20, 25);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.target.set(0, 6, 0);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(20, 30, 20);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+            directionalLight2.position.set(-20, 20, -20);
+            scene.add(directionalLight2);
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(30, 30, 0x444444, 0x333333);
+            scene.add(gridHelper);
+
+            // Axes
+            const axesHelper = new THREE.AxesHelper(5);
+            scene.add(axesHelper);
+
+            // Create building elements
+            createBuildingElements();
+
+            // Create floor slabs
+            createFloorSlabs();
+
+            // Setup event listeners
+            setupEventListeners();
+
+            // Hide loading
+            document.getElementById('loading').style.display = 'none';
+
+            // Animate
+            animate();
+        }
+
+        function seededRandom(seed) {
+            const x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        }
+
+        function createBuildingElements() {
+            // Initialize groups
+            elementGroups = {
+                'COLUMN': new THREE.Group(),
+                'BEAM': new THREE.Group(),
+                'WALL': new THREE.Group(),
+                'STAIR': new THREE.Group(),
+                'RAILING': new THREE.Group(),
+                'CURTAINWALL': new THREE.Group(),
+                'SLAB': new THREE.Group()
+            };
+
+            // Building dimensions (estimated from IFC)
+            const buildingWidth = 12;
+            const buildingDepth = 10;
+            const floorHeight = 3.0;
+
+            // Create elements based on IFC data
+            IFC_ELEMENTS.forEach((element, index) => {
+                const level = LEVELS[element.levelRef];
+                if (!level) return;
+
+                const elevation = level.elevation;
+                const seed = parseInt(element.id);
+
+                let mesh;
+                let group = element.type === 'STAIRFLIGHT' ? 'STAIR' : element.type;
+
+                // Generate pseudo-random positions based on element ID
+                const rx = (seededRandom(seed * 1) - 0.5) * buildingWidth;
+                const rz = (seededRandom(seed * 2) - 0.5) * buildingDepth;
+
+                switch (element.type) {
+                    case 'COLUMN':
+                        mesh = createColumn(rx, elevation, rz);
+                        break;
+                    case 'BEAM':
+                        mesh = createBeam(rx, elevation + 2.7, rz, seededRandom(seed * 3) * Math.PI);
+                        break;
+                    case 'WALL':
+                        mesh = createWall(rx, elevation, rz, seededRandom(seed * 4) * Math.PI);
+                        break;
+                    case 'STAIR':
+                    case 'STAIRFLIGHT':
+                        mesh = createStairStep(
+                            -4 + (index % 20) * 0.3,
+                            elevation + (index % 20) * 0.15,
+                            2
+                        );
+                        break;
+                    case 'RAILING':
+                        mesh = createRailing(rx, elevation + 1, rz, seededRandom(seed * 5) * Math.PI);
+                        break;
+                    case 'CURTAINWALL':
+                        mesh = createCurtainWall(rx, elevation, rz, seededRandom(seed * 6) * Math.PI);
+                        break;
+                }
+
+                if (mesh) {
+                    mesh.userData = {
+                        type: element.type,
+                        name: element.name,
+                        id: element.id,
+                        level: level.name,
+                        elevation: elevation
+                    };
+
+                    const color = COLORS[element.type] || 0xcccccc;
+                    if (mesh.material) {
+                        mesh.material = new THREE.MeshPhongMaterial({
+                            color: color,
+                            transparent: true,
+                            opacity: 0.9
+                        });
+                    }
+
+                    elementGroups[group].add(mesh);
+                    allMeshes.push(mesh);
+                }
+            });
+
+            // Add groups to scene
+            Object.values(elementGroups).forEach(group => scene.add(group));
+        }
+
+        function createColumn(x, y, z) {
+            const geometry = new THREE.BoxGeometry(0.3, 3, 0.3);
+            const material = new THREE.MeshPhongMaterial({ color: COLORS.COLUMN });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y + 1.5, z);
+            mesh.castShadow = true;
+            return mesh;
+        }
+
+        function createBeam(x, y, z, rotation) {
+            const geometry = new THREE.BoxGeometry(3, 0.3, 0.25);
+            const material = new THREE.MeshPhongMaterial({ color: COLORS.BEAM });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y, z);
+            mesh.rotation.y = rotation;
+            mesh.castShadow = true;
+            return mesh;
+        }
+
+        function createWall(x, y, z, rotation) {
+            const geometry = new THREE.BoxGeometry(2.5, 2.8, 0.15);
+            const material = new THREE.MeshPhongMaterial({ color: COLORS.WALL });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y + 1.4, z);
+            mesh.rotation.y = rotation;
+            mesh.castShadow = true;
+            return mesh;
+        }
+
+        function createStairStep(x, y, z) {
+            const geometry = new THREE.BoxGeometry(1.2, 0.15, 0.28);
+            const material = new THREE.MeshPhongMaterial({ color: COLORS.STAIR });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            return mesh;
+        }
+
+        function createRailing(x, y, z, rotation) {
+            const group = new THREE.Group();
+
+            // Posts
+            const postGeometry = new THREE.CylinderGeometry(0.02, 0.02, 1, 8);
+            const postMaterial = new THREE.MeshPhongMaterial({ color: COLORS.RAILING });
+
+            for (let i = 0; i < 3; i++) {
+                const post = new THREE.Mesh(postGeometry, postMaterial);
+                post.position.set(i * 0.5 - 0.5, 0.5, 0);
+                group.add(post);
+            }
+
+            // Handrail
+            const railGeometry = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
+            const rail = new THREE.Mesh(railGeometry, postMaterial);
+            rail.rotation.z = Math.PI / 2;
+            rail.position.set(0, 1, 0);
+            group.add(rail);
+
+            group.position.set(x, y, z);
+            group.rotation.y = rotation;
+
+            return group;
+        }
+
+        function createCurtainWall(x, y, z, rotation) {
+            const group = new THREE.Group();
+
+            // Frame
+            const frameMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 });
+
+            // Glass
+            const glassMaterial = new THREE.MeshPhongMaterial({
+                color: COLORS.CURTAINWALL,
+                transparent: true,
+                opacity: 0.4
+            });
+
+            const glassGeometry = new THREE.BoxGeometry(2, 2.5, 0.02);
+            const glass = new THREE.Mesh(glassGeometry, glassMaterial);
+            glass.position.y = 1.25;
+            group.add(glass);
+
+            // Frame
+            const frameGeometry = new THREE.BoxGeometry(2.1, 0.05, 0.05);
+            const topFrame = new THREE.Mesh(frameGeometry, frameMaterial);
+            topFrame.position.y = 2.5;
+            group.add(topFrame);
+
+            const bottomFrame = new THREE.Mesh(frameGeometry, frameMaterial);
+            bottomFrame.position.y = 0;
+            group.add(bottomFrame);
+
+            group.position.set(x, y, z);
+            group.rotation.y = rotation;
+
+            return group;
+        }
+
+        function createFloorSlabs() {
+            const slabMaterial = new THREE.MeshPhongMaterial({
+                color: COLORS.SLAB,
+                transparent: true,
+                opacity: 0.3
+            });
+
+            Object.values(LEVELS).forEach((level, index) => {
+                if (index < 4) { // No slab for roof level
+                    const slabGeometry = new THREE.BoxGeometry(14, 0.2, 12);
+                    const slab = new THREE.Mesh(slabGeometry, slabMaterial);
+                    slab.position.set(0, level.elevation, 0);
+                    slab.receiveShadow = true;
+                    slab.userData = {
+                        type: 'SLAB',
+                        name: `Losa ${level.name}`,
+                        level: level.name,
+                        elevation: level.elevation
+                    };
+                    elementGroups['SLAB'].add(slab);
+                    allMeshes.push(slab);
+                }
+            });
+        }
+
+        function setupEventListeners() {
+            // Element visibility toggles
+            document.getElementById('showColumns').addEventListener('change', (e) => {
+                elementGroups['COLUMN'].visible = e.target.checked;
+            });
+            document.getElementById('showBeams').addEventListener('change', (e) => {
+                elementGroups['BEAM'].visible = e.target.checked;
+            });
+            document.getElementById('showWalls').addEventListener('change', (e) => {
+                elementGroups['WALL'].visible = e.target.checked;
+            });
+            document.getElementById('showStairs').addEventListener('change', (e) => {
+                elementGroups['STAIR'].visible = e.target.checked;
+            });
+            document.getElementById('showRailings').addEventListener('change', (e) => {
+                elementGroups['RAILING'].visible = e.target.checked;
+            });
+            document.getElementById('showCurtainWalls').addEventListener('change', (e) => {
+                elementGroups['CURTAINWALL'].visible = e.target.checked;
+            });
+            document.getElementById('showSlabs').addEventListener('change', (e) => {
+                elementGroups['SLAB'].visible = e.target.checked;
+            });
+
+            // Level buttons
+            document.querySelectorAll('.level-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    filterByLevel(e.target.dataset.level);
+                });
+            });
+
+            // Tooltip on hover
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            const tooltip = document.getElementById('tooltip');
+
+            renderer.domElement.addEventListener('mousemove', (event) => {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(allMeshes, true);
+
+                if (intersects.length > 0) {
+                    let obj = intersects[0].object;
+                    while (obj && !obj.userData.type) {
+                        obj = obj.parent;
+                    }
+
+                    if (obj && obj.userData.type) {
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = event.clientX + 15 + 'px';
+                        tooltip.style.top = event.clientY + 15 + 'px';
+                        tooltip.innerHTML = `
+                            <strong>${obj.userData.type}</strong><br>
+                            Nombre: ${obj.userData.name}<br>
+                            Nivel: ${obj.userData.level}<br>
+                            Elevacion: ${obj.userData.elevation.toFixed(2)}m
+                        `;
+                    }
+                } else {
+                    tooltip.style.display = 'none';
+                }
+            });
+
+            // Window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        function filterByLevel(level) {
+            currentLevel = level;
+
+            allMeshes.forEach(mesh => {
+                let obj = mesh;
+                while (obj && !obj.userData.type) {
+                    obj = obj.parent;
+                }
+
+                if (obj && obj.userData) {
+                    if (level === 'all') {
+                        mesh.visible = true;
+                    } else {
+                        const levelNum = parseInt(level);
+                        const elevation = obj.userData.elevation;
+                        const levelElevation = levelNum * 3;
+                        mesh.visible = Math.abs(elevation - levelElevation) < 0.5;
+                    }
+                }
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>

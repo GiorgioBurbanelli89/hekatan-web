@@ -1,0 +1,219 @@
+"============================================
+"📊 CHART.JS - GRÁFICAS Y VISUALIZACIÓN DE DATOS
+"============================================
+"Aprende a crear gráficas profesionales con Chart.js.
+
+"¿QUÉ ES CHART.JS?
+"----------------------------------------
+'Biblioteca JavaScript para crear gráficas interactivas
+'Muy fácil de usar
+'Gráficas responsive y animadas
+'Soporta: líneas, barras, pie, donut, radar, etc.
+
+"TIPOS DE GRÁFICAS
+"----------------------------------------
+'line - Gráfica de líneas
+'bar - Gráfica de barras
+'pie - Gráfica circular
+'doughnut - Dona (pie con hueco)
+'radar - Gráfica de radar
+'polarArea - Área polar
+
+"INSTALACIÓN
+"----------------------------------------
+'Usar CDN (más fácil):
+'<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>14 - Chart.js</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .seccion {
+      background: white;
+      padding: 30px;
+      margin: 20px auto;
+      max-width: 800px;
+      border-radius: 8px;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin: 20px 0;
+    }
+
+    h2 {
+      color: #2196f3;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>📊 Gráficas con Chart.js</h1>
+
+  <!-- #region GRÁFICA DE LÍNEAS -->
+  <div class="seccion">
+    <h2>📈 Gráfica de Líneas</h2>
+    <div class="chart-container">
+      <canvas id="lineChart"></canvas>
+    </div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region GRÁFICA DE BARRAS -->
+  <div class="seccion">
+    <h2>📊 Gráfica de Barras</h2>
+    <div class="chart-container">
+      <canvas id="barChart"></canvas>
+    </div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region GRÁFICA PIE -->
+  <div class="seccion">
+    <h2>🥧 Gráfica Circular (Pie)</h2>
+    <div class="chart-container">
+      <canvas id="pieChart"></canvas>
+    </div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region SCRIPTS -->
+  <!-- Cargar Chart.js desde CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    // #region GRÁFICA DE LÍNEAS
+    const lineCtx = document.getElementById('lineChart').getContext('2d');
+    const lineChart = new Chart(lineCtx, {
+      type: 'line',
+      data: {
+        labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
+        datasets: [{
+          label: 'Ventas 2024',
+          data: [12, 19, 3, 5, 2, 3],
+          borderColor: '#2196f3',
+          backgroundColor: 'rgba(33, 150, 243, 0.1)',
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true
+          }
+        }
+      }
+    });
+    // #endregion
+
+    // #region GRÁFICA DE BARRAS
+    const barCtx = document.getElementById('barChart').getContext('2d');
+    const barChart = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Producto A', 'Producto B', 'Producto C', 'Producto D'],
+        datasets: [{
+          label: 'Unidades Vendidas',
+          data: [65, 59, 80, 81],
+          backgroundColor: [
+            '#2196f3',
+            '#4caf50',
+            '#ff9800',
+            '#f44336'
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+    // #endregion
+
+    // #region GRÁFICA PIE
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    const pieChart = new Chart(pieCtx, {
+      type: 'pie',
+      data: {
+        labels: ['JavaScript', 'Python', 'Java', 'C++', 'Otros'],
+        datasets: [{
+          data: [30, 25, 20, 15, 10],
+          backgroundColor: [
+            '#2196f3',
+            '#4caf50',
+            '#ff9800',
+            '#f44336',
+            '#9c27b0'
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+    // #endregion
+
+    console.log('✅ Chart.js cargado');
+    console.log('📊 Gráficas creadas:', lineChart, barChart, pieChart);
+  </script>
+  <!-- #endregion -->
+
+  <!-- #region CÓDIGO DE EJEMPLO -->
+  <div class="seccion">
+    <h3>💻 Código Básico:</h3>
+    <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px;">
+&lt;canvas id="myChart"&gt;&lt;/canvas&gt;
+
+&lt;script src="https://cdn.jsdelivr.net/npm/chart.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+const ctx = document.getElementById('myChart');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: ['A', 'B', 'C'],
+    datasets: [{
+      label: 'Datos',
+      data: [12, 19, 3]
+    }]
+  }
+});
+&lt;/script&gt;
+    </pre>
+  </div>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

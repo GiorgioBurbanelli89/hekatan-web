@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Calcpad IFC CLI</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1e1e1e;color:#d4d4d4;font-family:'Cascadia Code','Consolas',monospace;font-size:12px;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ── Toolbar ── */
+#toolbar{background:#2d2d2d;padding:4px 8px;display:flex;gap:4px;align-items:center;border-bottom:1px solid #444;flex-shrink:0;flex-wrap:wrap}
+#toolbar button{background:#0e639c;color:#fff;border:none;padding:3px 10px;cursor:pointer;border-radius:2px;font-size:11px;font-family:inherit}
+#toolbar button:hover{background:#1177bb}
+#toolbar button.active{background:#569cd6}
+#toolbar button:disabled{background:#555;color:#888;cursor:default;opacity:0.6}
+#toolbar .sep{color:#444;margin:0 2px}
+#toolbar select{background:#333;color:#d4d4d4;border:1px solid #555;padding:2px 4px;font-size:11px;font-family:inherit}
+#toolbar #fileName{color:#4ec9b0;font-size:11px;margin-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px}
+#toolbar .label{color:#888;font-size:10px}
+
+/* ── Main layout ── */
+#main{display:flex;flex:1;overflow:hidden}
+
+/* ── 3D Viewport ── */
+#viewport{flex:1;position:relative;background:#1a1a2e;overflow:hidden}
+#viewport canvas{display:block;width:100%;height:100%}
+#viewportInfo{position:absolute;bottom:6px;left:8px;color:#888;font-size:10px;pointer-events:none}
+#coordTooltip{display:none;position:absolute;pointer-events:none;background:rgba(0,0,0,0.85);color:#4ec9b0;font-size:11px;font-family:monospace;padding:4px 8px;border:1px solid #4ec9b0;border-radius:3px;z-index:30;white-space:nowrap}
+#dropOverlay{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(14,99,156,0.3);border:3px dashed #4ec9b0;z-index:10;align-items:center;justify-content:center;font-size:18px;color:#4ec9b0}
+#loadingOverlay{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:20;align-items:center;justify-content:center;flex-direction:column;color:#4ec9b0;font-size:14px}
+#loadingOverlay .spinner{width:40px;height:40px;border:3px solid #333;border-top-color:#4ec9b0;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Right Panel ── */
+#rightPanel{width:320px;background:#252526;border-left:1px solid #444;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.panel-section{border-bottom:1px solid #333}
+.panel-header{background:#333;padding:4px 8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.panel-header:hover{background:#3a3a3a}
+.panel-header span{color:#4ec9b0;font-size:11px;font-weight:bold}
+.panel-header .count{color:#888;font-size:10px}
+.panel-body{overflow-y:auto}
+
+/* Object tree */
+#objTree{max-height:200px;overflow-y:auto}
+.tree-group{background:#2a2a2a;padding:2px 8px;color:#c586c0;font-size:10px;font-weight:bold;position:sticky;top:0}
+.tree-item{display:flex;align-items:center;padding:2px 8px;cursor:pointer;gap:4px}
+.tree-item:hover{background:#2a2d2e}
+.tree-item.sel{background:#094771}
+.tree-item.dim{opacity:0.4}
+.tree-icon{width:14px;height:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px}
+.tree-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.tree-dim{color:#888;font-size:10px;flex-shrink:0}
+.tree-vis{cursor:pointer;font-size:12px;flex-shrink:0;margin-left:2px}
+.tree-vis:hover{color:#4ec9b0}
+.tree-vis.hidden{color:#555}
+
+/* Properties */
+#propsPanel{max-height:160px;overflow-y:auto;padding:4px 8px}
+.ptbl{width:100%;font-size:11px}
+.ptbl td{padding:1px 4px}
+.ptbl .pl{color:#888;width:90px}
+.ptbl .pv{color:#d4d4d4}
+
+/* CLI */
+#cliSection{flex:1;display:flex;flex-direction:column;min-height:120px}
+#cliOutput{flex:1;background:#1e1e1e;color:#d4d4d4;font-family:inherit;font-size:11px;padding:4px 8px;overflow-y:auto;white-space:pre-wrap;line-height:1.4;border:none;resize:none;min-height:80px}
+#cliBar{display:flex;gap:4px;padding:4px 6px;background:#2d2d2d;border-top:1px solid #444;align-items:center}
+#cliBar .prompt{color:#6a9955;font-size:11px;flex-shrink:0}
+#cliInput{flex:1;background:#1e1e1e;color:#d4d4d4;border:1px solid #555;padding:3px 6px;font-family:inherit;font-size:11px;outline:none}
+#cliInput:focus{border-color:#0e639c}
+#cliBar button{background:#0e639c;color:#fff;border:none;padding:3px 8px;cursor:pointer;border-radius:2px;font-size:10px}
+
+/* ── Report panel ── */
+#reportPanel{display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:50;background:#fff}
+#reportPanel iframe{width:100%;height:100%;border:none}
+#reportClose{position:absolute;top:8px;right:12px;background:#c00;color:#fff;border:none;padding:4px 12px;cursor:pointer;border-radius:3px;z-index:51;font-size:12px}
+
+/* Snap bar */
+#snapBar{background:#2d2d2d;padding:2px 8px;display:flex;gap:8px;border-top:1px solid #444;font-size:10px;color:#888;flex-shrink:0;align-items:center}
+#snapBar label{cursor:pointer;display:flex;align-items:center;gap:2px}
+#snapBar input[type=checkbox]{margin:0}
+
+/* Colors */
+.c-type{color:#4ec9b0}.c-num{color:#b5cea8}.c-key{color:#569cd6}.c-str{color:#ce9178}
+.c-warn{color:#dcdcaa}.c-err{color:#f44747}.c-dim{color:#666}.c-ok{color:#6a9955}
+.c-head{color:#c586c0;font-weight:bold}
+
+/* ── CAD Overlay ── */
+#cadOverlay{display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:15;pointer-events:none}
+#cadOverlay.active{display:block;pointer-events:auto}
+#lienzo{position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair}
+#cadStatusBar{position:absolute;bottom:0;left:0;right:0;background:rgba(30,30,30,0.92);padding:2px 8px;display:flex;gap:10px;font-size:10px;color:#888;z-index:16;align-items:center;border-top:1px solid #4ec9b0}
+#cadStatusBar .cad-val{color:#4ec9b0;font-weight:bold;min-width:50px}
+#cadStatusBar .cad-label{color:#888}
+#cadStatusBar .cad-sep{color:#444;margin:0 2px}
+#cadStatusBar .cad-mode{color:#dcdcaa;font-weight:bold}
+#cadStatusBar .cad-snap{color:#c586c0}
+#cadHint{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(78,201,176,0.15);color:#4ec9b0;padding:4px 16px;border:1px solid #4ec9b0;border-radius:4px;font-size:11px;z-index:17;pointer-events:none;display:none}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOOLBAR ═══ -->
+<div id="toolbar">
+  <button onclick="ifc.openFile()" title="Abrir archivo IFC">Abrir IFC</button>
+  <button onclick="ifc.openMerge()" title="Fusionar elementos de otro IFC">Fusionar IFC</button>
+  <button onclick="ifc.exec('report')" title="Generar reporte HTML">Reporte</button>
+  <span class="sep">|</span>
+  <button onclick="ifc.exec('view top')" title="Vista superior">Planta</button>
+  <button onclick="ifc.exec('view front')" title="Vista frontal">Frente</button>
+  <button onclick="ifc.exec('view right')" title="Vista lateral">Lateral</button>
+  <button onclick="ifc.exec('view 3d')" title="Vista 3D perspectiva">3D</button>
+  <span class="sep">|</span>
+  <button onclick="ifc.exec('elevxy')" title="Elevacion XY (frente, 2D ortografica)" style="background:#1a6b3f">Plano XY</button>
+  <button onclick="ifc.exec('elevxz')" title="Planta XZ (2D ortografica)" style="background:#1a6b3f">Plano XZ</button>
+  <button onclick="ifc.exec('elevyz')" title="Elevacion YZ (lateral, 2D ortografica)" style="background:#1a6b3f">Plano YZ</button>
+  <button onclick="ifc.exec('3d')" title="Volver a perspectiva 3D" style="background:#1a6b3f">3D&#x21A9;</button>
+  <span class="sep">|</span>
+  <select id="plantLevelSelect" onchange="_guiPlantLevel(this.value)" title="Seleccionar nivel de planta (corte seccion)" style="background:#2a1a4a;color:#caf;border:1px solid #7a5aaa;padding:2px 4px;font-size:11px;font-family:inherit;min-width:100px;cursor:pointer">
+    <option value="-1">🏗 Nivel...</option>
+  </select>
+  <button onclick="ifc.exec('fit')">Encuadrar</button>
+  <button onclick="ifc.exec('showall')">Mostrar todo</button>
+  <button onclick="ifc.exec('wireframe')">Wireframe</button>
+  <button onclick="_guiClipEnable()" title="Activar recorte/seccion en vista actual" style="background:#6b1a6b">✂ Recorte</button>
+  <span class="sep">|</span>
+  <button onclick="ifc.exec('extract json')" title="Exportar geometría JSON">Extraer</button>
+  <button onclick="toggleSelectMode(!S.selectMode)" title="Activar/desactivar modo seleccion">Seleccionar</button>
+  <button onclick="deleteSelectedOrPrompt()" title="Eliminar tipo seleccionado" style="background:#a33;color:#fff">Eliminar tipo</button>
+  <button id="btnDeleteSel" onclick="deleteSelectedMesh()" title="Seleccione un elemento primero" style="background:#a33;color:#fff" disabled>Eliminar &#x2716;</button>
+  <button id="btnHideSel" onclick="hideSelectedMesh()" title="Ocultar elemento seleccionado" style="background:#555;color:#fff" disabled>👁‍🗨 Ocultar</button>
+  <button id="btnTranspSel" onclick="transparentSelectedMesh(0.12)" title="Hacer transparente el elemento seleccionado" style="background:#555;color:#fff" disabled>◐ Transp</button>
+  <button id="btnIsolateSel" onclick="isolateSelectedMeshes()" title="Aislar: mostrar SOLO seleccionados (Ctrl+clic para multi-seleccionar)" style="background:#6b4e1a;color:#fff" disabled>🔍 Aislar</button>
+  <button onclick="restoreAllMeshVisibility()" title="Restaurar elementos ocultos, transparentes y aislados" style="background:#2a5a2a;color:#fff">↺ Restaurar</button>
+  <button onclick="ifc.exec('savehtml')" title="Guardar HTML con estado">Guardar HTML</button>
+  <span class="sep">|</span>
+  <span class="label">Archivo:</span>
+  <span id="fileName">Sin archivo</span>
+</div>
+
+<!-- ═══ PANEL DE MOVIMIENTO ═══ -->
+<div id="movePanel" style="display:none; background:#252535; padding:3px 8px; border-bottom:1px solid #444; font-size:11px; gap:6px; align-items:center; flex-wrap:wrap;">
+  <span style="color:#8cf;font-weight:bold" id="moveSelLabel">Seleccion:</span>
+  <span style="color:#aaa" id="movePosInfo">—</span>
+  <span class="sep" style="color:#555">|</span>
+  <span style="color:#888">Mover relativo:</span>
+  <label style="color:#f88">dX</label><input id="moveDx" type="number" value="0" step="0.1" style="width:55px;background:#1a1a2e;color:#fff;border:1px solid #555;padding:1px 3px;font-size:11px">
+  <label style="color:#8f8">dY</label><input id="moveDy" type="number" value="0" step="0.1" style="width:55px;background:#1a1a2e;color:#fff;border:1px solid #555;padding:1px 3px;font-size:11px">
+  <label style="color:#88f">dZ</label><input id="moveDz" type="number" value="0" step="0.1" style="width:55px;background:#1a1a2e;color:#fff;border:1px solid #555;padding:1px 3px;font-size:11px">
+  <button onclick="_guiMove()" style="background:#1a6b3f;color:#fff;border:none;padding:2px 8px;cursor:pointer;border-radius:2px;font-size:11px" title="Mover seleccion por dx,dy,dz">Mover</button>
+  <span class="sep" style="color:#555">|</span>
+  <span style="color:#888">Mover a:</span>
+  <label style="color:#f88">X</label><input id="moveToX" type="number" value="0" step="0.1" style="width:55px;background:#1a1a2e;color:#fff;border:1px solid #555;padding:1px 3px;font-size:11px">
+  <label style="color:#8f8">Y</label><input id="moveToY" type="number" value="0" step="0.1" style="width:55px;background:#1a1a2e;color:#fff;border:1px solid #555;padding:1px 3px;font-size:11px">
+  <label style="color:#88f">Z</label><input id="moveToZ" type="number" value="0" step="0.1" style="width:55px;background:#1a1a2e;color:#fff;border:1px solid #555;padding:1px 3px;font-size:11px">
+  <button onclick="_guiMoveTo()" style="background:#0e639c;color:#fff;border:none;padding:2px 8px;cursor:pointer;border-radius:2px;font-size:11px" title="Mover seleccion a coordenada absoluta">Ir a</button>
+  <button onclick="_guiShowPos()" style="background:#555;color:#fff;border:none;padding:2px 8px;cursor:pointer;border-radius:2px;font-size:11px" title="Mostrar posicion actual">Pos</button>
+</div>
+<script>
+function _guiMove(){
+  var dx=parseFloat(document.getElementById("moveDx").value)||0;
+  var dy=parseFloat(document.getElementById("moveDy").value)||0;
+  var dz=parseFloat(document.getElementById("moveDz").value)||0;
+  moveSelected(dx,dy,dz);
+}
+function _guiMoveTo(){
+  var x=parseFloat(document.getElementById("moveToX").value)||0;
+  var y=parseFloat(document.getElementById("moveToY").value)||0;
+  var z=parseFloat(document.getElementById("moveToZ").value)||0;
+  moveSelectedTo(x,y,z);
+}
+function _guiShowPos(){
+  showSelectedPosition();
+  // Llenar campos MoveTo con posicion actual
+  if(window._S.selectedMesh){
+    window._S.selectedMesh.updateMatrixWorld(true);
+    var box=new THREE.Box3().setFromObject(window._S.selectedMesh);
+    var c=box.getCenter(new THREE.Vector3());
+    document.getElementById("moveToX").value=c.x.toFixed(3);
+    document.getElementById("moveToY").value=c.y.toFixed(3);
+    document.getElementById("moveToZ").value=c.z.toFixed(3);
+  }
+}
+// Mostrar/ocultar panel de movimiento segun seleccion
+var _movePanelObs = setInterval(function(){
+  var panel=document.getElementById("movePanel");
+  if(!panel) return;
+  var S=window._S;
+  if(S && S.selectedMesh){
+    panel.style.display="flex";
+    var lbl=document.getElementById("moveSelLabel");
+    if(lbl) lbl.textContent="#"+(S.selectedMesh.userData.expressID||"?")+" ("+
+      (S.selectedMesh.userData.ifcType||"?")+")";
+    _updateMovePanel();
+  } else {
+    panel.style.display="none";
+  }
+}, 300);
+</script>
+
+<!-- ═══ PANEL DE RECORTE ═══ -->
+<div id="clipPanel" style="display:none; background:#2a2535; padding:3px 8px; border-bottom:1px solid #444; font-size:11px; gap:6px; align-items:center;">
+  <span style="color:#f8f;font-weight:bold">✂ Recorte</span>
+  <span style="color:#888">Eje:</span>
+  <button id="clipBtnX" onclick="_guiClipAxis('x')" style="background:#a33;color:#fff;border:none;padding:2px 8px;cursor:pointer;border-radius:2px;font-size:11px;font-weight:bold" title="Recorte en eje X">X</button>
+  <button id="clipBtnY" onclick="_guiClipAxis('y')" style="background:#3a3;color:#fff;border:none;padding:2px 8px;cursor:pointer;border-radius:2px;font-size:11px;font-weight:bold" title="Recorte en eje Y (elevacion)">Y</button>
+  <button id="clipBtnZ" onclick="_guiClipAxis('z')" style="background:#33a;color:#fff;border:none;padding:2px 8px;cursor:pointer;border-radius:2px;font-size:11px;font-weight:bold" title="Recorte en eje Z">Z</button>
+  <span id="clipAxisLabel" style="color:#ff8;font-weight:bold;min-width:24px">Y ▲</span>
+  <span class="sep" style="color:#555">|</span>
+  <input id="clipSlider" type="range" min="0" max="10" step="0.01" value="5"
+    style="width:200px;accent-color:#f8f;cursor:pointer"
+    oninput="_guiClipSlider(this.value)">
+  <input id="clipValue" type="number" value="0" step="0.1"
+    style="width:65px;background:#1a1a2e;color:#fff;border:1px solid #555;padding:1px 3px;font-size:11px"
+    onchange="_guiClipVal(this.value)">
+  <span style="color:#888">m</span>
+  <button onclick="_guiClipFlip()" style="background:#555;color:#fff;border:none;padding:2px 8px;cursor:pointer;border-radius:2px;font-size:11px" title="Invertir direccion del corte">↕ Invertir</button>
+  <button onclick="disableClipping();_hideClipPanel()" style="background:#a33;color:#fff;border:none;padding:2px 8px;cursor:pointer;border-radius:2px;font-size:11px" title="Desactivar recorte">✕ Off</button>
+</div>
+<script>
+function _guiClipSlider(val){
+  val = parseFloat(val);
+  setClipValue(val);
+  document.getElementById("clipValue").value = val.toFixed(2);
+}
+function _guiClipVal(val){
+  val = parseFloat(val) || 0;
+  setClipValue(val);
+  document.getElementById("clipSlider").value = val;
+}
+function _guiClipFlip(){
+  flipClipping();
+  var S = window._S;
+  var lbl = document.getElementById("clipAxisLabel");
+  if(lbl) lbl.textContent = S.clippingAxis.toUpperCase() + (S.clippingFlip ? " ▼" : " ▲");
+}
+// Cambiar eje de recorte manualmente (botones X/Y/Z)
+function _guiClipAxis(axis){
+  var cb = _clipBounds();
+  if(!cb) return;
+  var mid = cb.center[axis];
+  var mn = cb.min[axis];
+  var mx = cb.max[axis];
+  var slider = document.getElementById("clipSlider");
+  slider.min = mn.toFixed(3);
+  slider.max = mx.toFixed(3);
+  slider.step = ((mx-mn)/200).toFixed(4);
+  slider.value = mid.toFixed(3);
+  document.getElementById("clipValue").value = mid.toFixed(2);
+  enableClipping(axis, mid, false);
+  _highlightClipAxisBtn(axis);
+}
+function _guiClipEnable(){
+  var S = window._S;
+  var axis = getClipAxisForCurrentView();
+  var cb = _clipBounds();
+  if(!cb) return;
+  var mid = cb.center[axis];
+  var mn = cb.min[axis];
+  var mx = cb.max[axis];
+  var slider = document.getElementById("clipSlider");
+  slider.min = mn.toFixed(3);
+  slider.max = mx.toFixed(3);
+  slider.step = ((mx-mn)/200).toFixed(4);
+  slider.value = mid.toFixed(3);
+  document.getElementById("clipValue").value = mid.toFixed(2);
+  enableClipping(axis, mid, false);
+  _showClipPanel();
+  _highlightClipAxisBtn(axis);
+}
+function _highlightClipAxisBtn(axis){
+  // Resaltar boton activo, atenuar los otros
+  var bx = document.getElementById("clipBtnX");
+  var by = document.getElementById("clipBtnY");
+  var bz = document.getElementById("clipBtnZ");
+  bx.style.background = axis === "x" ? "#f44" : "#633";
+  by.style.background = axis === "y" ? "#4f4" : "#363";
+  bz.style.background = axis === "z" ? "#44f" : "#336";
+  bx.style.opacity = axis === "x" ? "1" : "0.6";
+  by.style.opacity = axis === "y" ? "1" : "0.6";
+  bz.style.opacity = axis === "z" ? "1" : "0.6";
+}
+function _showClipPanel(){
+  var p = document.getElementById("clipPanel");
+  if(p) p.style.display = "flex";
+}
+function _hideClipPanel(){
+  var p = document.getElementById("clipPanel");
+  if(p) p.style.display = "none";
+}
+
+// ═══ Selector de niveles de planta ═══
+function _guiPlantLevel(val){
+  var n = parseInt(val);
+  if(n <= 0){
+    // "Todos" o opcion invalida: desactivar clip, volver a vista completa
+    disableClipping();
+    if(window._S) window._S.plantLevelActive = -1;
+    ifc.exec("fit");
+    return;
+  }
+  setPlantLevel(n);
+}
+
+// Poblar el dropdown con los niveles detectados del modelo
+function _populatePlantLevelSelect(){
+  var sel = document.getElementById("plantLevelSelect");
+  if(!sel) return;
+  // Limpiar opciones existentes
+  sel.innerHTML = '<option value="-1">\uD83C\uDFD7 Nivel...</option>';
+  sel.innerHTML += '<option value="0">\uD83C\uDF10 Todos (sin corte)</option>';
+  var levels = detectPlantLevels();
+  if(!levels || levels.length === 0) return;
+  levels.forEach(function(lev, i){
+    var opt = document.createElement("option");
+    opt.value = (i + 1).toString();
+    // Descripcion corta
+    var typeParts = [];
+    for(var t in lev.types){
+      var sn = (window._S.SNAMES[t] || t.replace("IFC",""));
+      typeParts.push(sn + ":" + lev.types[t]);
+    }
+    opt.textContent = "N" + (i + 1) + " +" + lev.elevation.toFixed(2) + "m (" + typeParts.join(", ") + ")";
+    sel.appendChild(opt);
+  });
+}
+
+// Auto-poblar cuando el modelo se carga (poll hasta que exista)
+var _plantSelRetries = 0;
+var _plantSelObs = setInterval(function(){
+  var S = window._S;
+  if(!S || !S.ifcModel || !S.modelGroup) return;
+  if(S.modelGroup.children.length === 0) return;
+  var sel = document.getElementById("plantLevelSelect");
+  if(!sel) return;
+  // Si ya tiene niveles, dejar de intentar
+  if(sel.children.length > 2){ clearInterval(_plantSelObs); return; }
+  // Intentar poblar
+  _populatePlantLevelSelect();
+  _plantSelRetries++;
+  // Despues de 40 intentos (60s) dejar de intentar
+  if(_plantSelRetries > 40) clearInterval(_plantSelObs);
+}, 1500);
+</script>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+  <!-- 3D Viewport -->
+  <div id="viewport">
+    <div id="dropOverlay">Arrastre un archivo .ifc aquí</div>
+    <div id="loadingOverlay"><div class="spinner"></div><span id="loadingText">Cargando...</span></div>
+    <div id="viewportInfo"></div>
+    <div id="coordTooltip"></div>
+    <!-- ═══ CAD 2D OVERLAY (sobre Three.js) ═══ -->
+    <div id="cadOverlay" data-role="canvasArea">
+      <canvas id="lienzo" tabindex="0"></canvas>
+      <div id="cadHint"></div>
+      <div id="cadStatusBar">
+        <span class="cad-label">CAD</span>
+        <span class="cad-sep">|</span>
+        <span class="cad-label">X:</span><span class="cad-val" id="stX">0.00</span>
+        <span class="cad-label">Y:</span><span class="cad-val" id="stY">0.00</span>
+        <span class="cad-label">Z:</span><span class="cad-val" id="stZ">0.00</span>
+        <span class="cad-sep">|</span>
+        <span class="cad-label">L:</span><span class="cad-val" id="stLen">—</span>
+        <span class="cad-label">∠:</span><span class="cad-val" id="stAng">—</span>
+        <span class="cad-sep">|</span>
+        <span class="cad-mode" id="stMode">SELECT</span>
+        <span class="cad-sep">|</span>
+        <span class="cad-snap" id="stSnap">—</span>
+        <span style="flex:1"></span>
+        <span class="cad-label" id="stInfo">CAD 2D activo</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div id="rightPanel">
+    <!-- Objects -->
+    <div class="panel-section">
+      <div class="panel-header" onclick="togglePanel('objTree')">
+        <span>OBJETOS IFC</span><span class="count" id="objCount">0</span>
+      </div>
+      <div class="panel-body" id="objTree"></div>
+    </div>
+
+    <!-- Properties -->
+    <div class="panel-section">
+      <div class="panel-header" onclick="togglePanel('propsPanel')">
+        <span>PROPIEDADES</span>
+      </div>
+      <div class="panel-body" id="propsPanel">
+        <p style="color:#555;font-style:italic;padding:4px 8px;font-size:10px">Clic en un tipo para ver propiedades</p>
+      </div>
+    </div>
+
+    <!-- CLI -->
+    <div class="panel-section" id="cliSection">
+      <div class="panel-header">
+        <span>CLI COMANDOS</span>
+        <button style="background:transparent;border:1px solid #555;color:#888;padding:1px 6px;font-size:9px;cursor:pointer" onclick="ifc.exec('clear')">Limpiar</button>
+      </div>
+      <div id="cliOutput"></div>
+      <div id="cliBar">
+        <span class="prompt">ifc&gt;</span>
+        <input id="cliInput" placeholder="help para ayuda" autofocus>
+        <button onclick="runInput()">Exec</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report overlay -->
+  <div id="reportPanel">
+    <button id="reportClose" onclick="closeReport()">Cerrar</button>
+    <iframe id="reportFrame"></iframe>
+  </div>
+</div>
+
+<!-- ═══ SNAP BAR ═══ -->
+<div id="snapBar">
+  <span style="color:#4ec9b0">IFC CLI v3.0</span>
+  <span class="sep">|</span>
+  <label title="Mostrar ejes XYZ"><input type="checkbox" id="chkAxes" checked onchange="ifc.toggleAxes(this.checked)"> Ejes</label>
+  <label title="Mostrar malla de piso"><input type="checkbox" id="chkGrid" checked onchange="ifc.toggleGrid(this.checked)"> Grid</label>
+  <label title="Mostrar wireframe sobre sólidos"><input type="checkbox" id="chkWire" onchange="ifc.toggleWireframe(this.checked)"> Wire</label>
+  <label title="Selección 3D por clic"><input type="checkbox" id="chkSelect" checked onchange="toggleSelectMode(this.checked)"> Seleccionar</label>
+  <span class="sep">|</span>
+  <span id="statusBar" style="flex:1;text-align:right">Listo</span>
+</div>
+
+<!-- ═══ THREE.JS + WEB-IFC (dependencias externas) ═══ -->
+<script src="../Calcpad.Wpf/resources/ifc/three.min.js"></script>
+<script src="../Calcpad.Wpf/resources/ifc/OrbitControls.js"></script>
+<script src="../Calcpad.Wpf/resources/ifc/web-ifc-api-iife.js"></script>
+
+<!-- ═══ AUTO-CARGA: modelo + merge al iniciar ═══ -->
+<script>
+window.__ifcAutoLoad = {
+    baseUrl: "http://127.0.0.1:8888/ifc/vivienda%20Silvia%20sin%20escalera.ifc",
+    merges: [
+        { filter: "escalera", url: "http://127.0.0.1:8888/ifc/Silvia_Cedeno_escalera.ifc", offsetY: -3.96 }
+    ],
+    postProcess: []
+};
+</script>
+
+<!-- ═══ MÓDULOS IFC CLI v3.0 ═══ -->
+<!-- Orden de carga: state → parser → three → core → viewport → extractors → levels → ui → commands → persist → report → merge → io -->
+<script src="js/ifc-state.js?v=20"></script>
+<script src="js/ifc-parser.js?v=20"></script>
+<script src="js/ifc-three.js?v=78"></script>
+<script src="js/ifc-core.js?v=20"></script>
+<script src="js/ifc-viewport.js?v=20"></script>
+<script src="js/ifc-extractors.js?v=20"></script>
+<script src="js/ifc-levels.js?v=20"></script>
+<script src="js/ifc-ui.js?v=20"></script>
+<script src="js/ifc-commands.js?v=24"></script>
+<script src="js/ifc-persist.js?v=20"></script>
+<script src="js/ifc-report.js?v=20"></script>
+<script src="js/ifc-merge.js?v=20"></script>
+<script src="js/ifc-io.js?v=22"></script>
+
+<!-- ═══ CAD 2D OVERLAY - Modulos (cad-state → cad-cli) ═══ -->
+<!-- Orden de capas: state(0) → math(1) → dom(2) → projection(3) → history(4) → snap(5) → render(6) → input(7a) → export(7c) → cli(7b) -->
+<script src="js/cad/cad-state.js?v=1"></script>
+<script src="js/cad/cad-math.js?v=1"></script>
+<script src="js/cad/cad-dom.js?v=1"></script>
+<script src="js/cad/cad-projection.js?v=1"></script>
+<script src="js/cad/cad-history.js?v=1"></script>
+<script src="js/cad/cad-snap.js?v=1"></script>
+<script src="js/cad/cad-render.js?v=1"></script>
+<script src="js/cad/cad-input.js?v=1"></script>
+<script src="js/cad/cad-export.js?v=1"></script>
+<script src="js/cad/cad-cli.js?v=1"></script>
+
+<!-- ═══ CAD INIT ═══ -->
+<script>
+(function(){
+    "use strict";
+    // Inicializar CAD DOM y callbacks cuando la pagina este lista
+    if(!window.CAD) return;
+    CAD.initDOM();
+
+    // Registrar callbacks
+    CAD.callbacks.redraw = function(){ CAD.redraw(); };
+    CAD.callbacks.flash = function(msg){
+        var h = document.getElementById("cadHint");
+        if(!h) return;
+        h.textContent = msg;
+        h.style.display = "block";
+        setTimeout(function(){ h.style.display = "none"; }, 2000);
+    };
+    CAD.callbacks.setMode = function(m){
+        var el = document.getElementById("stMode");
+        if(el) el.textContent = (m || "SELECT").toUpperCase();
+    };
+    CAD.callbacks.updTree = function(){};
+    CAD.callbacks.showProps = function(){};
+    CAD.callbacks.selectShape = function(idx){
+        CAD.set("formaSel", idx);
+        CAD.redraw();
+    };
+    CAD.callbacks.zoomFit = function(){ if(CAD.zoomFit) CAD.zoomFit(); };
+
+    // Inicializar CLI (reutiliza cliOutput/cliInput del IFC)
+    CAD.initCLI();
+
+    // ═══ FUNCIONES DE ACTIVACION/DESACTIVACION ═══
+    window._cadActive = false;
+
+    var _cadEventsInstalled = false;
+
+    window.activateCAD = function(){
+        var overlay = document.getElementById("cadOverlay");
+        if(!overlay) return;
+        overlay.classList.add("active");
+        // Reiniciar DOM refs
+        CAD.initDOM();
+        // canvasArea no existe como ID — usar el cadOverlay como contenedor
+        CAD.canvasArea = overlay;
+        // Resize canvas al viewport
+        if(CAD.resizeCanvas) CAD.resizeCanvas();
+        // Instalar eventos solo una vez (evitar duplicar listeners)
+        if(!_cadEventsInstalled){
+            if(CAD.initCanvasEvents) CAD.initCanvasEvents();
+            if(CAD.initKeyboard) CAD.initKeyboard(
+                function setMode(m){ CAD.set("modo", m); CAD.callbacks.setMode?.(m); },
+                function toggleOrtho(){ CAD.set("orthoOn",!CAD.orthoOn); CAD.callbacks.flash?.("ORTHO "+(CAD.orthoOn?"ON":"OFF")); },
+                function toggleSnap(){ CAD.set("snapOn",!CAD.snapOn); CAD.callbacks.flash?.("SNAP "+(CAD.snapOn?"ON":"OFF")); },
+                function flash(msg){ CAD.callbacks.flash?.(msg); },
+                function undo(){ CAD.undo(); }
+            );
+            _cadEventsInstalled = true;
+        }
+        // Guardar estado inicial en historial
+        if(CAD.historial.length === 0) CAD.saveHist();
+        CAD.redraw();
+        window._cadActive = true;
+        console.log("[CAD] Activado sobre viewport IFC");
+    };
+
+    window.deactivateCAD = function(){
+        var overlay = document.getElementById("cadOverlay");
+        if(!overlay) return;
+        overlay.classList.remove("active");
+        window._cadActive = false;
+        // Limpiar nodos de sección importados
+        if(CAD.clearSectionNodes) CAD.clearSectionNodes();
+        // Restaurar OrbitControls y snap de sección via S (state compartido)
+        var S = window.ifc && window.ifc._state;
+        if(S){
+            if(S.controls) S.controls.enabled = true;
+            // Re-activar snap handler de sección si hay corte activo
+            if(S._sectionAxis && S._sectionSnapEnableFn){
+                S._sectionSnapEnableFn(S._sectionAxis);
+            }
+        }
+        console.log("[CAD] Desactivado, controles IFC restaurados");
+    };
+
+    // Resize CAD canvas cuando cambie el viewport
+    var vp = document.getElementById("viewport");
+    if(vp && typeof ResizeObserver !== "undefined"){
+        new ResizeObserver(function(){
+            if(window._cadActive && CAD.resizeCanvas) CAD.resizeCanvas();
+        }).observe(vp);
+    }
+
+    console.log("[CAD] Modulos cargados (10 archivos). Escriba 'cad2d' para activar.");
+})();
+</script>
+
+</body>
+</html>

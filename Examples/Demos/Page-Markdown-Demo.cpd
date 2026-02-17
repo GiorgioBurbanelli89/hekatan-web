@@ -1,0 +1,99 @@
+@{page markdown}
+
+# Documento de Ingeniería con Markdown
+
+Este documento usa **@{page markdown}** que permite escribir en Markdown puro
+combinado con cálculos de Calcpad y código externo.
+
+## Datos del Proyecto
+
+Aquí van algunos cálculos básicos:
+
+$$
+a = 5cm
+b = 3m
+$$
+
+El área es $$A = a * b$$ metros cuadrados.
+
+## Layout Multi-Columnas con @{columns}
+
+@{columns 3}
+### Columna 1
+Contenido en **Markdown** con
+- Listas
+- Items
+
+@{column}
+### Columna 2
+$$
+x = 10
+y = 20
+$$
+
+@{column}
+### Columna 3
+Tercera columna con más contenido.
+@{end columns}
+
+## Cálculos con Python
+
+@{python}
+import math
+x = 10
+y = 20
+area = x * y
+print(f"Área calculada en Python: {area}")
+print(f"CALCPAD:area_py={area}")
+@{end python}
+
+## Código en Múltiples Columnas
+
+@{columns 2}
+**Python:**
+@{python}
+print("Hello from Python!")
+@{end python}
+@{column}
+**JavaScript:**
+@{js}
+console.log("Hello from JS!");
+@{end js}
+@{end columns}
+
+## Tabla de Resultados
+
+Creamos una matriz y la mostramos como tabla:
+
+$$
+M = [1; 2; 3| 4; 5; 6| 7; 8; 9]
+$$
+
+@{table}
+M
+headers=Col A, Col B, Col C
+style=bordered
+@{end table}
+
+## Formato Markdown Completo
+
+- Lista item 1
+- Lista item 2
+- Lista item 3
+
+> Este es un bloque de cita que se renderiza correctamente.
+
+### Tabla Markdown Normal
+
+| Columna 1 | Columna 2 |
+|-----------|-----------|
+| Valor 1   | Valor 2   |
+| Valor 3   | Valor 4   |
+
+## Conclusiones
+
+Todo el documento es **Markdown limpio** con soporte para:
+- Cálculos Calcpad (`$$...$$`)
+- Código externo (`@{python}`, `@{octave}`, etc.)
+- Tablas desde matrices (`@{table}`)
+- **Layout multi-columnas** (`@{columns N}...@{column}...@{end columns}`)

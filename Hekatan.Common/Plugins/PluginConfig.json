@@ -1,0 +1,545 @@
+{
+  "engines": {
+    "calcpad": {
+      "name": "Hekatan Native",
+      "description": "Motor nativo de Hekatan - evaluación numérica con unidades",
+      "type": "builtin",
+      "enabled": true,
+      "isDefault": true,
+      "directive": "@{calcpad}",
+      "endDirective": "@{end calcpad}",
+      "capabilities": ["numeric", "units", "matrices", "vectors", "solve", "plot"],
+      "syntax": {
+        "assignment": "=",
+        "evaluation": "= ?",
+        "comment": "'",
+        "power": "^",
+        "multiply": "*",
+        "divide": "/",
+        "semicolon": ";",
+        "functionCall": "func(arg1; arg2)"
+      }
+    },
+    "angourimath": {
+      "name": "AngouriMath Symbolic",
+      "description": "Motor simbólico - derivadas, integrales, resolver ecuaciones",
+      "type": "plugin",
+      "pluginRef": "angourimath",
+      "enabled": true,
+      "isDefault": false,
+      "directive": "@{symbolic}",
+      "endDirective": "@{end symbolic}",
+      "capabilities": ["symbolic", "derivatives", "integrals", "solve", "simplify", "latex"],
+      "syntax": {
+        "assignment": "=",
+        "power": "^",
+        "multiply": "*",
+        "functionCall": "func(arg1, arg2)"
+      }
+    },
+    "latex": {
+      "name": "LaTeX Math",
+      "description": "Sintaxis LaTeX - se traduce a Hekatan",
+      "type": "translator",
+      "targetEngine": "calcpad",
+      "enabled": true,
+      "isDefault": false,
+      "directive": "@{latex}",
+      "endDirective": "@{end latex}",
+      "capabilities": ["symbolic-display"],
+      "translations": {
+        "\\frac{(.+?)}{(.+?)}": "($1)/($2)",
+        "\\sqrt{(.+?)}": "sqrt($1)",
+        "\\sqrt\\[(.+?)\\]{(.+?)}": "root($2; $1)",
+        "\\sin": "sin",
+        "\\cos": "cos",
+        "\\tan": "tan",
+        "\\ln": "ln",
+        "\\log": "log",
+        "\\exp": "exp",
+        "\\pi": "π",
+        "\\cdot": "*",
+        "\\times": "*",
+        "\\div": "/",
+        "\\sum_{(.+?)}^{(.+?)}": "$Sum{$1 @ $2}",
+        "\\int_{(.+?)}^{(.+?)}": "$Integral{$1 : $2}",
+        "\\infty": "∞"
+      }
+    },
+    "mathcad": {
+      "name": "Mathcad Style",
+      "description": "Sintaxis estilo Mathcad Prime - se traduce a Hekatan",
+      "type": "translator",
+      "targetEngine": "calcpad",
+      "enabled": true,
+      "isDefault": false,
+      "directive": "@{mathcad}",
+      "endDirective": "@{end mathcad}",
+      "translations": {
+        ":=": "=",
+        "·": "*",
+        "×": "*",
+        "÷": "/",
+        "≔": "="
+      }
+    },
+    "python": {
+      "name": "Python Math",
+      "description": "Sintaxis Python - se traduce a Hekatan",
+      "type": "translator",
+      "targetEngine": "calcpad",
+      "enabled": true,
+      "isDefault": false,
+      "directive": "@{pymath}",
+      "endDirective": "@{end pymath}",
+      "translations": {
+        "\\*\\*": "^",
+        "math\\.sqrt": "sqrt",
+        "math\\.sin": "sin",
+        "math\\.cos": "cos",
+        "math\\.tan": "tan",
+        "math\\.log": "ln",
+        "math\\.exp": "exp",
+        "math\\.pi": "π",
+        "numpy\\.": "",
+        "np\\.": ""
+      }
+    },
+    "custom": {
+      "name": "User Custom Engine",
+      "description": "Motor personalizado del usuario - carga DLL externa",
+      "type": "custom",
+      "enabled": false,
+      "isDefault": false,
+      "directive": "@{custom}",
+      "endDirective": "@{end custom}",
+      "assemblyPath": "",
+      "className": "",
+      "interfaceType": "IHekatanEngine"
+    }
+  },
+  "plugins": {
+    "angourimath": {
+      "name": "AngouriMath Symbolic Math",
+      "description": "Symbolic mathematics library - derivatives, integrals, equation solving",
+      "assemblyPath": "AngouriMath.dll",
+      "namespace": "AngouriMath",
+      "enabled": true,
+      "directive": "@{symbolic}",
+      "endDirective": "@{end symbolic}",
+      "functions": [
+        {
+          "calcpadName": "simplify",
+          "description": "Simplifica una expresión simbólica",
+          "signature": "simplify(expr)",
+          "returnType": "string",
+          "implementation": {
+            "type": "static",
+            "class": "MathS",
+            "method": "Simplify"
+          }
+        },
+        {
+          "calcpadName": "expand",
+          "description": "Expande una expresión algebraica",
+          "signature": "expand(expr)",
+          "returnType": "string",
+          "implementation": {
+            "type": "extension",
+            "method": "Expand"
+          }
+        },
+        {
+          "calcpadName": "diff",
+          "description": "Deriva una expresión respecto a una variable",
+          "signature": "diff(expr; var)",
+          "returnType": "string",
+          "implementation": {
+            "type": "extension",
+            "method": "Differentiate"
+          }
+        },
+        {
+          "calcpadName": "integrate",
+          "description": "Integra una expresión respecto a una variable",
+          "signature": "integrate(expr; var)",
+          "returnType": "string",
+          "implementation": {
+            "type": "extension",
+            "method": "Integrate"
+          }
+        },
+        {
+          "calcpadName": "solve",
+          "description": "Resuelve una ecuación",
+          "signature": "solve(expr; var)",
+          "returnType": "array",
+          "implementation": {
+            "type": "extension",
+            "method": "SolveEquation"
+          }
+        },
+        {
+          "calcpadName": "limit",
+          "description": "Calcula el límite de una expresión",
+          "signature": "limit(expr; var; value)",
+          "returnType": "string",
+          "implementation": {
+            "type": "static",
+            "class": "MathS",
+            "method": "Limit"
+          }
+        },
+        {
+          "calcpadName": "latex",
+          "description": "Convierte expresión a LaTeX",
+          "signature": "latex(expr)",
+          "returnType": "string",
+          "implementation": {
+            "type": "extension",
+            "method": "Latexise"
+          }
+        }
+      ]
+    },
+    "mathnet": {
+      "name": "Math.NET Numerics",
+      "description": "Numerical computing - linear algebra, statistics, special functions",
+      "assemblyPath": "MathNet.Numerics.dll",
+      "namespace": "MathNet.Numerics",
+      "enabled": false,
+      "directive": "@{mathnet}",
+      "endDirective": "@{end mathnet}",
+      "functions": [
+        {
+          "calcpadName": "cholesky",
+          "description": "Factorización de Cholesky",
+          "signature": "cholesky(matrix)",
+          "returnType": "matrix",
+          "implementation": {
+            "type": "static",
+            "class": "LinearAlgebra.Factorization.Cholesky",
+            "method": "Create"
+          }
+        },
+        {
+          "calcpadName": "svd",
+          "description": "Descomposición en valores singulares",
+          "signature": "svd(matrix)",
+          "returnType": "object",
+          "implementation": {
+            "type": "static",
+            "class": "LinearAlgebra.Factorization.Svd",
+            "method": "Create"
+          }
+        },
+        {
+          "calcpadName": "qr",
+          "description": "Factorización QR",
+          "signature": "qr(matrix)",
+          "returnType": "object",
+          "implementation": {
+            "type": "static",
+            "class": "LinearAlgebra.Factorization.QR",
+            "method": "Create"
+          }
+        },
+        {
+          "calcpadName": "lu",
+          "description": "Factorización LU",
+          "signature": "lu(matrix)",
+          "returnType": "object",
+          "implementation": {
+            "type": "static",
+            "class": "LinearAlgebra.Factorization.LU",
+            "method": "Create"
+          }
+        }
+      ]
+    },
+    "units": {
+      "name": "UnitsNet",
+      "description": "Unit conversion library with 100+ unit types",
+      "assemblyPath": "UnitsNet.dll",
+      "namespace": "UnitsNet",
+      "enabled": false,
+      "directive": "@{units}",
+      "endDirective": "@{end units}",
+      "functions": []
+    }
+  },
+  "customPlugins": {
+    "description": "Plugins personalizados del usuario",
+    "searchPaths": [
+      "./plugins",
+      "%APPDATA%/Hekatan/plugins",
+      "%USERPROFILE%/Documents/Hekatan/plugins"
+    ],
+    "autoLoad": true
+  },
+  "interfaces": {
+    "IHekatanFunction": {
+      "description": "Interface para funciones numéricas simples",
+      "methods": [
+        "double Evaluate(double[] args)",
+        "int ParameterCount { get; }",
+        "string Name { get; }",
+        "string Description { get; }"
+      ]
+    },
+    "IHekatanSymbolic": {
+      "description": "Interface para operaciones simbólicas",
+      "methods": [
+        "string Transform(string expression)",
+        "string Name { get; }",
+        "string[] Parameters { get; }"
+      ]
+    },
+    "IHekatanMatrix": {
+      "description": "Interface para operaciones con matrices",
+      "methods": [
+        "double[,] Compute(double[,] input)",
+        "string Name { get; }"
+      ]
+    }
+  },
+  "settings": {
+    "loadOnStartup": true,
+    "hotReload": false,
+    "sandboxMode": true,
+    "timeoutMs": 5000,
+    "maxMemoryMB": 512
+  },
+
+  "parserSyntax": {
+    "description": "Configuración de sintaxis del parser - define tus propios delimitadores",
+    "presets": {
+      "calcpad": {
+        "name": "Hekatan Standard",
+        "description": "Sintaxis estándar de Hekatan",
+        "comment": "'",
+        "textStart": "\"",
+        "textEnd": "\"",
+        "htmlStart": "'<",
+        "htmlEnd": "'>",
+        "mathStart": "\"<",
+        "mathEnd": "\">",
+        "assignment": "=",
+        "evaluation": "?",
+        "condition": "#if",
+        "conditionEnd": "#end if",
+        "loop": "#repeat",
+        "loopEnd": "#loop",
+        "include": "#include",
+        "macro": "#def",
+        "macroEnd": "#end def",
+        "hide": "#hide",
+        "show": "#show",
+        "val": "#val",
+        "equ": "#equ"
+      },
+      "mathcad": {
+        "name": "Mathcad Style",
+        "description": "Sintaxis estilo Mathcad Prime",
+        "comment": "//",
+        "textStart": "[[",
+        "textEnd": "]]",
+        "htmlStart": "{{",
+        "htmlEnd": "}}",
+        "mathStart": "<<",
+        "mathEnd": ">>",
+        "assignment": ":=",
+        "evaluation": "=",
+        "condition": "if",
+        "conditionEnd": "end",
+        "loop": "for",
+        "loopEnd": "end",
+        "include": "include",
+        "macro": "define",
+        "macroEnd": "end define"
+      },
+      "latex": {
+        "name": "LaTeX Style",
+        "description": "Sintaxis estilo LaTeX",
+        "comment": "%",
+        "textStart": "\\text{",
+        "textEnd": "}",
+        "htmlStart": "\\html{",
+        "htmlEnd": "}",
+        "mathStart": "$",
+        "mathEnd": "$",
+        "assignment": "=",
+        "evaluation": "\\Rightarrow",
+        "condition": "\\if",
+        "conditionEnd": "\\fi"
+      },
+      "custom": {
+        "name": "User Custom",
+        "description": "Sintaxis personalizada del usuario",
+        "enabled": false,
+        "comment": "#",
+        "textStart": "/*",
+        "textEnd": "*/",
+        "htmlStart": "<%",
+        "htmlEnd": "%>",
+        "mathStart": "${",
+        "mathEnd": "}$",
+        "assignment": "=",
+        "evaluation": "=>",
+        "condition": "@if",
+        "conditionEnd": "@endif",
+        "loop": "@for",
+        "loopEnd": "@endfor",
+        "include": "@import",
+        "macro": "@macro",
+        "macroEnd": "@endmacro"
+      }
+    },
+    "active": "calcpad",
+    "allowMixedSyntax": true,
+    "customSymbols": {
+      "description": "Define símbolos personalizados adicionales",
+      "operators": {
+        "→": "=",
+        "←": "=",
+        "≤": "<=",
+        "≥": ">=",
+        "≠": "<>",
+        "×": "*",
+        "÷": "/",
+        "√": "sqrt",
+        "∑": "$Sum",
+        "∏": "$Product",
+        "∫": "$Integral",
+        "∂": "$Derivative",
+        "∞": "1e308"
+      },
+      "functions": {
+        "sen": "sin",
+        "cos": "cos",
+        "tg": "tan",
+        "arcsen": "asin",
+        "arccos": "acos",
+        "arctg": "atan",
+        "ln": "ln",
+        "log": "log",
+        "raiz": "sqrt",
+        "abs": "abs",
+        "sgn": "sign"
+      },
+      "constants": {
+        "π": "pi",
+        "e": "e",
+        "φ": "1.618033988749895",
+        "γ": "0.5772156649015329"
+      }
+    }
+  },
+
+  "parserSelection": {
+    "description": "Configuración para elegir qué parser usar en cada sección",
+    "defaultParser": "calcpad",
+    "allowUserSelection": true,
+    "selectionDirective": "@{parser:",
+    "selectionEndDirective": "}",
+    "availableParsers": {
+      "calcpad": {
+        "name": "Hekatan Native",
+        "directive": "@{parser:calcpad}",
+        "description": "Parser nativo de Hekatan - usa el motor interno"
+      },
+      "angourimath": {
+        "name": "AngouriMath Symbolic",
+        "directive": "@{parser:symbolic}",
+        "description": "Parser simbólico - derivadas, integrales, simplificación"
+      },
+      "latex": {
+        "name": "LaTeX Translator",
+        "directive": "@{parser:latex}",
+        "description": "Traduce LaTeX a Hekatan antes de evaluar"
+      },
+      "mathcad": {
+        "name": "Mathcad Translator",
+        "directive": "@{parser:mathcad}",
+        "description": "Traduce sintaxis Mathcad a Hekatan"
+      },
+      "python": {
+        "name": "Python Math Translator",
+        "directive": "@{parser:pymath}",
+        "description": "Traduce sintaxis Python math a Hekatan"
+      },
+      "passthrough": {
+        "name": "Passthrough (No Parse)",
+        "directive": "@{parser:raw}",
+        "description": "No parsea - pasa el texto tal cual al output"
+      },
+      "custom": {
+        "name": "User Custom Parser",
+        "directive": "@{parser:custom}",
+        "description": "Tu parser personalizado definido en DLL"
+      }
+    },
+    "examples": [
+      {
+        "description": "Usar Hekatan nativo (por defecto)",
+        "code": "a = 5\\nb = sqrt(a^2 + 3)"
+      },
+      {
+        "description": "Cambiar a parser simbólico",
+        "code": "@{parser:symbolic}\\nf(x) = x^2 + 2x + 1\\nf'(x) = diff(f(x), x)\\n@{end parser}"
+      },
+      {
+        "description": "Usar LaTeX y traducir a Hekatan",
+        "code": "@{parser:latex}\\nc = \\\\frac{a + b}{2}\\n@{end parser}"
+      },
+      {
+        "description": "Inline parser selection",
+        "code": "M = @{latex}\\\\frac{q \\\\cdot L^2}{8}@{end}"
+      }
+    ]
+  },
+
+  "userDefinedExpressions": {
+    "description": "Expresiones definidas por el usuario que se expanden automáticamente",
+    "enabled": true,
+    "expressions": {
+      "Mmax": "q*L^2/8",
+      "Vmax": "q*L/2",
+      "delta_max": "5*q*L^4/(384*E*I)",
+      "sigma_flex": "M*c/I",
+      "tau_corte": "V*Q/(I*b)",
+      "As_min": "0.0018*b*d",
+      "Mn": "As*fy*(d - a/2)",
+      "Icr": "b*c^3/3 + n*As*(d-c)^2"
+    },
+    "templates": {
+      "viga_simple": {
+        "description": "Análisis de viga simplemente apoyada",
+        "parameters": ["q", "L", "E", "I"],
+        "expressions": {
+          "M(x)": "q*x*(L-x)/2",
+          "V(x)": "q*(L/2 - x)",
+          "y(x)": "q*x*(L^3 - 2*L*x^2 + x^3)/(24*E*I)"
+        }
+      },
+      "viga_empotrada": {
+        "description": "Análisis de viga empotrada-empotrada",
+        "parameters": ["q", "L", "E", "I"],
+        "expressions": {
+          "M(x)": "q*(L*x - x^2)/2 - q*L^2/12",
+          "V(x)": "q*L/2 - q*x",
+          "y(x)": "q*x^2*(L-x)^2/(24*E*I)"
+        }
+      },
+      "columna_euler": {
+        "description": "Carga crítica de Euler para columnas",
+        "parameters": ["E", "I", "L", "K"],
+        "expressions": {
+          "Pcr": "pi^2*E*I/(K*L)^2",
+          "sigma_cr": "Pcr/A",
+          "lambda": "K*L/r"
+        }
+      }
+    }
+  }
+}

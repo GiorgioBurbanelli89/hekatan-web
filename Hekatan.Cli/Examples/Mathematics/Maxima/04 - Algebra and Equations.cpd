@@ -1,0 +1,86 @@
+"<h1>Algebra and Equation Solving with Maxima CAS</h1>"
+"<h2>1. Algebraic Simplification</h2>"
+
+@{maxima}
+/* Expand */
+expand((x + y)^4);
+
+/* Factor */
+factor(x^4 - 1);
+
+factor(x^3 - 6*x^2 + 11*x - 6);
+
+/* Rational simplification */
+ratsimp((x^2 - 1)/(x - 1));
+
+/* Trigonometric simplification */
+trigsimp(sin(x)^2 + cos(x)^2);
+
+trigreduce(sin(x)^4);
+@{end maxima}
+
+"<h2>2. Solving Equations</h2>"
+
+@{maxima}
+/* Quadratic equation */
+solve(a*x^2 + b*x + c = 0, x);
+
+/* Cubic equation */
+solve(x^3 - 6*x^2 + 11*x - 6 = 0, x);
+
+/* System of nonlinear equations */
+solve([x^2 + y^2 = 25, x*y = 12], [x, y]);
+@{end maxima}
+
+"<h2>3. Partial Fractions</h2>"
+
+@{maxima}
+/* Decompose into partial fractions */
+partfrac(1/((x-1)*(x-2)*(x-3)), x);
+
+partfrac((x^2 + 1)/((x+1)^2*(x-1)), x);
+
+partfrac(1/(x^4 - 1), x);
+@{end maxima}
+
+"<h2>4. Polynomial Operations</h2>"
+
+@{maxima}
+/* GCD of polynomials */
+gcd(x^3 - 1, x^2 - 1);
+
+/* Division: quotient and remainder */
+divide(x^4 + 2*x^3 - x + 3, x^2 + 1);
+
+/* Resultant (useful for eliminating variables) */
+resultant(x^2 + y - 1, x + y^2 - 1, x);
+@{end maxima}
+
+"<h2>5. Substitution and Evaluation</h2>"
+
+@{maxima}
+/* Substitute values */
+f: x^3 + 2*x^2 - 5*x + 7;
+
+subst(3, x, f);
+
+subst([x = 1, y = 2], x^2 + y^2 + x*y);
+
+/* Evaluate numerically */
+float(sqrt(2));
+
+bfloat(%pi);
+fpprec: 30$
+bfloat(%pi);
+@{end maxima}
+
+"<h2>6. Export Roots to Calcpad</h2>"
+'<p>Solve and export numerical roots:</p>
+
+@{maxima}
+/* Solve x^3 - 2*x - 5 = 0 numerically */
+roots: allroots(x^3 - 2*x - 5);
+/* Export the real root */
+r1: rhs(roots[1]);
+printf(true, "CALCPAD:x_root=~,10f~%", realpart(r1));
+@{end maxima}

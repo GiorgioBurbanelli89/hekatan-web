@@ -1,0 +1,141 @@
+<UserControl x:Class="Hekatan.Wpf.MiniExcel.MiniExcelViewer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             Background="White">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar principal -->
+        <Border Grid.Row="0" Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="5">
+            <StackPanel Orientation="Horizontal">
+                <!-- Archivo -->
+                <Button x:Name="OpenButton" Content="Abrir" Click="OpenButton_Click"
+                        Margin="0,0,5,0" Padding="8,4" ToolTip="Abrir hoja de calculo Excel (Ctrl+O)"/>
+                <Button x:Name="SaveButton" Content="Guardar" Click="SaveButton_Click"
+                        Margin="0,0,5,0" Padding="8,4" ToolTip="Guardar (Ctrl+S)" IsEnabled="False"/>
+                <Button x:Name="SaveAsButton" Content="Guardar como..." Click="SaveAsButton_Click"
+                        Margin="0,0,15,0" Padding="8,4" ToolTip="Guardar como..." IsEnabled="False"/>
+
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,10,0"/>
+
+                <!-- Zoom -->
+                <TextBlock Text="Zoom:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <Button x:Name="ZoomOutButton" Content="-" Width="24" Click="ZoomOutButton_Click"
+                        Margin="0,0,2,0" ToolTip="Reducir zoom"/>
+                <TextBlock x:Name="ZoomLevelText" Text="100%" Width="40" TextAlignment="Center"
+                           VerticalAlignment="Center" Margin="0,0,2,0"/>
+                <Button x:Name="ZoomInButton" Content="+" Width="24" Click="ZoomInButton_Click"
+                        Margin="0,0,5,0" ToolTip="Aumentar zoom"/>
+                <Button x:Name="ZoomResetButton" Content="100%" Click="ZoomResetButton_Click"
+                        Margin="0,0,15,0" Padding="4,2" ToolTip="Restablecer zoom"/>
+
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,10,0"/>
+
+                <!-- Importar a Hekatan -->
+                <Button x:Name="ImportButton" Content="Importar a Hekatan" Click="ImportButton_Click"
+                        Margin="0,0,5,0" Padding="8,4" ToolTip="Importar datos seleccionados a Hekatan"
+                        IsEnabled="False" Background="#E8F5E9" FontWeight="Bold"/>
+                <Button x:Name="ImportAsMatrixButton" Content="Como Matriz" Click="ImportAsMatrixButton_Click"
+                        Margin="0,0,5,0" Padding="8,4" ToolTip="Importar como matriz Hekatan"
+                        IsEnabled="False"/>
+                <Button x:Name="ImportAsVectorButton" Content="Como Vector" Click="ImportAsVectorButton_Click"
+                        Margin="0,0,5,0" Padding="8,4" ToolTip="Importar como vector Hekatan"
+                        IsEnabled="False"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Barra de formulas -->
+        <Border Grid.Row="1" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Referencia de celda -->
+                <Border Grid.Column="0" Background="White" BorderBrush="#CCC" BorderThickness="1" Margin="0,0,5,0">
+                    <TextBlock x:Name="CellReferenceText" Text="A1" Padding="5,2"
+                               FontFamily="Consolas" FontWeight="Bold" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Barra de formula -->
+                <Border Grid.Column="1" Background="White" BorderBrush="#CCC" BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="fx" FontStyle="Italic" Foreground="#666"
+                                   Padding="5,2" VerticalAlignment="Center"/>
+                        <TextBox x:Name="FormulaTextBox" Grid.Column="1" BorderThickness="0"
+                                 Padding="5,2" FontFamily="Consolas"
+                                 KeyDown="FormulaTextBox_KeyDown"
+                                 IsEnabled="False"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Selector de hojas (tabs) -->
+        <Border Grid.Row="2" Background="#E8E8E8" BorderBrush="#CCC" BorderThickness="0,0,0,1"
+                x:Name="SheetTabsPanel" Visibility="Collapsed">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="SheetTabsContainer" Orientation="Horizontal" Margin="5,3"/>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Contenido principal -->
+        <Grid Grid.Row="3">
+            <!-- Placeholder cuando no hay documento -->
+            <Border x:Name="PlaceholderPanel" Background="#F8F8F8" Visibility="Visible">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="MiniExcel" FontSize="24" FontWeight="Bold" Foreground="#217346"
+                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="Visor de hojas de calculo Excel integrado"
+                               FontSize="14" Foreground="#666" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                    <Button Content="Abrir archivo .xlsx" Click="OpenButton_Click"
+                            Padding="20,10" FontSize="14"/>
+                    <TextBlock Text="o arrastra un archivo .xlsx aqui"
+                               FontSize="12" Foreground="#999" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- WebView2 para mostrar la hoja -->
+            <wv2:WebView2 x:Name="SpreadsheetWebView"
+                          DefaultBackgroundColor="White"
+                          Visibility="Collapsed"
+                          NavigationCompleted="SpreadsheetWebView_NavigationCompleted"/>
+        </Grid>
+
+        <!-- Barra de estado -->
+        <Border Grid.Row="4" Background="#F0F0F0" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="5,3">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="StatusText" Grid.Column="0" Text="Listo"
+                           VerticalAlignment="Center" Foreground="#666"/>
+                <TextBlock x:Name="ExcelVersionText" Grid.Column="1" Text=""
+                           VerticalAlignment="Center" Foreground="#999" Margin="10,0"/>
+                <TextBlock x:Name="SheetCountText" Grid.Column="2" Text=""
+                           VerticalAlignment="Center" Foreground="#666" Margin="10,0"/>
+                <TextBlock x:Name="SelectionInfoText" Grid.Column="3" Text=""
+                           VerticalAlignment="Center" Foreground="#666" Margin="10,0"/>
+                <TextBlock x:Name="SumText" Grid.Column="4" Text=""
+                           VerticalAlignment="Center" Foreground="#217346" FontWeight="Bold" Margin="10,0,0,0"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

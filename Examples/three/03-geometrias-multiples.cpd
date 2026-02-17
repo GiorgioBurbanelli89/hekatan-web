@@ -1,0 +1,144 @@
+"============================================
+"EJEMPLO 3: Geometrías Múltiples
+"============================================
+"Varios objetos 3D: esfera, cilindro, cono, toroide
+
+"PARÁMETROS:
+'Radio de esfera:'r_esf = 0.8m
+'Radio de cilindro:'r_cil = 0.5m
+'Altura de cilindro:'h_cil = 2m
+'Radio de cono:'r_con = 0.7m
+'Altura de cono:'h_con = 1.5m
+
+@{html}
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/examples/js/controls/OrbitControls.js"></script>
+<div id="canvas3" style="width:700px; height:500px; border:2px solid #ccc; margin:10px 0;"></div>
+<div style="background:#f0f0f0; padding:10px; margin:10px 0;">
+  <strong>Controles:</strong> Click izquierdo para rotar | Scroll para zoom | Click derecho para pan
+</div>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof THREE === 'undefined' || typeof THREE.OrbitControls === 'undefined') {
+    document.getElementById('canvas3').innerHTML = '<p style="color:red;">Error cargando Three.js</p>';
+    return;
+  }
+
+  // Variables de Calcpad
+  const r_sphere = @{calcpad:r_esf};
+  const r_cyl = @{calcpad:r_cil};
+  const h_cyl = @{calcpad:h_cil};
+  const r_cone = @{calcpad:r_con};
+  const h_cone = @{calcpad:h_con};
+
+  // Escena
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xe0e0e0);
+
+  // Cámara
+  const camera = new THREE.PerspectiveCamera(60, 700/500, 0.1, 1000);
+  camera.position.set(8, 6, 8);
+
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(700, 500);
+  renderer.shadowMap.enabled = true;
+  document.getElementById('canvas3').appendChild(renderer.domElement);
+
+  // Controles de órbita
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+
+  // Material común
+  const createMaterial = (color) => new THREE.MeshPhongMaterial({
+    color: color,
+    shininess: 80,
+    specular: 0x222222
+  });
+
+  // 1. ESFERA (izquierda)
+  const sphereGeom = new THREE.SphereGeometry(r_sphere, 32, 32);
+  const sphere = new THREE.Mesh(sphereGeom, createMaterial(0xe74c3c));
+  sphere.position.set(-3, r_sphere, 0);
+  sphere.castShadow = true;
+  scene.add(sphere);
+
+  // 2. CILINDRO (centro)
+  const cylGeom = new THREE.CylinderGeometry(r_cyl, r_cyl, h_cyl, 32);
+  const cylinder = new THREE.Mesh(cylGeom, createMaterial(0x3498db));
+  cylinder.position.set(0, h_cyl/2, 0);
+  cylinder.castShadow = true;
+  scene.add(cylinder);
+
+  // 3. CONO (derecha)
+  const coneGeom = new THREE.ConeGeometry(r_cone, h_cone, 32);
+  const cone = new THREE.Mesh(coneGeom, createMaterial(0x2ecc71));
+  cone.position.set(3, h_cone/2, 0);
+  cone.castShadow = true;
+  scene.add(cone);
+
+  // 4. TOROIDE (atrás)
+  const torusGeom = new THREE.TorusGeometry(1, 0.3, 16, 100);
+  const torus = new THREE.Mesh(torusGeom, createMaterial(0xf39c12));
+  torus.position.set(0, 1.5, -3);
+  torus.rotation.x = Math.PI / 4;
+  torus.castShadow = true;
+  scene.add(torus);
+
+  // Plano de suelo
+  const planeGeom = new THREE.PlaneGeometry(20, 20);
+  const planeMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    side: THREE.DoubleSide
+  });
+  const plane = new THREE.Mesh(planeGeom, planeMat);
+  plane.rotation.x = -Math.PI / 2;
+  plane.receiveShadow = true;
+  scene.add(plane);
+
+  // Iluminación
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+  scene.add(ambientLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(5, 10, 5);
+  dirLight.castShadow = true;
+  dirLight.shadow.camera.left = -10;
+  dirLight.shadow.camera.right = 10;
+  dirLight.shadow.camera.top = 10;
+  dirLight.shadow.camera.bottom = -10;
+  scene.add(dirLight);
+
+  // Grid
+  const gridHelper = new THREE.GridHelper(20, 20);
+  scene.add(gridHelper);
+
+  // Animación
+  function animate() {
+    requestAnimationFrame(animate);
+
+    // Rotaciones automáticas
+    sphere.rotation.y += 0.01;
+    cylinder.rotation.y += 0.015;
+    cone.rotation.y += 0.02;
+    torus.rotation.x += 0.01;
+    torus.rotation.y += 0.005;
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  animate();
+});
+</script>
+@{end html}
+
+"Geometrías básicas de Three.js:
+"- SphereGeometry: Esferas perfectas
+"- CylinderGeometry: Cilindros y columnas
+"- ConeGeometry: Conos y pirámides
+"- TorusGeometry: Toroides (donuts)
+"- PlaneGeometry: Planos infinitos
+"
+"Se agregó OrbitControls para navegación interactiva

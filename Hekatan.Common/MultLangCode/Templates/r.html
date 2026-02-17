@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R Output</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        .r-container {
+            margin: 10px 0;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .r-header {
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+            background: linear-gradient(135deg, #276dc3 0%, #165ba3 100%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .r-header::before {
+            content: "R>";
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .r-output {
+            background-color: #ffffff;
+            color: {{OUTPUT_COLOR}};
+            padding: 12px 15px;
+            font-family: 'Cascadia Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+
+        .r-output.error {
+            color: #cc0000;
+            border-left: 3px solid #cc0000;
+            background-color: #fff5f5;
+        }
+
+        .r-output.success {
+            color: #333333;
+        }
+
+        .r-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .r-output::-webkit-scrollbar-track {
+            background: #f0f0f0;
+        }
+
+        .r-output::-webkit-scrollbar-thumb {
+            background: #276dc3;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="r-container">
+        <div class="r-header">R</div>
+        <div class="r-output {{STATUS_CLASS}}">{{OUTPUT}}</div>
+    </div>
+</body>
+</html>

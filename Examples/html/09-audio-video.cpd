@@ -1,0 +1,103 @@
+"============================================
+"🎵 AUDIO Y VIDEO EN HTML5
+"============================================
+"Aprende a reproducir audio y video en tus páginas web.
+
+"FORMATOS SOPORTADOS
+"----------------------------------------
+'Video: MP4, WebM, Ogg
+'Audio: MP3, WAV, Ogg
+
+"ATRIBUTOS IMPORTANTES
+"----------------------------------------
+'controls → Muestra controles de reproducción
+'autoplay → Reproduce automáticamente (cuidado: molesto)
+'loop → Repite en bucle
+'muted → Sin sonido (necesario para autoplay)
+'width/height → Dimensiones del video
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>09 - Audio y Video</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .seccion {
+      background: white;
+      padding: 30px;
+      margin: 20px auto;
+      max-width: 800px;
+      border-radius: 8px;
+    }
+
+    video, audio {
+      width: 100%;
+      margin: 10px 0;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>Multimedia HTML5</h1>
+
+  <!-- #region VIDEO -->
+  <div class="seccion">
+    <h2>📹 Video</h2>
+    <p>Video de ejemplo (Big Buck Bunny - dominio público)</p>
+    <video controls width="640">
+      <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+      Tu navegador no soporta el tag de video.
+    </video>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region AUDIO -->
+  <div class="seccion">
+    <h2>🎵 Audio</h2>
+    <p>Sonido de ejemplo</p>
+    <audio controls>
+      <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+      Tu navegador no soporta el tag de audio.
+    </audio>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region CÓDIGO DE EJEMPLO -->
+  <div class="seccion">
+    <h3>💻 Código Básico</h3>
+    <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px;">
+&lt;video controls width="640"&gt;
+  &lt;source src="video.mp4" type="video/mp4"&gt;
+&lt;/video&gt;
+
+&lt;audio controls&gt;
+  &lt;source src="audio.mp3" type="audio/mpeg"&gt;
+&lt;/audio&gt;
+    </pre>
+  </div>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

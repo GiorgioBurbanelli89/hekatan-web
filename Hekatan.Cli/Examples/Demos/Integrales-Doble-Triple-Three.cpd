@@ -1,0 +1,176 @@
+"Integrales Doble y Triple con Visualización 3D
+'=================================================
+'Ejemplo de cálculo con integrales dobles y triples
+'usando cuadratura de Gauss nativa de Hekatan Calc
+'con visualización 3D usando Three.js
+
+"1. INTEGRAL SIMPLE - Área bajo una curva
+'------------------------------------------
+'Función: f(x) = sin(x)·x
+f(x) = sin(x)*x
+I_simple = $int{f(x) @ x = 0 : π}
+
+"2. INTEGRAL DOBLE - Volumen bajo superficie
+'----------------------------------------------
+'Superficie: g(x,y) = sin(x)·cos(y)
+'Dominio: [0,π] × [0,π/2]
+Vol = $dint{sin(x)*cos(y) @ x = 0 : π @ y = 0 : π/2}
+
+@{columns 2}
+'**Cálculo simbólico con Maxima**
+@{maxima}
+/* Integral doble simbólica */
+V_exact: integrate(integrate(sin(x)*cos(y), x, 0, %pi), y, 0, %pi/2);
+
+/* Volumen de un cilindro (coordenadas polares) */
+R: 2;
+V_cyl: integrate(integrate(r, r, 0, R), theta, 0, 2*%pi);
+
+/* Derivada de la superficie */
+g: sin(x)*cos(y);
+dg_dx: diff(g, x);
+dg_dy: diff(g, y);
+@{end maxima}
+
+@{column}
+'**Superficie g(x,y) = sin(x)·cos(y)**
+@{three}
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf0f0f0);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+camera.position.set(5, 4, 5);
+camera.lookAt(1.5, 0, 0.75);
+
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(5, 10, 5);
+scene.add(light);
+scene.add(new THREE.AmbientLight(0x404040));
+
+// Superficie g(x,y) = sin(x)*cos(y)
+const nx = 40, ny = 20;
+const geom = new THREE.BufferGeometry();
+const vertices = [];
+const indices = [];
+const colors = [];
+const PI = Math.PI;
+
+for (let j = 0; j <= ny; j++) {
+    for (let i = 0; i <= nx; i++) {
+        const x = (i / nx) * PI;
+        const y = (j / ny) * (PI / 2);
+        const z = Math.sin(x) * Math.cos(y);
+        vertices.push(x, z, y);
+        const t = (z + 1) / 2;
+        colors.push(0.2 + 0.8 * (1-t), 0.3 + 0.4 * t, 0.8 * t);
+    }
+}
+for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+        const a = j * (nx + 1) + i;
+        const b = a + 1;
+        const c = a + nx + 1;
+        const d = c + 1;
+        indices.push(a, b, c, b, d, c);
+    }
+}
+geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+geom.setIndex(indices);
+geom.computeVertexNormals();
+const mat = new THREE.MeshPhongMaterial({ vertexColors: true, side: THREE.DoubleSide });
+scene.add(new THREE.Mesh(geom, mat));
+
+const axLen = 4;
+scene.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0), new THREE.Vector3(0,0,0), axLen, 0xff0000));
+scene.add(new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,0), 1.5, 0x00aa00));
+scene.add(new THREE.ArrowHelper(new THREE.Vector3(0,0,1), new THREE.Vector3(0,0,0), 2, 0x0000ff));
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(450, 350);
+document.currentScript.parentElement.appendChild(renderer.domElement);
+renderer.render(scene, camera);
+@{end three}
+@{end columns}
+
+"3. INTEGRAL TRIPLE - Masa de un sólido
+'------------------------------------------
+'Densidad: ρ(x,y,z) = ρ_0·(1 + x² + y²)
+'Dominio: cubo [0,1]³
+L = 1'[m]
+ρ_0 = 2400'[kg/m³]
+M_total = $tint{ρ_0*(1 + x^2 + y^2) @ x = 0 : L @ y = 0 : L @ z = 0 : L}
+
+@{columns 2}
+'**Cálculo simbólico con Maxima**
+@{maxima}
+/* Masa con densidad variable */
+rho: 1 + x^2 + y^2;
+M: integrate(integrate(integrate(rho, z, 0, 1), y, 0, 1), x, 0, 1);
+
+/* Momento de inercia Izz */
+Izz: integrate(integrate(integrate((x^2 + y^2)*rho, z, 0, 1), y, 0, 1), x, 0, 1);
+
+/* Centro de masa */
+Mx: integrate(integrate(integrate(x*rho, z, 0, 1), y, 0, 1), x, 0, 1);
+x_cm: Mx / M;
+@{end maxima}
+
+@{column}
+'**Distribución de densidad ρ(x,y,z)**
+@{three}
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf8f8f8);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+camera.position.set(3, 2.5, 3);
+camera.lookAt(0.5, 0.5, 0.5);
+
+const light = new THREE.DirectionalLight(0xffffff, 0.8);
+light.position.set(5, 8, 5);
+scene.add(light);
+scene.add(new THREE.AmbientLight(0x505050));
+
+// Cubo unitario con puntos coloreados por densidad
+const n = 8;
+for (let ix = 0; ix < n; ix++) {
+    for (let iy = 0; iy < n; iy++) {
+        for (let iz = 0; iz < n; iz++) {
+            const x = (ix + 0.5) / n;
+            const y = (iy + 0.5) / n;
+            const z = (iz + 0.5) / n;
+            const rho = 1 + x*x + y*y;
+            const t = (rho - 1) / 2;
+            const color = new THREE.Color();
+            color.setHSL(0.65 - 0.65 * t, 0.9, 0.5);
+            const size = 0.04 + 0.06 * t;
+            const geom = new THREE.SphereGeometry(size, 6, 6);
+            const mat = new THREE.MeshPhongMaterial({ color: color, transparent: true, opacity: 0.7 });
+            const sphere = new THREE.Mesh(geom, mat);
+            sphere.position.set(x, z, y);
+            scene.add(sphere);
+        }
+    }
+}
+
+const boxGeom = new THREE.BoxGeometry(1, 1, 1);
+const edges = new THREE.EdgesGeometry(boxGeom);
+const lineMat = new THREE.LineBasicMaterial({ color: 0x333333 });
+const wireframe = new THREE.LineSegments(edges, lineMat);
+wireframe.position.set(0.5, 0.5, 0.5);
+scene.add(wireframe);
+
+scene.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0), new THREE.Vector3(0,0,0), 1.5, 0xff0000));
+scene.add(new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,0), 1.5, 0x00aa00));
+scene.add(new THREE.ArrowHelper(new THREE.Vector3(0,0,1), new THREE.Vector3(0,0,0), 1.5, 0x0000ff));
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(450, 350);
+document.currentScript.parentElement.appendChild(renderer.domElement);
+renderer.render(scene, camera);
+@{end three}
+@{end columns}
+
+"4. RESUMEN DE RESULTADOS
+'--------------------------
+'Integral simple: I_simple
+'Volumen (doble integral): Vol
+'Masa total (triple integral): M_total

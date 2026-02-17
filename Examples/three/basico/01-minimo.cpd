@@ -1,0 +1,154 @@
+"============================================
+"01 - EL EJEMPLO MÁS SIMPLE POSIBLE
+"============================================
+"Un cubo verde. HTML completo con regiones plegables.
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>01 - Three.js Cubo Simple</title>
+
+  <!-- #region ESTILOS CSS -->
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    #canvas {
+      border: 2px solid #ccc;
+      display: block;
+      margin: 20px auto;
+    }
+
+    .explicacion {
+      background: #e3f2fd;
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 800px;
+      border-left: 4px solid #2196f3;
+    }
+
+    .experimento {
+      background: #c8e6c9;
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 800px;
+      border-left: 4px solid #4caf50;
+    }
+
+    code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+  </style>
+  <!-- #endregion -->
+
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+
+  <h1>01 - Cubo Verde Simple</h1>
+
+  <!-- Contenedor del canvas Three.js -->
+  <div id="canvas" style="width: 600px; height: 400px;"></div>
+
+  <!-- #region EXPLICACIÓN -->
+  <div class="explicacion">
+    <h3>🎯 ¿Qué hace cada parte?</h3>
+    <p><strong>Scene:</strong> Habitación vacía donde pones objetos</p>
+    <p><strong>Camera:</strong> Tu punto de vista</p>
+    <p><strong>Renderer:</strong> Dibuja todo en pantalla</p>
+    <p><strong>Mesh:</strong> Geometría (forma) + Material (color)</p>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region EXPERIMENTOS -->
+  <div class="experimento">
+    <h3>🧪 Experimenta:</h3>
+    <p>Cambia estos valores y presiona F5:</p>
+    <ul>
+      <li>Color: <code>0x00ff00</code> → <code>0xff0000</code> (rojo)</li>
+      <li>Tamaño: <code>BoxGeometry(1,1,1)</code> → <code>BoxGeometry(2,2,2)</code></li>
+      <li>Cámara: <code>camera.position.z = 5</code> → <code>= 10</code> (más lejos)</li>
+    </ul>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region SCRIPTS -->
+
+  <!-- Cargar librería Three.js desde CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- #region CÓDIGO THREE.JS -->
+  <script>
+
+    // #region 1. CREAR ESCENA
+    const scene = new THREE.Scene();
+    // #endregion
+
+    // #region 2. CREAR CÁMARA
+    const camera = new THREE.PerspectiveCamera(
+      75,        // Ángulo de visión
+      600 / 400, // Aspecto (ancho/alto)
+      0.1,       // Cerca
+      1000       // Lejos
+    );
+    // #endregion
+
+    // #region 3. CREAR RENDERIZADOR
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(600, 400);
+    document.getElementById('canvas').appendChild(renderer.domElement);
+    // #endregion
+
+    // #region 4. CREAR CUBO
+    // Geometría (forma)
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+
+    // Material (color)
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+
+    // Mesh (objeto completo)
+    const cube = new THREE.Mesh(geometry, material);
+    // #endregion
+
+    // #region 5. AGREGAR A ESCENA
+    scene.add(cube);
+    // #endregion
+
+    // #region 6. POSICIONAR CÁMARA
+    camera.position.z = 5;
+    // #endregion
+
+    // #region 7. RENDERIZAR
+    renderer.render(scene, camera);
+    // #endregion
+
+    console.log('✅ Three.js cargado');
+
+  </script>
+  <!-- #endregion -->
+
+  <!-- #endregion SCRIPTS -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

@@ -1,0 +1,208 @@
+'@(h1 Analisis de Armadura Simple - Metodo de Wilson)
+'Basado en: @(b Edward L. Wilson - Analisis Estatico y Dinamico de Estructuras), Cap. 2
+'Ecuacion fundamental: @(b K u = R) (Ec. 2.14)
+
+'@(hr)
+'@(h2 1. Definicion de la Estructura)
+'Armadura simple de 4 nodos y 7 elementos (Figura 2.2 de Wilson)
+
+@{plot}
+title: Armadura Simple - Wilson Fig 2.2
+xlim: -2, 14
+ylim: -2, 10
+width: 700
+height: 450
+xlabel: x (ft)
+ylabel: y (ft)
+
+line: 0, 0, 6, 0, #333333
+line: 6, 0, 12, 0, #333333
+line: 0, 0, 6, 8, #333333
+line: 6, 0, 6, 8, #333333
+line: 0, 0, 12, 0, #3366CC
+line: 6, 8, 12, 0, #333333
+line: 6, 8, 6, 0, #333333
+
+point: 0, 0, #CC0000, 8, filled
+point: 6, 0, #CC0000, 8, filled
+point: 12, 0, #CC0000, 8, filled
+point: 6, 8, #CC0000, 8, filled
+
+text: -1.5, -0.5, "1 (apoyo)", #333333, 11
+text: 5, -1, "2", #333333, 11
+text: 12.5, -0.5, "3 (apoyo)", #333333, 11
+text: 6.5, 8.5, "4", #333333, 11
+
+text: 2.5, -0.5, "e1", #0066CC, 10
+text: 9, -0.5, "e6", #0066CC, 10
+text: 2, 4.5, "e2", #0066CC, 10
+text: 5, 4, "e3", #0066CC, 10
+text: 9.5, 4.5, "e5", #0066CC, 10
+text: 3.5, 2, "e4", #0066CC, 10
+text: 12, 1, "e7", #0066CC, 10
+
+eq: 0.5, 8.5, "L_diag = sqrt(6^2 + 8^2) = 10 ft", #003366, 11
+@{end plot}
+
+'@(h3 1.1 Propiedades)
+'Modulo de elasticidad (Acero)
+E = 29000'ksi
+'Area de seccion transversal (igual para todos)
+A = 1'in^2
+
+'@(h3 1.2 Coordenadas de nodos)
+'Nodo 1: (0, 0) - Apoyo fijo
+'Nodo 2: (6, 0) - Libre
+'Nodo 3: (12, 0) - Apoyo fijo
+'Nodo 4: (6, 8) - Libre
+
+'@(h3 1.3 Longitudes de elementos)
+L_1 = 6'ft (Nodo 1-2, horizontal)
+L_2 = sqr(6^2 + 8^2)'ft (Nodo 1-4, diagonal)
+L_3 = 8'ft (Nodo 2-4, vertical)
+L_4 = sqr(6^2 + 8^2)'ft (Nodo 1-3, diagonal larga)
+L_5 = sqr(6^2 + 8^2)'ft (Nodo 4-3, diagonal)
+L_6 = 6'ft (Nodo 2-3, horizontal)
+L_7 = 12'ft (Nodo 1-3, horizontal)
+
+'@(hr)
+'@(h2 2. Rigidez de Cada Elemento)
+'Para armadura: @(b k_i = A_i * E_i / L_i) (Ec. 2.13)
+
+'Rigideces axiales (kips/ft):
+k_1 = A*E/(L_1*12)
+k_2 = A*E/(L_2*12)
+k_3 = A*E/(L_3*12)
+k_4 = A*E/(L_4*12)
+k_5 = A*E/(L_5*12)
+k_6 = A*E/(L_6*12)
+k_7 = A*E/(L_7*12)
+
+'@(hr)
+'@(h2 3. Matriz de Rigidez del Elemento Reticular 2D)
+'Para un elemento reticular en 2D (Ec. 2.10):
+'@(b d = [-Lx/L, -Ly/L, Lx/L, Ly/L] {v})
+'Donde Lx, Ly son las proyecciones del elemento
+
+'@(h3 3.1 Cosenos directores de cada elemento)
+'Elemento 1 (1->2): Lx=6, Ly=0
+c_1 = 6/L_1
+s_1 = 0/L_1
+
+'Elemento 2 (1->4): Lx=6, Ly=8
+c_2 = 6/L_2
+s_2 = 8/L_2
+
+'Elemento 3 (2->4): Lx=0, Ly=8
+c_3 = 0/L_3
+s_3 = 8/L_3
+
+'Elemento 5 (4->3): Lx=6, Ly=-8
+c_5 = 6/L_5
+s_5 = -8/L_5
+
+'Elemento 6 (2->3): Lx=6, Ly=0
+c_6 = 6/L_6
+s_6 = 0/L_6
+
+'@(hr)
+'@(h2 4. Ensamblaje - Metodo de Rigidez Directa)
+'Wilson Ec. 3.21: @(b K = SUM(k_i))
+'Para armadura 2D, la rigidez elemental en coordenadas globales es:
+'@(b k_e = (AE/L) * [c^2, cs, -c^2, -cs; cs, s^2, -cs, -s^2; ...])
+
+'@(h3 4.1 GDL del sistema)
+'Nodos libres: 2 (u3,u4) y 4 (u5,u6) -> 4 GDL
+'Nodos fijos: 1 (u1=u2=0) y 3 (u7=0)
+'GDL activos: u3, u4, u5, u6
+
+'@(h3 4.2 Contribucion de cada elemento a K global (4x4))
+'Solo los GDL activos (nodos 2 y 4):
+
+'Elemento 1 (nodo 1->2): contribuye a u3,u4
+K_11_e1 = k_1*c_1^2
+K_12_e1 = k_1*c_1*s_1
+K_22_e1 = k_1*s_1^2
+
+'Elemento 3 (nodo 2->4): conecta u3,u4 con u5,u6
+K_11_e3 = k_3*c_3^2
+K_12_e3 = k_3*c_3*s_3
+K_22_e3 = k_3*s_3^2
+
+'Elemento 6 (nodo 2->3): contribuye a u3,u4
+K_11_e6 = k_6*c_6^2
+K_12_e6 = k_6*c_6*s_6
+K_22_e6 = k_6*s_6^2
+
+'@(h3 4.3 Matriz K ensamblada (sub-matriz nodo 2))
+'K[nodo2, nodo2] = k1 + k3 + k4 + k6 (contribuciones)
+K_33 = K_11_e1 + K_11_e3 + K_11_e6 + k_4*0.36
+K_44 = K_22_e1 + K_22_e3 + K_22_e6 + k_4*0.64
+K_34 = K_12_e1 + K_12_e3 + K_12_e6 + k_4*0.48
+
+'@(hr)
+'@(h2 5. Aplicacion de Carga)
+'Carga aplicada en nodo 4 (parte superior): P = 10 kips hacia abajo
+
+P = 10'kips
+
+'Vector de carga R = {0, 0, 0, -P}
+'(u3=0, u4=0, u5=0, u6=-P)
+
+'@(h2 6. Ecuacion Fundamental de Wilson)
+'@(b K u = R) (Ecuacion 3.33)
+'Esta es la ecuacion central de todo el analisis de elementos finitos.
+'La solucion: @(b u = K^(-1) R)
+'Las fuerzas del elemento: @(b f = k B u) (Ec. 2.16)
+
+@{plot}
+title: Diagrama de Cuerpo Libre - Equilibrio Nodal
+xlim: -3, 15
+ylim: -3, 12
+width: 700
+height: 450
+
+line: 0, 0, 6, 0, #333333
+line: 6, 0, 12, 0, #333333
+line: 0, 0, 6, 8, #333333
+line: 6, 0, 6, 8, #333333
+line: 6, 8, 12, 0, #333333
+
+point: 0, 0, #CC0000, 8, filled
+point: 6, 0, #0066CC, 8, filled
+point: 12, 0, #CC0000, 8, filled
+point: 6, 8, #0066CC, 8, filled
+
+arrow: 6, 9, 6, 8.2, #CC0000, 2
+text: 5.2, 9.5, "P = 10 kips", #CC0000, 12
+
+text: -0.5, -1, "Apoyo", #CC0000, 10
+text: 11.5, -1, "Apoyo", #CC0000, 10
+
+arrow: -1, 0, 0, 0, #006600, 1.5
+arrow: 0, -1, 0, 0, #006600, 1.5
+text: -2.5, 0.3, "R1x", #006600, 10
+text: -0.5, -1.5, "R1y", #006600, 10
+
+arrow: 13, 0, 12, 0, #006600, 1.5
+text: 13.2, 0.3, "R3x", #006600, 10
+
+eq: 1, 10.5, "K u = R (Wilson Ec. 3.33)", #003366, 13
+eq: 1, 9.5, "u = K^(-1) R", #CC0000, 12
+@{end plot}
+
+'@(hr)
+'@(h2 7. Resumen del Metodo de Wilson)
+'El procedimiento general para analisis estatico es:
+'1. Definir @(b K) = matriz de rigidez global = SUM(B^T k B)
+'2. Aplicar condiciones de borde (eliminar filas/columnas)
+'3. Resolver @(b K u = R) para desplazamientos u
+'4. Calcular fuerzas: @(b f = k B u)
+'5. Calcular esfuerzos: @(b sigma = E * epsilon)
+
+'@(h3 Ecuaciones clave del libro de Wilson:)
+'Rigidez elemental: k = integral(B^T E B dV) (Ec. 3.18)
+'Masa consistente: M = integral(N^T m N dV) (Ec. 3.46)
+'Equilibrio dinamico: @(b M u'' + K u = R) (Ec. 3.47)
+'Energia potencial: omega = 1/2 u^T K u - u^T R (Ec. 3.30)
+

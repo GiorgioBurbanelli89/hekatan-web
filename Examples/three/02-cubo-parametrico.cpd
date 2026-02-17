@@ -1,0 +1,98 @@
+"============================================
+"EJEMPLO 2: Cubo Paramétrico
+"============================================
+"Cubo con dimensiones controladas desde Calcpad
+"Las dimensiones se interpolan usando @{calcpad:variable}
+
+"PARÁMETROS DEL CUBO:
+'Ancho:'ancho = 3m
+'Alto:'alto = 2m
+'Profundidad:'prof = 1.5m
+'Color (RGB hex):'color_hex = 0x3498db
+
+#val
+'Volumen calculado:'
+V = ancho*alto*prof
+'Área superficial:'
+A = 2*(ancho*alto + ancho*prof + alto*prof)
+
+@{html}
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/build/three.min.js"></script>
+<div id="canvas2" style="width:600px; height:400px; border:2px solid #ccc; margin:10px 0;"></div>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof THREE === 'undefined') {
+    document.getElementById('canvas2').innerHTML = '<p style="color:red;">Error: Three.js no se pudo cargar</p>';
+    return;
+  }
+
+  // INTERPOLACIÓN DE VARIABLES DE CALCPAD
+  const width = @{calcpad:ancho};      // Metros
+  const height = @{calcpad:alto};
+  const depth = @{calcpad:prof};
+  const color = @{calcpad:color_hex};
+
+  console.log('Dimensiones:', width, height, depth);
+
+  // Configurar escena
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xffffff);
+
+  const camera = new THREE.PerspectiveCamera(75, 600/400, 0.1, 1000);
+  camera.position.set(width*1.5, height*1.5, depth*2);
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(600, 400);
+  document.getElementById('canvas2').appendChild(renderer.domElement);
+
+  // Crear cubo con dimensiones de Calcpad
+  const geometry = new THREE.BoxGeometry(width, height, depth);
+  const material = new THREE.MeshStandardMaterial({
+    color: color,
+    metalness: 0.3,
+    roughness: 0.6
+  });
+  const cube = new THREE.Mesh(geometry, material);
+  scene.add(cube);
+
+  // Agregar wireframe para ver la geometría
+  const edges = new THREE.EdgesGeometry(geometry);
+  const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+  const wireframe = new THREE.LineSegments(edges, edgeMaterial);
+  cube.add(wireframe);
+
+  // Iluminación
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  scene.add(ambientLight);
+
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  directionalLight.position.set(5, 8, 5);
+  scene.add(directionalLight);
+
+  // Grid helper para referencia
+  const gridHelper = new THREE.GridHelper(10, 10);
+  scene.add(gridHelper);
+
+  // Ejes de coordenadas
+  const axesHelper = new THREE.AxesHelper(Math.max(width, height, depth) * 1.2);
+  scene.add(axesHelper);
+
+  // Animación
+  function animate() {
+    requestAnimationFrame(animate);
+    cube.rotation.x += 0.005;
+    cube.rotation.y += 0.01;
+    renderer.render(scene, camera);
+  }
+
+  animate();
+});
+</script>
+@{end html}
+
+"Notas técnicas:
+"- Las variables de Calcpad se pasan con @{calcpad:nombre}
+"- Los valores mantienen sus unidades (m, mm, etc.)
+"- Se agregó grid y ejes para referencia espacial
+"- EdgeGeometry muestra los bordes del cubo

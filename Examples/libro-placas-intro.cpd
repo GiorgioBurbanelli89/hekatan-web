@@ -1,0 +1,187 @@
+@{paper}
+size: A4
+margin: 20mm 18mm 25mm 18mm
+font: "Georgia", "Times New Roman", Times, serif
+fontsize: 10pt
+color: #000000
+accent: #000000
+background: #FFFFFF
+lineheight: 1.45
+columngap: 8mm
+columns: 2
+startpage: 15
+pagenumber: right
+@{end paper}
+
+@{theme:black}
+@{end theme}
+
+@{markdown}
+# 1. Introduccion
+
+## 1.1 Definicion de placa
+
+Una **placa** es un elemento estructural plano cuyo espesor *h* es significativamente menor que sus dimensiones en planta *a* y *b*. La superficie media de la placa, equidistante de ambas caras, define el plano de referencia. Las cargas actuan predominantemente perpendiculares a este plano medio.
+
+La relacion entre el espesor y la menor dimension en planta permite clasificar las placas segun su comportamiento mecanico. Para placas delgadas, donde la relacion *h/a* es pequena (tipicamente menor a 1/10), las hipotesis de Kirchhoff-Love proporcionan resultados satisfactorios.
+
+En ingenieria estructural, las placas aparecen como losas de entrepiso, muros de contencion, tapas de tanques, tableros de puentes y muchos otros elementos. Su analisis requiere la solucion de ecuaciones diferenciales parciales que relacionan las deflexiones con las cargas aplicadas.
+
+## 1.2 Clasificacion de placas
+
+Las placas se clasifican segun diferentes criterios:
+
+**Segun el espesor relativo:**
+
+- *Placas delgadas* (*h/a* < 1/10): teoria de Kirchhoff
+- *Placas moderadamente gruesas* (1/10 < *h/a* < 1/5): teoria de Reissner-Mindlin
+- *Placas gruesas* (*h/a* > 1/5): analisis tridimensional
+
+**Segun la geometria:**
+
+- Placas rectangulares
+- Placas circulares
+- Placas anulares
+- Placas de forma irregular
+
+**Segun las condiciones de apoyo:**
+
+- Simplemente apoyada en todos los bordes
+- Empotrada en todos los bordes
+- Voladizo (un borde empotrado, tres libres)
+- Combinaciones de apoyos
+
+**Segun el material:**
+
+- Placas isotropas (propiedades iguales en todas las direcciones)
+- Placas ortotropas (propiedades diferentes en dos direcciones perpendiculares)
+- Placas laminadas (compuestas por capas de diferentes materiales)
+
+## 1.3 Hipotesis fundamentales
+
+La teoria clasica de placas delgadas (Kirchhoff-Love) se basa en las siguientes hipotesis:
+
+1. El espesor *h* de la placa es pequeno comparado con las dimensiones en planta.
+2. Las deflexiones *w* son pequenas comparadas con el espesor.
+3. Las secciones planas normales al plano medio permanecen planas y normales despues de la deformacion.
+4. Las tensiones normales en la direccion del espesor son despreciables.
+@{end markdown}
+
+@{pagebreak}
+left: TEORIA DE PLACAS
+right: 15
+linecolor: #000
+textcolor: #000
+@{end pagebreak}
+
+@{markdown}
+## 1.4 Ecuacion diferencial de la placa
+
+La ecuacion diferencial que gobierna la deflexion *w* de una placa delgada isotropa bajo carga transversal *q* es la ecuacion biharmonica. Esta ecuacion fue derivada por primera vez por Lagrange en 1811 y posteriormente refinada por Sophie Germain y Navier.
+@{end markdown}
+
+@{eq}
+(∂^2M_x)/(∂x^2) + 2*(∂^2M_{xy})/(∂x*∂y) + (∂^2M_y)/(∂y^2) + q = 0    (1.1)
+@{end eq}
+
+@{eq}
+D*∇^4*w = q    (1.2)
+@{end eq}
+
+@{markdown}
+donde *D* es la rigidez flexural de la placa:
+@{end markdown}
+
+@{eq}
+D = E*h^3/(12*(1 - ν^2))    (1.3)
+@{end eq}
+
+@{markdown}
+con *E* el modulo de elasticidad, *ν* el coeficiente de Poisson y *h* el espesor.
+
+La deflexion maxima de una placa rectangular simplemente apoyada bajo carga uniforme puede expresarse como:
+@{end markdown}
+
+@{eq}
+θ = α*q/E*(a/h)^4    (1.4)
+@{end eq}
+
+@{markdown}
+donde *α* es un coeficiente que depende de la relacion de lados *a/b* y de las condiciones de apoyo.
+
+## 1.5 Parametros de comparacion
+
+La siguiente tabla muestra los coeficientes *α* para placas rectangulares con diferentes condiciones de apoyo y relaciones de lados:
+@{end markdown}
+
+@{table}
+headers: Condicion de apoyo; a/b=1.0; a/b=1.5; a/b=2.0; a/b=3.0; a/b=∞
+4 lados simp. apoyados; 0.0444; 0.0843; 0.1106; 0.1335; 0.1422
+4 lados empotrados; 0.0138; 0.0277; 0.0404; 0.0519; 0.0571
+2 opuestos simp.+2 emp.; 0.0209; 0.0428; 0.0611; 0.0778; 0.0834
+Voladizo (1 emp.+3 lib.); 0.1265; 0.1478; 0.1510; 0.1520; 0.1522
+style: bordered
+@{end table}
+
+@{pagebreak}
+left: TEORIA DE PLACAS
+right: 16
+linecolor: #000
+textcolor: #000
+@{end pagebreak}
+
+@{markdown}
+## 1.6 Tipos de calculo
+
+El analisis de placas comprende los siguientes tipos de calculo:
+
+**Fuerzas internas:**
+Las fuerzas internas por unidad de longitud se obtienen integrando las tensiones a traves del espesor. Estas resultantes incluyen fuerzas normales, cortantes, momentos flectores y momentos torsores:
+@{end markdown}
+
+@{eq}
+N_x = ∫_{-h/2}^{h/2} σ_x*dz    (1.5a)
+M_x = ∫_{-h/2}^{h/2} σ_x*z*dz    (1.5b)
+T_{xy} = ∫_{-h/2}^{h/2} τ_{xy}*dz    (1.5c)
+@{end eq}
+
+@{markdown}
+**Frecuencias propias:**
+El analisis dinamico de placas requiere la solucion del problema de valores propios. Las frecuencias naturales de vibracion se determinan resolviendo:
+@{end markdown}
+
+@{eq}
+D*∇^4*w - ρ*h*ω^2*w = 0    (1.6)
+@{end eq}
+
+@{markdown}
+donde *ρ* es la densidad del material y *ω* las frecuencias circulares.
+
+**Estabilidad:**
+El pandeo de placas se analiza mediante la ecuacion de estabilidad que incluye las fuerzas en el plano:
+@{end markdown}
+
+@{eq}
+D*∇^4*w + N_x*(∂^2w)/(∂x^2) + 2*N_{xy}*(∂^2w)/(∂x*∂y) + N_y*(∂^2w)/(∂y^2) = 0    (1.7)
+@{end eq}
+
+@{markdown}
+donde *N_x*, *N_y* y *N_{xy}* son las fuerzas de compresion en el plano.
+
+**Metodos de solucion:**
+
+- *Metodos analiticos:* Series de Navier, series de Levy, funciones de Green
+- *Metodos aproximados:* Rayleigh-Ritz, Galerkin, diferencias finitas
+- *Metodos numericos:* Elementos finitos (FEM), elementos de contorno (BEM)
+
+En la practica moderna, el metodo de elementos finitos es el mas utilizado debido a su versatilidad para geometrias complejas, condiciones de apoyo arbitrarias y cargas no uniformes. Sin embargo, las soluciones analiticas siguen siendo importantes como referencia para la validacion de modelos numericos y para la comprension del comportamiento fundamental de las placas.
+
+Los capitulos siguientes desarrollan cada uno de estos temas en detalle, comenzando por el analisis de esfuerzos internos en el Capitulo 2.
+@{end markdown}
+
+@{pagebreak}
+left: TEORIA DE PLACAS
+right: 17
+linecolor: #000
+textcolor: #000
+@{end pagebreak}

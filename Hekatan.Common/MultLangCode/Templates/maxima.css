@@ -1,0 +1,263 @@
+/* ========== Maxima CAS @{maxima} Block Styles ========== */
+
+/* Container */
+.maxima-block {
+    border: 1px solid #4a90d9;
+    border-radius: 6px;
+    margin: 12px 0;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.maxima-header {
+    background: linear-gradient(135deg, #4a90d9, #357abd);
+    color: white;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.maxima-header .collapse-icon {
+    display: inline-block;
+    width: 16px;
+    transition: transform 0.2s;
+}
+
+.maxima-header:hover {
+    background: linear-gradient(135deg, #5a9ee6, #4088cc);
+}
+
+.maxima-body {
+    padding: 10px;
+    background: #f8f9fa;
+}
+
+/* ========== Input/Output Table ========== */
+.maxima-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+    font-size: 10.5pt;
+}
+
+.maxima-input td {
+    padding: 4px 10px;
+    color: #333;
+    white-space: pre-wrap;
+    border-bottom: 1px solid #eee;
+}
+
+.maxima-output td {
+    padding: 4px 10px 8px 10px;
+    color: #0066cc;
+    font-weight: bold;
+    white-space: pre-wrap;
+    border-bottom: 1px solid #ddd;
+    background: rgba(0, 102, 204, 0.03);
+}
+
+.maxima-label {
+    color: #999;
+    font-size: 0.8em;
+    font-weight: normal;
+    user-select: none;
+}
+
+.maxima-input .maxima-label { color: #888; }
+.maxima-output .maxima-label { color: #6699cc; }
+
+/* ========== Expression Styling ========== */
+.maxima-expr {
+    font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+    font-size: 11pt;
+}
+
+.maxima-const {
+    color: #d73a49;
+    font-style: italic;
+    font-weight: bold;
+}
+
+/* ========== Matrix Rendering - Bracket Style [ ] ========== */
+/* Uses empty bracket cells (first/last in each row) to form brackets */
+.maxima-matrix {
+    display: inline-table;
+    margin: 4px 4px;
+    vertical-align: middle;
+}
+
+.maxima-matrix .mrow {
+    display: table-row;
+}
+
+.maxima-matrix .mcell {
+    display: table-cell;
+    padding: 0 2pt;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 10pt;
+    min-width: 10pt;
+}
+
+/* Empty bracket cells form the [ ] shape - matches Calcpad native .matrix styling */
+.maxima-matrix .mcell.mbracket {
+    width: 0.75pt;
+    min-width: 0.75pt;
+    max-width: 0.75pt;
+    padding: 0 1pt;
+}
+
+.maxima-matrix .mcell.mbracket:first-child {
+    border-left: solid 1pt black;
+}
+
+.maxima-matrix .mcell.mbracket:last-child {
+    border-right: solid 1pt black;
+}
+
+.maxima-matrix .mrow:first-child .mcell.mbracket {
+    border-top: solid 1pt black;
+}
+
+.maxima-matrix .mrow:last-child .mcell.mbracket {
+    border-bottom: solid 1pt black;
+}
+
+/* ========== Fraction Rendering - Calcpad Native Style ========== */
+/* These are fallbacks in case the main template.html CSS is not loaded.
+   Normally, .dvc, .dvl, .b0-b3 are defined in template.html already. */
+.maxima-expr .dvc {
+    display: inline-block;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding-left: 2pt;
+    padding-right: 2pt;
+    text-align: center;
+    line-height: 110%;
+}
+
+.maxima-expr .dvl {
+    display: block;
+    border-bottom: solid 1pt black;
+    margin-top: 1pt;
+    margin-bottom: 1pt;
+}
+
+/* Tall parentheses for fractions - matches Calcpad native .b1 */
+.maxima-expr .b1 {
+    vertical-align: middle;
+    font-weight: 100;
+    font-stretch: ultra-condensed;
+    font-family: 'Jost* Thin', sans-serif;
+    font-size: 240%;
+    margin-top: -3pt;
+    margin-left: -1pt;
+    margin-right: -1pt;
+}
+
+/* ========== Clean Calcpad-Style Output (no In/Out, no table) ========== */
+.maxima-clean {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+    margin: 4px 0;
+}
+
+.maxima-eq {
+    font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+    font-size: 11pt;
+    margin: 2px 0;
+    padding: 2px 0;
+    line-height: 160%;
+}
+
+.maxima-eq b {
+    color: #0066cc;
+}
+
+.maxima-desc {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 10pt;
+    color: #555;
+    font-style: italic;
+    margin: 6px 0 2px 0;
+    padding: 0;
+}
+
+/* ========== Warnings, Errors, Code ========== */
+.maxima-warning {
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: #fff3cd;
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.maxima-error {
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: #f8d7da;
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.maxima-not-found {
+    border: 1px solid #cc0000;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 10px 0;
+    background: #fff0f0;
+}
+
+.maxima-not-found strong { color: #cc0000; }
+
+.maxima-code {
+    background: #f5f5f5;
+    padding: 8px;
+    margin: 4px 0;
+    border-radius: 4px;
+    font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    font-size: 9.5pt;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+/* ========== Exported Variables ========== */
+.maxima-export {
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: #e8f5e9;
+    border-radius: 4px;
+    font-size: 0.9em;
+    border-left: 3px solid #4caf50;
+}
+
+.maxima-export .var-name {
+    color: #2e7d32;
+    font-weight: bold;
+    font-family: Consolas, monospace;
+}
+
+.maxima-export .var-value {
+    color: #1b5e20;
+    font-family: Consolas, monospace;
+}
+
+/* ========== Print Styles ========== */
+@media print {
+    .maxima-block {
+        break-inside: avoid;
+        box-shadow: none;
+    }
+}

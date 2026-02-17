@@ -1,0 +1,1212 @@
+"============================================
+"📚 GUÍA COMPLETA DE HTML DESDE CERO
+"============================================
+"Aprende TODOS los símbolos y etiquetas de HTML.
+
+'Esta es una guía de referencia completa
+'Úsala para consultar cuando tengas dudas
+'Organizada por categorías
+
+@{markdown}
+# 📖 GUÍA COMPLETA DE HTML DESDE CERO
+
+## 📌 TABLA DE CONTENIDOS
+
+1. [Estructura Básica](#estructura-básica)
+2. [Símbolos Especiales](#símbolos-especiales)
+3. [Etiquetas de Texto](#etiquetas-de-texto)
+4. [Etiquetas de Encabezado](#etiquetas-de-encabezado)
+5. [Listas](#listas)
+6. [Enlaces](#enlaces)
+7. [Imágenes](#imágenes)
+8. [Tablas](#tablas)
+9. [Formularios](#formularios)
+10. [Multimedia](#multimedia)
+11. [Contenedores](#contenedores)
+12. [Etiquetas Semánticas](#etiquetas-semánticas)
+13. [Metadatos](#metadatos)
+14. [Atributos Globales](#atributos-globales)
+
+---
+
+## 1. ESTRUCTURA BÁSICA
+
+### `<!DOCTYPE html>`
+**Qué es:** Declaración del tipo de documento
+**Para qué:** Le dice al navegador que esto es HTML5
+**Dónde:** SIEMPRE primera línea del archivo
+**Ejemplo:**
+```html
+<!DOCTYPE html>
+```
+
+### `<html>`
+**Qué es:** Etiqueta raíz (contenedor principal)
+**Para qué:** Envuelve TODO el contenido HTML
+**Atributos comunes:** `lang="es"` (idioma del documento)
+**Ejemplo:**
+```html
+<html lang="es">
+  <!-- Todo tu código aquí -->
+</html>
+```
+
+### `<head>`
+**Qué es:** Cabecera del documento
+**Para qué:** Contiene metadatos (información SOBRE la página, no contenido visible)
+**Contiene:** `<title>`, `<meta>`, `<link>`, `<style>`, `<script>`
+**Ejemplo:**
+```html
+<head>
+  <meta charset="UTF-8">
+  <title>Mi Página</title>
+</head>
+```
+
+### `<body>`
+**Qué es:** Cuerpo del documento
+**Para qué:** Contiene TODO el contenido VISIBLE de la página
+**Ejemplo:**
+```html
+<body>
+  <h1>Bienvenido</h1>
+  <p>Este es el contenido visible</p>
+</body>
+```
+
+---
+
+## 2. SÍMBOLOS ESPECIALES
+
+### `< >` (Menor que, Mayor que)
+**Qué son:** Delimitadores de etiquetas HTML
+**Para qué:** Abrir y cerrar etiquetas
+**Ejemplo:** `<p>Texto</p>`
+
+### `</>`
+**Qué es:** Etiqueta de cierre
+**Para qué:** Cerrar una etiqueta abierta
+**Ejemplo:** `<p>` se cierra con `</p>`
+
+### `/` (Slash en etiquetas)
+**Qué es:** Indica cierre o auto-cierre
+**Usos:**
+- `</p>` - Etiqueta de cierre
+- `<img />` - Etiqueta auto-cerrada (opcional en HTML5)
+
+### `" "` (Comillas dobles)
+**Qué son:** Delimitadores de valores de atributos
+**Para qué:** Encerrar valores de atributos
+**Ejemplo:** `<a href="https://google.com">`
+
+### `' '` (Comillas simples)
+**Qué son:** Alternativa a comillas dobles
+**Para qué:** También para valores de atributos
+**Ejemplo:** `<a href='https://google.com'>`
+
+### `=` (Igual)
+**Qué es:** Asignador de valores
+**Para qué:** Asignar valor a un atributo
+**Ejemplo:** `class="mi-clase"`
+
+### `<!-- -->` (Comentarios)
+**Qué son:** Comentarios HTML
+**Para qué:** Notas que NO se muestran en la página
+**Ejemplo:**
+```html
+<!-- Este es un comentario -->
+<p>Esto SÍ se ve</p>
+<!-- Esto NO se ve -->
+```
+
+### `&` (Ampersand)
+**Qué es:** Inicio de entidad HTML
+**Para qué:** Escribir caracteres especiales
+**Ejemplo:** `&lt;` = `<`, `&gt;` = `>`, `&amp;` = `&`
+
+### `;` (Punto y coma en entidades)
+**Qué es:** Final de entidad HTML
+**Ejemplo:** `&nbsp;` (espacio), `&copy;` (©)
+
+---
+
+## 3. ETIQUETAS DE TEXTO
+
+### `<p>` - Párrafo
+**Para qué:** Definir un párrafo de texto
+**Cierra:** `</p>`
+**Ejemplo:**
+```html
+<p>Este es un párrafo de texto.</p>
+```
+
+### `<br>` - Salto de línea
+**Para qué:** Crear un salto de línea (enter)
+**Cierra:** NO necesita cierre (etiqueta vacía)
+**Ejemplo:**
+```html
+Primera línea<br>
+Segunda línea
+```
+
+### `<hr>` - Línea horizontal
+**Para qué:** Crear una línea horizontal (separador)
+**Cierra:** NO necesita cierre
+**Ejemplo:**
+```html
+<p>Texto arriba</p>
+<hr>
+<p>Texto abajo</p>
+```
+
+### `<strong>` - Texto importante (negrita)
+**Para qué:** Texto con importancia fuerte (se muestra en negrita)
+**Semántica:** Indica que el texto es importante
+**Ejemplo:**
+```html
+<p>Esto es <strong>muy importante</strong></p>
+```
+
+### `<b>` - Negrita (solo visual)
+**Para qué:** Texto en negrita SIN importancia semántica
+**Diferencia con `<strong>`:** Solo visual, no semántico
+**Ejemplo:**
+```html
+<p>Esto es <b>negrita</b></p>
+```
+
+### `<em>` - Énfasis (cursiva)
+**Para qué:** Texto con énfasis (se muestra en cursiva)
+**Semántica:** Indica énfasis
+**Ejemplo:**
+```html
+<p>Esto es <em>importante</em></p>
+```
+
+### `<i>` - Cursiva (solo visual)
+**Para qué:** Texto en cursiva SIN énfasis semántico
+**Diferencia con `<em>`:** Solo visual
+**Ejemplo:**
+```html
+<p>Esto es <i>cursiva</i></p>
+```
+
+### `<u>` - Subrayado
+**Para qué:** Texto subrayado
+**Ejemplo:**
+```html
+<p>Texto <u>subrayado</u></p>
+```
+
+### `<s>` o `<del>` - Tachado
+**Para qué:** Texto tachado (eliminado)
+**Ejemplo:**
+```html
+<p><s>Precio: $100</s> Ahora: $50</p>
+```
+
+### `<small>` - Texto pequeño
+**Para qué:** Texto más pequeño (letra chica)
+**Ejemplo:**
+```html
+<p>Texto normal <small>texto pequeño</small></p>
+```
+
+### `<mark>` - Texto resaltado
+**Para qué:** Resaltar texto (fondo amarillo por defecto)
+**Ejemplo:**
+```html
+<p>Esto es <mark>resaltado</mark></p>
+```
+
+### `<code>` - Código
+**Para qué:** Mostrar código inline
+**Ejemplo:**
+```html
+<p>Usa <code>console.log()</code> para imprimir</p>
+```
+
+### `<pre>` - Texto preformateado
+**Para qué:** Preservar espacios y saltos de línea
+**Ejemplo:**
+```html
+<pre>
+Esto    conserva
+  los espacios
+    y saltos
+</pre>
+```
+
+### `<sub>` - Subíndice
+**Para qué:** Texto en subíndice
+**Ejemplo:**
+```html
+<p>H<sub>2</sub>O (agua)</p>
+```
+
+### `<sup>` - Superíndice
+**Para qué:** Texto en superíndice
+**Ejemplo:**
+```html
+<p>E = mc<sup>2</sup></p>
+```
+
+### `<abbr>` - Abreviatura
+**Para qué:** Definir abreviaturas
+**Atributo:** `title` (significado completo)
+**Ejemplo:**
+```html
+<p><abbr title="HyperText Markup Language">HTML</abbr></p>
+```
+
+### `<q>` - Cita corta inline
+**Para qué:** Cita corta dentro de un párrafo
+**Ejemplo:**
+```html
+<p>Einstein dijo: <q>E=mc²</q></p>
+```
+
+### `<blockquote>` - Cita en bloque
+**Para qué:** Cita larga en bloque separado
+**Ejemplo:**
+```html
+<blockquote>
+  Esto es una cita larga que ocupa su propio bloque.
+</blockquote>
+```
+
+---
+
+## 4. ETIQUETAS DE ENCABEZADO
+
+### `<h1>` a `<h6>` - Encabezados
+**Para qué:** Títulos y subtítulos (jerarquía)
+**Niveles:** h1 (más importante) a h6 (menos importante)
+**Regla:** Solo UN `<h1>` por página
+**Ejemplo:**
+```html
+<h1>Título Principal</h1>
+<h2>Subtítulo</h2>
+<h3>Sub-subtítulo</h3>
+<h4>Nivel 4</h4>
+<h5>Nivel 5</h5>
+<h6>Nivel 6</h6>
+```
+
+**Tamaños por defecto:**
+- `<h1>` - 2em (muy grande)
+- `<h2>` - 1.5em (grande)
+- `<h3>` - 1.17em (mediano)
+- `<h4>` - 1em (normal)
+- `<h5>` - 0.83em (pequeño)
+- `<h6>` - 0.67em (muy pequeño)
+
+---
+
+## 5. LISTAS
+
+### `<ul>` - Lista no ordenada (viñetas)
+**Para qué:** Lista con viñetas (bullets)
+**Contiene:** `<li>` (items de lista)
+**Ejemplo:**
+```html
+<ul>
+  <li>Primer elemento</li>
+  <li>Segundo elemento</li>
+  <li>Tercer elemento</li>
+</ul>
+```
+
+### `<ol>` - Lista ordenada (números)
+**Para qué:** Lista numerada
+**Atributos:**
+- `type="1"` - Números (1, 2, 3)
+- `type="A"` - Letras mayúsculas (A, B, C)
+- `type="a"` - Letras minúsculas (a, b, c)
+- `type="I"` - Números romanos mayúsculas (I, II, III)
+- `type="i"` - Números romanos minúsculas (i, ii, iii)
+- `start="5"` - Comenzar desde el número 5
+
+**Ejemplo:**
+```html
+<ol>
+  <li>Primer paso</li>
+  <li>Segundo paso</li>
+  <li>Tercer paso</li>
+</ol>
+```
+
+### `<li>` - Item de lista
+**Para qué:** Cada elemento dentro de `<ul>` o `<ol>`
+**Ejemplo:**
+```html
+<ul>
+  <li>Item 1</li>
+  <li>Item 2</li>
+</ul>
+```
+
+### `<dl>` - Lista de definiciones
+**Para qué:** Lista de términos y definiciones
+**Contiene:** `<dt>` (término) y `<dd>` (definición)
+**Ejemplo:**
+```html
+<dl>
+  <dt>HTML</dt>
+  <dd>HyperText Markup Language</dd>
+
+  <dt>CSS</dt>
+  <dd>Cascading Style Sheets</dd>
+</dl>
+```
+
+### `<dt>` - Término de definición
+**Para qué:** Término a definir
+
+### `<dd>` - Definición
+**Para qué:** Definición del término
+
+---
+
+## 6. ENLACES
+
+### `<a>` - Enlace (anchor)
+**Para qué:** Crear enlaces/hipervínculos
+**Atributos principales:**
+- `href` - URL de destino (OBLIGATORIO)
+- `target` - Dónde abrir el enlace
+  - `_self` - Misma pestaña (por defecto)
+  - `_blank` - Nueva pestaña
+  - `_parent` - Frame padre
+  - `_top` - Ventana completa
+- `title` - Tooltip al pasar el mouse
+- `download` - Descargar en lugar de navegar
+
+**Ejemplos:**
+```html
+<!-- Enlace simple -->
+<a href="https://google.com">Ir a Google</a>
+
+<!-- Abrir en nueva pestaña -->
+<a href="https://google.com" target="_blank">Google (nueva pestaña)</a>
+
+<!-- Enlace a otra página del sitio -->
+<a href="contacto.html">Contacto</a>
+
+<!-- Enlace a sección de la misma página -->
+<a href="#seccion1">Ir a Sección 1</a>
+
+<!-- Enlace de email -->
+<a href="mailto:correo@ejemplo.com">Enviar email</a>
+
+<!-- Enlace de teléfono -->
+<a href="tel:+123456789">Llamar</a>
+
+<!-- Descargar archivo -->
+<a href="archivo.pdf" download>Descargar PDF</a>
+```
+
+---
+
+## 7. IMÁGENES
+
+### `<img>` - Imagen
+**Para qué:** Insertar imágenes
+**Atributos:**
+- `src` - URL de la imagen (OBLIGATORIO)
+- `alt` - Texto alternativo (OBLIGATORIO para accesibilidad)
+- `width` - Ancho en píxeles
+- `height` - Alto en píxeles
+- `title` - Tooltip
+
+**Ejemplos:**
+```html
+<!-- Imagen básica -->
+<img src="foto.jpg" alt="Descripción de la foto">
+
+<!-- Con tamaño específico -->
+<img src="foto.jpg" alt="Foto" width="300" height="200">
+
+<!-- Desde URL externa -->
+<img src="https://ejemplo.com/imagen.png" alt="Imagen externa">
+```
+
+### `<figure>` - Figura
+**Para qué:** Contenedor para imágenes con pie de foto
+**Contiene:** `<img>` + `<figcaption>`
+**Ejemplo:**
+```html
+<figure>
+  <img src="foto.jpg" alt="Paisaje">
+  <figcaption>Figura 1: Un hermoso paisaje</figcaption>
+</figure>
+```
+
+### `<figcaption>` - Pie de figura
+**Para qué:** Descripción/leyenda de la figura
+
+---
+
+## 8. TABLAS
+
+### `<table>` - Tabla
+**Para qué:** Crear tablas de datos
+**Contiene:** `<thead>`, `<tbody>`, `<tfoot>`, `<tr>`, `<th>`, `<td>`
+**Atributos (obsoletos en HTML5, usar CSS):**
+- `border` - Borde de tabla
+
+### `<thead>` - Encabezado de tabla
+**Para qué:** Agrupar filas de encabezado
+
+### `<tbody>` - Cuerpo de tabla
+**Para qué:** Agrupar filas de contenido
+
+### `<tfoot>` - Pie de tabla
+**Para qué:** Agrupar filas de pie (totales, etc.)
+
+### `<tr>` - Fila de tabla (table row)
+**Para qué:** Definir una fila
+
+### `<th>` - Celda de encabezado
+**Para qué:** Celda de encabezado (negrita y centrada por defecto)
+**Atributos:**
+- `colspan="2"` - Ocupar 2 columnas
+- `rowspan="2"` - Ocupar 2 filas
+
+### `<td>` - Celda de datos
+**Para qué:** Celda normal de datos
+
+**Ejemplo completo:**
+```html
+<table>
+  <thead>
+    <tr>
+      <th>Nombre</th>
+      <th>Edad</th>
+      <th>Ciudad</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Juan</td>
+      <td>25</td>
+      <td>Madrid</td>
+    </tr>
+    <tr>
+      <td>María</td>
+      <td>30</td>
+      <td>Barcelona</td>
+    </tr>
+  </tbody>
+</table>
+```
+
+---
+
+## 9. FORMULARIOS
+
+### `<form>` - Formulario
+**Para qué:** Contenedor de elementos de formulario
+**Atributos:**
+- `action` - URL donde enviar datos
+- `method` - Método HTTP (`GET` o `POST`)
+- `enctype` - Tipo de codificación
+  - `application/x-www-form-urlencoded` (por defecto)
+  - `multipart/form-data` (para archivos)
+
+**Ejemplo:**
+```html
+<form action="/procesar" method="POST">
+  <!-- inputs aquí -->
+</form>
+```
+
+### `<input>` - Campo de entrada
+**Para qué:** Campos de entrada de datos
+**Atributos:**
+- `type` - Tipo de input (OBLIGATORIO)
+- `name` - Nombre del campo (para enviar)
+- `value` - Valor por defecto
+- `placeholder` - Texto de ayuda
+- `required` - Campo obligatorio
+- `disabled` - Deshabilitado
+- `readonly` - Solo lectura
+
+**Tipos de input:**
+
+#### `<input type="text">` - Texto
+```html
+<input type="text" name="nombre" placeholder="Tu nombre">
+```
+
+#### `<input type="email">` - Email
+```html
+<input type="email" name="correo" placeholder="tu@email.com">
+```
+
+#### `<input type="password">` - Contraseña
+```html
+<input type="password" name="pass" placeholder="Contraseña">
+```
+
+#### `<input type="number">` - Número
+```html
+<input type="number" name="edad" min="0" max="120">
+```
+
+#### `<input type="tel">` - Teléfono
+```html
+<input type="tel" name="telefono" placeholder="123-456-7890">
+```
+
+#### `<input type="url">` - URL
+```html
+<input type="url" name="sitio" placeholder="https://ejemplo.com">
+```
+
+#### `<input type="date">` - Fecha
+```html
+<input type="date" name="nacimiento">
+```
+
+#### `<input type="time">` - Hora
+```html
+<input type="time" name="hora">
+```
+
+#### `<input type="color">` - Color
+```html
+<input type="color" name="color" value="#ff0000">
+```
+
+#### `<input type="range">` - Rango (slider)
+```html
+<input type="range" name="volumen" min="0" max="100" value="50">
+```
+
+#### `<input type="file">` - Archivo
+```html
+<input type="file" name="archivo" accept=".pdf,.jpg">
+```
+
+#### `<input type="checkbox">` - Casilla de verificación
+```html
+<input type="checkbox" name="acepto" value="si" id="check1">
+<label for="check1">Acepto términos</label>
+```
+
+#### `<input type="radio">` - Botón de radio
+```html
+<input type="radio" name="genero" value="m" id="masc">
+<label for="masc">Masculino</label>
+
+<input type="radio" name="genero" value="f" id="fem">
+<label for="fem">Femenino</label>
+```
+
+#### `<input type="submit">` - Botón de envío
+```html
+<input type="submit" value="Enviar">
+```
+
+#### `<input type="button">` - Botón simple
+```html
+<input type="button" value="Click" onclick="alert('Hola')">
+```
+
+#### `<input type="reset">` - Botón de reset
+```html
+<input type="reset" value="Limpiar">
+```
+
+#### `<input type="hidden">` - Campo oculto
+```html
+<input type="hidden" name="id" value="12345">
+```
+
+### `<textarea>` - Área de texto
+**Para qué:** Texto multilínea
+**Atributos:**
+- `rows` - Filas visibles
+- `cols` - Columnas visibles
+
+**Ejemplo:**
+```html
+<textarea name="mensaje" rows="5" cols="30" placeholder="Tu mensaje..."></textarea>
+```
+
+### `<select>` - Lista desplegable
+**Para qué:** Menú de selección
+**Contiene:** `<option>`
+**Atributos:**
+- `multiple` - Permitir selección múltiple
+
+**Ejemplo:**
+```html
+<select name="pais">
+  <option value="">Selecciona un país</option>
+  <option value="es">España</option>
+  <option value="mx">México</option>
+  <option value="ar">Argentina</option>
+</select>
+```
+
+### `<option>` - Opción de select
+**Atributos:**
+- `value` - Valor a enviar
+- `selected` - Opción por defecto
+
+### `<button>` - Botón
+**Para qué:** Botón (más flexible que `<input type="button">`)
+**Atributos:**
+- `type` - `submit`, `reset`, `button`
+
+**Ejemplo:**
+```html
+<button type="submit">Enviar</button>
+<button type="button" onclick="alert('Hola')">Click aquí</button>
+```
+
+### `<label>` - Etiqueta
+**Para qué:** Etiquetar campos de formulario
+**Atributo:** `for` - ID del input asociado
+
+**Ejemplo:**
+```html
+<label for="nombre">Nombre:</label>
+<input type="text" id="nombre" name="nombre">
+```
+
+### `<fieldset>` - Grupo de campos
+**Para qué:** Agrupar campos relacionados
+**Contiene:** `<legend>`
+
+**Ejemplo:**
+```html
+<fieldset>
+  <legend>Datos Personales</legend>
+  <input type="text" name="nombre">
+  <input type="email" name="email">
+</fieldset>
+```
+
+### `<legend>` - Leyenda de fieldset
+**Para qué:** Título del grupo
+
+---
+
+## 10. MULTIMEDIA
+
+### `<audio>` - Audio
+**Para qué:** Reproducir audio
+**Atributos:**
+- `src` - URL del audio
+- `controls` - Mostrar controles
+- `autoplay` - Reproducir automáticamente
+- `loop` - Repetir
+- `muted` - Sin sonido
+
+**Ejemplo:**
+```html
+<audio controls>
+  <source src="audio.mp3" type="audio/mpeg">
+  <source src="audio.ogg" type="audio/ogg">
+  Tu navegador no soporta audio.
+</audio>
+```
+
+### `<video>` - Video
+**Para qué:** Reproducir video
+**Atributos:**
+- `src` - URL del video
+- `controls` - Mostrar controles
+- `width`, `height` - Dimensiones
+- `autoplay` - Reproducir automáticamente
+- `loop` - Repetir
+- `muted` - Sin sonido
+- `poster` - Imagen de portada
+
+**Ejemplo:**
+```html
+<video controls width="640" height="360">
+  <source src="video.mp4" type="video/mp4">
+  <source src="video.webm" type="video/webm">
+  Tu navegador no soporta video.
+</video>
+```
+
+### `<source>` - Fuente multimedia
+**Para qué:** Especificar múltiples formatos
+**Atributos:**
+- `src` - URL
+- `type` - Tipo MIME
+
+### `<track>` - Pista de subtítulos
+**Para qué:** Agregar subtítulos a videos
+**Atributos:**
+- `src` - Archivo .vtt
+- `kind` - `subtitles`, `captions`, `descriptions`
+- `srclang` - Idioma (es, en, etc.)
+- `label` - Nombre visible
+
+**Ejemplo:**
+```html
+<video controls>
+  <source src="video.mp4" type="video/mp4">
+  <track src="subtitulos.vtt" kind="subtitles" srclang="es" label="Español">
+</video>
+```
+
+### `<iframe>` - Marco inline
+**Para qué:** Incrustar otra página web
+**Atributos:**
+- `src` - URL a incrustar
+- `width`, `height` - Dimensiones
+- `frameborder` - Borde (obsoleto, usar CSS)
+
+**Ejemplo:**
+```html
+<iframe src="https://www.youtube.com/embed/VIDEO_ID" width="560" height="315"></iframe>
+```
+
+### `<embed>` - Contenido embebido
+**Para qué:** Incrustar contenido externo (PDF, Flash, etc.)
+**Ejemplo:**
+```html
+<embed src="documento.pdf" width="600" height="400">
+```
+
+### `<object>` - Objeto embebido
+**Para qué:** Incrustar objetos externos
+
+### `<canvas>` - Lienzo
+**Para qué:** Dibujar gráficos con JavaScript
+**Atributos:**
+- `width`, `height` - Dimensiones
+
+**Ejemplo:**
+```html
+<canvas id="miCanvas" width="400" height="300"></canvas>
+<script>
+  const canvas = document.getElementById('miCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.fillRect(10, 10, 100, 100);
+</script>
+```
+
+### `<svg>` - Gráficos vectoriales
+**Para qué:** Gráficos escalables
+**Ejemplo:**
+```html
+<svg width="100" height="100">
+  <circle cx="50" cy="50" r="40" fill="red"/>
+</svg>
+```
+
+---
+
+## 11. CONTENEDORES
+
+### `<div>` - División
+**Para qué:** Contenedor genérico de bloque
+**Uso:** Agrupar elementos, aplicar estilos
+**Ejemplo:**
+```html
+<div class="contenedor">
+  <h2>Título</h2>
+  <p>Contenido</p>
+</div>
+```
+
+### `<span>` - Span
+**Para qué:** Contenedor genérico inline
+**Uso:** Aplicar estilos a parte de un texto
+**Ejemplo:**
+```html
+<p>Esto es <span style="color: red;">rojo</span> y esto no.</p>
+```
+
+---
+
+## 12. ETIQUETAS SEMÁNTICAS (HTML5)
+
+### `<header>` - Encabezado
+**Para qué:** Encabezado de página o sección
+**Contiene:** Logo, navegación, título
+**Ejemplo:**
+```html
+<header>
+  <h1>Mi Sitio Web</h1>
+  <nav><!-- navegación --></nav>
+</header>
+```
+
+### `<nav>` - Navegación
+**Para qué:** Enlaces de navegación principales
+**Ejemplo:**
+```html
+<nav>
+  <a href="#home">Inicio</a>
+  <a href="#about">Acerca</a>
+  <a href="#contact">Contacto</a>
+</nav>
+```
+
+### `<main>` - Contenido principal
+**Para qué:** Contenido principal único de la página
+**Regla:** Solo UNO por página
+**Ejemplo:**
+```html
+<main>
+  <article><!-- contenido --></article>
+</main>
+```
+
+### `<article>` - Artículo
+**Para qué:** Contenido independiente y autocontenido
+**Uso:** Artículos de blog, noticias, posts
+**Ejemplo:**
+```html
+<article>
+  <h2>Título del Artículo</h2>
+  <p>Contenido del artículo...</p>
+</article>
+```
+
+### `<section>` - Sección
+**Para qué:** Sección temática de contenido
+**Uso:** Agrupar contenido relacionado
+**Ejemplo:**
+```html
+<section>
+  <h2>Servicios</h2>
+  <p>Nuestros servicios...</p>
+</section>
+```
+
+### `<aside>` - Contenido lateral
+**Para qué:** Contenido relacionado pero separado
+**Uso:** Sidebar, notas, publicidad
+**Ejemplo:**
+```html
+<aside>
+  <h3>Artículos Relacionados</h3>
+  <ul>
+    <li><a href="#">Artículo 1</a></li>
+  </ul>
+</aside>
+```
+
+### `<footer>` - Pie de página
+**Para qué:** Pie de página o sección
+**Contiene:** Copyright, enlaces, contacto
+**Ejemplo:**
+```html
+<footer>
+  <p>&copy; 2024 Mi Sitio. Todos los derechos reservados.</p>
+</footer>
+```
+
+### `<details>` - Detalles desplegables
+**Para qué:** Contenido que se puede expandir/colapsar
+**Contiene:** `<summary>` (título clickeable)
+**Ejemplo:**
+```html
+<details>
+  <summary>Haz click para ver más</summary>
+  <p>Este contenido está oculto hasta que hagas click.</p>
+</details>
+```
+
+### `<summary>` - Resumen de details
+**Para qué:** Título visible del `<details>`
+
+### `<dialog>` - Diálogo/Modal
+**Para qué:** Ventana modal o diálogo
+**Ejemplo:**
+```html
+<dialog id="miDialog">
+  <p>Este es un diálogo</p>
+  <button onclick="document.getElementById('miDialog').close()">Cerrar</button>
+</dialog>
+```
+
+---
+
+## 13. METADATOS
+
+### `<meta>` - Metadatos
+**Para qué:** Información sobre el documento
+**Atributos:**
+- `charset` - Codificación de caracteres
+- `name` - Nombre del metadato
+- `content` - Valor del metadato
+- `http-equiv` - Encabezados HTTP
+
+**Ejemplos:**
+```html
+<!-- Codificación -->
+<meta charset="UTF-8">
+
+<!-- Viewport (responsive) -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Descripción (SEO) -->
+<meta name="description" content="Descripción de mi página">
+
+<!-- Palabras clave (SEO) -->
+<meta name="keywords" content="html, css, javascript">
+
+<!-- Autor -->
+<meta name="author" content="Tu Nombre">
+
+<!-- Refresh (redirigir en 5 segundos) -->
+<meta http-equiv="refresh" content="5;url=https://ejemplo.com">
+```
+
+### `<title>` - Título
+**Para qué:** Título de la página (en pestaña del navegador)
+**Obligatorio:** SÍ
+**Ejemplo:**
+```html
+<title>Mi Página Web - Inicio</title>
+```
+
+### `<link>` - Enlace externo
+**Para qué:** Vincular recursos externos (CSS, favicon, etc.)
+**Atributos:**
+- `rel` - Relación (stylesheet, icon, etc.)
+- `href` - URL del recurso
+- `type` - Tipo MIME
+
+**Ejemplos:**
+```html
+<!-- CSS -->
+<link rel="stylesheet" href="estilos.css">
+
+<!-- Favicon -->
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+
+<!-- Fuentes -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">
+```
+
+### `<style>` - Estilos CSS
+**Para qué:** CSS dentro del HTML
+**Ejemplo:**
+```html
+<style>
+  body {
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+  }
+  h1 {
+    color: blue;
+  }
+</style>
+```
+
+### `<script>` - JavaScript
+**Para qué:** JavaScript dentro o externo
+**Atributos:**
+- `src` - URL del script externo
+- `async` - Cargar asíncrono
+- `defer` - Ejecutar después del DOM
+
+**Ejemplos:**
+```html
+<!-- JavaScript inline -->
+<script>
+  console.log('Hola mundo');
+</script>
+
+<!-- JavaScript externo -->
+<script src="script.js"></script>
+
+<!-- Con defer -->
+<script src="script.js" defer></script>
+```
+
+### `<base>` - URL base
+**Para qué:** URL base para enlaces relativos
+**Ejemplo:**
+```html
+<base href="https://ejemplo.com/">
+```
+
+---
+
+## 14. ATRIBUTOS GLOBALES
+
+### `id`
+**Para qué:** Identificador único
+**Uso:** CSS, JavaScript, anclas
+**Regla:** Solo un elemento puede tener cada ID
+**Ejemplo:**
+```html
+<div id="contenedor-principal">...</div>
+```
+
+### `class`
+**Para qué:** Clases CSS (múltiples permitidas)
+**Uso:** Aplicar estilos a grupos
+**Ejemplo:**
+```html
+<p class="texto importante">...</p>
+```
+
+### `style`
+**Para qué:** Estilos CSS inline
+**Ejemplo:**
+```html
+<p style="color: red; font-size: 20px;">Texto rojo</p>
+```
+
+### `title`
+**Para qué:** Tooltip (texto al pasar mouse)
+**Ejemplo:**
+```html
+<abbr title="HyperText Markup Language">HTML</abbr>
+```
+
+### `lang`
+**Para qué:** Idioma del contenido
+**Ejemplo:**
+```html
+<p lang="en">This is in English</p>
+```
+
+### `data-*`
+**Para qué:** Atributos personalizados de datos
+**Uso:** Guardar datos custom para JavaScript
+**Ejemplo:**
+```html
+<div data-usuario-id="12345" data-rol="admin">...</div>
+```
+
+### `hidden`
+**Para qué:** Ocultar elemento
+**Ejemplo:**
+```html
+<p hidden>Este párrafo está oculto</p>
+```
+
+### `contenteditable`
+**Para qué:** Hacer elemento editable
+**Ejemplo:**
+```html
+<div contenteditable="true">Puedes editar este texto</div>
+```
+
+### `draggable`
+**Para qué:** Permitir arrastrar elemento
+**Ejemplo:**
+```html
+<div draggable="true">Arrástramer</div>
+```
+
+### `tabindex`
+**Para qué:** Orden de tabulación
+**Ejemplo:**
+```html
+<input type="text" tabindex="1">
+<input type="text" tabindex="2">
+```
+
+---
+
+## 15. ENTIDADES HTML (CARACTERES ESPECIALES)
+
+### Símbolos comunes:
+```
+&lt;      →  <   (menor que)
+&gt;      →  >   (mayor que)
+&amp;     →  &   (ampersand)
+&quot;    →  "   (comillas dobles)
+&apos;    →  '   (comillas simples)
+&nbsp;    →      (espacio no separable)
+&copy;    →  ©   (copyright)
+&reg;     →  ®   (registrado)
+&trade;   →  ™   (trademark)
+&euro;    →  €   (euro)
+&pound;   →  £   (libra)
+&yen;     →  ¥   (yen)
+&cent;    →  ¢   (centavo)
+&deg;     →  °   (grado)
+&plusmn;  →  ±   (más/menos)
+&times;   →  ×   (multiplicación)
+&divide;  →  ÷   (división)
+&frac14;  →  ¼   (un cuarto)
+&frac12;  →  ½   (un medio)
+&frac34;  →  ¾   (tres cuartos)
+```
+
+### Flechas:
+```
+&larr;    →  ←   (flecha izquierda)
+&uarr;    →  ↑   (flecha arriba)
+&rarr;    →  →   (flecha derecha)
+&darr;    →  ↓   (flecha abajo)
+&harr;    →  ↔   (flecha doble)
+```
+
+### Símbolos matemáticos:
+```
+&sum;     →  ∑   (suma)
+&prod;    →  ∏   (producto)
+&int;     →  ∫   (integral)
+&infin;   →  ∞   (infinito)
+&radic;   →  √   (raíz cuadrada)
+&prop;    →  ∝   (proporcional)
+&ne;      →  ≠   (no igual)
+&le;      →  ≤   (menor o igual)
+&ge;      →  ≥   (mayor o igual)
+```
+
+---
+
+## 📝 RESUMEN RÁPIDO
+
+### Estructura básica mínima:
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Página</title>
+</head>
+<body>
+  <h1>Hola Mundo</h1>
+  <p>Este es mi primer HTML</p>
+</body>
+</html>
+```
+
+### Etiquetas más usadas:
+- **Texto:** `<p>`, `<h1>`-`<h6>`, `<strong>`, `<em>`, `<br>`, `<hr>`
+- **Enlaces:** `<a href="...">`
+- **Imágenes:** `<img src="..." alt="...">`
+- **Listas:** `<ul>`, `<ol>`, `<li>`
+- **Contenedores:** `<div>`, `<span>`
+- **Formularios:** `<form>`, `<input>`, `<button>`, `<select>`, `<textarea>`
+- **Tablas:** `<table>`, `<tr>`, `<td>`, `<th>`
+- **Multimedia:** `<video>`, `<audio>`, `<canvas>`, `<svg>`
+- **Semánticas:** `<header>`, `<nav>`, `<main>`, `<article>`, `<section>`, `<footer>`
+
+### Reglas importantes:
+1. ✅ Siempre cerrar etiquetas (excepto las auto-cerradas)
+2. ✅ Usar comillas en atributos: `href="valor"`
+3. ✅ Un solo `<h1>` por página
+4. ✅ `<meta charset="UTF-8">` siempre en `<head>`
+5. ✅ Atributo `alt` en todas las imágenes
+6. ✅ Usar etiquetas semánticas en lugar de solo `<div>`
+7. ✅ Indentar código para legibilidad
+
+---
+
+**✅ ¡Guía completa de HTML desde cero!**
+**💡 Usa Ctrl+F para buscar etiquetas específicas**
+**📚 Consulta esta guía siempre que tengas dudas**
+
+@{end markdown}

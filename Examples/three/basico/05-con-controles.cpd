@@ -1,0 +1,256 @@
+"============================================
+"05 - MOVER LA CÁMARA CON EL MOUSE
+"============================================
+"OrbitControls: Rotar, hacer zoom y panear
+
+@{html}
+<div id="canvas" style="width: 800px; height: 500px; border: 2px solid #ccc;"></div>
+
+<p style="background: #e3f2fd; padding: 15px; margin: 10px 0;">
+  <strong>🖱️ Controles:</strong><br>
+  • <strong>Click izquierdo + arrastrar:</strong> Rotar la cámara<br>
+  • <strong>Rueda del mouse:</strong> Zoom in/out<br>
+  • <strong>Click derecho + arrastrar:</strong> Panear (mover la cámara)
+</p>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- Cargar OrbitControls -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+  // Setup básico
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x222222);
+
+  const camera = new THREE.PerspectiveCamera(75, 800 / 500, 0.1, 1000);
+  camera.position.set(5, 5, 5);  // Posición inicial de la cámara
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(800, 500);
+  document.getElementById('canvas').appendChild(renderer.domElement);
+
+  // ========================================
+  // AGREGAR ORBITCONTROLS
+  // ========================================
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  //                                       ↑       ↑
+  //                                    cámara   elemento HTML donde detectar el mouse
+
+  // Opciones de los controles
+  controls.enableDamping = true;      // Suavizado (inercia)
+  controls.dampingFactor = 0.05;      // Cuánto suavizado (0.05 = normal)
+  controls.screenSpacePanning = false; // No permitir panear verticalmente
+
+  // Límites (opcional)
+  controls.minDistance = 3;    // Qué tan cerca puede hacer zoom
+  controls.maxDistance = 20;   // Qué tan lejos puede hacer zoom
+
+  // Luz
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(5, 5, 5);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0x333333));
+
+  // Crear algunos objetos para ver
+  const cubo = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshStandardMaterial({ color: 0xff0000 })
+  );
+  cubo.position.set(-2, 0, 0);
+  scene.add(cubo);
+
+  const esfera = new THREE.Mesh(
+    new THREE.SphereGeometry(0.7, 32, 32),
+    new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+  );
+  esfera.position.set(0, 0, 0);
+  scene.add(esfera);
+
+  const cilindro = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5, 0.5, 1.5, 32),
+    new THREE.MeshStandardMaterial({ color: 0x0000ff })
+  );
+  cilindro.position.set(2, 0, 0);
+  scene.add(cilindro);
+
+  // Grid de referencia
+  const gridHelper = new THREE.GridHelper(10, 10);
+  scene.add(gridHelper);
+
+  // Ejes de referencia (X=rojo, Y=verde, Z=azul)
+  const axesHelper = new THREE.AxesHelper(5);
+  scene.add(axesHelper);
+
+  // ========================================
+  // ANIMACIÓN
+  // ========================================
+  function animate() {
+    requestAnimationFrame(animate);
+
+    // ⚠️ IMPORTANTE: Actualizar los controles
+    controls.update();  // ← Sin esto, el damping no funciona
+
+    // Rotar los objetos
+    cubo.rotation.y += 0.01;
+    esfera.rotation.y += 0.01;
+    cilindro.rotation.y += 0.01;
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+</script>
+
+<div style="background: #e3f2fd; padding: 20px; margin: 20px 0; border-left: 4px solid #2196f3;">
+  <h3>🎮 ¿Qué son los OrbitControls?</h3>
+
+  <p>OrbitControls te permiten mover la cámara con el mouse, como en programas 3D profesionales (Blender, Maya, etc.)</p>
+
+  <p><strong>3 tipos de movimiento:</strong></p>
+  <ul>
+    <li><strong>Orbitar:</strong> Rotar alrededor de un punto (click izquierdo + arrastrar)</li>
+    <li><strong>Zoom:</strong> Acercarse o alejarse (rueda del mouse)</li>
+    <li><strong>Panear:</strong> Mover la cámara lateralmente (click derecho + arrastrar)</li>
+  </ul>
+</div>
+
+<div style="background: #fff3cd; padding: 20px; margin: 20px 0; border-left: 4px solid #ffc107;">
+  <h3>⚙️ Opciones de OrbitControls:</h3>
+
+  <pre>// Crear controles
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+// Opciones comunes:
+
+controls.enableDamping = true;        // Suavizado (inercia)
+controls.dampingFactor = 0.05;        // Cuánto suavizado
+
+controls.enableZoom = true;           // Permitir zoom
+controls.enableRotate = true;         // Permitir rotar
+controls.enablePan = true;            // Permitir panear
+
+controls.minDistance = 2;             // Zoom mínimo
+controls.maxDistance = 50;            // Zoom máximo
+
+controls.maxPolarAngle = Math.PI / 2; // No permitir ver desde abajo
+controls.minPolarAngle = 0;           // No permitir ver desde arriba
+
+controls.autoRotate = true;           // Rotar automáticamente
+controls.autoRotateSpeed = 2.0;       // Velocidad de rotación automática</pre>
+</div>
+
+<div style="background: #c8e6c9; padding: 20px; margin: 20px 0; border-left: 4px solid #4caf50;">
+  <h3>🧪 Experimenta:</h3>
+
+  <ol>
+    <li><strong>Rotación automática:</strong>
+      <pre>controls.autoRotate = true;
+controls.autoRotateSpeed = 2.0;  // Velocidad</pre>
+    </li>
+
+    <li><strong>Limitar rotación vertical:</strong>
+      <pre>// No permitir ver desde abajo
+controls.maxPolarAngle = Math.PI / 2;  // 90°</pre>
+    </li>
+
+    <li><strong>Deshabilitar panear:</strong>
+      <pre>controls.enablePan = false;</pre>
+    </li>
+
+    <li><strong>Cambiar el punto al que orbita:</strong>
+      <pre>// Por defecto orbita alrededor de (0, 0, 0)
+controls.target.set(2, 0, 0);  // Orbitar alrededor del cilindro
+controls.update();  // Actualizar</pre>
+    </li>
+
+    <li><strong>Más suavizado:</strong>
+      <pre>controls.dampingFactor = 0.01;  // Más lento (más suave)</pre>
+    </li>
+  </ol>
+</div>
+
+<div style="background: #ffebee; padding: 20px; margin: 20px 0; border-left: 4px solid #f44336;">
+  <h3>⚠️ Errores Comunes:</h3>
+
+  <p><strong>Los controles no funcionan:</strong></p>
+  <ul>
+    <li>¿Cargaste el script de OrbitControls?</li>
+    <li>¿Olvidaste <code>controls.update()</code> en el loop de animación?</li>
+    <li>¿Pasaste el elemento correcto? <code>renderer.domElement</code></li>
+  </ul>
+
+  <p><strong>El movimiento no es suave:</strong></p>
+  <ul>
+    <li>¿Activaste <code>controls.enableDamping = true</code>?</li>
+    <li>¿Llamas <code>controls.update()</code> en cada frame?</li>
+  </ul>
+
+  <p><strong>La cámara se comporta raro:</strong></p>
+  <ul>
+    <li>Resetea la posición: <code>camera.position.set(5, 5, 5)</code></li>
+    <li>Resetea el target: <code>controls.target.set(0, 0, 0); controls.update()</code></li>
+  </ul>
+</div>
+
+<div style="background: #e1bee7; padding: 20px; margin: 20px 0; border-left: 4px solid #9c27b0;">
+  <h3>📝 Plantilla OrbitControls:</h3>
+
+  <pre>// 1. Crear controles
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// 2. En el loop de animación
+function animate() {
+  requestAnimationFrame(animate);
+
+  controls.update();  // ⚠️ IMPORTANTE
+
+  renderer.render(scene, camera);
+}
+
+animate();</pre>
+</div>
+
+<div style="background: #fff; padding: 20px; margin: 20px 0; border: 2px solid #333;">
+  <h3>🎯 Grid y Ejes Helpers:</h3>
+
+  <p><strong>GridHelper (Rejilla):</strong></p>
+  <pre>const gridHelper = new THREE.GridHelper(tamaño, divisiones);
+const gridHelper = new THREE.GridHelper(10, 10);  // 10x10, con 10 divisiones
+scene.add(gridHelper);</pre>
+
+  <p><strong>AxesHelper (Ejes X, Y, Z):</strong></p>
+  <pre>const axesHelper = new THREE.AxesHelper(longitud);
+const axesHelper = new THREE.AxesHelper(5);  // Ejes de longitud 5
+scene.add(axesHelper);
+
+// Colores:
+// X = Rojo
+// Y = Verde
+// Z = Azul</pre>
+
+  <p><strong>Otros Helpers útiles:</strong></p>
+  <pre>// BoxHelper - Borde de un objeto
+const boxHelper = new THREE.BoxHelper(cubo, 0xffff00);
+scene.add(boxHelper);
+
+// DirectionalLightHelper - Ver dirección de la luz
+const lightHelper = new THREE.DirectionalLightHelper(light, 1);
+scene.add(lightHelper);</pre>
+</div>
+
+<div style="background: #c8e6c9; padding: 20px; margin: 20px 0; border-left: 4px solid #4caf50;">
+  <h3>✅ Resumen:</h3>
+  <p>
+    Con OrbitControls puedes explorar tu escena 3D fácilmente.<br>
+    <strong>¡Ya tienes los fundamentos de Three.js!</strong>
+  </p>
+  <p>
+    Practica combinando lo que aprendiste:<br>
+    • Crear objetos (Paso 1-4)<br>
+    • Agregar luz (Paso 2)<br>
+    • Animar (Paso 3)<br>
+    • Controles de cámara (Paso 5)
+  </p>
+</div>
+@{end html}

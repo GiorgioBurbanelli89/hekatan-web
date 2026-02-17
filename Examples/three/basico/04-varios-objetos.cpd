@@ -1,0 +1,255 @@
+"============================================
+"04 - VARIOS OBJETOS EN LA ESCENA
+"============================================
+"Cubo, esfera y cilindro juntos
+
+@{html}
+<div id="canvas" style="width: 800px; height: 500px; border: 2px solid #ccc;"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+  // Setup
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x111111);
+
+  const camera = new THREE.PerspectiveCamera(75, 800 / 500, 0.1, 1000);
+  camera.position.z = 8;
+  camera.position.y = 2;
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(800, 500);
+  document.getElementById('canvas').appendChild(renderer.domElement);
+
+  // Luz
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(5, 5, 5);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0x333333));
+
+  // ========================================
+  // OBJETO 1: CUBO (izquierda)
+  // ========================================
+  const cuboGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+  const cuboMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });  // Rojo
+  const cubo = new THREE.Mesh(cuboGeo, cuboMat);
+
+  // Posicionar a la izquierda
+  cubo.position.x = -3;
+  cubo.position.y = 0;
+
+  scene.add(cubo);
+
+  // ========================================
+  // OBJETO 2: ESFERA (centro)
+  // ========================================
+  const esferaGeo = new THREE.SphereGeometry(1, 32, 32);
+  //                                        ↑  ↑   ↑
+  //                                     radio  segmentos (más = más suave)
+  const esferaMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });  // Verde
+  const esfera = new THREE.Mesh(esferaGeo, esferaMat);
+
+  // Posicionar en el centro
+  esfera.position.x = 0;
+  esfera.position.y = 0;
+
+  scene.add(esfera);
+
+  // ========================================
+  // OBJETO 3: CILINDRO (derecha)
+  // ========================================
+  const cilindroGeo = new THREE.CylinderGeometry(0.7, 0.7, 2, 32);
+  //                                             ↑    ↑    ↑  ↑
+  //                                        radioTop  radioBottom  altura  segmentos
+  const cilindroMat = new THREE.MeshStandardMaterial({ color: 0x0000ff });  // Azul
+  const cilindro = new THREE.Mesh(cilindroGeo, cilindroMat);
+
+  // Posicionar a la derecha
+  cilindro.position.x = 3;
+  cilindro.position.y = 0;
+
+  scene.add(cilindro);
+
+  // ========================================
+  // AGREGAR UN PLANO DE PISO
+  // ========================================
+  const pisoGeo = new THREE.PlaneGeometry(20, 20);
+  const pisoMat = new THREE.MeshStandardMaterial({
+    color: 0x444444,
+    side: THREE.DoubleSide  // Visible por ambos lados
+  });
+  const piso = new THREE.Mesh(pisoGeo, pisoMat);
+
+  // Rotar el plano para que sea horizontal (por defecto es vertical)
+  piso.rotation.x = -Math.PI / 2;  // -90 grados
+  piso.position.y = -1.5;  // Bajar
+
+  scene.add(piso);
+
+  // ========================================
+  // ANIMACIÓN
+  // ========================================
+  function animate() {
+    requestAnimationFrame(animate);
+
+    // Cada objeto rota diferente
+    cubo.rotation.x += 0.01;
+    cubo.rotation.y += 0.01;
+
+    esfera.rotation.y += 0.02;  // Más rápido
+
+    cilindro.rotation.y += 0.015;
+    cilindro.rotation.z += 0.005;  // También en Z
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+</script>
+
+<div style="background: #e3f2fd; padding: 20px; margin: 20px 0; border-left: 4px solid #2196f3;">
+  <h3>📍 Posicionar Objetos:</h3>
+
+  <p>Usa <code>.position</code> para mover objetos:</p>
+  <pre>objeto.position.x = -3;  // Izquierda
+objeto.position.x = 0;   // Centro
+objeto.position.x = 3;   // Derecha
+
+objeto.position.y = 2;   // Arriba
+objeto.position.y = 0;   // Centro
+objeto.position.y = -2;  // Abajo
+
+objeto.position.z = 5;   // Hacia ti
+objeto.position.z = -5;  // Alejándose</pre>
+
+  <p>O todo junto:</p>
+  <pre>objeto.position.set(x, y, z);
+// Ejemplo:
+objeto.position.set(3, 1, -2);</pre>
+</div>
+
+<div style="background: #fff3cd; padding: 20px; margin: 20px 0; border-left: 4px solid #ffc107;">
+  <h3>📦 Geometrías Básicas:</h3>
+
+  <p><strong>BoxGeometry (Cubo):</strong></p>
+  <pre>new THREE.BoxGeometry(ancho, alto, profundidad)
+new THREE.BoxGeometry(2, 1, 1)  // Cubo aplastado</pre>
+
+  <p><strong>SphereGeometry (Esfera):</strong></p>
+  <pre>new THREE.SphereGeometry(radio, segmentosHorizontales, segmentosVerticales)
+new THREE.SphereGeometry(1, 32, 32)    // Suave
+new THREE.SphereGeometry(1, 8, 8)      // Pixelada</pre>
+
+  <p><strong>CylinderGeometry (Cilindro):</strong></p>
+  <pre>new THREE.CylinderGeometry(radioTop, radioBottom, altura, segmentos)
+new THREE.CylinderGeometry(1, 1, 3, 32)  // Cilindro normal
+new THREE.CylinderGeometry(0, 1, 3, 32)  // Cono (radioTop = 0)</pre>
+
+  <p><strong>PlaneGeometry (Plano):</strong></p>
+  <pre>new THREE.PlaneGeometry(ancho, alto)
+new THREE.PlaneGeometry(10, 10)  // Cuadrado
+new THREE.PlaneGeometry(20, 5)   // Rectángulo</pre>
+
+  <p><strong>ConeGeometry (Cono):</strong></p>
+  <pre>new THREE.ConeGeometry(radio, altura, segmentos)
+new THREE.ConeGeometry(1, 2, 32)</pre>
+
+  <p><strong>TorusGeometry (Toroide/Dona):</strong></p>
+  <pre>new THREE.TorusGeometry(radio, tubo, segmentosRadiales, segmentosTubulares)
+new THREE.TorusGeometry(1, 0.3, 16, 100)</pre>
+</div>
+
+<div style="background: #c8e6c9; padding: 20px; margin: 20px 0; border-left: 4px solid #4caf50;">
+  <h3>🧪 Experimenta:</h3>
+
+  <ol>
+    <li><strong>Agregar más objetos:</strong>
+      <pre>const conoGeo = new THREE.ConeGeometry(1, 2, 32);
+const conoMat = new THREE.MeshStandardMaterial({ color: 0xffff00 });
+const cono = new THREE.Mesh(conoGeo, conoMat);
+cono.position.set(-3, 2, 0);  // Arriba a la izquierda
+scene.add(cono);</pre>
+    </li>
+
+    <li><strong>Cambiar colores:</strong>
+      <pre>cuboMat.color.set(0xff00ff);  // Cambiar a magenta</pre>
+    </li>
+
+    <li><strong>Hacer objetos más grandes:</strong>
+      <pre>cubo.scale.set(2, 2, 2);  // Doble de tamaño</pre>
+    </li>
+
+    <li><strong>Rotar el plano de piso:</strong>
+      <pre>// Cambiar el ángulo
+piso.rotation.x = -Math.PI / 4;  // -45 grados</pre>
+    </li>
+
+    <li><strong>Agregar wireframe a un objeto:</strong>
+      <pre>const esferaMat = new THREE.MeshStandardMaterial({
+  color: 0x00ff00,
+  wireframe: true  // Solo bordes
+});</pre>
+    </li>
+  </ol>
+</div>
+
+<div style="background: #ffebee; padding: 20px; margin: 20px 0; border-left: 4px solid #f44336;">
+  <h3>⚠️ Errores Comunes:</h3>
+
+  <p><strong>No veo el plano:</strong></p>
+  <ul>
+    <li>¿Olvidaste rotarlo? <code>piso.rotation.x = -Math.PI / 2</code></li>
+    <li>¿Agregaste <code>side: THREE.DoubleSide</code>?</li>
+  </ul>
+
+  <p><strong>La esfera se ve pixelada:</strong></p>
+  <ul>
+    <li>Aumenta los segmentos: <code>SphereGeometry(1, 64, 64)</code></li>
+  </ul>
+
+  <p><strong>Los objetos están muy juntos:</strong></p>
+  <ul>
+    <li>Aumenta la separación en X: <code>cubo.position.x = -5</code></li>
+  </ul>
+</div>
+
+<div style="background: #e1bee7; padding: 20px; margin: 20px 0; border-left: 4px solid #9c27b0;">
+  <h3>💡 Tip: Organizar con Arrays</h3>
+
+  <p>Si tienes MUCHOS objetos, usa un array:</p>
+  <pre>const objetos = [];
+
+// Crear 10 cubos en fila
+for (let i = 0; i < 10; i++) {
+  const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+  const mat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color().setHSL(i / 10, 1, 0.5)  // Color rainbow
+  });
+  const cubo = new THREE.Mesh(geo, mat);
+
+  cubo.position.x = i - 5;  // De -5 a +5
+
+  scene.add(cubo);
+  objetos.push(cubo);  // Guardar para después
+}
+
+// Animar todos
+function animate() {
+  requestAnimationFrame(animate);
+
+  objetos.forEach(obj => {
+    obj.rotation.y += 0.01;
+  });
+
+  renderer.render(scene, camera);
+}</pre>
+</div>
+
+<div style="background: #c8e6c9; padding: 20px; margin: 20px 0; border-left: 4px solid #4caf50;">
+  <h3>✅ Siguiente Paso:</h3>
+  <p>
+    Ve a <strong>05-con-controles.cpd</strong> para aprender
+    a mover la cámara con el mouse (OrbitControls).
+  </p>
+</div>
+@{end html}

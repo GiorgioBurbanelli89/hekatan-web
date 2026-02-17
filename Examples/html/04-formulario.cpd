@@ -1,0 +1,127 @@
+"============================================
+"04 - FORMULARIO HTML
+"============================================
+"Aprende a crear formularios con inputs, botones y más.
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>04 - Formulario</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .formulario {
+      background: white;
+      padding: 30px;
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .campo {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+      font-weight: bold;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #2196f3;
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+    }
+
+    button:hover {
+      background-color: #1976d2;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>Formulario de Contacto</h1>
+
+  <!-- #region FORMULARIO -->
+  <div class="formulario">
+    <form>
+      <div class="campo">
+        <label for="nombre">Nombre:</label>
+        <input type="text" id="nombre" name="nombre" placeholder="Tu nombre">
+      </div>
+
+      <div class="campo">
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" placeholder="tu@email.com">
+      </div>
+
+      <div class="campo">
+        <label for="edad">Edad:</label>
+        <input type="number" id="edad" name="edad" placeholder="18">
+      </div>
+
+      <div class="campo">
+        <label for="pais">País:</label>
+        <select id="pais" name="pais">
+          <option value="">Selecciona un país</option>
+          <option value="es">España</option>
+          <option value="mx">México</option>
+          <option value="ar">Argentina</option>
+          <option value="co">Colombia</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label for="mensaje">Mensaje:</label>
+        <textarea id="mensaje" name="mensaje" rows="4" placeholder="Escribe tu mensaje aquí..."></textarea>
+      </div>
+
+      <button type="submit">Enviar</button>
+    </form>
+  </div>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

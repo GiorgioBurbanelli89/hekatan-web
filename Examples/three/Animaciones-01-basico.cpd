@@ -1,0 +1,379 @@
+"============================================
+"ANIMACIONES - Parte 1: Conceptos Básicos
+"============================================
+"Aprende qué es una animación y cómo funciona
+
+"EXPLICACIÓN:
+"Una animación es simplemente CAMBIAR algo en cada frame
+"
+"Frame = Una imagen de la animación
+"FPS (Frames Por Segundo) = Velocidad de la animación
+"  - 30 FPS = 30 imágenes por segundo
+"  - 60 FPS = 60 imágenes por segundo (más suave)
+"
+"requestAnimationFrame() = Función que se ejecuta cada frame
+"  (aproximadamente 60 veces por segundo)
+
+@{html}
+<style>
+  .explicacion {
+    background: #e3f2fd;
+    padding: 20px;
+    border-left: 4px solid #2196f3;
+    margin: 20px 0;
+  }
+
+  .codigo-ejemplo {
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 4px;
+    font-family: monospace;
+    margin: 10px 0;
+  }
+</style>
+
+<div class="explicacion">
+  <h3>🎬 ¿Qué es una Animación?</h3>
+  <p>
+    Una animación es como un <strong>flipbook</strong> (libro de animación):
+    <br>- Cada página es ligeramente diferente
+    <br>- Al pasar las páginas rápido, parece que se mueve
+  </p>
+</div>
+
+<!-- EJEMPLO 1: Cuadrado que se mueve horizontalmente -->
+<h3>Ejemplo 1: Cuadrado Moviéndose</h3>
+<canvas id="canvas1" width="600" height="100" style="border: 2px solid #ccc;"></canvas>
+
+<script>
+  // ===================================================================
+  // EJEMPLO 1: ANIMACIÓN SIMPLE
+  // ===================================================================
+
+  // 1. Obtener el canvas (área de dibujo)
+  const canvas1 = document.getElementById('canvas1');
+  const ctx1 = canvas1.getContext('2d');
+
+  // 2. Variables de estado
+  let posX = 0;  // Posición X del cuadrado
+  const velocidad = 2;  // Píxeles por frame
+
+  // 3. Función que dibuja un frame
+  function dibujarFrame1() {
+    // Limpiar el canvas (borrar todo)
+    ctx1.clearRect(0, 0, canvas1.width, canvas1.height);
+
+    // Dibujar el cuadrado en la nueva posición
+    ctx1.fillStyle = '#4caf50';  // Color verde
+    ctx1.fillRect(posX, 30, 40, 40);  // (x, y, ancho, alto)
+
+    // Mover el cuadrado
+    posX += velocidad;
+
+    // Si sale de la pantalla, volver al inicio
+    if (posX > canvas1.width) {
+      posX = -40;  // Empezar antes del borde izquierdo
+    }
+
+    // 4. Llamar de nuevo esta función en el siguiente frame
+    requestAnimationFrame(dibujarFrame1);
+  }
+
+  // 5. Iniciar la animación
+  dibujarFrame1();
+</script>
+
+<div class="explicacion">
+  <h4>💡 Explicación del Código:</h4>
+  <div class="codigo-ejemplo">
+    1. ctx.clearRect() → Borra todo el canvas<br>
+    2. ctx.fillRect() → Dibuja un rectángulo<br>
+    3. posX += velocidad → Aumenta la posición<br>
+    4. requestAnimationFrame() → Llama la función otra vez
+  </div>
+</div>
+
+<!-- EJEMPLO 2: Cuadrado que sube y baja -->
+<h3>Ejemplo 2: Movimiento Vertical (Seno)</h3>
+<canvas id="canvas2" width="600" height="150" style="border: 2px solid #ccc;"></canvas>
+<p>FPS: <span id="fps2">0</span> | Frames: <span id="frames2">0</span></p>
+
+<script>
+  // ===================================================================
+  // EJEMPLO 2: MOVIMIENTO SINUSOIDAL
+  // ===================================================================
+
+  const canvas2 = document.getElementById('canvas2');
+  const ctx2 = canvas2.getContext('2d');
+
+  let tiempo = 0;  // Variable de tiempo
+  let frameCount2 = 0;
+  let lastTime2 = performance.now();
+
+  function dibujarFrame2() {
+    // Limpiar
+    ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+
+    // Calcular posición Y usando seno
+    // Math.sin() da valores entre -1 y 1
+    const posY = 75 + Math.sin(tiempo) * 40;
+    //         ↑              ↑           ↑
+    //      centro      oscilación    amplitud
+
+    // Dibujar círculo
+    ctx2.fillStyle = '#2196f3';
+    ctx2.beginPath();
+    ctx2.arc(300, posY, 20, 0, Math.PI * 2);  // (x, y, radio, inicio, fin)
+    ctx2.fill();
+
+    // Dibujar línea de referencia (centro)
+    ctx2.strokeStyle = '#ccc';
+    ctx2.setLineDash([5, 5]);  // Línea punteada
+    ctx2.beginPath();
+    ctx2.moveTo(0, 75);
+    ctx2.lineTo(600, 75);
+    ctx2.stroke();
+    ctx2.setLineDash([]);  // Volver a línea sólida
+
+    // Incrementar tiempo
+    tiempo += 0.05;  // Velocidad de oscilación
+
+    // Calcular FPS
+    frameCount2++;
+    const currentTime2 = performance.now();
+    if (currentTime2 - lastTime2 >= 1000) {  // Cada segundo
+      document.getElementById('fps2').textContent = frameCount2;
+      frameCount2 = 0;
+      lastTime2 = currentTime2;
+    }
+    document.getElementById('frames2').textContent = Math.floor(tiempo / 0.05);
+
+    requestAnimationFrame(dibujarFrame2);
+  }
+
+  dibujarFrame2();
+</script>
+
+<div class="explicacion">
+  <h4>📊 Math.sin() para Movimientos Suaves:</h4>
+  <p>
+    <code>Math.sin(tiempo)</code> crea movimiento de onda:
+    <br>• Cuando tiempo = 0 → sin = 0 (centro)
+    <br>• Cuando tiempo = π/2 → sin = 1 (arriba)
+    <br>• Cuando tiempo = π → sin = 0 (centro)
+    <br>• Cuando tiempo = 3π/2 → sin = -1 (abajo)
+  </p>
+</div>
+
+<!-- EJEMPLO 3: Múltiples objetos -->
+<h3>Ejemplo 3: Múltiples Objetos Animados</h3>
+<canvas id="canvas3" width="600" height="200" style="border: 2px solid #ccc;"></canvas>
+
+<script>
+  // ===================================================================
+  // EJEMPLO 3: MÚLTIPLES OBJETOS
+  // ===================================================================
+
+  const canvas3 = document.getElementById('canvas3');
+  const ctx3 = canvas3.getContext('2d');
+
+  // Crear un array de círculos
+  const circulos = [];
+  for (let i = 0; i < 10; i++) {
+    circulos.push({
+      x: Math.random() * 600,      // Posición X aleatoria
+      y: Math.random() * 200,      // Posición Y aleatoria
+      vx: (Math.random() - 0.5) * 4,  // Velocidad X (-2 a +2)
+      vy: (Math.random() - 0.5) * 4,  // Velocidad Y (-2 a +2)
+      radio: 5 + Math.random() * 15,  // Radio aleatorio
+      color: `hsl(${Math.random() * 360}, 70%, 60%)`  // Color aleatorio
+    });
+  }
+
+  function dibujarFrame3() {
+    // Limpiar
+    ctx3.clearRect(0, 0, canvas3.width, canvas3.height);
+
+    // Actualizar y dibujar cada círculo
+    circulos.forEach(circulo => {
+      // Mover
+      circulo.x += circulo.vx;
+      circulo.y += circulo.vy;
+
+      // Rebotar en los bordes
+      if (circulo.x - circulo.radio < 0 || circulo.x + circulo.radio > 600) {
+        circulo.vx *= -1;  // Invertir dirección X
+      }
+      if (circulo.y - circulo.radio < 0 || circulo.y + circulo.radio > 200) {
+        circulo.vy *= -1;  // Invertir dirección Y
+      }
+
+      // Dibujar
+      ctx3.fillStyle = circulo.color;
+      ctx3.beginPath();
+      ctx3.arc(circulo.x, circulo.y, circulo.radio, 0, Math.PI * 2);
+      ctx3.fill();
+    });
+
+    requestAnimationFrame(dibujarFrame3);
+  }
+
+  dibujarFrame3();
+</script>
+
+<div class="explicacion">
+  <h4>🎯 Conceptos Clave:</h4>
+  <ul>
+    <li><strong>Array de objetos:</strong> Guardamos múltiples círculos en una lista</li>
+    <li><strong>forEach():</strong> Recorre cada elemento del array</li>
+    <li><strong>Rebote:</strong> Invertir velocidad cuando toca un borde</li>
+    <li><strong>hsl():</strong> Sistema de color (Hue, Saturation, Lightness)</li>
+  </ul>
+</div>
+
+<!-- EJEMPLO 4: Control manual -->
+<h3>Ejemplo 4: Control con Botones</h3>
+<canvas id="canvas4" width="600" height="150" style="border: 2px solid #ccc;"></canvas>
+<div style="margin: 10px 0;">
+  <button id="btnIniciar" style="padding: 10px 20px; margin: 5px; cursor: pointer; font-size: 16px;">▶️ Iniciar</button>
+  <button id="btnPausar" style="padding: 10px 20px; margin: 5px; cursor: pointer; font-size: 16px;">⏸️ Pausar</button>
+  <button id="btnReiniciar" style="padding: 10px 20px; margin: 5px; cursor: pointer; font-size: 16px;">🔄 Reiniciar</button>
+  <br>
+  <label>Velocidad: </label>
+  <input type="range" id="velocidadSlider" min="1" max="10" value="3" style="width: 200px;">
+  <span id="velocidadValor">3</span>x
+</div>
+
+<script>
+  // ===================================================================
+  // EJEMPLO 4: ANIMACIÓN CONTROLABLE
+  // ===================================================================
+
+  const canvas4 = document.getElementById('canvas4');
+  const ctx4 = canvas4.getContext('2d');
+
+  let posX4 = 0;
+  let velocidad4 = 3;
+  let animando = false;  // Estado de la animación
+
+  function dibujarFrame4() {
+    if (!animando) return;  // Si está pausado, no hacer nada
+
+    ctx4.clearRect(0, 0, canvas4.width, canvas4.height);
+
+    // Dibujar barra de progreso
+    ctx4.fillStyle = '#4caf50';
+    ctx4.fillRect(0, 60, posX4, 30);
+
+    // Dibujar borde
+    ctx4.strokeStyle = '#333';
+    ctx4.strokeRect(0, 60, 600, 30);
+
+    // Dibujar texto de porcentaje
+    const porcentaje = Math.floor((posX4 / 600) * 100);
+    ctx4.fillStyle = '#333';
+    ctx4.font = 'bold 16px Arial';
+    ctx4.textAlign = 'center';
+    ctx4.fillText(porcentaje + '%', 300, 110);
+
+    // Mover
+    posX4 += velocidad4;
+
+    // Si llega al final, detener
+    if (posX4 >= 600) {
+      posX4 = 600;
+      animando = false;
+    }
+
+    if (animando) {
+      requestAnimationFrame(dibujarFrame4);
+    }
+  }
+
+  // Botones
+  document.getElementById('btnIniciar').addEventListener('click', () => {
+    if (posX4 >= 600) posX4 = 0;  // Si terminó, reiniciar
+    animando = true;
+    dibujarFrame4();
+  });
+
+  document.getElementById('btnPausar').addEventListener('click', () => {
+    animando = false;
+  });
+
+  document.getElementById('btnReiniciar').addEventListener('click', () => {
+    animando = false;
+    posX4 = 0;
+    ctx4.clearRect(0, 0, canvas4.width, canvas4.height);
+    ctx4.strokeRect(0, 60, 600, 30);
+    ctx4.fillStyle = '#333';
+    ctx4.font = 'bold 16px Arial';
+    ctx4.textAlign = 'center';
+    ctx4.fillText('0%', 300, 110);
+  });
+
+  document.getElementById('velocidadSlider').addEventListener('input', (e) => {
+    velocidad4 = parseInt(e.target.value);
+    document.getElementById('velocidadValor').textContent = velocidad4;
+  });
+
+  // Dibujar estado inicial
+  ctx4.strokeRect(0, 60, 600, 30);
+  ctx4.fillStyle = '#333';
+  ctx4.font = 'bold 16px Arial';
+  ctx4.textAlign = 'center';
+  ctx4.fillText('0%', 300, 110);
+</script>
+
+<div class="explicacion">
+  <h4>🎮 Interactividad:</h4>
+  <ul>
+    <li><strong>Variable de estado:</strong> <code>animando</code> controla si la animación está activa</li>
+    <li><strong>Event listeners:</strong> Detectan clicks en los botones</li>
+    <li><strong>Slider:</strong> Permite ajustar la velocidad en tiempo real</li>
+    <li><strong>Condicional:</strong> <code>if (!animando) return;</code> detiene la animación</li>
+  </ul>
+</div>
+
+<div class="explicacion" style="background: #fff3cd; border-left-color: #ffc107;">
+  <h4>📚 Resumen:</h4>
+  <p><strong>Los 3 pasos de toda animación:</strong></p>
+  <ol>
+    <li><strong>Limpiar</strong> el canvas/escena</li>
+    <li><strong>Actualizar</strong> las posiciones/valores</li>
+    <li><strong>Dibujar</strong> el nuevo estado</li>
+  </ol>
+  <p>
+    <code>requestAnimationFrame()</code> repite estos 3 pasos ~60 veces por segundo.
+  </p>
+  <p>
+    <strong>Próximo paso:</strong> Aplicar estos conceptos a Three.js 🚀
+  </p>
+</div>
+@{end html}
+
+"RESUMEN DE CONCEPTOS:
+"
+"1. requestAnimationFrame(función)
+"   Llama la función en el próximo frame (~60 FPS)
+"
+"2. clearRect(x, y, ancho, alto)
+"   Borra un área del canvas
+"
+"3. fillRect(x, y, ancho, alto)
+"   Dibuja un rectángulo relleno
+"
+"4. arc(x, y, radio, inicio, fin)
+"   Dibuja un círculo/arco
+"
+"5. Math.sin(x) y Math.cos(x)
+"   Crean movimientos suaves/ondulatorios
+"
+"6. Arrays para múltiples objetos
+"   Guardan muchos elementos animados
+"
+"7. Variables de estado (animando, pausado)
+"   Controlan el flujo de la animación
+"
+"Estos conceptos son la BASE de cualquier
+"animación, incluyendo Three.js

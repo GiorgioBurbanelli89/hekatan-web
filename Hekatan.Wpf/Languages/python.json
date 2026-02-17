@@ -1,0 +1,97 @@
+{
+  "name": "Python",
+  "directive": "#python",
+  "endDirective": "#end python",
+  "fileExtension": ".py",
+  "caseSensitive": true,
+
+  "comments": {
+    "singleLine": "#",
+    "multiLineStart": "\"\"\"",
+    "multiLineEnd": "\"\"\""
+  },
+
+  "stringDelimiters": ["\"", "'"],
+  "escapeChar": "\\",
+
+  "colors": {
+    "keyword": "#FF8C00",
+    "function": "#0000CD",
+    "builtin": "#8B008B",
+    "string": "#008000",
+    "comment": "#808080",
+    "number": "#000000",
+    "operator": "#B8860B",
+    "decorator": "#AA22FF",
+    "class": "#0000FF",
+    "variable": "#000000",
+    "error": "#DC143C"
+  },
+
+  "keywords": [
+    "False", "None", "True", "and", "as", "assert", "async", "await",
+    "break", "class", "continue", "def", "del", "elif", "else", "except",
+    "finally", "for", "from", "global", "if", "import", "in", "is",
+    "lambda", "nonlocal", "not", "or", "pass", "raise", "return",
+    "try", "while", "with", "yield"
+  ],
+
+  "builtins": [
+    "abs", "all", "any", "ascii", "bin", "bool", "bytearray", "bytes",
+    "callable", "chr", "classmethod", "compile", "complex", "delattr",
+    "dict", "dir", "divmod", "enumerate", "eval", "exec", "filter",
+    "float", "format", "frozenset", "getattr", "globals", "hasattr",
+    "hash", "help", "hex", "id", "input", "int", "isinstance",
+    "issubclass", "iter", "len", "list", "locals", "map", "max",
+    "min", "next", "object", "oct", "open", "ord", "pow", "print",
+    "property", "range", "repr", "reversed", "round", "set", "setattr",
+    "slice", "sorted", "staticmethod", "str", "sum", "super", "tuple",
+    "type", "vars", "zip", "__import__",
+    "np", "plt", "pd", "array", "linspace", "arange", "zeros", "ones",
+    "sqrt", "sin", "cos", "tan", "exp", "log", "log10", "pi", "e",
+    "math", "random", "datetime", "os", "sys", "re", "json"
+  ],
+
+  "operators": [
+    "+", "-", "*", "/", "//", "%", "**",
+    "=", "==", "!=", "<", ">", "<=", ">=",
+    "+=", "-=", "*=", "/=", "//=", "%=", "**=",
+    "&", "|", "^", "~", "<<", ">>",
+    "and", "or", "not", "in", "is"
+  ],
+
+  "autocomplete": [
+    {
+      "trigger": "import",
+      "snippet": "import ${1:module}"
+    },
+    {
+      "trigger": "def",
+      "snippet": "def ${1:function_name}(${2:params}):\n    ${3:pass}"
+    },
+    {
+      "trigger": "class",
+      "snippet": "class ${1:ClassName}:\n    def __init__(self, ${2:params}):\n        ${3:pass}"
+    },
+    {
+      "trigger": "if",
+      "snippet": "if ${1:condition}:\n    ${2:pass}"
+    },
+    {
+      "trigger": "for",
+      "snippet": "for ${1:item} in ${2:iterable}:\n    ${3:pass}"
+    },
+    {
+      "trigger": "while",
+      "snippet": "while ${1:condition}:\n    ${2:pass}"
+    },
+    {
+      "trigger": "try",
+      "snippet": "try:\n    ${1:pass}\nexcept ${2:Exception} as ${3:e}:\n    ${4:pass}"
+    },
+    {
+      "trigger": "with",
+      "snippet": "with open(${1:filename}, ${2:'r'}) as ${3:f}:\n    ${4:pass}"
+    }
+  ]
+}

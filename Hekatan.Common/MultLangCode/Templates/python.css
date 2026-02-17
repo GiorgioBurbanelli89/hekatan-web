@@ -1,0 +1,8 @@
+/* ========== Python @{python} Block Styles ========== */
+
+/* Error styling */
+.lang-block.python-block .lang-error {
+    background-color: #f8d7da;
+    color: #d32f2f;
+    border-left: 3px solid #d32f2f;
+}

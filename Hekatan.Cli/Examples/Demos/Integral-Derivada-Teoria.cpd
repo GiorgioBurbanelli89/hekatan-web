@@ -1,0 +1,269 @@
+'@(h1 Teoria de Integrales y Derivadas - Visualizacion con @{plot})
+'Demostracion grafica de los conceptos fundamentales del calculo
+
+'@(h2 1. Integral Definida - Area bajo la curva)
+'La integral definida ∫f(x)dx es el @(b area bajo la curva) entre a y b.
+'Se aproxima con @(b sumas de Riemann): S_n = Σ f(x_i)·Δx
+
+'@(h3 1.1 Suma de Riemann Izquierda (n=8 rectangulos))
+@{plot}
+function: x^2
+color: #0033CC
+linewidth: 2.5
+legend: f(x) = x²
+xlim: 0, 4
+ylim: -1, 17
+width: 700
+height: 450
+title: Suma de Riemann Izquierda - f(x) = x²
+xlabel: x
+ylabel: f(x)
+
+rect: 0, 0, 0.5, 0, #3366CC, fill
+rect: 0.5, 0, 0.5, 0.25, #3366CC, fill
+rect: 1.0, 0, 0.5, 1.0, #3366CC, fill
+rect: 1.5, 0, 0.5, 2.25, #3366CC, fill
+rect: 2.0, 0, 0.5, 4.0, #3366CC, fill
+rect: 2.5, 0, 0.5, 6.25, #3366CC, fill
+rect: 3.0, 0, 0.5, 9.0, #3366CC, fill
+rect: 3.5, 0, 0.5, 12.25, #3366CC, fill
+
+eq: 0.5, 15, "S_8 = Σ f(x_i)·Δx = 17.5", #CC0000, 13
+eq: 0.5, 13.5, "∫ x² dx = 64/3 ≈ 21.33", #003366, 12
+text: 2.5, -0.7, "Δx = 0.5", #666666, 11
+
+dim: 0, -0.5, 4, -0.5, "a=0 a b=4", #333333
+@{end plot}
+
+'@(h3 1.2 Suma de Riemann Derecha (n=8 rectangulos))
+@{plot}
+function: x^2
+color: #0033CC
+linewidth: 2.5
+legend: f(x) = x²
+xlim: 0, 4
+ylim: -1, 18
+width: 700
+height: 450
+title: Suma de Riemann Derecha - f(x) = x²
+xlabel: x
+ylabel: f(x)
+
+rect: 0, 0, 0.5, 0.25, #CC3333, fill
+rect: 0.5, 0, 0.5, 1.0, #CC3333, fill
+rect: 1.0, 0, 0.5, 2.25, #CC3333, fill
+rect: 1.5, 0, 0.5, 4.0, #CC3333, fill
+rect: 2.0, 0, 0.5, 6.25, #CC3333, fill
+rect: 2.5, 0, 0.5, 9.0, #CC3333, fill
+rect: 3.0, 0, 0.5, 12.25, #CC3333, fill
+rect: 3.5, 0, 0.5, 16.0, #CC3333, fill
+
+eq: 0.5, 16, "S_8 = Σ f(x_i)·Δx = 25.5", #CC0000, 13
+eq: 0.5, 14.5, "∫ x² dx = 64/3 ≈ 21.33", #003366, 12
+text: 2.5, -0.7, "Δx = 0.5", #666666, 11
+@{end plot}
+
+'@(h3 1.3 Comparacion: n=4 vs n=16 (Convergencia))
+'Con @(b n=4 rectangulos) (Δx=1):
+@{plot}
+function: sin(x)
+color: #0033CC
+linewidth: 2.5
+legend: f(x) = sin(x)
+xlim: 0, 3.14159
+ylim: -0.3, 1.4
+width: 700
+height: 400
+title: Riemann con n=4 - sin(x), [0,π]
+xlabel: x
+ylabel: f(x)
+points: 300
+
+rect: 0, 0, 0.7854, 0, #3366CC, fill
+rect: 0.7854, 0, 0.7854, 0.7071, #3366CC, fill
+rect: 1.5708, 0, 0.7854, 1.0, #3366CC, fill
+rect: 2.3562, 0, 0.7854, 0.7071, #3366CC, fill
+
+eq: 0.3, 1.25, "S_4 = 1.896", #CC0000, 13
+eq: 0.3, 1.1, "∫ sin(x)dx = 2.000", #003366, 12
+text: 1.5, -0.2, "Error: 5.2%", #CC0000, 11
+@{end plot}
+
+'Con @(b n=16 rectangulos) (Δx=π/16≈0.196):
+@{plot}
+function: sin(x)
+color: #0033CC
+linewidth: 2.5
+legend: f(x) = sin(x)
+xlim: 0, 3.14159
+ylim: -0.3, 1.4
+width: 700
+height: 400
+title: Riemann con n=16 - sin(x), [0,π]
+xlabel: x
+ylabel: f(x)
+points: 300
+
+rect: 0, 0, 0.19635, 0, #3366CC, fill
+rect: 0.19635, 0, 0.19635, 0.19509, #3366CC, fill
+rect: 0.3927, 0, 0.19635, 0.38268, #3366CC, fill
+rect: 0.58905, 0, 0.19635, 0.55557, #3366CC, fill
+rect: 0.7854, 0, 0.19635, 0.70711, #3366CC, fill
+rect: 0.98175, 0, 0.19635, 0.83147, #3366CC, fill
+rect: 1.1781, 0, 0.19635, 0.92388, #3366CC, fill
+rect: 1.37445, 0, 0.19635, 0.98079, #3366CC, fill
+rect: 1.5708, 0, 0.19635, 1.0, #3366CC, fill
+rect: 1.76715, 0, 0.19635, 0.98079, #3366CC, fill
+rect: 1.9635, 0, 0.19635, 0.92388, #3366CC, fill
+rect: 2.15985, 0, 0.19635, 0.83147, #3366CC, fill
+rect: 2.3562, 0, 0.19635, 0.70711, #3366CC, fill
+rect: 2.55255, 0, 0.19635, 0.55557, #3366CC, fill
+rect: 2.7489, 0, 0.19635, 0.38268, #3366CC, fill
+rect: 2.94525, 0, 0.19635, 0.19509, #3366CC, fill
+
+eq: 0.3, 1.25, "S_16 = 1.974", #CC0000, 13
+eq: 0.3, 1.1, "∫ sin(x)dx = 2.000", #003366, 12
+text: 1.5, -0.2, "Error: 1.3%", #CC0000, 11
+@{end plot}
+
+'@(hr)
+
+'@(h2 2. Derivada - Pendiente de la Recta Tangente)
+'La derivada f'(a) es la @(b pendiente de la recta tangente) en el punto (a, f(a)).
+'Se define como: f'(a) = lim[h→0] (f(a+h) - f(a))/h
+
+'@(h3 2.1 Derivada de f(x) = x² en x=1.5)
+@{plot}
+function: x^2
+color: #0033CC
+linewidth: 2.5
+legend: f(x) = x²
+xlim: -0.5, 4
+ylim: -2, 14
+width: 700
+height: 450
+title: Derivada de f(x)=x² en x=1.5
+xlabel: x
+ylabel: f(x)
+
+line: -0.5, -3.75, 3.5, 8.25, #CC0000
+point: 1.5, 2.25, #CC0000, 7, filled
+
+proj: 1.5, 2.25, #999999
+eq: 2.2, 1.5, "f'(1.5) = 2·1.5 = 3", #CC0000, 12
+eq: 2.2, 0.5, "Pendiente m = 3", #003366, 11
+text: 1.6, 2.5, "(1.5, 2.25)", #333333, 10
+text: 2.5, 6, "Tangente", #CC0000, 11
+@{end plot}
+
+'@(h3 2.2 Secante vs Tangente - Aproximacion de la derivada)
+@{plot}
+function: x^2
+color: #0033CC
+linewidth: 2.5
+legend: f(x) = x²
+xlim: 0, 4
+ylim: -1, 16
+width: 700
+height: 450
+title: Secante → Tangente cuando h → 0
+xlabel: x
+ylabel: f(x)
+
+line: 0.5, -1, 3.5, 15, #FF6600
+line: 0, -1, 3.5, 6, #CC0000
+point: 1, 1, #0033CC, 7, filled
+point: 3, 9, #FF6600, 7, filled
+
+arrow: 3.1, 9, 3.1, 1, #FF6600, 1
+arrow: 1, 0.8, 3, 0.8, #FF6600, 1
+text: 3.3, 5, "Δy = 8", #FF6600, 11
+text: 1.8, 0.3, "Δx = 2", #FF6600, 11
+eq: 1.5, 14, "m_sec = Δy/Δx = 8/2 = 4", #FF6600, 12
+eq: 1.5, 12.5, "m_tan = f'(1) = 2·1 = 2", #CC0000, 12
+text: 2.8, 12, "Secante", #FF6600, 10
+text: 2.8, 4, "Tangente", #CC0000, 10
+@{end plot}
+
+'@(h3 2.3 Funcion y su Derivada superpuestas)
+@{plot}
+function: sin(x)
+function2: cos(x)
+color: #0033CC
+color2: #CC0000
+linewidth: 2.5
+linewidth2: 2
+legend: f(x) = sin(x)
+legend2: f'(x) = cos(x)
+xlim: -1, 7
+ylim: -1.5, 1.5
+width: 700
+height: 400
+title: Funcion y su Derivada
+xlabel: x
+ylabel: y
+points: 300
+style2: dashed
+
+hline: 0, #999999
+point: 1.5708, 1, #0033CC, 6, filled
+point: 1.5708, 0, #CC0000, 6, filled
+
+proj: 1.5708, 1, #AAAAAA
+text: 1.8, 1.1, "Maximo: f'=0", #006600, 11
+arrow: 1.8, 1.05, 1.6, 1.0, #006600, 1
+
+point: 3.14159, 0, #0033CC, 6, filled
+point: 3.14159, -1, #CC0000, 6, filled
+text: 3.3, -0.85, "Inflexion: f'=min", #CC0000, 10
+
+eq: 4.5, 1.3, "d/dx sin(x) = cos(x)", #003366, 12
+@{end plot}
+
+'@(hr)
+
+'@(h2 3. Teorema Fundamental del Calculo)
+'Si F'(x) = f(x), entonces ∫[a,b] f(x)dx = F(b) - F(a)
+
+'@(h3 3.1 Acumulacion del Area: F(x) = ∫[0,x] t² dt = x³/3)
+@{plot}
+function: x^2
+function2: x^3/3
+color: #0033CC
+color2: #CC0000
+linewidth: 2.5
+linewidth2: 2
+style2: dashed
+legend: f(t) = t² (integrando)
+legend2: F(x) = x³/3 (area acumulada)
+xlim: 0, 3
+ylim: -1, 10
+width: 700
+height: 400
+title: Teorema Fundamental del Calculo
+xlabel: x
+ylabel: y
+
+rect: 0, 0, 0.5, 0, #3366CC, fill
+rect: 0.5, 0, 0.5, 0.25, #3366CC, fill
+rect: 1.0, 0, 0.5, 1.0, #3366CC, fill
+rect: 1.5, 0, 0.5, 2.25, #3366CC, fill
+
+point: 2, 4, #0033CC, 6, filled
+point: 2, 2.667, #CC0000, 6, filled
+proj: 2, 4, #AAAAAA
+
+text: 2.2, 4.2, "f(2) = 4", #0033CC, 10
+text: 2.2, 2.9, "F(2) = 8/3", #CC0000, 10
+
+eq: 1.5, 8.5, "F(x) = ∫ t² dt = x³/3", #003366, 12
+arrow: 2, 2.667, 1.0, 1.2, #CC0000, 1
+text: 0.5, 0.8, "Area = F(2)", #CC0000, 10
+@{end plot}
+
+'@(hr)
+'@(h2 Resumen)
+'@(b Integral:) Area bajo la curva = lim[n→∞] Σ f(x_i)·Δx
+'@(b Derivada:) Pendiente de tangente = lim[h→0] (f(x+h)-f(x))/h
+'@(b TFC:) F'(x) = f(x) ⟹ ∫[a,b] f(x)dx = F(b) - F(a)
+

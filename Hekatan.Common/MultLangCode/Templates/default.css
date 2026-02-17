@@ -1,0 +1,112 @@
+/* ========== Default @{} Language Block Styles ========== */
+/* Base styles for all language output blocks */
+
+.lang-block {
+    margin: 10px 0;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif;
+}
+
+.lang-header {
+    padding: 6px 12px;
+    font-weight: bold;
+    font-size: 0.85em;
+    color: white;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lang-header .collapse-icon {
+    display: inline-block;
+    width: 16px;
+    transition: transform 0.2s;
+}
+
+.lang-body {
+    padding: 10px;
+    background: #f8f9fa;
+}
+
+.lang-output-text {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace;
+    font-size: 10.5pt;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #333;
+    padding: 4px 0;
+    margin: 4px 0;
+}
+
+.lang-error {
+    color: #d32f2f;
+    padding: 6px 10px;
+    background: #f8d7da;
+    border-radius: 4px;
+    font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    font-size: 10pt;
+    white-space: pre-wrap;
+    border: 1px solid #f5c6cb;
+}
+
+.lang-success {
+    color: #388e3c;
+    padding: 5px 0;
+    font-style: italic;
+}
+
+.lang-no-output {
+    color: #757575;
+    font-style: italic;
+    padding: 5px 0;
+}
+
+.lang-warning {
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: #fff3cd;
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.lang-export {
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: #e8f5e9;
+    border-radius: 4px;
+    font-size: 0.9em;
+    border-left: 3px solid #4caf50;
+}
+
+.lang-export .var-name {
+    color: #2e7d32;
+    font-weight: bold;
+    font-family: Consolas, monospace;
+}
+
+.lang-export .var-value {
+    color: #1b5e20;
+    font-family: Consolas, monospace;
+}
+
+/* Scrollbar styling */
+.lang-output-text::-webkit-scrollbar { width: 8px; }
+.lang-output-text::-webkit-scrollbar-track { background: #eee; }
+.lang-output-text::-webkit-scrollbar-thumb { background: #aaa; border-radius: 4px; }
+.lang-output-text::-webkit-scrollbar-thumb:hover { background: #888; }
+
+/* Print styles */
+@media print {
+    .lang-block {
+        break-inside: avoid;
+        box-shadow: none;
+    }
+}

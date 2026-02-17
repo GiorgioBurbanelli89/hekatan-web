@@ -1,0 +1,234 @@
+"============================================
+"✨ CANVAS AVANZADO - SISTEMA DE PARTÍCULAS
+"============================================
+"Aprende a crear efectos visuales avanzados con Canvas 2D.
+
+"SISTEMA DE PARTÍCULAS
+"----------------------------------------
+'Muchos objetos pequeños (partículas)
+'Cada partícula tiene: posición, velocidad, color, tamaño
+'Se actualizan y dibujan en cada frame
+'Crea efectos: lluvia, nieve, fuegos artificiales, etc.
+
+"PATRÓN DE DISEÑO
+"----------------------------------------
+'1. Clase Particle con propiedades
+'2. Array de partículas
+'3. Loop de animación que:
+'   - Actualiza posiciones
+'   - Dibuja partículas
+'   - Elimina partículas fuera de pantalla
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>15 - Canvas Partículas</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: white;
+      text-align: center;
+    }
+
+    h1 {
+      color: white;
+    }
+
+    canvas {
+      border: 2px solid #333;
+      background: linear-gradient(to bottom, #000428, #004e92);
+      display: block;
+      margin: 20px auto;
+      cursor: crosshair;
+    }
+
+    .controles {
+      background: rgba(255,255,255,0.1);
+      padding: 20px;
+      max-width: 600px;
+      margin: 20px auto;
+      border-radius: 8px;
+    }
+
+    button {
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    button:hover {
+      background: #1976d2;
+    }
+
+    .info {
+      color: #aaa;
+      margin: 10px 0;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>✨ Sistema de Partículas</h1>
+  <p class="info">Haz click en el canvas para crear partículas</p>
+
+  <canvas id="canvas" width="800" height="500"></canvas>
+
+  <div class="controles">
+    <button onclick="cambiarModo('fuegos')">🎆 Fuegos Artificiales</button>
+    <button onclick="cambiarModo('lluvia')">🌧️ Lluvia</button>
+    <button onclick="cambiarModo('nieve')">❄️ Nieve</button>
+    <button onclick="limpiar()">🗑️ Limpiar</button>
+  </div>
+
+  <!-- #region SCRIPTS -->
+  <script>
+    // #region CONFIGURACIÓN
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let particulas = [];
+    let modo = 'fuegos';
+    // #endregion
+
+    // #region CLASE PARTÍCULA
+    class Particula {
+      constructor(x, y, tipo = 'fuegos') {
+        this.x = x;
+        this.y = y;
+        this.tipo = tipo;
+
+        if (tipo === 'fuegos') {
+          this.vx = (Math.random() - 0.5) * 8;
+          this.vy = (Math.random() - 0.5) * 8;
+          this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+          this.radio = Math.random() * 3 + 2;
+          this.vida = 1;
+        } else if (tipo === 'lluvia') {
+          this.vx = 0;
+          this.vy = Math.random() * 5 + 3;
+          this.color = '#4ecdc4';
+          this.radio = 1;
+          this.vida = 1;
+        } else if (tipo === 'nieve') {
+          this.vx = (Math.random() - 0.5) * 0.5;
+          this.vy = Math.random() * 2 + 1;
+          this.color = 'white';
+          this.radio = Math.random() * 3 + 1;
+          this.vida = 1;
+        }
+      }
+
+      actualizar() {
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.tipo === 'fuegos') {
+          this.vy += 0.1; // Gravedad
+          this.vida -= 0.01;
+        }
+
+        // Eliminar si sale de pantalla
+        if (this.y > canvas.height) this.vida = 0;
+      }
+
+      dibujar() {
+        ctx.globalAlpha = this.vida;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radio, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+    // #endregion
+
+    // #region FUNCIONES DE CONTROL
+    function cambiarModo(nuevoModo) {
+      modo = nuevoModo;
+      limpiar();
+    }
+
+    function limpiar() {
+      particulas = [];
+    }
+
+    function crearExplosion(x, y) {
+      for (let i = 0; i < 50; i++) {
+        particulas.push(new Particula(x, y, modo));
+      }
+    }
+    // #endregion
+
+    // #region EVENTOS DE CLICK
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      crearExplosion(x, y);
+    });
+    // #endregion
+
+    // #region GENERACIÓN AUTOMÁTICA
+    function generarAutomatico() {
+      if (modo === 'lluvia') {
+        if (Math.random() < 0.3) {
+          const x = Math.random() * canvas.width;
+          particulas.push(new Particula(x, 0, 'lluvia'));
+        }
+      } else if (modo === 'nieve') {
+        if (Math.random() < 0.2) {
+          const x = Math.random() * canvas.width;
+          particulas.push(new Particula(x, 0, 'nieve'));
+        }
+      }
+    }
+    // #endregion
+
+    // #region LOOP DE ANIMACIÓN
+    function animar() {
+      // Efecto de estela (fade)
+      ctx.fillStyle = 'rgba(0, 4, 40, 0.1)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Generar partículas automáticamente
+      generarAutomatico();
+
+      // Actualizar y dibujar partículas
+      particulas = particulas.filter(p => {
+        p.actualizar();
+        p.dibujar();
+        return p.vida > 0;
+      });
+
+      requestAnimationFrame(animar);
+    }
+    // #endregion
+
+    // #region INICIAR
+    animar();
+    console.log('✅ Sistema de partículas iniciado');
+    console.log('🖱️ Haz click para crear explosiones');
+    // #endregion
+  </script>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

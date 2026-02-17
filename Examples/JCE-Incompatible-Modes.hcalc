@@ -1,0 +1,17 @@
+"Method of Incompatible Modes – Overview and Application
+@{paper}
+size: 206mm 286mm
+margin: 32pt 20pt 20pt 20pt
+font: "Myriad Pro", "Segoe UI", Arial, Helvetica, sans-serif
+fontsize: 9pt
+color: #333333
+accent: #F27835
+lineheight: 1.35
+columngap: 18pt
+@{end paper}
+
+@{include jce-parts/00-cover.hcalc}
+@{include jce-parts/01-introduction.hcalc}
+@{include jce-parts/02-examples-1d.hcalc}
+@{include jce-parts/03-2d-3d.hcalc}
+@{include jce-parts/04-conclusion-refs.hcalc}

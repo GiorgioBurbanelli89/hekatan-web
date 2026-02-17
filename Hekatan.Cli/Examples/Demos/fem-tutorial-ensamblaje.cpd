@@ -1,0 +1,284 @@
+@{config comment:%}
+%%FEM desde CERO - Matrices Locales, Globales y Ensamblaje
+%%Hekatan Calc - Tutorial Educativo
+
+@(h2 0. Esquema del Proceso FEM)
+
+@{tree title:"Método de Elementos Finitos" color:#1565c0}
+FEM - Pasos icon:folder
+  1. Discretizar icon:info
+    Dividir estructura en ELEMENTOS icon:file
+    Cada elemento tiene NODOS icon:file
+  2. Matriz Local [k] icon:gear
+    Rigidez de CADA elemento icon:file
+    En coordenadas del elemento icon:file
+  3. Transformar [T] icon:gear
+    De local a global icon:file
+    [K] = [T]ᵀ[k][T] icon:code
+  4. ENSAMBLAR [K_global] icon:star
+    Sumar contribuciones icon:file
+    Cada elemento aporta a [K] icon:file
+  5. Condiciones de borde icon:warning
+    Apoyos → filas/columnas eliminadas icon:file
+    Cargas → vector {F} icon:file
+  6. RESOLVER icon:check
+    [K]{u} = {F} icon:code
+    {u} = [K]⁻¹{F} icon:code
+@{end tree}
+
+@(h2 1. El Ejemplo Más Simple: 2 Resortes)
+
+@{svg 600 200}
+background #fafafa
+grid 0 0 600 200 step:50 stroke:#f0f0f0 opacity:0.3
+% Pared izquierda
+rect 40 60 10 80 fill:#999 stroke:#333 width:2
+line 30 60 50 60 stroke:#333 width:1
+line 30 80 50 80 stroke:#333 width:1
+line 30 100 50 100 stroke:#333 width:1
+line 30 120 50 120 stroke:#333 width:1
+line 30 140 50 140 stroke:#333 width:1
+% Nodo 1
+circle 50 100 8 fill:#1565c0 stroke:#0d47a1 width:2
+text 50 85 "1" size:14 bold color:#1565c0 anchor:middle
+% Resorte 1
+line 58 100 120 95 stroke:#c62828 width:2
+line 120 95 140 105 stroke:#c62828 width:2
+line 140 105 160 95 stroke:#c62828 width:2
+line 160 95 180 105 stroke:#c62828 width:2
+line 180 105 200 95 stroke:#c62828 width:2
+line 200 95 230 100 stroke:#c62828 width:2
+text 145 75 "k₁" size:16 bold color:#c62828 anchor:middle
+% Nodo 2
+circle 240 100 8 fill:#1565c0 stroke:#0d47a1 width:2
+text 240 85 "2" size:14 bold color:#1565c0 anchor:middle
+% Resorte 2
+line 248 100 310 95 stroke:#2e7d32 width:2
+line 310 95 330 105 stroke:#2e7d32 width:2
+line 330 105 350 95 stroke:#2e7d32 width:2
+line 350 95 370 105 stroke:#2e7d32 width:2
+line 370 105 390 95 stroke:#2e7d32 width:2
+line 390 95 420 100 stroke:#2e7d32 width:2
+text 335 75 "k₂" size:16 bold color:#2e7d32 anchor:middle
+% Nodo 3
+circle 430 100 8 fill:#1565c0 stroke:#0d47a1 width:2
+text 430 85 "3" size:14 bold color:#1565c0 anchor:middle
+% Fuerza
+arrow 430 100 530 100 stroke:#e65100 width:3
+text 530 95 "F" size:18 bold color:#e65100
+% Labels
+text 145 140 "Elem 1" size:12 color:#c62828 anchor:middle
+text 335 140 "Elem 2" size:12 color:#2e7d32 anchor:middle
+text 50 160 "Fijo" size:11 color:#666 anchor:middle
+text 300 175 "3 nodos, 2 elementos, 3 DOF (u₁, u₂, u₃)" size:12 color:#333 anchor:middle
+@{end svg}
+
+%Datos:
+k_1 = 100
+k_2 = 200
+F = 50
+
+@(h2 2. Matriz Local de CADA Elemento)
+
+%Cada resorte tiene la misma forma de matriz:
+
+@{eqdef}
+[k] = k × [+1, -1; -1, +1] | Matriz local 2×2 de un resorte
+F = k × (u_j - u_i) | Fuerza = rigidez × desplazamiento relativo
+@{end eqdef}
+
+@{columns 2}
+
+@(h3 Elemento 1: nodos 1→2)
+@(color:red k₁ = 100)
+
+@{maxima}
+k1: 100;
+K1_local: k1 * matrix([1,-1],[-1,1]);
+@{end maxima}
+
+@{column}
+
+@(h3 Elemento 2: nodos 2→3)
+@(color:green k₂ = 200)
+
+@{maxima}
+k2: 200;
+K2_local: k2 * matrix([1,-1],[-1,1]);
+@{end maxima}
+
+@{end columns}
+
+@(h2 3. ENSAMBLAJE - La Clave del FEM)
+
+%El ensamblaje coloca cada [k] local en la posición correcta de [K] global.
+%La regla es: el elemento conecta nodos i,j → aporta a las filas/columnas i,j.
+
+@{svg 650 320}
+background #fafafa
+% Título
+text 325 20 "PROCESO DE ENSAMBLAJE" size:16 bold color:#333 anchor:middle
+% Matriz elem 1
+text 80 55 "[K₁] local 2×2" size:12 bold color:#c62828 anchor:middle
+text 55 75 "n1" size:10 color:#c62828
+text 105 75 "n2" size:10 color:#c62828
+rect 30 85 120 60 fill:#ffcdd2 stroke:#c62828 width:2
+text 55 110 "+k₁" size:12 bold color:#c62828 anchor:middle
+text 105 110 "-k₁" size:12 bold color:#c62828 anchor:middle
+text 55 130 "-k₁" size:12 bold color:#c62828 anchor:middle
+text 105 130 "+k₁" size:12 bold color:#c62828 anchor:middle
+line 80 85 80 145 stroke:#c62828 width:1
+line 30 115 150 115 stroke:#c62828 width:1
+% Flecha
+arrow 165 110 210 110 stroke:#333 width:2
+text 190 100 "+" size:18 bold color:#333 anchor:middle
+% Matriz elem 2
+text 310 55 "[K₂] local 2×2" size:12 bold color:#2e7d32 anchor:middle
+text 280 75 "n2" size:10 color:#2e7d32
+text 340 75 "n3" size:10 color:#2e7d32
+rect 255 85 120 60 fill:#c8e6c9 stroke:#2e7d32 width:2
+text 280 110 "+k₂" size:12 bold color:#2e7d32 anchor:middle
+text 340 110 "-k₂" size:12 bold color:#2e7d32 anchor:middle
+text 280 130 "-k₂" size:12 bold color:#2e7d32 anchor:middle
+text 340 130 "+k₂" size:12 bold color:#2e7d32 anchor:middle
+line 310 85 310 145 stroke:#2e7d32 width:1
+line 255 115 375 115 stroke:#2e7d32 width:1
+% Flecha
+arrow 390 110 430 110 stroke:#333 width:2
+text 410 100 "=" size:18 bold color:#333 anchor:middle
+% Matriz global
+text 540 55 "[K] GLOBAL 3×3" size:12 bold color:#1565c0 anchor:middle
+text 490 75 "n1" size:10 color:#1565c0
+text 540 75 "n2" size:10 color:#1565c0
+text 590 75 "n3" size:10 color:#1565c0
+rect 460 85 180 90 fill:#e3f2fd stroke:#1565c0 width:2
+text 490 110 "+k₁" size:11 bold color:#c62828 anchor:middle
+text 540 110 "-k₁" size:11 bold color:#c62828 anchor:middle
+text 590 110 "0" size:11 color:#999 anchor:middle
+text 490 135 "-k₁" size:11 bold color:#c62828 anchor:middle
+text 540 135 "k₁+k₂" size:10 bold color:#9c27b0 anchor:middle
+text 590 135 "-k₂" size:11 bold color:#2e7d32 anchor:middle
+text 490 160 "0" size:11 color:#999 anchor:middle
+text 540 160 "-k₂" size:11 bold color:#2e7d32 anchor:middle
+text 590 160 "+k₂" size:11 bold color:#2e7d32 anchor:middle
+line 510 85 510 175 stroke:#1565c0 width:1
+line 560 85 560 175 stroke:#1565c0 width:1
+line 460 120 640 120 stroke:#1565c0 width:1
+line 460 145 640 145 stroke:#1565c0 width:1
+% Nota
+text 325 210 "Nodo 2 es COMPARTIDO → k₁+k₂ en diagonal" size:13 bold color:#9c27b0 anchor:middle
+text 325 235 "Los ceros aparecen donde los nodos NO están conectados" size:11 color:#666 anchor:middle
+text 325 255 "Esto es EXACTAMENTE lo que hace Awatif en getGlobalStiffnessMatrix.cpp" size:11 color:#333 anchor:middle
+@{end svg}
+
+@(h3 Ensamblaje con Maxima)
+
+@{maxima}
+k1: 100;
+k2: 200;
+/* Matriz global 3x3 ensamblada */
+K_global: matrix(
+  [k1,    -k1,     0  ],
+  [-k1,  k1+k2,  -k2  ],
+  [0,     -k2,    k2   ]
+);
+@{end maxima}
+
+@(h2 4. Condiciones de Borde)
+
+%Nodo 1 está fijo (u₁ = 0) → eliminamos fila 1 y columna 1:
+
+@{maxima}
+k1: 100;
+k2: 200;
+/* Eliminamos fila 1, columna 1 (nodo fijo) */
+K_reduced: matrix(
+  [k1+k2, -k2],
+  [-k2,    k2]
+);
+/* Vector de fuerzas (solo nodos libres 2 y 3) */
+F_vec: matrix([0],[50]);
+@{end maxima}
+
+@(h2 5. RESOLVER: [K]{u} = {F})
+
+@{eqdef}
+{u} = [K]⁻¹ × {F} | Desplazamientos = Inversa × Fuerzas
+@{end eqdef}
+
+@{maxima}
+k1: 100;
+k2: 200;
+K_reduced: matrix([k1+k2, -k2],[-k2, k2]);
+F_vec: matrix([0],[50]);
+/* Inversa */
+K_inv: invert(K_reduced);
+/* Solución */
+u: K_inv . F_vec;
+@{end maxima}
+
+%Con Calcpad verificamos:
+
+u_2 = F/(k_1)
+u_3 = F*(1/k_1 + 1/k_2)
+'u₂ ='u_2' (desplazamiento nodo 2)
+'u₃ ='u_3' (desplazamiento nodo 3)
+
+@(h2 6. Verificación Visual)
+
+@{svg 600 150}
+background #fafafa
+% Original
+line 50 50 240 50 stroke:#ccc width:2 dash:5,3
+line 240 50 430 50 stroke:#ccc width:2 dash:5,3
+circle 50 50 5 fill:#ccc stroke:#999 width:1
+circle 240 50 5 fill:#ccc stroke:#999 width:1
+circle 430 50 5 fill:#ccc stroke:#999 width:1
+text 50 35 "1" size:12 color:#999 anchor:middle
+text 240 35 "2" size:12 color:#999 anchor:middle
+text 430 35 "3" size:12 color:#999 anchor:middle
+% Deformada (escala ×200)
+line 50 100 340 100 stroke:#1565c0 width:3
+line 340 100 530 100 stroke:#2e7d32 width:3
+circle 50 100 6 fill:#c62828 stroke:#b71c1c width:2
+circle 340 100 6 fill:#1565c0 stroke:#0d47a1 width:2
+circle 530 100 6 fill:#1565c0 stroke:#0d47a1 width:2
+text 50 120 "1 (fijo)" size:10 color:#c62828 anchor:middle
+text 340 120 "2 → u₂=0.50" size:10 bold color:#1565c0 anchor:middle
+text 530 120 "3 → u₃=0.75" size:10 bold color:#1565c0 anchor:middle
+text 300 140 "Escala ×200" size:10 color:#666 anchor:middle
+@{end svg}
+
+@(h2 7. De Resortes a PLACA - Awatif)
+
+%El proceso es IDÉNTICO pero con más DOFs:
+
+@{tree title:"Escalando el concepto" color:#c62828}
+Resorte (este ejemplo) icon:check
+  1 DOF por nodo (u) icon:file
+  Matriz local 2×2 icon:file
+  Global N×N icon:file
+Barra axial (Wilson W1) icon:check
+  1-3 DOF por nodo icon:file
+  Igual que resorte pero con EA/L icon:file
+Viga (Wilson W2) icon:check
+  2 DOF por nodo (v, θ) icon:file
+  Matriz local 4×4 icon:file
+Pórtico (Wilson W4) icon:check
+  3 DOF por nodo (u, v, θ) icon:file
+  Matriz local 6×6 icon:file
+  Necesita TRANSFORMACIÓN [T] icon:warning
+Shell Tri3 - AWATIF icon:star
+  6 DOF por nodo (u,v,w,θx,θy,θz) icon:gear
+  Matriz local 18×18 icon:code
+  Bending: Bb (3×18) icon:file
+  Shear DSG: Bs (2×18) icon:file
+  Membrane ANDES: Km (9×9) icon:file
+  Mismo ensamblaje que resortes icon:check
+@{end tree}
+
+%La ÚNICA diferencia entre este ejemplo de resortes y Awatif es:
+%• Más DOFs por nodo (6 en vez de 1)
+%• Matrices más grandes (18×18 en vez de 2×2)
+%• Se necesita transformación de coordenadas [T]
+%• Pero el ENSAMBLAJE es exactamente igual

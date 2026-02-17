@@ -1,0 +1,376 @@
+'<!-- ============== PAGE 4 cont. - SECTION 2.3 ============== -->
+'<!-- This continues on the right column of page 4 -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Građevinar 1/2018
+right: Ivica Kožar, Tea Rukavina, Adnan Ibrahimbegović
+barside: left
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{markdown}
+### 2.3. Examples
+#### 2.3.1. Strain discontinuity for a heterogeneous bar
+
+Consider a bar of length L composed of two different materials, where the interface between them is located in the middle of the element x̄ = L/2. Elastic moduli of the left and right part of the bar are marked as E₁ and E₂, such that E₁ > E₂. The bar is clamped at the left end, with an imposed force F on the right end, as can be seen in Figure 2. The following geometric and material properties are used: E₁ = 1000, E₂ = 500, L = 1, A = 1, and F = 300.
+@{end markdown}
+
+@{figure}
+src: jce-images/image21.jpeg
+caption: Figure 2. Heterogeneous bar composed of two different materials
+width: 80%
+@{end figure}
+
+@{column}
+@{markdown}
+Since the bar is composed of two different materials, there is a discontinuity in the strain field just in the middle of the element. The strain discontinuity is often called weak discontinuity, as opposed to the displacement discontinuity that is called strong discontinuity, and which will be explored in the next section. For an example where both strong and weak discontinuities have been implemented in one element see [12]. This example of a heterogeneous bar can easily be solved using two standard truss bar finite elements with different material properties. The values of nodal displacements can be obtained by simple calculation:
+@{end markdown}
+
+@{eq}
+u(x = L/2) = 0.15;   u(x = L) = 0.45    (28)
+@{end eq}
+
+@{markdown}
+Now, the same example can be solved using the method of incompatible modes described in the previous section. In this case, a single enhanced finite element is used.
+@{end markdown}
+
+@{figure}
+src: jce-images/image20.png
+caption: Figure 3. Incompatible mode function and its derivative for strain discontinuity modelling
+width: 80%
+@{end figure}
+
+@{markdown}
+The strain discontinuity is taken into account by choosing an appropriate incompatible mode function M(x), as shown in Figure 3:
+@{end markdown}
+
+@{eq}
+M(x) = { −2x/L + 1,   x ∈ [0, L/2]
+         { −2x/L + 1,   x ∈ [L/2, L]    (29)
+@{end eq}
+
+@{markdown}
+The derivative of M(x) is then:
+@{end markdown}
+
+@{eq}
+G(x) = dM(x)/dx = { −2/L,   x ∈ [0, L/2]
+                     {  2/L,   x ∈ [L/2, L]    (30)
+@{end eq}
+
+@{markdown}
+Eqs. (21) have to be computed by dividing the domain Ω into two subdomains, Ω₁ ∈ [0, L/2] where E = E₁ and Ω₂ ∈ [L/2, L] in which E = E₂:
+@{end markdown}
+
+@{eq}
+K = ∫_{Ω_1} B^T*E_1*A*B*dx + ∫_{Ω_2} B^T*E_2*A*B*dx
+F = ∫_{Ω_1} B^T*E_1*A*G*dx + ∫_{Ω_2} B^T*E_2*A*G*dx
+H = ∫_{Ω_1} G*E_1*A*G*dx + ∫_{Ω_2} G*E_2*A*G*dx    (31)
+@{end eq}
+
+@{end columns}
+
+@{footer}
+left: 22
+right: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+@{end footer}
+
+'<!-- ============== PAGE 5 ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Građevinar 1/2018
+right: Ivica Kožar, Tea Rukavina, Adnan Ibrahimbegović
+barside: left
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{markdown}
+After introduction of shape function values, Eqs. (31) become:
+@{end markdown}
+
+@{eq}
+K = A/L * [E_1+E_2, −E_1−E_2; −E_1−E_2, E_1+E_2] / 2
+F = A/L * [E_2−E_1; E_1−E_2]
+H = 2*A*(E_1+E_2)/L    (31a)
+@{end eq}
+
+@{markdown}
+from which the condensed stiffness matrix defined in Eq. (26) is obtained as follows:
+@{end markdown}
+
+@{eq}
+K̂ = K − F^T*H^{−1}*F = 2*A*E_1*E_2 / (L*(E_1+E_2)) * [1, −1; −1, 1]    (31b)
+@{end eq}
+
+@{markdown}
+After taking into account boundary conditions, and after introduction of geometric and material parameters, Eq. (27) is solved to obtain displacement of the free end of the bar:
+@{end markdown}
+
+@{eq}
+u(x = L) = 0.45    (32)
+@{end eq}
+
+@{markdown}
+To calculate the displacement at the discontinuity, it is first necessary to recover the value of the displacement jump α. This is done via Eq. (24), from which we compute:
+@{end markdown}
+
+@{eq}
+α = 0.075    (33)
+@{end eq}
+
+@{markdown}
+The displacement at the discontinuity can be now calculated from Eq. (15):
+@{end markdown}
+
+@{eq}
+u(x̄) = N(L/2)*u + M(L/2)*α = 0.225 + (−0.075) = 0.15    (34)
+@{end eq}
+
+@{markdown}
+It has been shown here that, by using one finite element enhanced by an incompatible mode, it is possible to obtain the results similar to the ones already obtained from the calculation with two standard finite elements, given in Eq. (28).
+
+#### 2.3.2. Displacement discontinuity for localized failure modelling
+
+The aim of this section is to present application of the method of incompatible modes to a softening damage model that is capable of representing failure of concrete in tension. When the limit strength is reached, a macro crack starts to develop, and so the softening occurs immediately after the linear elastic phase. There are several approaches for implementing softening into the model. The one described in [7, 12] is selected for the purposes of this paper. In the proposed model, an embedded strong discontinuity is introduced as a localized displacement jump that simulates the crack opening in the middle of the element. With this localization limiter, mesh-dependency is eliminated. There are other works in which a similar framework is used to describe the softening phase, for either damage, or
+@{end markdown}
+
+@{column}
+@{markdown}
+plasticity or coupled plasticity-damage models (e.g., in [14-17]). In damage, strain goes to zero after complete unloading, and unlike plasticity, there is no residual plastic strain.
+
+The formulation for the simplest 1D truss bar finite element will be derived. The displacement discontinuity has to be introduced into kinematic equations, and it is implemented using the incompatible mode method.
+
+To simulate the crack opening, a displacement jump α is introduced in the middle of the element x̄ = L/2. Since we are dealing with a truss bar finite element that has axial degrees of freedom only, this displacement jump can describe mode I crack opening only.
+@{end markdown}
+
+@{figure}
+src: jce-images/image35.png
+caption: Figure 4. Incompatible mode function and its derivative for displacement discontinuity modelling
+width: 80%
+@{end figure}
+
+@{markdown}
+This localization can be introduced into the finite element formulation in the spirit of the incompatible mode method, as a displacement discontinuity. In this case, the incompatible mode function M(x) shown in Figure 4 is chosen:
+@{end markdown}
+
+@{eq}
+M(x) = { −x/L,         x ∈ [0, x̄)
+         { 1 − x/L,   x ∈ (x̄, L]    (35)
+@{end eq}
+
+@{markdown}
+Here, the derivative of M(x) is defined as follows:
+@{end markdown}
+
+@{eq}
+G(x) = Ĝ + δ_{x̄}    (36)
+@{end eq}
+
+@{markdown}
+where Ĝ = -1/L, and δ_{x̄} is the Dirac delta function representing the singular part of the strain field:
+@{end markdown}
+
+@{eq}
+δ_{x̄} = { 0,   x ≠ x̄;   ∞,   x = x̄    (37)
+@{end eq}
+
+@{markdown}
+By introducing the enriched strain field approximation from Eq. (16) into Hooke's law, the stress field of the bulk material is obtained, as defined in [0, x̄ ∪ x̄, L], since δ_{x̄} = 0 for x ≠ x̄:
+@{end markdown}
+
+@{eq}
+σ(x) = E * (B*u + Ĝ*α)    (38)
+@{end eq}
+
+@{markdown}
+As behaviour at the discontinuity is inelastic, a 1D softening damage model is introduced. The energy dissipation is described
+@{end markdown}
+
+@{end columns}
+
+@{footer}
+left: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+right: 23
+@{end footer}
+
+'<!-- ============== PAGE 6 ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Method of incompatible modes – overview and application
+right: Građevinar 1/2018
+barside: right
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{markdown}
+by the traction-separation cohesive law (see Figure 5), defined by the following equation:
+@{end markdown}
+
+@{eq}
+t = D̄*α    (39)
+@{end eq}
+
+@{markdown}
+where D̄ is the compliance modulus at the discontinuity that can take values from zero to infinity.
+@{end markdown}
+
+@{figure}
+src: jce-images/image38.jpeg
+caption: Figure 5. Cohesive law at the discontinuity
+width: 45%
+@{end figure}
+
+@{markdown}
+The damage function φ̄ checks if the value of traction at the discontinuity is admissible or not:
+@{end markdown}
+
+@{eq}
+φ̄(t, q̄) = |t| − (σ_f − q̄) ≤ 0    (40)
+@{end eq}
+
+@{markdown}
+In Eq. (40), σ_f is the elasticity limit, denoting the stress at which the first cracking occurs, and q̄ is the stress-like softening variable that controls damage defined by:
+@{end markdown}
+
+@{eq}
+q̄ = −K̄*ξ̄    (41)
+@{end eq}
+
+@{markdown}
+for linear softening. Here, K̄ is the softening modulus, and ξ̄ is the displacement-like softening variable that measures accumulation of damage.
+
+The evolution of damage can be described by the softening damage multiplier γ̄ that takes non-negative values only. The evolution equations for internal variables of this model are then:
+@{end markdown}
+
+@{eq}
+α̇ = γ̄ * ∂φ̄/∂t ;   ξ̇̄ = γ̄    (42)
+@{end eq}
+
+@{markdown}
+and the loading/unloading conditions are listed here:
+@{end markdown}
+
+@{eq}
+γ̄ ≥ 0 ;   φ̄ ≤ 0 ;   γ̄ * φ̄ = 0    (43)
+@{end eq}
+
+@{markdown}
+The damage consistency condition enforces the stress admissibility at subsequent time steps:
+@{end markdown}
+
+@{eq}
+γ̄ * φ̇̄ = 0    (44)
+@{end eq}
+
+@{markdown}
+In practice, this means that there are two admissible cases:
+
+- Elastic case: φ̄ < 0, γ̄ = 0
+- Damage case: φ̄ = 0, γ̄ > 0
+
+The fracture energy G_f is equal to the area below the softening part of the response in Figure 6, with the slope equal to the softening modulus K̄:
+@{end markdown}
+
+@{eq}
+G_f = σ_f² / (2*K̄)    (45)
+@{end eq}
+
+@{figure}
+src: jce-images/image28.png
+caption: Figure 6. Fracture energy G_f
+width: 45%
+@{end figure}
+
+@{column}
+@{markdown}
+Numerical implementation of the presented model is quite complex, so that just a brief overview will be given in this paper. For a detailed and comprehensive description, please refer to [13].
+
+Since evolution equations are defined locally, at the element level (at a Gauss quadrature point), and the equilibrium equations are defined globally, for the whole finite element mesh, the operator split methodology [7] will be used to attain computational efficiency. The computation is divided into two phases: local, where evolution equations of internal variables are considered, and global, where equilibrium equations are solved.
+
+The incremental and iterative Newton-Raphson procedure is used to find an approximate solution at each time step, while the implicit Backward Euler method is used to integrate the evolution equations.
+
+In the local phase, the first step is the elastic trial step where the admissibility of the traction at the discontinuity is checked, as shown in Eq. (40). If φ̄ ≤ 0, the values are admissible and the step is indeed elastic, and if φ̄ > 0, the current step is not elastic and a correction must be made since the element has entered the softening phase. This is done by computing the positive value of the damage multiplier γ̄, and by updating the softening variables D̄ and ξ̄ and the displacement jump α. Once the final values of internal variables are obtained, the global phase of the computation is initiated.
+
+In the global phase, the check is made to determine if the equilibrium equations are satisfied within a chosen tolerance. If that is not the case, a new iterative sweep must be conducted to compute the updated values of nodal displacements. The system of equations to be solved is of the form as presented in Eq. (23), where the matrices **K**, **F** and **H** are the same as in Eqs. (21), with an additional term in **H** related to the traction at the discontinuity:
+@{end markdown}
+
+@{eq}
+H = ∫_0^L Ĝ*E*A*Ĝ*dx + A*∂t/∂α    (46)
+@{end eq}
+
+@{end columns}
+
+@{footer}
+left: 24
+right: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+@{end footer}
+
+'<!-- ============== PAGE 7 ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Građevinar 1/2018
+right: Ivica Kožar, Tea Rukavina, Adnan Ibrahimbegović
+barside: left
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{markdown}
+A finite element computer code has been developed in *Mathematica* [18] and FEAP [19] to implement and validate the model. The chosen example is a cantilever bar clamped at the left-hand side, with the displacement ū imposed at the right-hand side (see Figure 7). The bar is discretized by two finite elements, where the material model for element 1 is softening damage, while it is linear elasticity for element 2. The geometric and material properties used in this example are: E = 1000, σ_f = 150, K̄ = −200, L = 1 and A = 1. The imposed displacement is equal to ū = 0.75.
+@{end markdown}
+
+@{figure}
+src: jce-images/image44.png
+caption: Figure 7. Cantilever bar with imposed displacement
+width: 80%
+@{end figure}
+
+@{markdown}
+The global response of the structure is shown in Figure 8. The behaviour of the bar is linear elastic until the elasticity limit is reached. Then the softening starts and the crack opens in the middle of element 1. That means that all the stress is concentrated at the discontinuity, while the bulk of the material is unloading. If we unload the bar, the diagram goes back to zero, showing the typical behaviour of damage models. It can be seen that the unloading and the reloading follow the same path and, in the end, the bar reaches complete failure, σ = 0.
+@{end markdown}
+
+@{figure}
+src: jce-images/image45.png
+caption: Figure 8. Force-displacement diagram with two loading-unloading cycles
+width: 80%
+@{end figure}
+
+@{column}
+
+@{end columns}
+
+@{footer}
+left: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+right: 25
+@{end footer}

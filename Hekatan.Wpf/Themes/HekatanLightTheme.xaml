@@ -1,0 +1,181 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ============================================== -->
+    <!-- HEKATAN CALC - LIGHT THEME (Egyptian Gold)    -->
+    <!-- The Magic of Calculation                       -->
+    <!-- ============================================== -->
+
+    <!-- Primary Colors - Egyptian Gold -->
+    <Color x:Key="PrimaryColor">#B8960C</Color>
+    <Color x:Key="PrimaryLightColor">#D4AF37</Color>
+    <Color x:Key="PrimaryDarkColor">#8B7209</Color>
+
+    <!-- Accent Colors - Turquoise/Cyan -->
+    <Color x:Key="AccentColor">#00A080</Color>
+    <Color x:Key="AccentLightColor">#00C8A0</Color>
+    <Color x:Key="AccentDarkColor">#008060</Color>
+
+    <!-- Background Colors - Light -->
+    <Color x:Key="BackgroundPrimaryColor">#FAFAFA</Color>
+    <Color x:Key="BackgroundSecondaryColor">#F5F5F5</Color>
+    <Color x:Key="BackgroundCardColor">#FFFFFF</Color>
+    <Color x:Key="BackgroundElevatedColor">#EEEEEE</Color>
+    <Color x:Key="BackgroundHoverColor">#E8E8E8</Color>
+
+    <!-- Text Colors -->
+    <Color x:Key="TextPrimaryColor">#1A1A25</Color>
+    <Color x:Key="TextSecondaryColor">#555555</Color>
+    <Color x:Key="TextMutedColor">#888888</Color>
+    <Color x:Key="TextDisabledColor">#AAAAAA</Color>
+
+    <!-- Border Colors -->
+    <Color x:Key="BorderColor">#DDDDDD</Color>
+    <Color x:Key="BorderActiveColor">#B8960C</Color>
+    <Color x:Key="BorderHoverColor">#00A080</Color>
+
+    <!-- Status Colors -->
+    <Color x:Key="SuccessColor">#00A080</Color>
+    <Color x:Key="WarningColor">#D4AF37</Color>
+    <Color x:Key="ErrorColor">#E74C3C</Color>
+    <Color x:Key="InfoColor">#3498DB</Color>
+
+    <!-- ============================================== -->
+    <!-- SOLID COLOR BRUSHES                            -->
+    <!-- ============================================== -->
+
+    <!-- Primary Brushes -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
+    <SolidColorBrush x:Key="PrimaryLightBrush" Color="{StaticResource PrimaryLightColor}"/>
+    <SolidColorBrush x:Key="PrimaryDarkBrush" Color="{StaticResource PrimaryDarkColor}"/>
+
+    <!-- Accent Brushes -->
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="AccentLightBrush" Color="{StaticResource AccentLightColor}"/>
+    <SolidColorBrush x:Key="AccentDarkBrush" Color="{StaticResource AccentDarkColor}"/>
+
+    <!-- Background Brushes -->
+    <SolidColorBrush x:Key="BackgroundPrimaryBrush" Color="{StaticResource BackgroundPrimaryColor}"/>
+    <SolidColorBrush x:Key="BackgroundSecondaryBrush" Color="{StaticResource BackgroundSecondaryColor}"/>
+    <SolidColorBrush x:Key="BackgroundCardBrush" Color="{StaticResource BackgroundCardColor}"/>
+    <SolidColorBrush x:Key="BackgroundElevatedBrush" Color="{StaticResource BackgroundElevatedColor}"/>
+    <SolidColorBrush x:Key="BackgroundHoverBrush" Color="{StaticResource BackgroundHoverColor}"/>
+
+    <!-- Text Brushes -->
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}"/>
+    <SolidColorBrush x:Key="TextDisabledBrush" Color="{StaticResource TextDisabledColor}"/>
+
+    <!-- Border Brushes -->
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
+    <SolidColorBrush x:Key="BorderActiveBrush" Color="{StaticResource BorderActiveColor}"/>
+    <SolidColorBrush x:Key="BorderHoverBrush" Color="{StaticResource BorderHoverColor}"/>
+
+    <!-- Status Brushes -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}"/>
+
+    <!-- ============================================== -->
+    <!-- GRADIENT BRUSHES                               -->
+    <!-- ============================================== -->
+
+    <!-- Gold Gradient (Primary) -->
+    <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#B8960C" Offset="0"/>
+        <GradientStop Color="#D4AF37" Offset="0.5"/>
+        <GradientStop Color="#B8960C" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Toolbar Gradient -->
+    <LinearGradientBrush x:Key="ToolbarGradientBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#FFFFFF" Offset="0"/>
+        <GradientStop Color="#F5F5F5" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Card Gradient -->
+    <LinearGradientBrush x:Key="CardGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FFFFFF" Offset="0"/>
+        <GradientStop Color="#F5F5F5" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Button Hover Gradient -->
+    <LinearGradientBrush x:Key="ButtonHoverGradientBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#F0F0F0" Offset="0"/>
+        <GradientStop Color="#E8E8E8" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Accent Gradient -->
+    <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#00A080" Offset="0"/>
+        <GradientStop Color="#00C8A0" Offset="0.5"/>
+        <GradientStop Color="#00A080" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- ============================================== -->
+    <!-- WINDOW & CONTROL BRUSHES (for theming)        -->
+    <!-- ============================================== -->
+
+    <!-- Window -->
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="{StaticResource BackgroundPrimaryColor}"/>
+    <SolidColorBrush x:Key="WindowForegroundBrush" Color="{StaticResource TextPrimaryColor}"/>
+
+    <!-- Menu -->
+    <SolidColorBrush x:Key="MenuBackgroundBrush" Color="{StaticResource BackgroundCardColor}"/>
+    <SolidColorBrush x:Key="MenuForegroundBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="MenuHoverBackgroundBrush" Color="{StaticResource BackgroundHoverColor}"/>
+    <SolidColorBrush x:Key="MenuBorderBrush" Color="{StaticResource BorderColor}"/>
+
+    <!-- Button -->
+    <SolidColorBrush x:Key="ButtonBackgroundBrush" Color="{StaticResource BackgroundCardColor}"/>
+    <SolidColorBrush x:Key="ButtonForegroundBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="ButtonHoverBackgroundBrush" Color="{StaticResource BackgroundHoverColor}"/>
+    <SolidColorBrush x:Key="ButtonPressedBackgroundBrush" Color="{StaticResource BackgroundElevatedColor}"/>
+    <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource BorderColor}"/>
+
+    <!-- TextBox / Editor -->
+    <SolidColorBrush x:Key="EditorBackgroundBrush" Color="{StaticResource BackgroundCardColor}"/>
+    <SolidColorBrush x:Key="EditorForegroundBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="EditorBorderBrush" Color="{StaticResource BorderColor}"/>
+    <SolidColorBrush x:Key="EditorSelectionBrush" Color="#40B8960C"/>
+
+    <!-- TabControl -->
+    <SolidColorBrush x:Key="TabBackgroundBrush" Color="{StaticResource BackgroundSecondaryColor}"/>
+    <SolidColorBrush x:Key="TabSelectedBackgroundBrush" Color="{StaticResource BackgroundCardColor}"/>
+    <SolidColorBrush x:Key="TabForegroundBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="TabSelectedForegroundBrush" Color="{StaticResource PrimaryColor}"/>
+
+    <!-- ScrollBar -->
+    <SolidColorBrush x:Key="ScrollBarBackgroundBrush" Color="{StaticResource BackgroundSecondaryColor}"/>
+    <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#CCCCCC"/>
+    <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="{StaticResource PrimaryLightColor}"/>
+
+    <!-- Toggle/Radio Button -->
+    <SolidColorBrush x:Key="ToggleBackgroundBrush" Color="{StaticResource BackgroundCardColor}"/>
+    <SolidColorBrush x:Key="ToggleCheckedBackgroundBrush" Color="{StaticResource PrimaryColor}"/>
+    <SolidColorBrush x:Key="ToggleForegroundBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="ToggleCheckedForegroundBrush" Color="#FFFFFF"/>
+
+    <!-- Greek Letter Panel -->
+    <SolidColorBrush x:Key="GreekLetterHoverBrush" Color="#30B8960C"/>
+
+    <!-- Syntax Highlighting Colors -->
+    <SolidColorBrush x:Key="SyntaxKeywordBrush" Color="#8B7209"/>
+    <SolidColorBrush x:Key="SyntaxFunctionBrush" Color="#00806A"/>
+    <SolidColorBrush x:Key="SyntaxNumberBrush" Color="#B8960C"/>
+    <SolidColorBrush x:Key="SyntaxStringBrush" Color="#50A14F"/>
+    <SolidColorBrush x:Key="SyntaxCommentBrush" Color="#A0A1A7"/>
+    <SolidColorBrush x:Key="SyntaxOperatorBrush" Color="#A626A4"/>
+    <SolidColorBrush x:Key="SyntaxErrorBrush" Color="#E74C3C"/>
+
+    <!-- Output Panel -->
+    <SolidColorBrush x:Key="OutputBackgroundBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="OutputBorderBrush" Color="#DDDDDD"/>
+
+    <!-- Splitter -->
+    <SolidColorBrush x:Key="SplitterBackgroundBrush" Color="{StaticResource BorderColor}"/>
+    <SolidColorBrush x:Key="SplitterHoverBrush" Color="{StaticResource PrimaryColor}"/>
+
+</ResourceDictionary>

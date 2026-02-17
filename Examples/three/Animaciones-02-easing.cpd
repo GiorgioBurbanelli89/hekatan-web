@@ -1,0 +1,533 @@
+"============================================
+"ANIMACIONES - Parte 2: Easing (Suavizado)
+"============================================
+"Aprende a hacer animaciones más naturales
+
+"EXPLICACIÓN:
+"Easing = Suavizado del movimiento
+"
+"En la vida real, nada se mueve a velocidad constante:
+"- Un carro acelera y desacelera
+"- Una puerta se cierra rápido y luego despacio
+"- Una pelota rebota con menos fuerza cada vez
+"
+"Easing hace que las animaciones se vean NATURALES
+
+@{html}
+<style>
+  .ejemplo {
+    background: white;
+    padding: 20px;
+    margin: 20px 0;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+  }
+
+  .explicacion {
+    background: #e8f5e9;
+    padding: 15px;
+    border-left: 4px solid #4caf50;
+    margin: 15px 0;
+  }
+
+  button {
+    padding: 10px 20px;
+    margin: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    border: none;
+    background: #2196f3;
+    color: white;
+    border-radius: 4px;
+  }
+
+  button:hover {
+    background: #1976d2;
+  }
+</style>
+
+<h2>🎯 Tipos de Easing</h2>
+
+<!-- EJEMPLO 1: Linear vs Easing -->
+<div class="ejemplo">
+  <h3>1. Comparación: Linear vs Ease</h3>
+  <canvas id="canvas1" width="800" height="250" style="border: 2px solid #ccc;"></canvas>
+  <button id="btn1">▶️ Reproducir</button>
+</div>
+
+<script>
+  const canvas1 = document.getElementById('canvas1');
+  const ctx1 = canvas1.getContext('2d');
+
+  let t1 = 0;  // t = tiempo (de 0 a 1)
+  let animando1 = false;
+
+  // FUNCIONES DE EASING
+  function linear(t) {
+    return t;  // Velocidad constante
+  }
+
+  function easeInQuad(t) {
+    return t * t;  // Empieza lento, termina rápido
+  }
+
+  function easeOutQuad(t) {
+    return t * (2 - t);  // Empieza rápido, termina lento
+  }
+
+  function easeInOutQuad(t) {
+    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    // Lento al inicio y al final, rápido en el medio
+  }
+
+  function dibujar1() {
+    ctx1.clearRect(0, 0, 800, 250);
+
+    // Líneas de referencia
+    ctx1.strokeStyle = '#ddd';
+    ctx1.setLineDash([5, 5]);
+    for (let i = 1; i <= 3; i++) {
+      ctx1.beginPath();
+      ctx1.moveTo(0, i * 60);
+      ctx1.lineTo(800, i * 60);
+      ctx1.stroke();
+    }
+    ctx1.setLineDash([]);
+
+    // Etiquetas
+    ctx1.fillStyle = '#666';
+    ctx1.font = '12px Arial';
+    ctx1.fillText('Linear', 10, 30);
+    ctx1.fillText('Ease In', 10, 90);
+    ctx1.fillText('Ease Out', 10, 150);
+    ctx1.fillText('Ease In-Out', 10, 210);
+
+    const distancia = 700;
+    const offset = 100;
+
+    // 1. Linear
+    const x1 = offset + linear(t1) * distancia;
+    ctx1.fillStyle = '#f44336';
+    ctx1.fillRect(x1 - 10, 20, 20, 20);
+
+    // 2. Ease In
+    const x2 = offset + easeInQuad(t1) * distancia;
+    ctx1.fillStyle = '#2196f3';
+    ctx1.fillRect(x2 - 10, 80, 20, 20);
+
+    // 3. Ease Out
+    const x3 = offset + easeOutQuad(t1) * distancia;
+    ctx1.fillStyle = '#4caf50';
+    ctx1.fillRect(x3 - 10, 140, 20, 20);
+
+    // 4. Ease In-Out
+    const x4 = offset + easeInOutQuad(t1) * distancia;
+    ctx1.fillStyle = '#ff9800';
+    ctx1.fillRect(x4 - 10, 200, 20, 20);
+
+    if (animando1) {
+      t1 += 0.01;  // Incrementar tiempo
+      if (t1 >= 1) {
+        t1 = 1;
+        animando1 = false;
+      }
+      requestAnimationFrame(dibujar1);
+    }
+  }
+
+  document.getElementById('btn1').addEventListener('click', () => {
+    t1 = 0;
+    animando1 = true;
+    dibujar1();
+  });
+
+  dibujar1();
+</script>
+
+<div class="explicacion">
+  <h4>📐 Fórmulas Matemáticas:</h4>
+  <ul>
+    <li><strong>Linear:</strong> <code>y = t</code> → Velocidad constante</li>
+    <li><strong>Ease In:</strong> <code>y = t²</code> → Acelera (empieza lento)</li>
+    <li><strong>Ease Out:</strong> <code>y = t(2-t)</code> → Desacelera (termina lento)</li>
+    <li><strong>Ease In-Out:</strong> Acelera y luego desacelera</li>
+  </ul>
+</div>
+
+<!-- EJEMPLO 2: Rebote -->
+<div class="ejemplo">
+  <h3>2. Bounce (Rebote)</h3>
+  <canvas id="canvas2" width="800" height="300" style="border: 2px solid #ccc;"></canvas>
+  <button id="btn2">▶️ Reproducir</button>
+</div>
+
+<script>
+  const canvas2 = document.getElementById('canvas2');
+  const ctx2 = canvas2.getContext('2d');
+
+  let t2 = 0;
+  let animando2 = false;
+
+  function easeOutBounce(t) {
+    const n1 = 7.5625;
+    const d1 = 2.75;
+
+    if (t < 1 / d1) {
+      return n1 * t * t;
+    } else if (t < 2 / d1) {
+      return n1 * (t -= 1.5 / d1) * t + 0.75;
+    } else if (t < 2.5 / d1) {
+      return n1 * (t -= 2.25 / d1) * t + 0.9375;
+    } else {
+      return n1 * (t -= 2.625 / d1) * t + 0.984375;
+    }
+  }
+
+  function dibujar2() {
+    ctx2.clearRect(0, 0, 800, 300);
+
+    // Suelo
+    ctx2.fillStyle = '#333';
+    ctx2.fillRect(0, 280, 800, 2);
+
+    // Pelota
+    const y = 250 - easeOutBounce(t2) * 230;  // Altura máxima 230px
+    ctx2.fillStyle = '#ff5722';
+    ctx2.beginPath();
+    ctx2.arc(100 + t2 * 600, y, 20, 0, Math.PI * 2);
+    ctx2.fill();
+
+    // Sombra (elipse aplastada)
+    const shadowScale = 1 - easeOutBounce(t2) * 0.7;
+    ctx2.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx2.beginPath();
+    ctx2.ellipse(100 + t2 * 600, 280, 15 * (1 + shadowScale), 5 * shadowScale, 0, 0, Math.PI * 2);
+    ctx2.fill();
+
+    if (animando2) {
+      t2 += 0.008;
+      if (t2 >= 1) {
+        t2 = 1;
+        animando2 = false;
+      }
+      requestAnimationFrame(dibujar2);
+    }
+  }
+
+  document.getElementById('btn2').addEventListener('click', () => {
+    t2 = 0;
+    animando2 = true;
+    dibujar2();
+  });
+
+  dibujar2();
+</script>
+
+<div class="explicacion">
+  <h4>🏀 Bounce Easing:</h4>
+  <p>
+    Simula una pelota rebotando. La fórmula es compleja, pero el resultado
+    es muy natural. Se usa mucho en interfaces de usuario.
+  </p>
+</div>
+
+<!-- EJEMPLO 3: Elastic -->
+<div class="ejemplo">
+  <h3>3. Elastic (Elástico)</h3>
+  <canvas id="canvas3" width="800" height="300" style="border: 2px solid #ccc;"></canvas>
+  <button id="btn3">▶️ Reproducir</button>
+</div>
+
+<script>
+  const canvas3 = document.getElementById('canvas3');
+  const ctx3 = canvas3.getContext('2d');
+
+  let t3 = 0;
+  let animando3 = false;
+
+  function easeOutElastic(t) {
+    const c4 = (2 * Math.PI) / 3;
+    return t === 0
+      ? 0
+      : t === 1
+      ? 1
+      : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+  }
+
+  function dibujar3() {
+    ctx3.clearRect(0, 0, 800, 300);
+
+    // Línea central
+    ctx3.strokeStyle = '#ddd';
+    ctx3.setLineDash([5, 5]);
+    ctx3.beginPath();
+    ctx3.moveTo(0, 150);
+    ctx3.lineTo(800, 150);
+    ctx3.stroke();
+    ctx3.setLineDash([]);
+
+    // Resorte (línea ondulada)
+    ctx3.strokeStyle = '#666';
+    ctx3.lineWidth = 2;
+    ctx3.beginPath();
+    const posX = 100 + easeOutElastic(t3) * 600;
+    ctx3.moveTo(50, 150);
+
+    for (let x = 50; x < posX - 20; x += 10) {
+      const y = 150 + Math.sin(x * 0.5) * 10;
+      ctx3.lineTo(x, y);
+    }
+    ctx3.stroke();
+
+    // Peso
+    ctx3.fillStyle = '#9c27b0';
+    ctx3.fillRect(posX - 20, 130, 40, 40);
+    ctx3.lineWidth = 1;
+
+    // Texto
+    ctx3.fillStyle = '#666';
+    ctx3.font = '14px Arial';
+    ctx3.fillText('t = ' + t3.toFixed(2), posX - 10, 185);
+
+    if (animando3) {
+      t3 += 0.01;
+      if (t3 >= 1) {
+        t3 = 1;
+        animando3 = false;
+      }
+      requestAnimationFrame(dibujar3);
+    }
+  }
+
+  document.getElementById('btn3').addEventListener('click', () => {
+    t3 = 0;
+    animando3 = true;
+    dibujar3();
+  });
+
+  dibujar3();
+</script>
+
+<div class="explicacion">
+  <h4>🎸 Elastic Easing:</h4>
+  <p>
+    Simula un resorte u objeto elástico. Oscila antes de estabilizarse.
+    Muy usado para efectos de "aparecer" dramáticos.
+  </p>
+</div>
+
+<!-- EJEMPLO 4: Comparación visual -->
+<div class="ejemplo">
+  <h3>4. Todas las Curvas Juntas</h3>
+  <canvas id="canvas4" width="800" height="400" style="border: 2px solid #ccc;"></canvas>
+</div>
+
+<script>
+  const canvas4 = document.getElementById('canvas4');
+  const ctx4 = canvas4.getContext('2d');
+
+  const funciones = [
+    { nombre: 'Linear', func: linear, color: '#f44336' },
+    { nombre: 'Ease In', func: easeInQuad, color: '#2196f3' },
+    { nombre: 'Ease Out', func: easeOutQuad, color: '#4caf50' },
+    { nombre: 'Ease In-Out', func: easeInOutQuad, color: '#ff9800' },
+    { nombre: 'Bounce', func: easeOutBounce, color: '#ff5722' },
+    { nombre: 'Elastic', func: easeOutElastic, color: '#9c27b0' }
+  ];
+
+  function dibujarGraficas() {
+    ctx4.clearRect(0, 0, 800, 400);
+
+    // Ejes
+    ctx4.strokeStyle = '#333';
+    ctx4.lineWidth = 2;
+    // Eje Y
+    ctx4.beginPath();
+    ctx4.moveTo(50, 50);
+    ctx4.lineTo(50, 350);
+    ctx4.lineTo(45, 355);
+    ctx4.moveTo(50, 350);
+    ctx4.lineTo(55, 355);
+    ctx4.stroke();
+
+    // Eje X
+    ctx4.beginPath();
+    ctx4.moveTo(50, 350);
+    ctx4.lineTo(750, 350);
+    ctx4.lineTo(745, 345);
+    ctx4.moveTo(750, 350);
+    ctx4.lineTo(745, 355);
+    ctx4.stroke();
+
+    // Etiquetas
+    ctx4.fillStyle = '#333';
+    ctx4.font = 'bold 14px Arial';
+    ctx4.fillText('Salida (y)', 10, 40);
+    ctx4.fillText('Tiempo (t)', 700, 390);
+    ctx4.fillText('0', 35, 365);
+    ctx4.fillText('1', 35, 60);
+    ctx4.fillText('1', 745, 365);
+
+    // Dibujar cada curva
+    funciones.forEach((item, index) => {
+      ctx4.strokeStyle = item.color;
+      ctx4.lineWidth = 2;
+      ctx4.beginPath();
+
+      for (let t = 0; t <= 1; t += 0.01) {
+        const x = 50 + t * 700;
+        const y = 350 - item.func(t) * 300;
+
+        if (t === 0) {
+          ctx4.moveTo(x, y);
+        } else {
+          ctx4.lineTo(x, y);
+        }
+      }
+      ctx4.stroke();
+
+      // Leyenda
+      const legendY = 20 + index * 25;
+      ctx4.fillStyle = item.color;
+      ctx4.fillRect(780, legendY - 10, 15, 15);
+      ctx4.fillStyle = '#333';
+      ctx4.font = '12px Arial';
+      ctx4.fillText(item.nombre, 800, legendY + 2);
+    });
+  }
+
+  dibujarGraficas();
+</script>
+
+<div class="explicacion">
+  <h4>📈 Interpretando las Gráficas:</h4>
+  <ul>
+    <li><strong>Eje X (horizontal):</strong> Tiempo (0 = inicio, 1 = fin)</li>
+    <li><strong>Eje Y (vertical):</strong> Progreso (0 = 0%, 1 = 100%)</li>
+    <li><strong>Pendiente:</strong> Velocidad (más inclinado = más rápido)</li>
+  </ul>
+  <p>
+    Por ejemplo, <strong>Ease In</strong> tiene poca pendiente al inicio (lento)
+    y mucha al final (rápido).
+  </p>
+</div>
+
+<!-- EJEMPLO 5: Aplicación práctica -->
+<div class="ejemplo">
+  <h3>5. Aplicación: Animación de Carga</h3>
+  <div style="margin: 20px 0;">
+    <label>Tipo de easing: </label>
+    <select id="tipoEasing" style="padding: 5px;">
+      <option value="linear">Linear</option>
+      <option value="easeInQuad">Ease In</option>
+      <option value="easeOutQuad" selected>Ease Out</option>
+      <option value="easeInOutQuad">Ease In-Out</option>
+      <option value="easeOutBounce">Bounce</option>
+      <option value="easeOutElastic">Elastic</option>
+    </select>
+    <button id="btn5">▶️ Animar</button>
+  </div>
+
+  <div style="width: 100%; background: #f0f0f0; height: 40px; border-radius: 20px; overflow: hidden;">
+    <div id="barra" style="width: 0%; height: 100%; background: linear-gradient(90deg, #4caf50, #8bc34a); transition: none;"></div>
+  </div>
+
+  <p id="porcentaje5" style="font-size: 24px; font-weight: bold; text-align: center;">0%</p>
+</div>
+
+<script>
+  const barra = document.getElementById('barra');
+  const porcentaje5 = document.getElementById('porcentaje5');
+  const tipoEasing = document.getElementById('tipoEasing');
+
+  let t5 = 0;
+  let animando5 = false;
+  let funcionActual = easeOutQuad;
+
+  const mapaFunciones = {
+    'linear': linear,
+    'easeInQuad': easeInQuad,
+    'easeOutQuad': easeOutQuad,
+    'easeInOutQuad': easeInOutQuad,
+    'easeOutBounce': easeOutBounce,
+    'easeOutElastic': easeOutElastic
+  };
+
+  function animar5() {
+    if (!animando5) return;
+
+    const progreso = funcionActual(t5);
+    barra.style.width = (progreso * 100) + '%';
+    porcentaje5.textContent = Math.floor(progreso * 100) + '%';
+
+    t5 += 0.01;
+
+    if (t5 >= 1) {
+      t5 = 1;
+      barra.style.width = '100%';
+      porcentaje5.textContent = '100%';
+      animando5 = false;
+    } else {
+      requestAnimationFrame(animar5);
+    }
+  }
+
+  document.getElementById('btn5').addEventListener('click', () => {
+    t5 = 0;
+    funcionActual = mapaFunciones[tipoEasing.value];
+    animando5 = true;
+    animar5();
+  });
+</script>
+
+<div class="explicacion" style="background: #fff3cd; border-left-color: #ffc107;">
+  <h4>💡 Cuándo usar cada tipo:</h4>
+  <ul>
+    <li><strong>Linear:</strong> Carruseles, progreso de descarga</li>
+    <li><strong>Ease Out:</strong> Modales, dropdowns (lo más común)</li>
+    <li><strong>Ease In:</strong> Elementos que desaparecen</li>
+    <li><strong>Ease In-Out:</strong> Transiciones suaves generales</li>
+    <li><strong>Bounce:</strong> Botones, notificaciones (llamar atención)</li>
+    <li><strong>Elastic:</strong> Efectos dramáticos, gamificación</li>
+  </ul>
+</div>
+
+<div class="explicacion" style="background: #e3f2fd; border-left-color: #2196f3;">
+  <h4>🚀 Próximo Nivel:</h4>
+  <p>
+    Ahora que entiendes el easing, puedes aplicarlo a animaciones en Three.js:
+    <br>• Rotación de objetos con easing
+    <br>• Cámaras que se mueven suavemente
+    <br>• Deformaciones progresivas en FEA
+  </p>
+</div>
+@{end html}
+
+"RESUMEN DE EASING:
+"
+"1. t = tiempo normalizado (0 a 1)
+"   0 = inicio de animación
+"   1 = fin de animación
+"
+"2. Funciones de easing transforman t:
+"   y = easing(t)
+"   donde y es el progreso real
+"
+"3. Tipos principales:
+"   - Linear: y = t (constante)
+"   - Ease In: y = t² (acelera)
+"   - Ease Out: y = t(2-t) (desacelera)
+"   - Ease In-Out: combina ambos
+"   - Bounce: rebota
+"   - Elastic: oscila como resorte
+"
+"4. Se usa para TODO:
+"   - Posición de objetos
+"   - Opacidad
+"   - Escala/tamaño
+"   - Rotación
+"   - Colores
+"   - Deformaciones
+"
+"El easing hace que las animaciones se
+"sientan NATURALES y PROFESIONALES

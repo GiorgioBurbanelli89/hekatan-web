@@ -1,0 +1,300 @@
+"============================================
+"🎬 SVG ANIMACIONES AVANZADAS
+"============================================
+"Aprende a crear animaciones complejas con SVG y CSS/JS.
+
+"SVG ANIMACIÓN CON CSS
+"----------------------------------------
+'Animar propiedades: fill, stroke, transform
+'Usar @keyframes y animation
+'Muy eficiente y suave
+
+"SVG ANIMACIÓN CON JavaScript
+"----------------------------------------
+'Manipular atributos directamente
+'Cambiar d (paths), cx, cy, r, etc.
+'Más control y dinámico
+
+"SMIL (SVG Animation)
+"----------------------------------------
+'<animate> - Animar atributos
+'<animateTransform> - Transformaciones
+'<animateMotion> - Movimiento en path
+'⚠️ Obsoleto, mejor usar CSS/JS
+
+"PATHS SVG
+"----------------------------------------
+'M - MoveTo (mover a)
+'L - LineTo (línea a)
+'C - Curva cúbica Bézier
+'Q - Curva cuadrática
+'A - Arco
+'Z - Cerrar path
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>22 - SVG Animaciones</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #1a1a1a;
+      color: white;
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+    }
+
+    .seccion {
+      background: rgba(255,255,255,0.05);
+      padding: 30px;
+      margin: 20px auto;
+      max-width: 900px;
+      border-radius: 8px;
+    }
+
+    svg {
+      display: block;
+      margin: 20px auto;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+
+    /* ANIMACIONES CSS */
+    .circle-pulse {
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { r: 30px; fill: #2196f3; }
+      50% { r: 50px; fill: #f44336; }
+    }
+
+    .path-draw {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      animation: draw 3s linear infinite;
+    }
+
+    @keyframes draw {
+      to { stroke-dashoffset: 0; }
+    }
+
+    .rotate-continuous {
+      animation: rotate 4s linear infinite;
+      transform-origin: center;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    button {
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    button:hover {
+      background: #1976d2;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>🎬 SVG Animaciones Avanzadas</h1>
+
+  <!-- #region ANIMACIÓN CSS - PULSO -->
+  <div class="seccion">
+    <h2>💓 Animación CSS - Pulso</h2>
+    <svg width="600" height="200">
+      <circle class="circle-pulse" cx="300" cy="100" r="30" fill="#2196f3"/>
+      <text x="300" y="180" text-anchor="middle" fill="white">CSS @keyframes</text>
+    </svg>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region ANIMACIÓN CSS - DIBUJAR PATH -->
+  <div class="seccion">
+    <h2>✏️ Animación CSS - Dibujar Path</h2>
+    <svg width="600" height="200">
+      <path class="path-draw"
+            d="M 50 100 Q 150 50 250 100 T 450 100 L 550 100"
+            fill="none"
+            stroke="#4caf50"
+            stroke-width="4"/>
+      <text x="300" y="180" text-anchor="middle" fill="white">stroke-dasharray animation</text>
+    </svg>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region ANIMACIÓN CSS - ROTACIÓN -->
+  <div class="seccion">
+    <h2>🔄 Animación CSS - Rotación</h2>
+    <svg width="600" height="200">
+      <g class="rotate-continuous">
+        <rect x="275" y="75" width="50" height="50" fill="#ff9800"/>
+        <circle cx="300" cy="100" r="5" fill="white"/>
+      </g>
+      <text x="300" y="180" text-anchor="middle" fill="white">transform: rotate()</text>
+    </svg>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region ANIMACIÓN JAVASCRIPT -->
+  <div class="seccion">
+    <h2>⚡ Animación JavaScript</h2>
+    <svg id="svgJS" width="600" height="200">
+      <circle id="circleJS" cx="50" cy="100" r="20" fill="#e91e63"/>
+      <path id="pathJS"
+            d="M 50 50 Q 300 50 550 50"
+            fill="none"
+            stroke="#555"
+            stroke-width="2"
+            stroke-dasharray="5,5"/>
+    </svg>
+    <div style="text-align: center;">
+      <button onclick="iniciarAnimacion()">▶️ Iniciar</button>
+      <button onclick="pausarAnimacion()">⏸️ Pausar</button>
+      <button onclick="resetear()">🔄 Resetear</button>
+    </div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region LOGO ANIMADO -->
+  <div class="seccion">
+    <h2>🎨 Logo Animado Complejo</h2>
+    <svg width="600" height="300" viewBox="0 0 200 100">
+      <!-- Fondo -->
+      <rect width="200" height="100" fill="#667eea"/>
+
+      <!-- Estrella rotando -->
+      <g class="rotate-continuous">
+        <path d="M 100 20 L 110 45 L 135 45 L 115 60 L 125 85 L 100 70 L 75 85 L 85 60 L 65 45 L 90 45 Z"
+              fill="#ffd700"
+              stroke="#ff9800"
+              stroke-width="2"/>
+      </g>
+
+      <!-- Texto -->
+      <text x="100" y="95" text-anchor="middle" fill="white" font-size="16" font-weight="bold">
+        SVG Animations
+      </text>
+    </svg>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region SCRIPTS -->
+  <script>
+    // #region VARIABLES
+    let animacionActiva = false;
+    let posX = 50;
+    let velocidad = 2;
+    let animacionID;
+    // #endregion
+
+    // #region ANIMACIÓN JAVASCRIPT
+    function animar() {
+      if (!animacionActiva) return;
+
+      const circle = document.getElementById('circleJS');
+      const path = document.getElementById('pathJS');
+
+      // Actualizar posición
+      posX += velocidad;
+
+      // Rebotar en los bordes
+      if (posX > 550 || posX < 50) {
+        velocidad *= -1;
+      }
+
+      // Actualizar círculo
+      circle.setAttribute('cx', posX);
+
+      // Calcular Y en la curva (aproximación simple)
+      const t = (posX - 50) / 500;
+      const y = 50 + Math.sin(t * Math.PI) * 20;
+      circle.setAttribute('cy', y);
+
+      // Cambiar color según posición
+      const hue = (posX / 600) * 360;
+      circle.setAttribute('fill', `hsl(${hue}, 70%, 50%)`);
+
+      animacionID = requestAnimationFrame(animar);
+    }
+
+    function iniciarAnimacion() {
+      animacionActiva = true;
+      animar();
+    }
+
+    function pausarAnimacion() {
+      animacionActiva = false;
+      cancelAnimationFrame(animacionID);
+    }
+
+    function resetear() {
+      pausarAnimacion();
+      posX = 50;
+      velocidad = 2;
+      document.getElementById('circleJS').setAttribute('cx', 50);
+      document.getElementById('circleJS').setAttribute('cy', 100);
+      document.getElementById('circleJS').setAttribute('fill', '#e91e63');
+    }
+    // #endregion
+
+    console.log('✅ SVG Animaciones cargadas');
+  </script>
+  <!-- #endregion -->
+
+  <!-- #region CÓDIGO DE EJEMPLO -->
+  <div class="seccion">
+    <h3>💻 Código Básico:</h3>
+    <pre style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 4px;">
+/* CSS Animation */
+@keyframes pulse {
+  0%, 100% { r: 30px; }
+  50% { r: 50px; }
+}
+.circle { animation: pulse 2s infinite; }
+
+/* Dibujar path */
+.path {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: draw 3s linear infinite;
+}
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* JavaScript */
+circle.setAttribute('cx', newX);
+circle.setAttribute('cy', newY);
+    </pre>
+  </div>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

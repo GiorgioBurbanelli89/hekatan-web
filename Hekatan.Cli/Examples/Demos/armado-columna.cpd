@@ -1,0 +1,232 @@
+@{svg 700 50}
+text 350 35 "DETALLE DE ARMADO - COLUMNA C1 (40x40cm)" size:22 anchor:middle bold color:#222
+@{end svg}
+
+@{svg 700 700}
+# =====================================================
+# SECCION TRANSVERSAL A-A
+# Columna 40x40cm, 8d16mm, E d10@15cm, r=4cm
+# Escala visual: 1cm = 7px → 40cm = 280px
+# Centro de seccion en (200, 300)
+# =====================================================
+
+background #fff
+
+# --- Marco del plano ---
+rect 5 5 690 690 fill:none stroke:#333 width:1.5
+
+# --- Titulo de la vista ---
+text 200 45 "SECCION A-A" size:16 anchor:middle bold color:#222
+line 130 50 270 50 stroke:#222 width:1.5
+
+# --- Ejes de simetria ---
+line 200 70 200 530 stroke:#aaa width:0.5 dash:8,4
+line 40 300 360 300 stroke:#aaa width:0.5 dash:8,4
+text 205 75 "eje Y" size:8 anchor:start color:#aaa italic
+text 350 295 "eje X" size:8 anchor:end color:#aaa italic
+
+# --- Concreto (seccion 40x40) ---
+# x: 200-140=60 → 60 a 340, y: 300-140=160 → 160 a 440
+rect 60 160 280 280 fill:#e0e0e0 stroke:#444 width:2.5
+
+# --- Hatch diagonal (textura concreto) ---
+line 60 180 80 160 stroke:#bbb width:0.3
+line 60 210 110 160 stroke:#bbb width:0.3
+line 60 240 140 160 stroke:#bbb width:0.3
+line 60 270 170 160 stroke:#bbb width:0.3
+line 60 300 200 160 stroke:#bbb width:0.3
+line 60 330 230 160 stroke:#bbb width:0.3
+line 60 360 260 160 stroke:#bbb width:0.3
+line 60 390 290 160 stroke:#bbb width:0.3
+line 60 420 320 160 stroke:#bbb width:0.3
+line 60 440 340 160 stroke:#bbb width:0.3
+line 80 440 340 180 stroke:#bbb width:0.3
+line 110 440 340 210 stroke:#bbb width:0.3
+line 140 440 340 240 stroke:#bbb width:0.3
+line 170 440 340 270 stroke:#bbb width:0.3
+line 200 440 340 300 stroke:#bbb width:0.3
+line 230 440 340 330 stroke:#bbb width:0.3
+line 260 440 340 360 stroke:#bbb width:0.3
+line 290 440 340 390 stroke:#bbb width:0.3
+line 320 440 340 420 stroke:#bbb width:0.3
+
+# --- Estribo principal (d10) ---
+# Recubrimiento libre 4cm=28px, eje estribo a 4.5cm=31.5px del borde
+rect 92 192 216 216 fill:none stroke:#1565c0 width:2.5
+
+# Ganchos del estribo 135° (esquina sup-izq)
+line 92 207 92 192 stroke:#1565c0 width:2.5
+line 92 192 107 182 stroke:#1565c0 width:2.5
+
+# --- Barras longitudinales 8d16mm ---
+# Posicion: eje estribo + d_barra/2 ≈ 4.5+0.8=5.3cm del borde → 37px
+# Esquinas
+circle 97 197 9 fill:#c62828 stroke:#8e0000 width:1.5
+circle 303 197 9 fill:#c62828 stroke:#8e0000 width:1.5
+circle 97 403 9 fill:#c62828 stroke:#8e0000 width:1.5
+circle 303 403 9 fill:#c62828 stroke:#8e0000 width:1.5
+# Intermedias
+circle 200 197 9 fill:#c62828 stroke:#8e0000 width:1.5
+circle 200 403 9 fill:#c62828 stroke:#8e0000 width:1.5
+circle 97 300 9 fill:#c62828 stroke:#8e0000 width:1.5
+circle 303 300 9 fill:#c62828 stroke:#8e0000 width:1.5
+
+# =====================================================
+# ANOTACIONES TIPO PLANO
+# =====================================================
+
+# --- Lineas de llamada a barras ---
+# Barra esquina sup-izq → etiqueta
+line 97 197 30 120 stroke:#333 width:0.7
+line 30 120 30 105 stroke:#333 width:0.7
+circle 30 102 2 fill:#333 stroke:#333 width:0.5
+text 32 98 "1d16" size:10 anchor:start color:#222
+
+# Barra intermedia superior → etiqueta
+line 200 197 200 110 stroke:#333 width:0.7
+line 200 110 245 110 stroke:#333 width:0.7
+text 248 114 "1d16" size:10 anchor:start color:#222
+
+# Barra intermedia derecha → etiqueta
+line 303 300 380 300 stroke:#333 width:0.7
+line 380 300 380 280 stroke:#333 width:0.7
+text 385 284 "1d16" size:10 anchor:start color:#222
+
+# Estribo → etiqueta con linea de llamada
+line 154 192 154 130 stroke:#1565c0 width:0.7
+line 154 130 260 130 stroke:#1565c0 width:0.7
+text 263 134 "Ed10@15" size:10 anchor:start color:#1565c0
+
+# --- COTAS EXTERIORES ---
+
+# Cota horizontal inferior (40cm)
+line 60 455 60 475 stroke:#333 width:0.7
+line 340 455 340 475 stroke:#333 width:0.7
+line 60 468 340 468 stroke:#333 width:0.7
+line 60 468 65 465 stroke:#333 width:0.7
+line 60 468 65 471 stroke:#333 width:0.7
+line 340 468 335 465 stroke:#333 width:0.7
+line 340 468 335 471 stroke:#333 width:0.7
+text 200 480 "40" size:12 anchor:middle color:#222
+
+# Cota vertical derecha (40cm)
+line 355 160 375 160 stroke:#333 width:0.7
+line 355 440 375 440 stroke:#333 width:0.7
+line 368 160 368 440 stroke:#333 width:0.7
+line 368 160 365 165 stroke:#333 width:0.7
+line 368 160 371 165 stroke:#333 width:0.7
+line 368 440 365 435 stroke:#333 width:0.7
+line 368 440 371 435 stroke:#333 width:0.7
+text 382 300 "40" size:12 anchor:middle color:#222 rotate:90
+
+# Cota recubrimiento sup (4cm)
+line 60 145 60 155 stroke:#666 width:0.5
+line 92 145 92 155 stroke:#666 width:0.5
+line 60 150 92 150 stroke:#666 width:0.5
+text 76 143 "4" size:9 anchor:middle color:#666
+
+# Cota recubrimiento izq (4cm)
+line 45 160 55 160 stroke:#666 width:0.5
+line 45 192 55 192 stroke:#666 width:0.5
+line 50 160 50 192 stroke:#666 width:0.5
+text 43 176 "4" size:9 anchor:end color:#666
+
+# --- Nota de seccion ---
+text 200 510 "8d16mm (As = 16.08 cm2)" size:11 anchor:middle color:#222
+text 200 525 "Ed10@15cm (doble estribo)" size:11 anchor:middle color:#1565c0
+text 200 540 "f'c = 240 kg/cm2 | fy = 4200 kg/cm2" size:10 anchor:middle color:#666
+
+# =====================================================
+# VISTA LONGITUDINAL (ELEVACION)
+# A la derecha de la seccion transversal
+# =====================================================
+
+text 560 45 "ELEVACION" size:16 anchor:middle bold color:#222
+line 510 50 610 50 stroke:#222 width:1.5
+
+# Contorno de columna (vista frontal)
+rect 470 80 180 560 fill:#f0f0f0 stroke:#444 width:2
+
+# Barras longitudinales (2 visibles en cada cara)
+# Cara izquierda
+line 490 80 490 640 stroke:#c62828 width:2.5
+line 510 80 510 640 stroke:#c62828 width:2.5
+# Cara derecha
+line 630 80 630 640 stroke:#c62828 width:2.5
+line 610 80 610 640 stroke:#c62828 width:2.5
+
+# Estribos (cada 15cm, escala aprox)
+line 485 120 655 120 stroke:#1565c0 width:1.5
+line 485 170 655 170 stroke:#1565c0 width:1.5
+line 485 220 655 220 stroke:#1565c0 width:1.5
+line 485 270 655 270 stroke:#1565c0 width:1.5
+line 485 320 655 320 stroke:#1565c0 width:1.5
+line 485 370 655 370 stroke:#1565c0 width:1.5
+line 485 420 655 420 stroke:#1565c0 width:1.5
+line 485 470 655 470 stroke:#1565c0 width:1.5
+line 485 520 655 520 stroke:#1565c0 width:1.5
+line 485 570 655 570 stroke:#1565c0 width:1.5
+line 485 620 655 620 stroke:#1565c0 width:1.5
+
+# Gancho de estribos (pequeño tick en cada estribo, lado izq)
+line 485 120 480 115 stroke:#1565c0 width:1.2
+line 485 170 480 165 stroke:#1565c0 width:1.2
+line 485 220 480 215 stroke:#1565c0 width:1.2
+line 485 270 480 265 stroke:#1565c0 width:1.2
+line 485 320 480 315 stroke:#1565c0 width:1.2
+line 485 370 480 365 stroke:#1565c0 width:1.2
+line 485 420 480 415 stroke:#1565c0 width:1.2
+line 485 470 480 465 stroke:#1565c0 width:1.2
+line 485 520 480 515 stroke:#1565c0 width:1.2
+line 485 570 480 565 stroke:#1565c0 width:1.2
+line 485 620 480 615 stroke:#1565c0 width:1.2
+
+# Cota separacion estribos
+line 660 120 675 120 stroke:#666 width:0.5
+line 660 170 675 170 stroke:#666 width:0.5
+line 670 120 670 170 stroke:#666 width:0.5
+line 670 120 667 125 stroke:#666 width:0.5
+line 670 120 673 125 stroke:#666 width:0.5
+line 670 170 667 165 stroke:#666 width:0.5
+line 670 170 673 165 stroke:#666 width:0.5
+text 680 148 "15" size:9 anchor:start color:#666
+
+# Linea de corte A-A (marca de seccion)
+line 430 350 465 350 stroke:#d32f2f width:1.5
+line 465 350 470 345 stroke:#d32f2f width:1.5
+line 430 350 435 355 stroke:#d32f2f width:1.5
+text 428 355 "A" size:12 anchor:end bold color:#d32f2f
+
+line 655 350 690 350 stroke:#d32f2f width:1.5
+line 655 350 660 345 stroke:#d32f2f width:1.5
+line 690 350 685 355 stroke:#d32f2f width:1.5
+text 693 355 "A" size:12 anchor:start bold color:#d32f2f
+
+# Linea de llamada barras longitudinales
+line 490 660 490 670 stroke:#333 width:0.5
+line 490 670 540 670 stroke:#333 width:0.5
+text 543 674 "4d16" size:10 anchor:start color:#222
+
+# Linea de llamada estribos
+line 655 270 668 258 stroke:#1565c0 width:0.5
+text 660 253 "Ed10" size:9 anchor:start color:#1565c0
+@{end svg}
+
+@{svg 700 80}
+# Cajetin
+rect 5 5 690 70 fill:#fafafa stroke:#333 width:1.5
+line 250 5 250 75 stroke:#333 width:0.5
+line 500 5 500 75 stroke:#333 width:0.5
+
+text 125 28 "PROYECTO: VIVIENDA CRUCITA" size:10 anchor:middle color:#222
+text 125 48 "PLANO: DETALLE COLUMNA C1" size:10 anchor:middle color:#222
+text 125 65 "ESCALA: S/E" size:9 anchor:middle color:#666
+
+text 375 28 "MATERIAL: H.A. f'c=240" size:10 anchor:middle color:#222
+text 375 48 "ACERO: fy=4200 kg/cm2" size:10 anchor:middle color:#222
+text 375 65 "RECUBRIMIENTO: 4 cm" size:9 anchor:middle color:#666
+
+text 600 28 "CALCULADO:" size:9 anchor:middle color:#666
+text 600 45 "CALCPAD CLI" size:11 anchor:middle bold color:#1565c0
+text 600 62 "FEB 2026" size:9 anchor:middle color:#666
+@{end svg}

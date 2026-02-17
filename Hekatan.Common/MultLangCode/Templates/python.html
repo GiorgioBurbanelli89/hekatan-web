@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Output</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        .python-container {
+            margin: 10px 0;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .python-header {
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+            background: linear-gradient(135deg, #3776ab 0%, #ffd43b 100%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .python-header::before {
+            content: "\1F40D";
+            font-size: 14px;
+        }
+
+        .python-output {
+            background-color: #1e1e1e;
+            color: {{OUTPUT_COLOR}};
+            padding: 12px 15px;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .python-output.error {
+            color: #f44747;
+            border-left: 3px solid #f44747;
+        }
+
+        .python-output.success {
+            color: #4ec9b0;
+        }
+
+        .python-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .python-output::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        .python-output::-webkit-scrollbar-thumb {
+            background: #3776ab;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="python-container">
+        <div class="python-header">Python</div>
+        <div class="python-output {{STATUS_CLASS}}">{{OUTPUT}}</div>
+    </div>
+</body>
+</html>

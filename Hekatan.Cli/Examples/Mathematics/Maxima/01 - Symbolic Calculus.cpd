@@ -1,0 +1,87 @@
+"<h1>Symbolic Calculus with Maxima CAS</h1>"
+"<h2>1. Derivatives</h2>"
+'<p>Maxima computes symbolic derivatives analytically:</p>
+
+@{maxima}
+/* First derivative */
+diff(x^3 + 2*x^2 - 5*x + 7, x);
+
+/* Second derivative */
+diff(x^3 + 2*x^2 - 5*x + 7, x, 2);
+
+/* Partial derivatives */
+diff(x^2*y^3 + sin(x*y), x);
+diff(x^2*y^3 + sin(x*y), y);
+
+/* Chain rule - derivative of composite function */
+diff(sin(exp(x^2)), x);
+@{end maxima}
+
+"<h2>2. Integrals</h2>"
+'<p>Indefinite and definite integrals:</p>
+
+@{maxima}
+/* Indefinite integrals */
+integrate(x^2*exp(x), x);
+
+integrate(1/(x^2 + 1), x);
+
+integrate(sin(x)^3*cos(x)^2, x);
+
+/* Definite integrals */
+integrate(x^2, x, 0, 1);
+
+integrate(exp(-x^2), x, minf, inf);
+
+integrate(sin(x)/x, x, 0, inf);
+@{end maxima}
+
+"<h2>3. Limits</h2>"
+'<p>Limits at finite points and infinity:</p>
+
+@{maxima}
+/* Limit at a point */
+limit(sin(x)/x, x, 0);
+
+/* L'Hopital cases */
+limit((exp(x) - 1)/x, x, 0);
+
+limit((1 + 1/x)^x, x, inf);
+
+/* One-sided limits */
+limit(1/x, x, 0, plus);
+limit(1/x, x, 0, minus);
+@{end maxima}
+
+"<h2>4. Taylor Series</h2>"
+'<p>Series expansions around a point:</p>
+
+@{maxima}
+/* Taylor series of sin(x) around x=0, order 7 */
+taylor(sin(x), x, 0, 7);
+
+/* Taylor series of exp(x) around x=0, order 5 */
+taylor(exp(x), x, 0, 5);
+
+/* Taylor series of ln(1+x) around x=0, order 6 */
+taylor(log(1+x), x, 0, 6);
+
+/* Multivariate Taylor expansion */
+taylor(sin(x)*cos(y), [x, y], [0, 0], 3);
+@{end maxima}
+
+"<h2>5. Sums and Products</h2>"
+
+@{maxima}
+/* Symbolic summation */
+sum(k^2, k, 1, n);
+
+simpsum: true$
+sum(1/k^2, k, 1, inf);
+
+/* Telescoping sum */
+sum(1/(k*(k+1)), k, 1, inf);
+
+/* Product */
+product(k, k, 1, n);
+@{end maxima}

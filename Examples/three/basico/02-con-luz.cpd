@@ -1,0 +1,236 @@
+"============================================
+"02 - AGREGAR LUZ AL CUBO
+"============================================
+"Ver la diferencia entre materiales con y sin luz
+
+@{html}
+<div style="display: flex; gap: 20px;">
+  <div>
+    <h4>Sin Luz (MeshBasicMaterial)</h4>
+    <div id="canvas1" style="width: 400px; height: 300px; border: 2px solid #ccc;"></div>
+  </div>
+  <div>
+    <h4>Con Luz (MeshStandardMaterial)</h4>
+    <div id="canvas2" style="width: 400px; height: 300px; border: 2px solid #ccc;"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+  // ============================================================
+  // EJEMPLO 1: SIN LUZ (MeshBasicMaterial)
+  // ============================================================
+
+  const scene1 = new THREE.Scene();
+  scene1.background = new THREE.Color(0x222222);  // Fondo gris oscuro
+
+  const camera1 = new THREE.PerspectiveCamera(75, 400 / 300, 0.1, 1000);
+  camera1.position.z = 5;
+
+  const renderer1 = new THREE.WebGLRenderer();
+  renderer1.setSize(400, 300);
+  document.getElementById('canvas1').appendChild(renderer1.domElement);
+
+  // Cubo con MeshBasicMaterial (NO necesita luz)
+  const geometry1 = new THREE.BoxGeometry(2, 2, 2);
+  const material1 = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  //                          ↑
+  //                      "Basic" = Siempre se ve igual, no importa la luz
+
+  const cube1 = new THREE.Mesh(geometry1, material1);
+  scene1.add(cube1);
+
+  renderer1.render(scene1, camera1);
+
+  // ============================================================
+  // EJEMPLO 2: CON LUZ (MeshStandardMaterial)
+  // ============================================================
+
+  const scene2 = new THREE.Scene();
+  scene2.background = new THREE.Color(0x222222);
+
+  const camera2 = new THREE.PerspectiveCamera(75, 400 / 300, 0.1, 1000);
+  camera2.position.z = 5;
+
+  const renderer2 = new THREE.WebGLRenderer();
+  renderer2.setSize(400, 300);
+  document.getElementById('canvas2').appendChild(renderer2.domElement);
+
+  // Cubo con MeshStandardMaterial (SÍ necesita luz)
+  const geometry2 = new THREE.BoxGeometry(2, 2, 2);
+  const material2 = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+  //                          ↑
+  //                      "Standard" = Se ve diferente según la luz
+
+  const cube2 = new THREE.Mesh(geometry2, material2);
+  scene2.add(cube2);
+
+  // ========================================
+  // AGREGAR LUZ
+  // ========================================
+
+  // 1. Luz Direccional (como el sol)
+  //    Viene de una dirección específica
+  const directionalLight = new THREE.DirectionalLight(
+    0xffffff,  // Color de la luz (blanco)
+    1          // Intensidad (1 = normal)
+  );
+
+  // Posicionar la luz arriba y a la derecha
+  directionalLight.position.set(5, 5, 5);
+  //                              ↑  ↑  ↑
+  //                              x  y  z
+
+  scene2.add(directionalLight);  // ⚠️ No olvides agregar la luz a la escena
+
+  // 2. Luz Ambiente (ilumina todo por igual)
+  //    Como luz de una habitación
+  const ambientLight = new THREE.AmbientLight(
+    0x404040  // Color gris oscuro (luz tenue)
+  );
+
+  scene2.add(ambientLight);
+
+  renderer2.render(scene2, camera2);
+</script>
+
+<div style="background: #e3f2fd; padding: 20px; margin: 20px 0; border-left: 4px solid #2196f3;">
+  <h3>💡 Diferencia entre Materiales:</h3>
+
+  <p><strong>MeshBasicMaterial (Sin luz):</strong></p>
+  <ul>
+    <li>Siempre se ve plano</li>
+    <li>No cambia con la luz</li>
+    <li>Útil para objetos simples o debugging</li>
+    <li>Más rápido de renderizar</li>
+  </ul>
+
+  <p><strong>MeshStandardMaterial (Con luz):</strong></p>
+  <ul>
+    <li>Se ve 3D real</li>
+    <li>Tiene sombras y reflejos</li>
+    <li>Más realista</li>
+    <li>NECESITA luz para verse</li>
+  </ul>
+</div>
+
+<div style="background: #fff3cd; padding: 20px; margin: 20px 0; border-left: 4px solid #ffc107;">
+  <h3>🔦 Tipos de Luz:</h3>
+
+  <p><strong>1. DirectionalLight (Luz Direccional):</strong></p>
+  <pre>const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(5, 5, 5);  // Posición de donde viene
+scene.add(light);</pre>
+  <ul>
+    <li>Como el sol</li>
+    <li>Todos los rayos van en la misma dirección</li>
+    <li>Crea sombras definidas</li>
+  </ul>
+
+  <p><strong>2. AmbientLight (Luz Ambiente):</strong></p>
+  <pre>const light = new THREE.AmbientLight(0x404040);
+scene.add(light);</pre>
+  <ul>
+    <li>Ilumina todo por igual</li>
+    <li>No tiene dirección</li>
+    <li>No crea sombras</li>
+    <li>Como luz de una habitación</li>
+  </ul>
+
+  <p><strong>3. PointLight (Luz Puntual):</strong></p>
+  <pre>const light = new THREE.PointLight(0xff0000, 1, 50);
+light.position.set(0, 3, 0);
+scene.add(light);</pre>
+  <ul>
+    <li>Como una bombilla</li>
+    <li>Ilumina en todas direcciones desde un punto</li>
+    <li>Se debilita con la distancia</li>
+  </ul>
+
+  <p><strong>4. SpotLight (Luz Spot):</strong></p>
+  <pre>const light = new THREE.SpotLight(0xffffff, 1);
+light.position.set(0, 5, 0);
+light.angle = Math.PI / 6;  // Ángulo del cono
+scene.add(light);</pre>
+  <ul>
+    <li>Como un reflector de teatro</li>
+    <li>Ilumina en forma de cono</li>
+    <li>Tiene dirección y ángulo</li>
+  </ul>
+</div>
+
+<div style="background: #c8e6c9; padding: 20px; margin: 20px 0; border-left: 4px solid #4caf50;">
+  <h3>🧪 Experimenta:</h3>
+
+  <ol>
+    <li><strong>Cambiar color de la luz:</strong>
+      <pre>DirectionalLight(0xffffff, 1)  →  DirectionalLight(0xff0000, 1)  (luz roja)</pre>
+    </li>
+
+    <li><strong>Cambiar intensidad:</strong>
+      <pre>DirectionalLight(0xffffff, 1)  →  DirectionalLight(0xffffff, 2)  (más brillante)</pre>
+    </li>
+
+    <li><strong>Mover la luz:</strong>
+      <pre>light.position.set(5, 5, 5)  →  light.position.set(-5, -5, 5)  (desde otro lado)</pre>
+    </li>
+
+    <li><strong>Solo luz ambiente (sin direccional):</strong>
+      <pre>// Comenta la luz direccional
+// const directionalLight = new THREE.DirectionalLight(...);</pre>
+    </li>
+
+    <li><strong>Múltiples luces de colores:</strong>
+      <pre>const redLight = new THREE.PointLight(0xff0000, 1, 50);
+redLight.position.set(3, 0, 0);
+scene2.add(redLight);
+
+const blueLight = new THREE.PointLight(0x0000ff, 1, 50);
+blueLight.position.set(-3, 0, 0);
+scene2.add(blueLight);</pre>
+    </li>
+  </ol>
+</div>
+
+<div style="background: #ffebee; padding: 20px; margin: 20px 0; border-left: 4px solid #f44336;">
+  <h3>⚠️ Errores Comunes:</h3>
+
+  <p><strong>El cubo con MeshStandardMaterial se ve negro:</strong></p>
+  <ul>
+    <li>¿Olvidaste agregar luz?</li>
+    <li>¿La luz está muy lejos?</li>
+    <li>¿Agregaste la luz a la escena con <code>scene.add(light)</code>?</li>
+  </ul>
+
+  <p><strong>La luz no hace diferencia:</strong></p>
+  <ul>
+    <li>¿Estás usando MeshBasicMaterial? Cambia a MeshStandardMaterial</li>
+  </ul>
+
+  <p><strong>El cubo se ve demasiado oscuro:</strong></p>
+  <ul>
+    <li>Aumenta la intensidad: <code>DirectionalLight(0xffffff, 2)</code></li>
+    <li>O agrega luz ambiente más brillante: <code>AmbientLight(0x808080)</code></li>
+  </ul>
+</div>
+
+<div style="background: #e1bee7; padding: 20px; margin: 20px 0; border-left: 4px solid #9c27b0;">
+  <h3>📝 Regla Simple:</h3>
+  <p style="font-size: 18px;">
+    <strong>¿Quieres que se vea realista y 3D?</strong><br>
+    → Usa <code>MeshStandardMaterial</code> + luz<br><br>
+
+    <strong>¿Quieres algo simple y rápido?</strong><br>
+    → Usa <code>MeshBasicMaterial</code> (no necesita luz)
+  </p>
+</div>
+
+<div style="background: #c8e6c9; padding: 20px; margin: 20px 0; border-left: 4px solid #4caf50;">
+  <h3>✅ Siguiente Paso:</h3>
+  <p>
+    Ahora ve a <strong>03-rotando.cpd</strong> para aprender
+    a hacer que el cubo rote automáticamente.
+  </p>
+</div>
+@{end html}

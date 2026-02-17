@@ -1,0 +1,424 @@
+"Elemento Placa - Doble Integral FEM con Cuadratura de Gauss
+'=============================================================
+'Formulación del elemento placa de Kirchhoff Q4 usando
+'integración numérica con cuadratura de Gauss-Legendre
+
+"1. PARÁMETROS DEL MATERIAL Y GEOMETRÍA
+'----------------------------------------
+
+E = 30000'[MPa] - Módulo de elasticidad (concreto)
+ν = 0.2' - Coeficiente de Poisson
+t = 0.15'[m] - Espesor de la placa
+a = 3.0'[m] - Dimensión en X
+b = 2.0'[m] - Dimensión en Y
+q = 10'[kN/m²] - Carga uniforme
+
+"2. DERIVACIÓN SIMBÓLICA - Matriz Constitutiva D
+'-------------------------------------------------
+'La rigidez a flexión de placa y la matriz constitutiva D
+'se derivan simbólicamente con Maxima:
+
+@{columns 2}
+'**Derivación simbólica con Maxima**
+@{maxima}
+/* Rigidez flexural de placa */
+D_flex: E_val * t_val^3 / (12 * (1 - nu^2));
+
+/* Matriz constitutiva D para placa isotrópica */
+D_matrix: D_flex * matrix(
+    [1,    nu,   0          ],
+    [nu,   1,    0          ],
+    [0,    0,    (1-nu)/2   ]
+);
+
+/* Sustituir valores numéricos */
+D_num: subst([E_val=30000, nu=0.2, t_val=0.15], D_matrix);
+
+/* Verificar componentes */
+D11: D_num[1][1];
+D12: D_num[1][2];
+D33: D_num[3][3];
+
+/* Curvatura de placa: κ = -d²w/dx² */
+/* Energía de deformación: U = 1/2 ∬ κᵀ·D·κ dA */
+U_symbolic: '(1/2) * 'integrate('integrate(
+    kappa_x^2 * D11 + 2*nu*kappa_x*kappa_y * D11 + kappa_y^2 * D11,
+    x, 0, a_val), y, 0, b_val);
+@{end maxima}
+
+@{column}
+'**Cálculo numérico Hekatan**
+
+'Rigidez flexural:
+D_f = E*t^3/(12*(1 - ν^2))'[kN·m]
+
+'Componentes de la matriz D:
+D_11 = D_f*1'[kN·m]
+D_12 = D_f*ν'[kN·m]
+D_33 = D_f*(1 - ν)/2'[kN·m]
+
+'Verificación:
+'D₁₁ ='D_11
+'D₁₂ ='D_12
+'D₃₃ ='D_33
+@{end columns}
+
+"3. INTEGRACIÓN NUMÉRICA - Cuadratura de Gauss 2×2
+'----------------------------------------------------
+'El elemento Q4 usa coordenadas naturales (ξ, η) ∈ [-1,1]²
+'con cuadratura de Gauss-Legendre de 2×2 puntos.
+
+@{columns 2}
+'**Puntos de Gauss y funciones de forma**
+
+'Puntos de Gauss (2×2):
+'  ξ₁ = -1/√3 ≈ -0.5774
+'  ξ₂ = +1/√3 ≈ +0.5774
+'  Pesos: w₁ = w₂ = 1.0
+
+ξ_1 = -1/sqr(3)
+ξ_2 = 1/sqr(3)
+
+'Funciones de forma bilineales Q4:
+'  N₁(ξ,η) = ¼(1-ξ)(1-η)
+'  N₂(ξ,η) = ¼(1+ξ)(1-η)
+'  N₃(ξ,η) = ¼(1+ξ)(1+η)
+'  N₄(ξ,η) = ¼(1-ξ)(1+η)
+
+'Jacobiano para elemento rectangular:
+J_11 = a/2'[m]
+J_22 = b/2'[m]
+det_J = J_11*J_22'[m²]
+
+@{column}
+'**Integral simple - Verificación**
+
+'Área por integración:
+A_exact = a*b'[m²]
+
+'Área por doble integral numérica:
+A_num = $dint{1 @ ξ = -1 : 1 @ η = -1 : 1}*det_J
+
+'Error:
+ε_A = abs(A_num - A_exact)/A_exact*100'[%]
+
+'Momento de inercia de la sección:
+I_placa = t^3/12'[m³]
+
+'Integral del Jacobiano ponderado:
+'∬ |J| dξ dη = 4·|J| (para Gauss 2×2 exacto)
+I_J = $dint{1 @ ξ = -1 : 1 @ η = -1 : 1}
+@{end columns}
+
+"4. DOBLE INTEGRAL - Rigidez del Elemento
+'------------------------------------------
+'La matriz de rigidez de placa se calcula como:
+'  K = ∬ Bᵀ · D · B · |J| dξ dη
+'
+'Evaluamos componentes de rigidez usando doble integral:
+
+@{columns 2}
+'**Componentes de rigidez K**
+
+'Término K₁₁ (flexión pura en x):
+'  B₁₁ = ∂²N/∂x² = d²N/dξ² · (2/a)²
+
+'Integral de rigidez a flexión:
+K_bend_x = $dint{D_f*(2/a)^2*(2/a)^2 @ ξ = -1 : 1 @ η = -1 : 1}*det_J
+
+'Integral de rigidez a flexión en Y:
+K_bend_y = $dint{D_f*(2/b)^2*(2/b)^2 @ ξ = -1 : 1 @ η = -1 : 1}*det_J
+
+'Integral de rigidez al corte:
+K_shear = $dint{D_33*(2/a)*(2/b)*(2/a)*(2/b) @ ξ = -1 : 1 @ η = -1 : 1}*det_J
+
+@{column}
+'**Triple integral - Volumen y masa**
+
+'Volumen de la placa:
+V_exact = a*b*t'[m³]
+
+'Volumen por triple integral:
+V_num = $tint{1 @ x = 0 : a @ y = 0 : b @ z = 0 : t}
+
+'Error:
+ε_V = abs(V_num - V_exact)/V_exact*100'[%]
+
+'Masa de la placa (ρ = 2400 kg/m³):
+ρ = 2400'[kg/m³]
+M_placa = ρ*V_exact'[kg]
+
+'Carga total:
+F_total = q*a*b'[kN]
+
+'Deflexión máxima (placa simplemente apoyada):
+'  w_max = α·q·b⁴/(D_f)
+'  α = coeficiente según a/b
+α_w = 0.01013' (para a/b = 1.5, Timoshenko)
+w_max = α_w*q*b^4/D_f*1000'[mm]
+@{end columns}
+
+"5. CUADRATURA DE GAUSS - Comparación de Órdenes
+'--------------------------------------------------
+'Comparamos precisión de integración Gauss para
+'funciones polinómicas sobre el dominio [-1,1]²
+
+@{columns 2}
+'**Integrales con Gauss 1D**
+
+'∫ ξ² dξ de -1 a 1 (exacto = 2/3):
+I_1 = $int{ξ^2 @ ξ = -1 : 1}
+
+'∫ ξ⁴ dξ de -1 a 1 (exacto = 2/5):
+I_2 = $int{ξ^4 @ ξ = -1 : 1}
+
+'∫ sin(πξ/2) dξ de -1 a 1 (exacto = 4/π):
+I_3 = $int{sin(π*ξ/2) @ ξ = -1 : 1}
+
+'∫ exp(-ξ²) dξ de -1 a 1 (≈ 1.4936):
+I_4 = $int{exp(-ξ^2) @ ξ = -1 : 1}
+
+@{column}
+'**Doble integrales 2D**
+
+'∬ 1 dξdη (exacto = 4):
+I_5 = $dint{1 @ ξ = -1 : 1 @ η = -1 : 1}
+
+'∬ ξ·η dξdη (exacto = 0):
+I_6 = $dint{ξ*η @ ξ = -1 : 1 @ η = -1 : 1}
+
+'∬ ξ²+η² dξdη (exacto = 8/3):
+I_7 = $dint{ξ^2 + η^2 @ ξ = -1 : 1 @ η = -1 : 1}
+
+'∬ sin(πξ)·sin(πη) dξdη:
+I_8 = $dint{sin(π*ξ/2)*sin(π*η/2) @ ξ = -1 : 1 @ η = -1 : 1}
+@{end columns}
+
+"6. DERIVACIÓN SIMBÓLICA - Funciones de Forma con Maxima
+'---------------------------------------------------------
+
+@{columns 2}
+'**Funciones de forma y derivadas**
+@{maxima}
+/* Funciones de forma Q4 */
+N1(xi, eta) := (1-xi)*(1-eta)/4;
+N2(xi, eta) := (1+xi)*(1-eta)/4;
+N3(xi, eta) := (1+xi)*(1+eta)/4;
+N4(xi, eta) := (1-xi)*(1+eta)/4;
+
+/* Derivadas respecto a xi */
+dN1_dxi: diff(N1(xi,eta), xi);
+dN2_dxi: diff(N2(xi,eta), xi);
+dN3_dxi: diff(N3(xi,eta), xi);
+dN4_dxi: diff(N4(xi,eta), xi);
+
+/* Derivadas respecto a eta */
+dN1_deta: diff(N1(xi,eta), eta);
+dN2_deta: diff(N2(xi,eta), eta);
+
+/* Verificar partición de la unidad */
+suma: N1(xi,eta) + N2(xi,eta) + N3(xi,eta) + N4(xi,eta);
+suma_simplificada: ratsimp(suma);
+
+/* Integral de N1 sobre el elemento */
+int_N1: integrate(integrate(N1(xi,eta), xi, -1, 1), eta, -1, 1);
+@{end maxima}
+
+@{column}
+'**Visualización 3D del elemento**
+@{three}
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf0f0f0);
+const camera = new THREE.PerspectiveCamera(45, 1.2, 0.1, 100);
+camera.position.set(5, 4, 5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(500, 420);
+document.currentScript.parentElement.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+
+// Placa Q4 - geometría
+const a = 3, b = 2, t = 0.15;
+const plateGeom = new THREE.BoxGeometry(a, t, b);
+const plateMat = new THREE.MeshPhongMaterial({
+    color: 0x4488cc, transparent: true, opacity: 0.7, side: THREE.DoubleSide
+});
+const plate = new THREE.Mesh(plateGeom, plateMat);
+plate.position.set(a/2, t/2, b/2);
+scene.add(plate);
+
+// Bordes de la placa
+const edges = new THREE.EdgesGeometry(plateGeom);
+const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x003366 }));
+line.position.copy(plate.position);
+scene.add(line);
+
+// Nodos Q4 (esferas)
+const nodePositions = [[0,0,0],[a,0,0],[a,0,b],[0,0,b]];
+const nodeMat = new THREE.MeshPhongMaterial({ color: 0xff3333 });
+nodePositions.forEach((p, i) => {
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.08), nodeMat);
+    sphere.position.set(p[0], t, p[2]);
+    scene.add(sphere);
+
+    // Etiqueta del nodo
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ff0000';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText(`N${i+1}`, 5, 24);
+    const tex = new THREE.CanvasTexture(canvas);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex }));
+    sprite.position.set(p[0], t + 0.3, p[2]);
+    sprite.scale.set(0.5, 0.25, 1);
+    scene.add(sprite);
+});
+
+// Puntos de Gauss (2x2)
+const gp = 1/Math.sqrt(3);
+const gaussPts = [[-gp,-gp],[gp,-gp],[gp,gp],[-gp,gp]];
+const gpMat = new THREE.MeshPhongMaterial({ color: 0x00cc00 });
+gaussPts.forEach((g, i) => {
+    const x = a/2 + g[0]*a/2;
+    const z = b/2 + g[1]*b/2;
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.06), gpMat);
+    sphere.position.set(x, t + 0.01, z);
+    scene.add(sphere);
+});
+
+// Ejes coordenados
+const axisLen = 1.0;
+const arrowX = new THREE.ArrowHelper(new THREE.Vector3(1,0,0), new THREE.Vector3(-0.3,0,-0.3), axisLen, 0xff0000);
+const arrowY = new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(-0.3,0,-0.3), axisLen*0.6, 0x00ff00);
+const arrowZ = new THREE.ArrowHelper(new THREE.Vector3(0,0,1), new THREE.Vector3(-0.3,0,-0.3), axisLen, 0x0000ff);
+scene.add(arrowX, arrowY, arrowZ);
+
+// Flechas de carga distribuida
+for (let i = 0; i < 5; i++) {
+    for (let j = 0; j < 4; j++) {
+        const x = a*0.1 + i*a*0.2;
+        const z = b*0.1 + j*b*0.3;
+        const arrow = new THREE.ArrowHelper(
+            new THREE.Vector3(0, -1, 0),
+            new THREE.Vector3(x, t + 0.8, z),
+            0.5, 0xff6600, 0.1, 0.06
+        );
+        scene.add(arrow);
+    }
+}
+
+// Grilla de referencia
+const grid = new THREE.GridHelper(6, 12, 0xcccccc, 0xeeeeee);
+grid.position.set(a/2, -0.01, b/2);
+scene.add(grid);
+
+// Luces
+scene.add(new THREE.AmbientLight(0x404040));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(5, 8, 5);
+scene.add(dirLight);
+
+// Leyenda
+const legend = document.createElement('div');
+legend.innerHTML = `
+<div style="position:absolute;bottom:5px;left:5px;background:rgba(255,255,255,0.9);padding:8px;border-radius:4px;font-size:11px;">
+<b>Elemento Placa Q4</b><br>
+<span style="color:#ff3333">● Nodos (4)</span><br>
+<span style="color:#00cc00">● Gauss 2×2</span><br>
+<span style="color:#ff6600">↓ Carga q=${10} kN/m²</span><br>
+${a}×${b}×${t} m
+</div>`;
+renderer.domElement.parentElement.style.position = 'relative';
+renderer.domElement.parentElement.appendChild(legend);
+
+controls.target.set(a/2, 0, b/2);
+controls.update();
+
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+animate();
+@{end three}
+@{end columns}
+
+"7. DEFLEXIÓN ANALÍTICA - Serie de Navier
+'------------------------------------------
+'Para placa simplemente apoyada con carga uniforme,
+'la solución exacta por serie doble de Fourier es:
+'
+'  w(x,y) = Σ Σ (a_mn · sin(mπx/a) · sin(nπy/b))
+'
+'donde: a_mn = 16·q/(π⁶·D·mn·[(m/a)²+(n/b)²]²)
+
+@{columns 2}
+'**Serie de Navier (primeros términos)**
+
+'Coeficiente a₁₁:
+m = 1
+n = 1
+a_11 = 16*q/(π^6*D_f*m*n*((m/a)^2 + (n/b)^2)^2)*1000'[mm]
+
+'Coeficiente a₁₃:
+n_3 = 3
+a_13 = 16*q/(π^6*D_f*m*n_3*((m/a)^2 + (n_3/b)^2)^2)*1000'[mm]
+
+'Coeficiente a₃₁:
+m_3 = 3
+a_31 = 16*q/(π^6*D_f*m_3*n*((m_3/a)^2 + (n/b)^2)^2)*1000'[mm]
+
+'Deflexión centro (1 término):
+w_1 = a_11'[mm]
+
+'Deflexión centro (3 términos):
+w_3 = a_11 + a_13 + a_31'[mm]
+
+@{column}
+'**Momentos flectores**
+
+'Momento Mx en el centro:
+'  Mx = -D·(∂²w/∂x² + ν·∂²w/∂y²)
+
+M_x1 = D_f*a_11/1000*(π^2)*((m/a)^2 + ν*(n/b)^2)'[kN·m/m]
+
+'Momento My en el centro:
+M_y1 = D_f*a_11/1000*(π^2)*(ν*(m/a)^2 + (n/b)^2)'[kN·m/m]
+
+'Reacción en el borde (aprox):
+R_borde = q*b/2'[kN/m]
+
+"RESUMEN DE RESULTADOS
+'---------------------
+'Deflexión máxima ≈'w_max'mm (Timoshenko)
+'Serie Navier (1 término) ≈'w_1'mm
+'Serie Navier (3 términos) ≈'w_3'mm
+@{end columns}
+
+"8. VERIFICACIÓN CON INTEGRACIÓN
+'---------------------------------
+'Verificamos la energía de deformación usando doble integral:
+
+'Energía potencial de la carga:
+W_ext = $dint{q*1 @ x = 0 : a @ y = 0 : b}
+
+'Segundo momento de área de la placa:
+S_2 = $dint{x^2 + y^2 @ x = 0 : a @ y = 0 : b}
+
+'Integral de la función de forma N₁ sobre dominio natural:
+'  ∬ ¼(1-ξ)(1-η) dξdη = 1
+I_N1 = $dint{(1 - ξ)*(1 - η)/4 @ ξ = -1 : 1 @ η = -1 : 1}
+
+'Integral de N₁² (para matriz de masa):
+I_N1sq = $dint{((1 - ξ)*(1 - η)/4)^2 @ ξ = -1 : 1 @ η = -1 : 1}
+
+'Integral de N₁·N₂ (término cruzado masa):
+I_N1N2 = $dint{(1 - ξ)*(1 - η)/4*(1 + ξ)*(1 - η)/4 @ ξ = -1 : 1 @ η = -1 : 1}
+
+"FIN DEL EJEMPLO
+'Hekatan Calc - Integración numérica para elementos finitos de placa

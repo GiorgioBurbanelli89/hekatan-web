@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ Output</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        .cpp-container {
+            margin: 10px 0;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .cpp-header {
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+            background: linear-gradient(135deg, #00599c 0%, #004482 100%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cpp-header::before {
+            content: "C++";
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .cpp-output {
+            background-color: #1e1e1e;
+            color: {{OUTPUT_COLOR}};
+            padding: 12px 15px;
+            font-family: 'Cascadia Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .cpp-output.error {
+            color: #f44747;
+            border-left: 3px solid #f44747;
+        }
+
+        .cpp-output.success {
+            color: #dcdcaa;
+        }
+
+        .cpp-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .cpp-output::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        .cpp-output::-webkit-scrollbar-thumb {
+            background: #00599c;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="cpp-container">
+        <div class="cpp-header">C++</div>
+        <div class="cpp-output {{STATUS_CLASS}}">{{OUTPUT}}</div>
+    </div>
+</body>
+</html>

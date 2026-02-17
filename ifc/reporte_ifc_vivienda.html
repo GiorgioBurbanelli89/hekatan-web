@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte IFC - Vivienda Silvia Cedeno</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #ecf0f1;
+            border-left: 4px solid #3498db;
+        }
+        h3 {
+            color: #2980b9;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .info-box {
+            background: #e8f4fd;
+            border: 1px solid #3498db;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .warning-box {
+            background: #fef9e7;
+            border: 1px solid #f1c40f;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: white;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background: #3498db;
+            color: white;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        tr:hover {
+            background: #f1f1f1;
+        }
+        .count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2980b9;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .summary-card h4 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        .summary-card .number {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        .structural {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+        .architectural {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        }
+        .storey-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .storey-badge {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        .element-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .collapsible {
+            background: #f1f1f1;
+            cursor: pointer;
+            padding: 15px;
+            border: none;
+            width: 100%;
+            text-align: left;
+            outline: none;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .collapsible:hover {
+            background: #e1e1e1;
+        }
+        .collapsible:after {
+            content: '+';
+            float: right;
+            font-weight: bold;
+        }
+        .collapsible.active:after {
+            content: '-';
+        }
+        .content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background: #fafafa;
+        }
+        .content.show {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Reporte IFC - Vivienda Silvia Cedeno</h1>
+
+        <div class="info-box">
+            <strong>Archivo:</strong> C:\\Users\\j-b-j\\Downloads\\Vivienda_Silvia Cede\X2\00F1\X0\o - BIMx_A1.ifc<br>
+            <strong>Fecha de creacion:</strong> 2026-01-31T16:38:54<br>
+            <strong>Esquema IFC:</strong> IFC2X3<br>
+            <strong>Lineas totales:</strong> 9178
+        </div>
+
+        <h2>Informacion del Proyecto</h2>
+        <table>
+            <tr>
+                <th>Elemento</th>
+                <th>ID</th>
+                <th>Nombre</th>
+            </tr>
+            <tr>
+                <td>Proyecto</td>
+                <td>#16</td>
+                <td>Vivienda_Silvia Cede\X2\00F1\X0\o - BIMx_A1</td>
+            </tr>
+            <tr>
+                <td>Sitio</td>
+                <td>#18</td>
+                <td>Sitio</td>
+            </tr>
+            <tr>
+                <td>Edificio</td>
+                <td>#20</td>
+                <td>Edificio</td>
+            </tr>
+        </table>
+
+        <h2>Niveles del Edificio</h2>
+        <div class="storey-list">
+            <div class="storey-badge">Nivel 0 (Z = 0.00 m)</div>
+            <div class="storey-badge">Nivel 1 (Z = 3.00 m)</div>
+            <div class="storey-badge">Nivel 2 (Z = 6.00 m)</div>
+            <div class="storey-badge">Nivel 3 (Z = 9.00 m)</div>
+            <div class="storey-badge">Nivel 4 (Z = 12.00 m)</div>
+        </div>
+
+        <h2>Resumen de Elementos</h2>
+        <div class="summary-grid">
+            <div class="summary-card structural">
+                <h4>ELEMENTOS ESTRUCTURALES</h4>
+                <div class="number">434</div>
+            </div>
+            <div class="summary-card structural">
+                <h4>COLUMNAS</h4>
+                <div class="number">64</div>
+            </div>
+            <div class="summary-card structural">
+                <h4>VIGAS</h4>
+                <div class="number">60</div>
+            </div>
+            <div class="summary-card structural">
+                <h4>MUROS</h4>
+                <div class="number">310</div>
+            </div>
+            <div class="summary-card architectural">
+                <h4>ELEMENTOS ARQUITECTONICOS</h4>
+                <div class="number">296</div>
+            </div>
+            <div class="summary-card architectural">
+                <h4>ESCALERAS</h4>
+                <div class="number">86</div>
+            </div>
+            <div class="summary-card architectural">
+                <h4>BARANDILLAS</h4>
+                <div class="number">155</div>
+            </div>
+            <div class="summary-card architectural">
+                <h4>MUROS CORTINA</h4>
+                <div class="number">10</div>
+            </div>
+        </div>
+
+        <h2>Detalle de Elementos Estructurales</h2>
+
+        <h3>Columnas por Tipo</h3>
+        <table>
+            <tr>
+                <th>Tipo de Columna</th>
+                <th>Cantidad</th>
+            </tr>
+            <tr>
+                <td>Pilar-049</td>
+                <td>23</td>
+            </tr>
+            <tr>
+                <td>Pilar-002</td>
+                <td>23</td>
+            </tr>
+            <tr>
+                <td>CRE - 001</td>
+                <td>12</td>
+            </tr>
+            <tr>
+                <td>Pilar-015</td>
+                <td>6</td>
+            </tr>
+        </table>
+
+        <h3>Vigas por Tipo</h3>
+        <table>
+            <tr>
+                <th>Tipo de Viga</th>
+                <th>Cantidad</th>
+            </tr>
+            <tr>
+                <td>Sin nombre</td>
+                <td>29</td>
+            </tr>
+            <tr>
+                <td>VIGA - 172</td>
+                <td>16</td>
+            </tr>
+            <tr>
+                <td>VIGA - 170</td>
+                <td>6</td>
+            </tr>
+            <tr>
+                <td>VIGA - 161</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>VIGA - 167</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>BMR - 002</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>BSG - 002</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>VIGA - 173</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>VIGA - 174</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>VIGA - 176</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>VIGA - 177</td>
+                <td>1</td>
+            </tr>
+        </table>
+
+        <h3>Muros por Tipo</h3>
+        <table>
+            <tr>
+                <th>Tipo de Muro</th>
+                <th>Cantidad</th>
+            </tr>
+            <tr>
+                <td>MU - 441</td>
+                <td>48</td>
+            </tr>
+            <tr>
+                <td>Cinta de Luz LED</td>
+                <td>47</td>
+            </tr>
+            <tr>
+                <td>MU - 063</td>
+                <td>20</td>
+            </tr>
+            <tr>
+                <td>MU - 349</td>
+                <td>15</td>
+            </tr>
+            <tr>
+                <td>MU - 180</td>
+                <td>13</td>
+            </tr>
+            <tr>
+                <td>MU - 341</td>
+                <td>13</td>
+            </tr>
+            <tr>
+                <td>MU - 340</td>
+                <td>13</td>
+            </tr>
+            <tr>
+                <td>MU - 354</td>
+                <td>12</td>
+            </tr>
+            <tr>
+                <td>MU - 339</td>
+                <td>10</td>
+            </tr>
+            <tr>
+                <td>MU - 342</td>
+                <td>9</td>
+            </tr>
+            <tr>
+                <td>MU - 528</td>
+                <td>9</td>
+            </tr>
+            <tr>
+                <td>MU - 335</td>
+                <td>8</td>
+            </tr>
+            <tr>
+                <td>MU - 338</td>
+                <td>7</td>
+            </tr>
+            <tr>
+                <td>MU - 322</td>
+                <td>6</td>
+            </tr>
+            <tr>
+                <td>MU - 356</td>
+                <td>5</td>
+            </tr>
+            <tr>
+                <td>MU - 337</td>
+                <td>5</td>
+            </tr>
+            <tr>
+                <td>MU - 357</td>
+                <td>5</td>
+            </tr>
+            <tr>
+                <td>MU - 296</td>
+                <td>4</td>
+            </tr>
+            <tr>
+                <td>MU - 355</td>
+                <td>4</td>
+            </tr>
+            <tr>
+                <td>MU - 336</td>
+                <td>4</td>
+            </tr>
+            <tr>
+                <td>MU - 295</td>
+                <td>3</td>
+            </tr>
+            <tr>
+                <td>MU - 323</td>
+                <td>3</td>
+            </tr>
+            <tr>
+                <td>MU - WP019</td>
+                <td>3</td>
+            </tr>
+            <tr>
+                <td>MU - 329</td>
+                <td>3</td>
+            </tr>
+            <tr>
+                <td>MU - 359</td>
+                <td>3</td>
+            </tr>
+            <tr>
+                <td>MU - 344</td>
+                <td>3</td>
+            </tr>
+            <tr>
+                <td>MU - 293</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>MU - 294</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>MU - 350</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>MU - 334</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>MU - 469</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>MU - 458</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>SW - 026</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>MU - 358</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>MU - 360</td>
+                <td>2</td>
+            </tr>
+            <tr>
+                <td>MU - 351</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 325</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 332</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 326</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 327</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 529</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 328</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 330</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 331</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 333</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>SW - 098</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 343</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 345</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 346</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 347</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 348</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>MU - 353</td>
+                <td>1</td>
+            </tr>
+        </table>
+
+        <h2>Lista Completa de Elementos</h2>
+
+        <button class="collapsible">Columnas (64 elementos)</button>
+        <div class="content">
+            <table>
+                <tr><th>ID</th><th>Nombre</th></tr>
+                <tr><td>#59</td><td>Pilar-049</td></tr>
+                <tr><td>#63</td><td>Pilar-049</td></tr>
+                <tr><td>#67</td><td>Pilar-049</td></tr>
+                <tr><td>#83</td><td>CRE - 001</td></tr>
+                <tr><td>#87</td><td>CRE - 001</td></tr>
+                <tr><td>#99</td><td>Pilar-049</td></tr>
+                <tr><td>#103</td><td>Pilar-049</td></tr>
+                <tr><td>#107</td><td>Pilar-049</td></tr>
+                <tr><td>#111</td><td>Pilar-015</td></tr>
+                <tr><td>#115</td><td>Pilar-015</td></tr>
+                <tr><td>#119</td><td>Pilar-015</td></tr>
+                <tr><td>#123</td><td>Pilar-002</td></tr>
+                <tr><td>#127</td><td>Pilar-002</td></tr>
+                <tr><td>#131</td><td>Pilar-002</td></tr>
+                <tr><td>#135</td><td>CRE - 001</td></tr>
+                <tr><td>#139</td><td>CRE - 001</td></tr>
+                <tr><td>#143</td><td>Pilar-002</td></tr>
+                <tr><td>#151</td><td>CRE - 001</td></tr>
+                <tr><td>#155</td><td>Pilar-049</td></tr>
+                <tr><td>#159</td><td>Pilar-049</td></tr>
+                <tr><td>#163</td><td>Pilar-049</td></tr>
+                <tr><td>#247</td><td>Pilar-002</td></tr>
+                <tr><td>#255</td><td>Pilar-049</td></tr>
+                <tr><td>#259</td><td>Pilar-049</td></tr>
+                <tr><td>#299</td><td>Pilar-002</td></tr>
+                <tr><td>#303</td><td>Pilar-002</td></tr>
+                <tr><td>#307</td><td>Pilar-002</td></tr>
+                <tr><td>#311</td><td>Pilar-002</td></tr>
+                <tr><td>#315</td><td>Pilar-002</td></tr>
+                <tr><td>#319</td><td>Pilar-002</td></tr>
+                <tr><td>#323</td><td>Pilar-002</td></tr>
+                <tr><td>#327</td><td>Pilar-002</td></tr>
+                <tr><td>#331</td><td>Pilar-002</td></tr>
+                <tr><td>#335</td><td>Pilar-002</td></tr>
+                <tr><td>#339</td><td>Pilar-002</td></tr>
+                <tr><td>#343</td><td>Pilar-002</td></tr>
+                <tr><td>#355</td><td>CRE - 001</td></tr>
+                <tr><td>#359</td><td>CRE - 001</td></tr>
+                <tr><td>#363</td><td>CRE - 001</td></tr>
+                <tr><td>#367</td><td>CRE - 001</td></tr>
+                <tr><td>#439</td><td>Pilar-049</td></tr>
+                <tr><td>#459</td><td>CRE - 001</td></tr>
+                <tr><td>#539</td><td>Pilar-049</td></tr>
+                <tr><td>#543</td><td>Pilar-049</td></tr>
+                <tr><td>#547</td><td>Pilar-049</td></tr>
+                <tr><td>#551</td><td>Pilar-049</td></tr>
+                <tr><td>#555</td><td>Pilar-049</td></tr>
+                <tr><td>#559</td><td>Pilar-049</td></tr>
+                <tr><td>#563</td><td>Pilar-049</td></tr>
+                <tr><td>#567</td><td>Pilar-049</td></tr>
+                <tr><td>#571</td><td>Pilar-049</td></tr>
+                <tr><td>#719</td><td>Pilar-049</td></tr>
+                <tr><td>#723</td><td>Pilar-049</td></tr>
+                <tr><td>#1035</td><td>Pilar-015</td></tr>
+                <tr><td>#1047</td><td>Pilar-015</td></tr>
+                <tr><td>#1059</td><td>Pilar-015</td></tr>
+                <tr><td>#1151</td><td>CRE - 001</td></tr>
+                <tr><td>#1159</td><td>CRE - 001</td></tr>
+                <tr><td>#1319</td><td>Pilar-002</td></tr>
+                <tr><td>#1331</td><td>Pilar-002</td></tr>
+                <tr><td>#1347</td><td>Pilar-002</td></tr>
+                <tr><td>#1359</td><td>Pilar-002</td></tr>
+                <tr><td>#1379</td><td>Pilar-002</td></tr>
+                <tr><td>#1403</td><td>Pilar-002</td></tr>
+            </table>
+        </div>
+
+        <button class="collapsible">Vigas (60 elementos)</button>
+        <div class="content">
+            <table>
+                <tr><th>ID</th><th>Nombre</th></tr>
+                <tr><td>#75</td><td>VIGA - 161</td></tr>
+                <tr><td>#79</td><td>VIGA - 167</td></tr>
+                <tr><td>#351</td><td>BMR - 002</td></tr>
+                <tr><td>#431</td><td>VIGA - 172</td></tr>
+                <tr><td>#435</td><td>VIGA - 172</td></tr>
+                <tr><td>#443</td><td>VIGA - 170</td></tr>
+                <tr><td>#447</td><td>VIGA - 170</td></tr>
+                <tr><td>#451</td><td>VIGA - 170</td></tr>
+                <tr><td>#455</td><td>VIGA - 170</td></tr>
+                <tr><td>#531</td><td>VIGA - 170</td></tr>
+                <tr><td>#535</td><td>VIGA - 170</td></tr>
+                <tr><td>#715</td><td></td></tr>
+                <tr><td>#1363</td><td></td></tr>
+                <tr><td>#1367</td><td>VIGA - 161</td></tr>
+                <tr><td>#1639</td><td></td></tr>
+                <tr><td>#1671</td><td></td></tr>
+                <tr><td>#1835</td><td></td></tr>
+                <tr><td>#1839</td><td>VIGA - 172</td></tr>
+                <tr><td>#2623</td><td></td></tr>
+                <tr><td>#2627</td><td>VIGA - 172</td></tr>
+                <tr><td>#2635</td><td></td></tr>
+                <tr><td>#2639</td><td>VIGA - 172</td></tr>
+                <tr><td>#2643</td><td></td></tr>
+                <tr><td>#2647</td><td>VIGA - 172</td></tr>
+                <tr><td>#2827</td><td>BSG - 002</td></tr>
+                <tr><td>#3267</td><td></td></tr>
+                <tr><td>#3271</td><td>VIGA - 172</td></tr>
+                <tr><td>#3367</td><td></td></tr>
+                <tr><td>#3371</td><td></td></tr>
+                <tr><td>#3391</td><td></td></tr>
+                <tr><td>#3395</td><td></td></tr>
+                <tr><td>#3399</td><td></td></tr>
+                <tr><td>#3403</td><td></td></tr>
+                <tr><td>#3655</td><td></td></tr>
+                <tr><td>#3659</td><td></td></tr>
+                <tr><td>#3827</td><td>VIGA - 172</td></tr>
+                <tr><td>#3835</td><td></td></tr>
+                <tr><td>#3839</td><td>VIGA - 172</td></tr>
+                <tr><td>#3859</td><td></td></tr>
+                <tr><td>#3863</td><td>VIGA - 172</td></tr>
+                <tr><td>#3867</td><td></td></tr>
+                <tr><td>#3871</td><td>VIGA - 172</td></tr>
+                <tr><td>#3875</td><td></td></tr>
+                <tr><td>#3879</td><td>VIGA - 172</td></tr>
+                <tr><td>#3883</td><td></td></tr>
+                <tr><td>#3887</td><td>VIGA - 172</td></tr>
+                <tr><td>#3891</td><td></td></tr>
+                <tr><td>#3895</td><td>VIGA - 172</td></tr>
+                <tr><td>#3899</td><td></td></tr>
+                <tr><td>#3903</td><td>VIGA - 172</td></tr>
+                <tr><td>#4035</td><td></td></tr>
+                <tr><td>#4039</td><td>VIGA - 172</td></tr>
+                <tr><td>#4043</td><td></td></tr>
+                <tr><td>#4047</td><td>VIGA - 173</td></tr>
+                <tr><td>#4051</td><td></td></tr>
+                <tr><td>#4055</td><td>VIGA - 174</td></tr>
+                <tr><td>#4059</td><td></td></tr>
+                <tr><td>#4063</td><td>VIGA - 176</td></tr>
+                <tr><td>#4067</td><td></td></tr>
+                <tr><td>#4071</td><td>VIGA - 177</td></tr>
+            </table>
+        </div>
+
+        <button class="collapsible">Muros (310 elementos)</button>
+        <div class="content">
+            <table>
+                <tr><th>ID</th><th>Nombre</th></tr>
+                <tr><td>#371</td><td>MU - 441</td></tr>
+                <tr><td>#375</td><td>MU - 441</td></tr>
+                <tr><td>#379</td><td>MU - 441</td></tr>
+                <tr><td>#383</td><td>MU - 441</td></tr>
+                <tr><td>#387</td><td>MU - 441</td></tr>
+                <tr><td>#391</td><td>MU - 441</td></tr>
+                <tr><td>#751</td><td>MU - 293</td></tr>
+                <tr><td>#755</td><td>MU - 294</td></tr>
+                <tr><td>#759</td><td>MU - 295</td></tr>
+                <tr><td>#763</td><td>MU - 296</td></tr>
+                <tr><td>#767</td><td>MU - 180</td></tr>
+                <tr><td>#771</td><td>MU - 180</td></tr>
+                <tr><td>#775</td><td>MU - 180</td></tr>
+                <tr><td>#783</td><td>MU - 338</td></tr>
+                <tr><td>#787</td><td>MU - 341</td></tr>
+                <tr><td>#799</td><td>Cinta de Luz LED</td></tr>
+                <tr><td>#803</td><td>MU - 295</td></tr>
+                <tr><td>#807</td><td>MU - 296</td></tr>
+                <tr><td>#811</td><td>MU - 296</td></tr>
+                <tr><td>#855</td><td>MU - 356</td></tr>
+                <tr><td>#859</td><td>MU - 063</td></tr>
+                <tr><td>#883</td><td>MU - 063</td></tr>
+                <tr><td>#895</td><td>MU - 063</td></tr>
+                <tr><td>#943</td><td>MU - 063</td></tr>
+                <tr><td>#947</td><td>MU - 063</td></tr>
+                <tr><td>#951</td><td>MU - 063</td></tr>
+                <tr><td>#1007</td><td>MU - 441</td></tr>
+                <tr><td>#1011</td><td>MU - 322</td></tr>
+                <tr><td>#1015</td><td>MU - 322</td></tr>
+                <tr><td>#1019</td><td>MU - 063</td></tr>
+                <tr><td>#1023</td><td>MU - 322</td></tr>
+                <tr><td>#1107</td><td>MU - 063</td></tr>
+                <tr><td>#1111</td><td>MU - 063</td></tr>
+                <tr><td>#1123</td><td>MU - 180</td></tr>
+                <tr><td>#1127</td><td>MU - 180</td></tr>
+                <tr><td>#1131</td><td>MU - 180</td></tr>
+                <tr><td>#1135</td><td>MU - 180</td></tr>
+                <tr><td>#1139</td><td>MU - 338</td></tr>
+                <tr><td>#1143</td><td>MU - 180</td></tr>
+                <tr><td>#1167</td><td>Cinta de Luz LED</td></tr>
+                <tr><td>#1307</td><td>MU - 337</td></tr>
+                <tr><td>#1335</td><td>MU - 341</td></tr>
+                <tr><td>#1391</td><td>MU - 349</td></tr>
+                <tr><td>#1407</td><td>MU - 349</td></tr>
+                <tr><td>#1411</td><td>MU - 350</td></tr>
+                <tr><td>#1415</td><td>MU - 341</td></tr>
+                <tr><td>#1443</td><td>MU - 342</td></tr>
+                <tr><td>#1447</td><td>MU - 342</td></tr>
+                <tr><td>#1459</td><td>MU - 334</td></tr>
+                <tr><td>#1487</td><td>MU - 349</td></tr>
+                <tr><td>#1507</td><td>MU - 349</td></tr>
+                <tr><td>#1511</td><td>MU - 349</td></tr>
+                <tr><td>#1515</td><td>MU - 349</td></tr>
+                <tr><td>#1519</td><td>MU - 337</td></tr>
+                <tr><td>#1523</td><td>MU - 341</td></tr>
+                <tr><td>#1527</td><td>MU - 351</td></tr>
+                <tr><td>#1531</td><td>MU - 342</td></tr>
+                <tr><td>#1551</td><td>MU - 325</td></tr>
+                <tr><td>#1563</td><td>MU - 332</td></tr>
+                <tr><td>#1583</td><td>MU - 293</td></tr>
+                <tr><td>#1587</td><td>MU - 294</td></tr>
+                <tr><td>#1591</td><td>MU - 295</td></tr>
+                <tr><td>#1595</td><td>MU - 296</td></tr>
+                <tr><td>#1599</td><td>MU - 180</td></tr>
+                <tr><td>#1603</td><td>MU - 180</td></tr>
+                <tr><td>#1607</td><td>MU - 180</td></tr>
+                <tr><td>#1615</td><td>MU - 180</td></tr>
+                <tr><td>#1627</td><td>MU - 340</td></tr>
+                <tr><td>#1631</td><td>MU - 339</td></tr>
+                <tr><td>#1651</td><td>MU - 338</td></tr>
+                <tr><td>#1655</td><td>MU - 341</td></tr>
+                <tr><td>#1659</td><td>MU - 323</td></tr>
+                <tr><td>#1663</td><td>MU - 323</td></tr>
+                <tr><td>#1667</td><td>MU - 323</td></tr>
+                <tr><td>#1691</td><td>Cinta de Luz LED</td></tr>
+                <tr><td>#1711</td><td>MU - 326</td></tr>
+                <tr><td>#1851</td><td>MU - 327</td></tr>
+                <tr><td>#1863</td><td>MU - 063</td></tr>
+                <tr><td>#1907</td><td>MU - 063</td></tr>
+                <tr><td>#1911</td><td>MU - 063</td></tr>
+                <tr><td>#1915</td><td>MU - 063</td></tr>
+                <tr><td>#1927</td><td>MU - 063</td></tr>
+                <tr><td>#1943</td><td>MU - 529</td></tr>
+                <tr><td>#1971</td><td>MU - 063</td></tr>
+                <tr><td>#1975</td><td>MU - 063</td></tr>
+                <tr><td>#1983</td><td>MU - 063</td></tr>
+                <tr><td>#1987</td><td>MU - 063</td></tr>
+                <tr><td>#1991</td><td>MU - 063</td></tr>
+                <tr><td>#2047</td><td>MU - 441</td></tr>
+                <tr><td>#2051</td><td>MU - 441</td></tr>
+                <tr><td>#2055</td><td>MU - 441</td></tr>
+                <tr><td>#2059</td><td>MU - 441</td></tr>
+                <tr><td>#2063</td><td>MU - 441</td></tr>
+                <tr><td>#2067</td><td>MU - 322</td></tr>
+                <tr><td>#2071</td><td>MU - 322</td></tr>
+                <tr><td>#2075</td><td>MU - 063</td></tr>
+                <tr><td>#2079</td><td>MU - 322</td></tr>
+                <tr><td>#2127</td><td>MU - 355</td></tr>
+                <tr><td>#2131</td><td>MU - 469</td></tr>
+                <tr><td>#2135</td><td>MU - 469</td></tr>
+            </table>
+        </div>
+
+        <button class="collapsible">Escaleras (86 elementos)</button>
+        <div class="content">
+            <table>
+                <tr><th>ID</th><th>Nombre</th><th>Tipo</th></tr>
+                <tr><td>#167</td><td>ESCALERA - 016</td><td>IFCSTAIR</td></tr>
+                <tr><td>#171</td><td>CONTRAHUELLA-288</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#175</td><td>CONTRAHUELLA-289</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#179</td><td>CONTRAHUELLA-290</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#183</td><td>CONTRAHUELLA-291</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#187</td><td>CONTRAHUELLA-292</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#191</td><td>CONTRAHUELLA-293</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#195</td><td>CONTRAHUELLA-294</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#199</td><td>CONTRAHUELLA-018</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#203</td><td>CONTRAHUELLA-295</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#207</td><td>CONTRAHUELLA-296</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#211</td><td>CONTRAHUELLA-297</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#215</td><td>CONTRAHUELLA-298</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#219</td><td>CONTRAHUELLA-299</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#223</td><td>CONTRAHUELLA-300</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#227</td><td>CONTRAHUELLA-301</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#231</td><td>CONTRAHUELLA-302</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#235</td><td>CONTRAHUELLA-303</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#239</td><td>CONTRAHUELLA-304</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#243</td><td>CONTRAHUELLA-305</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#263</td><td>CONTRAHUELLA-309</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#267</td><td>CONTRAHUELLA-310</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#271</td><td>CONTRAHUELLA-311</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#575</td><td>ESCALERA - 016</td><td>IFCSTAIR</td></tr>
+                <tr><td>#579</td><td>CONTRAHUELLA-288</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#583</td><td>HUELLA-284</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#587</td><td>CONTRAHUELLA-289</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#591</td><td>HUELLA-285</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#595</td><td>CONTRAHUELLA-290</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#599</td><td>HUELLA-286</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#603</td><td>CONTRAHUELLA-291</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#607</td><td>HUELLA-287</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#611</td><td>CONTRAHUELLA-292</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#615</td><td>HUELLA-288</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#619</td><td>CONTRAHUELLA-293</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#623</td><td>HUELLA-289</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#627</td><td>CONTRAHUELLA-294</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#631</td><td>HUELLA-290</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#635</td><td>CONTRAHUELLA-295</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#639</td><td>HUELLA-291</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#643</td><td>CONTRAHUELLA-296</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#647</td><td>HUELLA-292</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#651</td><td>CONTRAHUELLA-297</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#655</td><td>HUELLA-293</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#659</td><td>CONTRAHUELLA-298</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#663</td><td>HUELLA-294</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#667</td><td>CONTRAHUELLA-299</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#671</td><td>HUELLA-295</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#675</td><td>CONTRAHUELLA-300</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#679</td><td>HUELLA-296</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#683</td><td>CONTRAHUELLA-301</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#687</td><td>HUELLA-297</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#691</td><td>CONTRAHUELLA-302</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#695</td><td>HUELLA-298</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#699</td><td>CONTRAHUELLA-303</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#703</td><td>CONTRAHUELLA-304</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#707</td><td>CONTRAHUELLA-305</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#711</td><td>CONTRAHUELLA-309</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2355</td><td>HUELLA-284</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2359</td><td>HUELLA-285</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2363</td><td>HUELLA-286</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2367</td><td>HUELLA-287</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2371</td><td>HUELLA-288</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2375</td><td>HUELLA-289</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2379</td><td>HUELLA-290</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2383</td><td>HUELLA-018</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2387</td><td>HUELLA-291</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2391</td><td>HUELLA-292</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2395</td><td>HUELLA-293</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2399</td><td>HUELLA-294</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2403</td><td>HUELLA-295</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2407</td><td>HUELLA-296</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2411</td><td>HUELLA-297</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2415</td><td>HUELLA-298</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2419</td><td>HUELLA-299</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2423</td><td>HUELLA-300</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2427</td><td>SE - 037</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2431</td><td>SE - 038</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2435</td><td>SE - 018</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2475</td><td>HUELLA-304</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2479</td><td>HUELLA-305</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#2483</td><td>HUELLA-306</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#3811</td><td>HUELLA-299</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#3815</td><td>HUELLA-300</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#3819</td><td>HUELLA-304</td><td>IFCSTAIRFLIGHT</td></tr>
+                <tr><td>#3823</td><td>SE - 039</td><td>IFCSTAIRFLIGHT</td></tr>
+            </table>
+        </div>
+
+        <button class="collapsible">Barandillas (155 elementos)</button>
+        <div class="content">
+            <table>
+                <tr><th>ID</th><th>Nombre</th></tr>
+                <tr><td>#275</td><td></td></tr>
+                <tr><td>#279</td><td></td></tr>
+                <tr><td>#283</td><td>SEGMENTO BARANDILLA - 010</td></tr>
+                <tr><td>#287</td><td></td></tr>
+                <tr><td>#291</td><td></td></tr>
+                <tr><td>#295</td><td>BAR - 007</td></tr>
+                <tr><td>#403</td><td></td></tr>
+                <tr><td>#407</td><td></td></tr>
+                <tr><td>#411</td><td>SEGMENTO BARANDILLA - 010</td></tr>
+                <tr><td>#415</td><td>BAR - 008</td></tr>
+                <tr><td>#419</td><td></td></tr>
+                <tr><td>#423</td><td></td></tr>
+                <tr><td>#427</td><td></td></tr>
+                <tr><td>#463</td><td>SEGMENTO BARANDILLA - 012</td></tr>
+                <tr><td>#467</td><td></td></tr>
+                <tr><td>#471</td><td>SEGMENTO BARANDILLA - 013</td></tr>
+                <tr><td>#475</td><td></td></tr>
+                <tr><td>#479</td><td></td></tr>
+                <tr><td>#483</td><td></td></tr>
+                <tr><td>#487</td><td></td></tr>
+                <tr><td>#491</td><td></td></tr>
+                <tr><td>#495</td><td></td></tr>
+                <tr><td>#499</td><td></td></tr>
+                <tr><td>#503</td><td></td></tr>
+                <tr><td>#507</td><td>SEGMENTO BARANDILLA - 014</td></tr>
+                <tr><td>#511</td><td>BAR - 007</td></tr>
+                <tr><td>#515</td><td></td></tr>
+                <tr><td>#519</td><td></td></tr>
+                <tr><td>#523</td><td></td></tr>
+                <tr><td>#527</td><td></td></tr>
+                <tr><td>#831</td><td></td></tr>
+                <tr><td>#835</td><td></td></tr>
+                <tr><td>#839</td><td>SEGMENTO BARANDILLA - 014</td></tr>
+                <tr><td>#843</td><td>BAR - 007</td></tr>
+                <tr><td>#847</td><td></td></tr>
+                <tr><td>#851</td><td></td></tr>
+                <tr><td>#1063</td><td></td></tr>
+                <tr><td>#1067</td><td></td></tr>
+                <tr><td>#1071</td><td></td></tr>
+                <tr><td>#1075</td><td>SEGMENTO BARANDILLA - 015</td></tr>
+                <tr><td>#1079</td><td>SEGMENTO BARANDILLA - 016</td></tr>
+                <tr><td>#1083</td><td>BAR - 007</td></tr>
+                <tr><td>#1087</td><td></td></tr>
+                <tr><td>#1091</td><td></td></tr>
+                <tr><td>#1095</td><td></td></tr>
+                <tr><td>#1099</td><td></td></tr>
+                <tr><td>#1171</td><td></td></tr>
+                <tr><td>#1175</td><td></td></tr>
+                <tr><td>#1179</td><td>SEGMENTO BARANDILLA - 017</td></tr>
+                <tr><td>#1183</td><td>BAR - 007</td></tr>
+                <tr><td>#1187</td><td></td></tr>
+                <tr><td>#1191</td><td></td></tr>
+                <tr><td>#1195</td><td></td></tr>
+                <tr><td>#1199</td><td>SEGMENTO BARANDILLA - 018</td></tr>
+                <tr><td>#1203</td><td></td></tr>
+                <tr><td>#1207</td><td>SEGMENTO BARANDILLA - 019</td></tr>
+                <tr><td>#1211</td><td></td></tr>
+                <tr><td>#1215</td><td></td></tr>
+                <tr><td>#1219</td><td></td></tr>
+                <tr><td>#1223</td><td></td></tr>
+                <tr><td>#1227</td><td></td></tr>
+                <tr><td>#1231</td><td></td></tr>
+                <tr><td>#1235</td><td></td></tr>
+                <tr><td>#1239</td><td>SEGMENTO BARANDILLA - 017</td></tr>
+                <tr><td>#1243</td><td>BAR - 008</td></tr>
+                <tr><td>#1247</td><td></td></tr>
+                <tr><td>#1251</td><td></td></tr>
+                <tr><td>#1535</td><td>BARANDA SUP - 001</td></tr>
+                <tr><td>#1539</td><td>BARANDA SUP - 001</td></tr>
+                <tr><td>#2655</td><td>POSTE - 001</td></tr>
+                <tr><td>#2659</td><td>POSTE - 001</td></tr>
+                <tr><td>#2663</td><td>BARANDA SUP - 001</td></tr>
+                <tr><td>#2667</td><td>BARANDAL - 001</td></tr>
+                <tr><td>#2671</td><td>POSTE INTERIOR - 001</td></tr>
+                <tr><td>#2675</td><td>PANEL - 001</td></tr>
+                <tr><td>#2679</td><td>PANEL - 001</td></tr>
+                <tr><td>#3311</td><td>BARANDA SUP - 001</td></tr>
+                <tr><td>#3315</td><td>BARANDAL - 001</td></tr>
+                <tr><td>#3319</td><td>POSTE INTERIOR - 001</td></tr>
+                <tr><td>#3323</td><td>PANEL - 001</td></tr>
+                <tr><td>#3327</td><td>POSTE INTERIOR - 001</td></tr>
+                <tr><td>#3331</td><td>PANEL - 001</td></tr>
+                <tr><td>#3335</td><td>POSTE - 001</td></tr>
+                <tr><td>#3339</td><td>POSTE - 001</td></tr>
+                <tr><td>#3431</td><td>BARANDAL - 001</td></tr>
+                <tr><td>#3435</td><td>BARANDAL - 001</td></tr>
+                <tr><td>#3439</td><td>PANEL - 001</td></tr>
+                <tr><td>#3443</td><td>POSTE INTERIOR - 001</td></tr>
+                <tr><td>#3447</td><td>PANEL - 001</td></tr>
+                <tr><td>#3451</td><td>POSTE INTERIOR - 001</td></tr>
+                <tr><td>#3455</td><td>PANEL - 001</td></tr>
+                <tr><td>#3459</td><td>POSTE INTERIOR - 001</td></tr>
+                <tr><td>#3463</td><td>PANEL - 001</td></tr>
+                <tr><td>#3467</td><td>PANEL - 001</td></tr>
+                <tr><td>#3471</td><td>POSTE - 001</td></tr>
+                <tr><td>#3475</td><td>POSTE - 001</td></tr>
+                <tr><td>#3527</td><td>BARANDA SUP - 001</td></tr>
+                <tr><td>#3531</td><td>BARANDAL - 001</td></tr>
+                <tr><td>#3535</td><td>POSTE INTERIOR - 001</td></tr>
+                <tr><td>#3539</td><td>PANEL - 001</td></tr>
+            </table>
+        </div>
+
+        <button class="collapsible">Muros Cortina (10 elementos)</button>
+        <div class="content">
+            <table>
+                <tr><th>ID</th><th>Nombre</th></tr>
+                <tr><td>#47</td><td>MC-008</td></tr>
+                <tr><td>#51</td><td>CW-015</td></tr>
+                <tr><td>#55</td><td>MC-008</td></tr>
+                <tr><td>#71</td><td>CW-015</td></tr>
+                <tr><td>#91</td><td>MC-008</td></tr>
+                <tr><td>#95</td><td>MC-008</td></tr>
+                <tr><td>#147</td><td>MC-008</td></tr>
+                <tr><td>#347</td><td>CW-005</td></tr>
+                <tr><td>#395</td><td>MC-008</td></tr>
+                <tr><td>#399</td><td>MC-008</td></tr>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>Reporte generado automaticamente desde archivo IFC</p>
+            <p>Fecha de generacion: 2026-02-05 11:48:04</p>
+        </div>
+    </div>
+
+    <script>
+        // Funcionalidad de colapsar/expandir
+        var coll = document.getElementsByClassName("collapsible");
+        for (var i = 0; i < coll.length; i++) {
+            coll[i].addEventListener("click", function() {
+                this.classList.toggle("active");
+                var content = this.nextElementSibling;
+                content.classList.toggle("show");
+            });
+        }
+    </script>
+</body>
+</html>

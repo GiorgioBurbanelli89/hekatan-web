@@ -1,0 +1,122 @@
+"============================================
+"03 - LISTAS Y TABLAS
+"============================================
+"Aprende a crear listas y tablas en HTML.
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>03 - Listas y Tablas</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    h1 {
+      color: #333;
+      text-align: center;
+    }
+
+    .seccion {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #2196f3;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    ul, ol {
+      line-height: 1.8;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>Listas y Tablas en HTML</h1>
+
+  <!-- #region LISTAS -->
+  <div class="seccion">
+    <h2>📋 Listas No Ordenadas (ul)</h2>
+    <ul>
+      <li>Primer elemento</li>
+      <li>Segundo elemento</li>
+      <li>Tercer elemento</li>
+    </ul>
+
+    <h2>🔢 Listas Ordenadas (ol)</h2>
+    <ol>
+      <li>Primero</li>
+      <li>Segundo</li>
+      <li>Tercero</li>
+    </ol>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region TABLAS -->
+  <div class="seccion">
+    <h2>📊 Tabla de Datos</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Edad</th>
+          <th>Ciudad</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Juan</td>
+          <td>25</td>
+          <td>Madrid</td>
+        </tr>
+        <tr>
+          <td>María</td>
+          <td>30</td>
+          <td>Barcelona</td>
+        </tr>
+        <tr>
+          <td>Pedro</td>
+          <td>28</td>
+          <td>Valencia</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

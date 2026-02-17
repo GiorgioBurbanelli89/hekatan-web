@@ -1,0 +1,31 @@
+{
+  "baseModel": "vivienda Silvia sin escalera.ifc",
+  "mergeModel": "Silvia_Cedeno_escalera.ifc",
+  "mergeFilter": "escalera",
+  "autoAlignOffset": {"x": 49.32, "y": 4.06, "z": 6.57},
+  "manualCorrection": {"dy": -0.375, "note": "position.y aplicado después del merge automático"},
+  "alignMethod": {
+    "description": "Losa inclinada minY debe coincidir con contrapiso (0.200). En original: PROXY minY=0.100 = losa PB. En modelo base: contrapiso=0.200.",
+    "original_proxy_minY": 0.100,
+    "original_slab_PB": "0.100/0.170",
+    "base_contrapiso_level": 0.200,
+    "base_vigas_amarre_top": 0.150,
+    "target_losa_inclinada_minY": 0.200
+  },
+  "mergedMeshes": 31,
+  "finalPositions": {
+    "Zapatas": "-0.500 a -0.250 (6)",
+    "Barandas": "-0.250 a 2.500 (6)",
+    "Losa_inclinada": "0.200 a 3.515 (1)",
+    "Huellas": "0.455 a 3.180 (14)",
+    "Descansos": "2.075 a 3.540 (4)",
+    "vigas_PA_top": 3.620,
+    "gap_descanso_a_vigas_PA": "0.080m"
+  },
+  "timestamp": "2026-02-10T21:30:00Z",
+  "howToReproduce": [
+    "1. Cargar modelo base: loadurl http://127.0.0.1:8888/ifc/vivienda%20Silvia%20sin%20escalera.ifc",
+    "2. Merge escalera: merge escalera http://127.0.0.1:8888/ifc/Silvia_Cedeno_escalera.ifc",
+    "3. Ajustar Y: ifc.scene().traverse(o => { if(o.isMesh && o.userData.merged) o.position.y = -0.375; })"
+  ]
+}

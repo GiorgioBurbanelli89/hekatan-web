@@ -1,0 +1,159 @@
+<UserControl x:Class="Hekatan.Wpf.MiniWord.MiniWordViewer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             Background="White">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar principal -->
+        <Border Grid.Row="0" Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="5">
+            <StackPanel Orientation="Horizontal">
+                <!-- Archivo -->
+                <Button x:Name="OpenButton" Content="Abrir" Click="OpenButton_Click"
+                        Margin="0,0,5,0" Padding="8,4" ToolTip="Abrir documento Word (Ctrl+O)"/>
+                <Button x:Name="SaveButton" Content="Guardar" Click="SaveButton_Click"
+                        Margin="0,0,5,0" Padding="8,4" ToolTip="Guardar documento (Ctrl+S)" IsEnabled="False"/>
+                <Button x:Name="SaveAsButton" Content="Guardar como..." Click="SaveAsButton_Click"
+                        Margin="0,0,15,0" Padding="8,4" ToolTip="Guardar como..." IsEnabled="False"/>
+
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,10,0"/>
+
+                <!-- Edicion -->
+                <Button x:Name="UndoButton" Content="Deshacer" Click="UndoButton_Click"
+                        Margin="0,0,5,0" Padding="8,4" ToolTip="Deshacer (Ctrl+Z)" IsEnabled="False"/>
+                <Button x:Name="RedoButton" Content="Rehacer" Click="RedoButton_Click"
+                        Margin="0,0,15,0" Padding="8,4" ToolTip="Rehacer (Ctrl+Y)" IsEnabled="False"/>
+
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,10,0"/>
+
+                <!-- Zoom -->
+                <TextBlock Text="Zoom:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <Button x:Name="ZoomOutButton" Content="-" Width="24" Click="ZoomOutButton_Click"
+                        Margin="0,0,2,0" ToolTip="Reducir zoom"/>
+                <TextBlock x:Name="ZoomLevelText" Text="100%" Width="40" TextAlignment="Center"
+                           VerticalAlignment="Center" Margin="0,0,2,0"/>
+                <Button x:Name="ZoomInButton" Content="+" Width="24" Click="ZoomInButton_Click"
+                        Margin="0,0,5,0" ToolTip="Aumentar zoom"/>
+                <Button x:Name="ZoomResetButton" Content="100%" Click="ZoomResetButton_Click"
+                        Margin="0,0,15,0" Padding="4,2" ToolTip="Restablecer zoom"/>
+
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,10,0"/>
+
+                <!-- Importar a Hekatan -->
+                <Button x:Name="ImportButton" Content="Importar a Hekatan" Click="ImportButton_Click"
+                        Margin="0,0,5,0" Padding="8,4" ToolTip="Importar contenido a Hekatan"
+                        IsEnabled="False" Background="#E3F2FD" FontWeight="Bold"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Toolbar de formato (para edicion) -->
+        <Border Grid.Row="1" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"
+                Padding="5" x:Name="FormatToolbar" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal">
+                <!-- Formato de texto -->
+                <Button x:Name="BoldButton" Content="N" FontWeight="Bold" Width="28"
+                        Click="BoldButton_Click" Margin="0,0,2,0" ToolTip="Negrita (Ctrl+B)"/>
+                <Button x:Name="ItalicButton" Content="K" FontStyle="Italic" Width="28"
+                        Click="ItalicButton_Click" Margin="0,0,2,0" ToolTip="Cursiva (Ctrl+I)"/>
+                <Button x:Name="UnderlineButton" Width="28" Click="UnderlineButton_Click"
+                        Margin="0,0,10,0" ToolTip="Subrayado (Ctrl+U)">
+                    <TextBlock TextDecorations="Underline">S</TextBlock>
+                </Button>
+
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,10,0"/>
+
+                <!-- Tamano de fuente -->
+                <ComboBox x:Name="FontSizeCombo" Width="60" SelectionChanged="FontSizeCombo_Changed"
+                          Margin="0,0,10,0" ToolTip="Tamano de fuente">
+                    <ComboBoxItem Content="8"/>
+                    <ComboBoxItem Content="9"/>
+                    <ComboBoxItem Content="10"/>
+                    <ComboBoxItem Content="11"/>
+                    <ComboBoxItem Content="12" IsSelected="True"/>
+                    <ComboBoxItem Content="14"/>
+                    <ComboBoxItem Content="16"/>
+                    <ComboBoxItem Content="18"/>
+                    <ComboBoxItem Content="20"/>
+                    <ComboBoxItem Content="24"/>
+                    <ComboBoxItem Content="28"/>
+                    <ComboBoxItem Content="36"/>
+                </ComboBox>
+
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,10,0"/>
+
+                <!-- Alineacion -->
+                <Button x:Name="AlignLeftButton" Content="Izq" Width="35"
+                        Click="AlignLeftButton_Click" Margin="0,0,2,0" ToolTip="Alinear izquierda"/>
+                <Button x:Name="AlignCenterButton" Content="Centro" Width="50"
+                        Click="AlignCenterButton_Click" Margin="0,0,2,0" ToolTip="Centrar"/>
+                <Button x:Name="AlignRightButton" Content="Der" Width="35"
+                        Click="AlignRightButton_Click" Margin="0,0,10,0" ToolTip="Alinear derecha"/>
+
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,10,0"/>
+
+                <!-- Listas -->
+                <Button x:Name="BulletListButton" Content="Lista" Width="40"
+                        Click="BulletListButton_Click" Margin="0,0,2,0" ToolTip="Lista con vinetas"/>
+                <Button x:Name="NumberListButton" Content="1. Lista" Width="50"
+                        Click="NumberListButton_Click" Margin="0,0,10,0" ToolTip="Lista numerada"/>
+
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,10,0"/>
+
+                <!-- Toggle edicion -->
+                <CheckBox x:Name="EditModeCheckBox" Content="Modo edicion"
+                          Checked="EditModeCheckBox_Changed" Unchecked="EditModeCheckBox_Changed"
+                          VerticalAlignment="Center" Margin="0,0,5,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Contenido principal - WebView2 -->
+        <Grid Grid.Row="2">
+            <!-- Placeholder cuando no hay documento -->
+            <Border x:Name="PlaceholderPanel" Background="#F8F8F8" Visibility="Visible">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="MiniWord" FontSize="24" FontWeight="Bold" Foreground="#2B579A"
+                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="Visor y editor de documentos Word integrado"
+                               FontSize="14" Foreground="#666" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                    <Button Content="Abrir documento .docx" Click="OpenButton_Click"
+                            Padding="20,10" FontSize="14"/>
+                    <TextBlock Text="o arrastra un archivo .docx aqui"
+                               FontSize="12" Foreground="#999" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- WebView2 para mostrar el documento -->
+            <wv2:WebView2 x:Name="DocumentWebView"
+                          DefaultBackgroundColor="White"
+                          Visibility="Collapsed"
+                          NavigationCompleted="DocumentWebView_NavigationCompleted"/>
+        </Grid>
+
+        <!-- Barra de estado -->
+        <Border Grid.Row="3" Background="#F0F0F0" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="5,3">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="StatusText" Grid.Column="0" Text="Listo"
+                           VerticalAlignment="Center" Foreground="#666"/>
+                <TextBlock x:Name="WordVersionText" Grid.Column="1" Text=""
+                           VerticalAlignment="Center" Foreground="#999" Margin="10,0"/>
+                <TextBlock x:Name="PageCountText" Grid.Column="2" Text=""
+                           VerticalAlignment="Center" Foreground="#666" Margin="10,0"/>
+                <TextBlock x:Name="ModifiedIndicator" Grid.Column="3" Text=""
+                           VerticalAlignment="Center" Foreground="#C62828" FontWeight="Bold" Margin="10,0,0,0"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

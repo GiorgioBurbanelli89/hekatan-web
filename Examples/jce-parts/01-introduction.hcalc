@@ -1,0 +1,333 @@
+'<!-- ============== PAGE 2 ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Method of incompatible modes – overview and application
+right: Građevinar 1/2018
+barside: right
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{markdown}
+## 1. Introduction
+
+It was observed already at initial stages of implementation that the greatest problem with finite elements with low number of nodes is their sensitivity to "locking" (e.g., see [1]). The remedy has been sought through enhancement of the displacement or strain element field, and the method was called "the method of incompatible modes" or simply "incompatible modes".
+
+The method of incompatible modes was introduced in 1973 by Wilson et al. [2, 3] as an improvement of the low-order plane and solid elements in bending problems. It was observed through eigenvector analysis that low-order elements can not describe bending behaviour simply because they lack the necessary shape functions, and so the lacking displacement shapes were added artificially. Although simple addition of shape functions violates the continuity condition, the convergence can still be achieved if some requirements are met [4]. Incompatible shape functions are not unique, i.e. they assume various forms in different problems (small displacements, large displacements, large rotations, incompressible material, etc.). Many well performing incompatible shape functions belong to the class of mixed formulation elements [5].
+
+It was established that this method has some additional benefits, such as an improved resistance to mesh distortions and improved behaviour of elements when nearly incompressible materials are analysed [6]. Also, incompatible modes are not only applied to improve the elements' behaviour, i.e. they can also be used to formulate strain or displacement based on constitutive laws (e.g., damage evolution) on the element level. In combination with the operator split technique (e.g., see [7]) that enables separate solution of evolution equations and equilibrium equations on the local and global levels, this drastically reduces demand for secondary storage. The application of incompatible modes to the geometrically non-linear problem of large rotations can be found in [8, 9]. Practical application of enhanced elements is possible in various areas, such as in the design of walls with openings [10].
+
+The application of incompatible modes in strain and displacement discontinuities in 1D-problems is described in Section 2. The application of incompatible modes to the original problem of bending, where the behaviour of 2D and 3D quadrilateral elements in a structure loaded in bending has been improved, is described in Section 3.
+
+## 2. Incompatible mode method in 1D
+### 2.1. Mixed variational formulation
+
+The standard finite element solution is usually constructed from the displacement type variational formulation, where the weak form is obtained only from equilibrium equation. If we want to enrich the strain field and introduce the enhanced approximation into the finite element formulation, we have to construct the weak form from all three sets of equations: kinematic, constitutive and equilibrium equations. This is called
+@{end markdown}
+
+@{column}
+@{markdown}
+the mixed or Hu-Washizu variational formulation, where the displacement field u(x), the strain field ε(x), and the stress field σ(x), are independent of one another [7]. To be able to derive the method of incompatible modes, one should start by enriching the strain field in the following way:
+@{end markdown}
+
+@{eq}
+ε(x) = du/dx + ε̃(x)    (1)
+@{end eq}
+
+@{markdown}
+where the first term is the standard strain, and the second term is the enhanced or incompatible strain.
+
+In the weak form, equations no longer have to be satisfied at each point of the domain Ω, but rather in an integral sense only. It is obtained by multiplying the equation by an arbitrary function w, also known as the weighting function, and then by integrating the product over the whole domain. For the equilibrium equation we get:
+@{end markdown}
+
+@{eq}
+∫_Ω w*(dσ/dx + b)*dx = 0    (2)
+@{end eq}
+
+@{markdown}
+which, after integrating by parts, assumes the following form:
+@{end markdown}
+
+@{eq}
+= ∫_Ω (dw/dx)*σ*dx − ∫_Ω w*b*dx − [w*t̄]_{Γ_σ}    (3)
+@{end eq}
+
+@{markdown}
+Here, w(x) represents the virtual displacement field that has to vanish on the boundary, thus satisfying the condition w(x) = 0 on Γ_u. In a similar manner, the weak form of the constitutive equation is defined in the space of the virtual strain field γ(x) for the case of linear elasticity:
+@{end markdown}
+
+@{eq}
+= ∫_Ω γ*(E*ε − σ)*dx = 0    (4)
+@{end eq}
+
+@{markdown}
+The weak form of the kinematic equation is constructed in the space of the virtual stress field τ(x):
+@{end markdown}
+
+@{eq}
+Π(u,ε,σ) = ∫_Ω ½*ε*E*ε*dx + ∫_Ω σ*(du/dx − ε)*dx − ∫_Ω u*b*dx − [u*t̄]_{Γ_σ}    (5)
+@{end eq}
+
+@{markdown}
+Eqs. (3), (4) and (5) constitute the mixed weak form that is equivalent to the Hu-Washizu functional [11] for a 1D case:
+@{end markdown}
+
+@{eq}
+= ∫_Ω (dw/dx + γ̃)*[E*(du/dx + ε̃) − σ]*dx = 0    (6)
+@{end eq}
+
+@{markdown}
+The virtual strain field and the virtual stress field do not have to satisfy the boundary condition imposed on the virtual displacement field. Also, they do not have to be continuous, but square integrable functions only [7].
+
+The enriched virtual strain field is defined in the same manner as the real strain field in Eq. (1):
+@{end markdown}
+
+@{eq}
+γ(x) = dw/dx + γ̃(x)    (7)
+@{end eq}
+
+@{markdown}
+By introducing the enriched approximations from Eqs. (1) and (7) into Eqs. (4) and (5), the following equations are obtained:
+@{end markdown}
+
+@{eq}
+∫_Ω (dw/dx)*[E*(du/dx + ε̃) − σ]*dx = 0    (8)
+@{end eq}
+
+@{end columns}
+
+@{footer}
+left: 20
+right: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+@{end footer}
+
+'<!-- ============== PAGE 3 ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Građevinar 1/2018
+right: Ivica Kožar, Tea Rukavina, Adnan Ibrahimbegović
+barside: left
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{eq}
+∫_Ω γ̃*[E*(du/dx + ε̃) − σ]*dx = 0    (9)
+@{end eq}
+
+@{markdown}
+Furthermore, Eq. (8) can be divided into two equations:
+@{end markdown}
+
+@{eq}
+∫_Ω (dw/dx)*σ*dx = ∫_Ω (dw/dx)*E*(du/dx + ε̃)*dx    (10)
+@{end eq}
+
+@{eq}
+= ∫_Ω (dw/dx)*σ*dx − ∫_Ω w*b*dx − [w*t̄]_{Γ_σ}    (11)
+@{end eq}
+
+@{markdown}
+From Eq. (10), it follows:
+@{end markdown}
+
+@{eq}
+ε(x) = B*u + G(x)*α    (12)
+@{end eq}
+
+@{markdown}
+and by introducing it into Eq. (3), we obtain:
+@{end markdown}
+
+@{eq}
+∫_Ω (dw/dx)*σ*dx − ∫_Ω w*b*dx − [w*t̄]_{Γ_σ}    (13)
+@{end eq}
+
+@{markdown}
+Eqs. (9), (11) and (13) constitute the weak form for the enriched strain field obtained using the mixed formulation. They are listed here:
+@{end markdown}
+
+@{eq}
+∫_Ω (dw/dx)*E*(du/dx + ε̃)*dx − ∫_Ω w*b*dx − [w*t̄]_{Γ_σ} = 0
+∫_Ω γ̃*[E*(du/dx + ε̃) − σ]*dx = 0
+∫_Ω τ*(du/dx + ε̃ − ε)*dx = 0    (14)
+@{end eq}
+
+@{markdown}
+### 2.2. Finite element implementation
+
+A 2-node truss bar finite element of length L and cross-sectional area A is considered, with an axial degree of freedom u_i at every node (see Figure 1).
+@{end markdown}
+
+@{figure}
+src: jce-images/image17.jpeg
+caption: Figure 1. 2-node truss bar finite element with its shape functions
+width: 90%
+@{end figure}
+
+@{markdown}
+By introducing the finite element approximations, the enriched displacement field can be represented as the sum of the compatible and incompatible part:
+@{end markdown}
+
+@{eq}
+u(x) = N(x)*u + M(x)*α    (15)
+@{end eq}
+
+@{markdown}
+where **N** are linear shape functions, **u** is the nodal displacement vector, M(x) is the incompatible mode function, and α is the
+@{end markdown}
+
+@{column}
+@{markdown}
+incompatible mode parameter. The incompatible mode function M(x) is chosen according to the characteristics of the problem to be solved, as will be shown through examples in the following Sections.
+
+The enriched strain field in Eq. (1) can be computed as the derivative of Eq. (15):
+@{end markdown}
+
+@{eq}
+ε(x) = B*u + G(x)*α    (16)
+@{end eq}
+
+@{markdown}
+where matrix **B** contains the shape functions' derivatives, and G(x) is the derivative of the incompatible mode function.
+
+Besides the convergence conditions that have to be met by standard finite elements, several additional conditions have to be solved by enhanced elements with incompatible modes [7]: The incompatible strain field should be independent from the compatible strain field, and so their shape functions must not belong to the same space:
+@{end markdown}
+
+@{eq}
+N_i ∩ M ≡ ∅    (17)
+@{end eq}
+
+@{markdown}
+Stress parameters should be orthogonal to the incompatible mode parameters, so that the presence of stress in the approximation can be avoided. For this reason, all the terms in Eqs. (14) that contain stress parameters should vanish:
+@{end markdown}
+
+@{eq}
+H = ∫_{Ω_1} G*E_1*A*G*dx + ∫_{Ω_2} G*E_2*A*G*dx    (18)
+@{end eq}
+
+@{markdown}
+Any incompatible strain should be orthogonal to any constant stress and no work should result from the coupling between these two fields. This ensures convergence in the spirit of the patch test. It has been shown in [3] that for a constant stress σ, it follows from Eqs. (18):
+@{end markdown}
+
+@{eq}
+∫_Ω G*dx = 0    (19)
+@{end eq}
+
+@{markdown}
+By introducing the finite element approximations for displacements and strains into the mixed formulation from Eqs. (14), a system of equations is obtained:
+@{end markdown}
+
+@{eq}
+∫_Ω B^T*E*A*B*u*dx + ∫_Ω B^T*E*A*G*α*dx − ∫_Ω N*b*A*dx − [N*t̄*A]_{Γ_σ}
+∫_Ω G*E*A*B^T*u*dx + ∫_Ω G*E*A*G*α*dx = 0    (20)
+@{end eq}
+
+@{markdown}
+When we introduce the substitutions:
+@{end markdown}
+
+@{eq}
+K = ∫_Ω B^T*E*A*B*dx ;   F = ∫_Ω B^T*E*A*G*dx
+H = ∫_Ω G*E*A*G*dx ;   f = ∫_Ω N*b*A*dx + [N*t̄*A]_{Γ_σ}    (21)
+@{end eq}
+
+@{end columns}
+
+@{footer}
+left: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+right: 21
+@{end footer}
+
+'<!-- ============== PAGE 4 ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Method of incompatible modes – overview and application
+right: Građevinar 1/2018
+barside: right
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{markdown}
+Eqs. (20) become:
+@{end markdown}
+
+@{eq}
+K*u + F*α = f
+F^T*u + H*α = 0    (22)
+@{end eq}
+
+@{markdown}
+and that can be written in matrix form:
+@{end markdown}
+
+@{eq}
+[K, F^T; F, H]*[u; α] = [f; 0]    (23)
+@{end eq}
+
+@{markdown}
+Now the static condensation can be performed to reduce the stiffness matrix to the same size as the nodal displacement vector. From the second equation in Eqs. (22), it follows:
+@{end markdown}
+
+@{eq}
+α = −H^{−1}*F*u    (24)
+@{end eq}
+
+@{markdown}
+When Eq. (24) is introduced into the first equation in Eqs. (22), the following is obtained:
+@{end markdown}
+
+@{eq}
+(K − F^T*H^{−1}*F)*u = f    (25)
+@{end eq}
+
+@{markdown}
+where the first term represents the condensed stiffness matrix:
+@{end markdown}
+
+@{eq}
+K̂ = K − F^T*H^{−1}*F    (26)
+@{end eq}
+
+@{markdown}
+The following can finally be written:
+@{end markdown}
+
+@{eq}
+K̂*u = f    (27)
+@{end eq}
+
+@{markdown}
+The method of incompatible modes derived in this section can be applied to a wide range of problems in mechanics. Two potential applications in a 1D setting will be shown in the following two subsections: the first one is a bar composed of two different materials, and the second one is a bar with an embedded discontinuity that simulates the crack opening.
+@{end markdown}
+
+@{column}
+
+@{end columns}
+
+@{footer}
+left: 22
+right: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+@{end footer}

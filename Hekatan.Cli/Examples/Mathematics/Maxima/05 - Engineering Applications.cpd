@@ -1,0 +1,33 @@
+"<h1>Engineering Applications with Maxima CAS</h1>"
+"<h2>1. Beam Deflection and Stiffness Matrix</h2>"
+'<p>Structural engineering computations:</p>
+
+@{maxima}
+/* === Simply Supported Beam Deflection === */
+/* EI*y'''' = -w0, integrate 4 times */
+V: integrate(-w0, x) + C1$
+M: integrate(V, x) + C2$
+theta: integrate(M, x) + C3$
+defl: integrate(theta, x) + C4$
+eqs: [subst(0, x, defl), subst(L, x, defl), subst(0, x, M), subst(L, x, M)]$
+sol: solve(eqs, [C1, C2, C3, C4])$
+y_beam: ratsimp(subst(sol[1], defl));
+
+/* === Bar Element Stiffness Matrix === */
+B: matrix([diff(1-x/Le, x), diff(x/Le, x)])$
+K_bar: Ep*Ap*integrate(transpose(B) . B, x, 0, Le);
+ratsimp(K_bar);
+
+/* === Rectangle Moment of Inertia === */
+Ix_rect: integrate(integrate(y^2, x, -b/2, b/2), y, -h/2, h/2);
+
+/* === Vibration: Undamped Natural Frequency === */
+solve(m*r^2 + c*r + k = 0, r);
+
+/* === Inverse Laplace: Step Response === */
+ilt(4/(s*(s^2 + 2*s + 4)), s, t);
+
+/* === Export numerical result to Calcpad === */
+delta: 10e3 * 3.0^3 / (3 * 200e9 * 1e-4)$
+printf(true, "CALCPAD:delta_max=~,8f~%", delta);
+@{end maxima}

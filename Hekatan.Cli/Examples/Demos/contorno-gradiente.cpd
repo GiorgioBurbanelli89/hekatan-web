@@ -1,0 +1,622 @@
+@{svg 700 50}
+text 350 35 "GRADIENTES DE CONTORNO - Mapa de Colores SVG" size:20 anchor:middle bold color:#222
+@{end svg}
+
+@{svg 700 500}
+# =====================================================
+# MAPA DE DEFLEXION - Placa simplemente apoyada
+# Carga uniforme q=10 kN/m2, 6x4m
+# Gradiente tipo jet (azul → cyan → verde → amarillo → rojo)
+# =====================================================
+
+background #fff
+
+text 350 30 "Deflexion w(x,y) - Placa 6x4m SS, q=10 kN/m2" size:15 anchor:middle bold color:#222
+
+# Grilla 30x20 celdas, cada celda 18x18px
+# Origen mapa: (50, 50), ancho 540, alto 360
+
+# Fila 0 (borde y=0, w=0) - azul oscuro
+rect 50 50 18 18 fill:#00008B stroke:none
+rect 68 50 18 18 fill:#00008B stroke:none
+rect 86 50 18 18 fill:#00008B stroke:none
+rect 104 50 18 18 fill:#00008B stroke:none
+rect 122 50 18 18 fill:#00008B stroke:none
+rect 140 50 18 18 fill:#00008B stroke:none
+rect 158 50 18 18 fill:#00008B stroke:none
+rect 176 50 18 18 fill:#00008B stroke:none
+rect 194 50 18 18 fill:#00008B stroke:none
+rect 212 50 18 18 fill:#00008B stroke:none
+rect 230 50 18 18 fill:#00008B stroke:none
+rect 248 50 18 18 fill:#00008B stroke:none
+rect 266 50 18 18 fill:#00008B stroke:none
+rect 284 50 18 18 fill:#00008B stroke:none
+rect 302 50 18 18 fill:#00008B stroke:none
+rect 320 50 18 18 fill:#00008B stroke:none
+rect 338 50 18 18 fill:#00008B stroke:none
+rect 356 50 18 18 fill:#00008B stroke:none
+rect 374 50 18 18 fill:#00008B stroke:none
+rect 392 50 18 18 fill:#00008B stroke:none
+rect 410 50 18 18 fill:#00008B stroke:none
+rect 428 50 18 18 fill:#00008B stroke:none
+rect 446 50 18 18 fill:#00008B stroke:none
+rect 464 50 18 18 fill:#00008B stroke:none
+rect 482 50 18 18 fill:#00008B stroke:none
+rect 500 50 18 18 fill:#00008B stroke:none
+rect 518 50 18 18 fill:#00008B stroke:none
+rect 536 50 18 18 fill:#00008B stroke:none
+rect 554 50 18 18 fill:#00008B stroke:none
+rect 572 50 18 18 fill:#00008B stroke:none
+
+# Fila 1 - azul con bordes oscuros
+rect 50 68 18 18 fill:#00008B stroke:none
+rect 68 68 18 18 fill:#0000CD stroke:none
+rect 86 68 18 18 fill:#0000FF stroke:none
+rect 104 68 18 18 fill:#0033FF stroke:none
+rect 122 68 18 18 fill:#0055FF stroke:none
+rect 140 68 18 18 fill:#0077FF stroke:none
+rect 158 68 18 18 fill:#0088FF stroke:none
+rect 176 68 18 18 fill:#0099FF stroke:none
+rect 194 68 18 18 fill:#00AAFF stroke:none
+rect 212 68 18 18 fill:#00BBFF stroke:none
+rect 230 68 18 18 fill:#00CCFF stroke:none
+rect 248 68 18 18 fill:#00DDEE stroke:none
+rect 266 68 18 18 fill:#00EEDD stroke:none
+rect 284 68 18 18 fill:#00EEDD stroke:none
+rect 302 68 18 18 fill:#00DDEE stroke:none
+rect 320 68 18 18 fill:#00CCFF stroke:none
+rect 338 68 18 18 fill:#00BBFF stroke:none
+rect 356 68 18 18 fill:#00AAFF stroke:none
+rect 374 68 18 18 fill:#0099FF stroke:none
+rect 392 68 18 18 fill:#0088FF stroke:none
+rect 410 68 18 18 fill:#0077FF stroke:none
+rect 428 68 18 18 fill:#0055FF stroke:none
+rect 446 68 18 18 fill:#0033FF stroke:none
+rect 464 68 18 18 fill:#0000FF stroke:none
+rect 482 68 18 18 fill:#0000CD stroke:none
+rect 500 68 18 18 fill:#00008B stroke:none
+rect 518 68 18 18 fill:#00008B stroke:none
+rect 536 68 18 18 fill:#00008B stroke:none
+rect 554 68 18 18 fill:#00008B stroke:none
+rect 572 68 18 18 fill:#00008B stroke:none
+
+# Fila 2
+rect 50 86 18 18 fill:#00008B stroke:none
+rect 68 86 18 18 fill:#0000FF stroke:none
+rect 86 86 18 18 fill:#0055FF stroke:none
+rect 104 86 18 18 fill:#0099FF stroke:none
+rect 122 86 18 18 fill:#00BBFF stroke:none
+rect 140 86 18 18 fill:#00DDFF stroke:none
+rect 158 86 18 18 fill:#00EEDD stroke:none
+rect 176 86 18 18 fill:#00FFCC stroke:none
+rect 194 86 18 18 fill:#33FF99 stroke:none
+rect 212 86 18 18 fill:#55FF77 stroke:none
+rect 230 86 18 18 fill:#77FF55 stroke:none
+rect 248 86 18 18 fill:#88FF44 stroke:none
+rect 266 86 18 18 fill:#99FF33 stroke:none
+rect 284 86 18 18 fill:#99FF33 stroke:none
+rect 302 86 18 18 fill:#88FF44 stroke:none
+rect 320 86 18 18 fill:#77FF55 stroke:none
+rect 338 86 18 18 fill:#55FF77 stroke:none
+rect 356 86 18 18 fill:#33FF99 stroke:none
+rect 374 86 18 18 fill:#00FFCC stroke:none
+rect 392 86 18 18 fill:#00EEDD stroke:none
+rect 410 86 18 18 fill:#00DDFF stroke:none
+rect 428 86 18 18 fill:#00BBFF stroke:none
+rect 446 86 18 18 fill:#0099FF stroke:none
+rect 464 86 18 18 fill:#0055FF stroke:none
+rect 482 86 18 18 fill:#0000FF stroke:none
+rect 500 86 18 18 fill:#00008B stroke:none
+rect 518 86 18 18 fill:#00008B stroke:none
+rect 536 86 18 18 fill:#00008B stroke:none
+rect 554 86 18 18 fill:#00008B stroke:none
+rect 572 86 18 18 fill:#00008B stroke:none
+
+# Fila 3
+rect 50 104 18 18 fill:#00008B stroke:none
+rect 68 104 18 18 fill:#0033FF stroke:none
+rect 86 104 18 18 fill:#0099FF stroke:none
+rect 104 104 18 18 fill:#00DDFF stroke:none
+rect 122 104 18 18 fill:#00FFCC stroke:none
+rect 140 104 18 18 fill:#33FF99 stroke:none
+rect 158 104 18 18 fill:#77FF55 stroke:none
+rect 176 104 18 18 fill:#AAFF22 stroke:none
+rect 194 104 18 18 fill:#CCFF00 stroke:none
+rect 212 104 18 18 fill:#EEFF00 stroke:none
+rect 230 104 18 18 fill:#FFEE00 stroke:none
+rect 248 104 18 18 fill:#FFDD00 stroke:none
+rect 266 104 18 18 fill:#FFCC00 stroke:none
+rect 284 104 18 18 fill:#FFCC00 stroke:none
+rect 302 104 18 18 fill:#FFDD00 stroke:none
+rect 320 104 18 18 fill:#FFEE00 stroke:none
+rect 338 104 18 18 fill:#EEFF00 stroke:none
+rect 356 104 18 18 fill:#CCFF00 stroke:none
+rect 374 104 18 18 fill:#AAFF22 stroke:none
+rect 392 104 18 18 fill:#77FF55 stroke:none
+rect 410 104 18 18 fill:#33FF99 stroke:none
+rect 428 104 18 18 fill:#00FFCC stroke:none
+rect 446 104 18 18 fill:#00DDFF stroke:none
+rect 464 104 18 18 fill:#0099FF stroke:none
+rect 482 104 18 18 fill:#0033FF stroke:none
+rect 500 104 18 18 fill:#00008B stroke:none
+rect 518 104 18 18 fill:#00008B stroke:none
+rect 536 104 18 18 fill:#00008B stroke:none
+rect 554 104 18 18 fill:#00008B stroke:none
+rect 572 104 18 18 fill:#00008B stroke:none
+
+# Fila 4
+rect 50 122 18 18 fill:#00008B stroke:none
+rect 68 122 18 18 fill:#0055FF stroke:none
+rect 86 122 18 18 fill:#00BBFF stroke:none
+rect 104 122 18 18 fill:#00FFCC stroke:none
+rect 122 122 18 18 fill:#55FF77 stroke:none
+rect 140 122 18 18 fill:#AAFF22 stroke:none
+rect 158 122 18 18 fill:#EEFF00 stroke:none
+rect 176 122 18 18 fill:#FFCC00 stroke:none
+rect 194 122 18 18 fill:#FF9900 stroke:none
+rect 212 122 18 18 fill:#FF7700 stroke:none
+rect 230 122 18 18 fill:#FF5500 stroke:none
+rect 248 122 18 18 fill:#FF4400 stroke:none
+rect 266 122 18 18 fill:#FF3300 stroke:none
+rect 284 122 18 18 fill:#FF3300 stroke:none
+rect 302 122 18 18 fill:#FF4400 stroke:none
+rect 320 122 18 18 fill:#FF5500 stroke:none
+rect 338 122 18 18 fill:#FF7700 stroke:none
+rect 356 122 18 18 fill:#FF9900 stroke:none
+rect 374 122 18 18 fill:#FFCC00 stroke:none
+rect 392 122 18 18 fill:#EEFF00 stroke:none
+rect 410 122 18 18 fill:#AAFF22 stroke:none
+rect 428 122 18 18 fill:#55FF77 stroke:none
+rect 446 122 18 18 fill:#00FFCC stroke:none
+rect 464 122 18 18 fill:#00BBFF stroke:none
+rect 482 122 18 18 fill:#0055FF stroke:none
+rect 500 122 18 18 fill:#00008B stroke:none
+rect 518 122 18 18 fill:#00008B stroke:none
+rect 536 122 18 18 fill:#00008B stroke:none
+rect 554 122 18 18 fill:#00008B stroke:none
+rect 572 122 18 18 fill:#00008B stroke:none
+
+# Fila 5
+rect 50 140 18 18 fill:#00008B stroke:none
+rect 68 140 18 18 fill:#0077FF stroke:none
+rect 86 140 18 18 fill:#00DDFF stroke:none
+rect 104 140 18 18 fill:#33FF99 stroke:none
+rect 122 140 18 18 fill:#99FF33 stroke:none
+rect 140 140 18 18 fill:#EEFF00 stroke:none
+rect 158 140 18 18 fill:#FFAA00 stroke:none
+rect 176 140 18 18 fill:#FF6600 stroke:none
+rect 194 140 18 18 fill:#FF3300 stroke:none
+rect 212 140 18 18 fill:#FF1100 stroke:none
+rect 230 140 18 18 fill:#EE0000 stroke:none
+rect 248 140 18 18 fill:#DD0000 stroke:none
+rect 266 140 18 18 fill:#CC0000 stroke:none
+rect 284 140 18 18 fill:#CC0000 stroke:none
+rect 302 140 18 18 fill:#DD0000 stroke:none
+rect 320 140 18 18 fill:#EE0000 stroke:none
+rect 338 140 18 18 fill:#FF1100 stroke:none
+rect 356 140 18 18 fill:#FF3300 stroke:none
+rect 374 140 18 18 fill:#FF6600 stroke:none
+rect 392 140 18 18 fill:#FFAA00 stroke:none
+rect 410 140 18 18 fill:#EEFF00 stroke:none
+rect 428 140 18 18 fill:#99FF33 stroke:none
+rect 446 140 18 18 fill:#33FF99 stroke:none
+rect 464 140 18 18 fill:#00DDFF stroke:none
+rect 482 140 18 18 fill:#0077FF stroke:none
+rect 500 140 18 18 fill:#00008B stroke:none
+rect 518 140 18 18 fill:#00008B stroke:none
+rect 536 140 18 18 fill:#00008B stroke:none
+rect 554 140 18 18 fill:#00008B stroke:none
+rect 572 140 18 18 fill:#00008B stroke:none
+
+# Fila 6-7 (pico, centro vertical)
+rect 50 158 18 18 fill:#00008B stroke:none
+rect 68 158 18 18 fill:#0088FF stroke:none
+rect 86 158 18 18 fill:#00EEDD stroke:none
+rect 104 158 18 18 fill:#55FF77 stroke:none
+rect 122 158 18 18 fill:#CCFF00 stroke:none
+rect 140 158 18 18 fill:#FFCC00 stroke:none
+rect 158 158 18 18 fill:#FF6600 stroke:none
+rect 176 158 18 18 fill:#FF1100 stroke:none
+rect 194 158 18 18 fill:#DD0000 stroke:none
+rect 212 158 18 18 fill:#BB0000 stroke:none
+rect 230 158 18 18 fill:#AA0000 stroke:none
+rect 248 158 18 18 fill:#990000 stroke:none
+rect 266 158 18 18 fill:#880000 stroke:none
+rect 284 158 18 18 fill:#880000 stroke:none
+rect 302 158 18 18 fill:#990000 stroke:none
+rect 320 158 18 18 fill:#AA0000 stroke:none
+rect 338 158 18 18 fill:#BB0000 stroke:none
+rect 356 158 18 18 fill:#DD0000 stroke:none
+rect 374 158 18 18 fill:#FF1100 stroke:none
+rect 392 158 18 18 fill:#FF6600 stroke:none
+rect 410 158 18 18 fill:#FFCC00 stroke:none
+rect 428 158 18 18 fill:#CCFF00 stroke:none
+rect 446 158 18 18 fill:#55FF77 stroke:none
+rect 464 158 18 18 fill:#00EEDD stroke:none
+rect 482 158 18 18 fill:#0088FF stroke:none
+rect 500 158 18 18 fill:#00008B stroke:none
+rect 518 158 18 18 fill:#00008B stroke:none
+rect 536 158 18 18 fill:#00008B stroke:none
+rect 554 158 18 18 fill:#00008B stroke:none
+rect 572 158 18 18 fill:#00008B stroke:none
+
+# Fila 7 (maximo - centro)
+rect 50 176 18 18 fill:#00008B stroke:none
+rect 68 176 18 18 fill:#0099FF stroke:none
+rect 86 176 18 18 fill:#00FFCC stroke:none
+rect 104 176 18 18 fill:#77FF55 stroke:none
+rect 122 176 18 18 fill:#EEFF00 stroke:none
+rect 140 176 18 18 fill:#FFAA00 stroke:none
+rect 158 176 18 18 fill:#FF3300 stroke:none
+rect 176 176 18 18 fill:#CC0000 stroke:none
+rect 194 176 18 18 fill:#990000 stroke:none
+rect 212 176 18 18 fill:#770000 stroke:none
+rect 230 176 18 18 fill:#660000 stroke:none
+rect 248 176 18 18 fill:#550000 stroke:none
+rect 266 176 18 18 fill:#440000 stroke:none
+rect 284 176 18 18 fill:#440000 stroke:none
+rect 302 176 18 18 fill:#550000 stroke:none
+rect 320 176 18 18 fill:#660000 stroke:none
+rect 338 176 18 18 fill:#770000 stroke:none
+rect 356 176 18 18 fill:#990000 stroke:none
+rect 374 176 18 18 fill:#CC0000 stroke:none
+rect 392 176 18 18 fill:#FF3300 stroke:none
+rect 410 176 18 18 fill:#FFAA00 stroke:none
+rect 428 176 18 18 fill:#EEFF00 stroke:none
+rect 446 176 18 18 fill:#77FF55 stroke:none
+rect 464 176 18 18 fill:#00FFCC stroke:none
+rect 482 176 18 18 fill:#0099FF stroke:none
+rect 500 176 18 18 fill:#00008B stroke:none
+rect 518 176 18 18 fill:#00008B stroke:none
+rect 536 176 18 18 fill:#00008B stroke:none
+rect 554 176 18 18 fill:#00008B stroke:none
+rect 572 176 18 18 fill:#00008B stroke:none
+
+# Fila 8 (centro+1 max absoluto)
+rect 50 194 18 18 fill:#00008B stroke:none
+rect 68 194 18 18 fill:#0099FF stroke:none
+rect 86 194 18 18 fill:#00FFCC stroke:none
+rect 104 194 18 18 fill:#88FF44 stroke:none
+rect 122 194 18 18 fill:#FFEE00 stroke:none
+rect 140 194 18 18 fill:#FFAA00 stroke:none
+rect 158 194 18 18 fill:#FF3300 stroke:none
+rect 176 194 18 18 fill:#BB0000 stroke:none
+rect 194 194 18 18 fill:#880000 stroke:none
+rect 212 194 18 18 fill:#660000 stroke:none
+rect 230 194 18 18 fill:#550000 stroke:none
+rect 248 194 18 18 fill:#440000 stroke:none
+rect 266 194 18 18 fill:#330000 stroke:none
+rect 284 194 18 18 fill:#330000 stroke:none
+rect 302 194 18 18 fill:#440000 stroke:none
+rect 320 194 18 18 fill:#550000 stroke:none
+rect 338 194 18 18 fill:#660000 stroke:none
+rect 356 194 18 18 fill:#880000 stroke:none
+rect 374 194 18 18 fill:#BB0000 stroke:none
+rect 392 194 18 18 fill:#FF3300 stroke:none
+rect 410 194 18 18 fill:#FFAA00 stroke:none
+rect 428 194 18 18 fill:#FFEE00 stroke:none
+rect 446 194 18 18 fill:#88FF44 stroke:none
+rect 464 194 18 18 fill:#00FFCC stroke:none
+rect 482 194 18 18 fill:#0099FF stroke:none
+rect 500 194 18 18 fill:#00008B stroke:none
+rect 518 194 18 18 fill:#00008B stroke:none
+rect 536 194 18 18 fill:#00008B stroke:none
+rect 554 194 18 18 fill:#00008B stroke:none
+rect 572 194 18 18 fill:#00008B stroke:none
+
+# Fila 9 = Fila 7 (simetria)
+rect 50 212 18 18 fill:#00008B stroke:none
+rect 68 212 18 18 fill:#0099FF stroke:none
+rect 86 212 18 18 fill:#00FFCC stroke:none
+rect 104 212 18 18 fill:#77FF55 stroke:none
+rect 122 212 18 18 fill:#EEFF00 stroke:none
+rect 140 212 18 18 fill:#FFAA00 stroke:none
+rect 158 212 18 18 fill:#FF3300 stroke:none
+rect 176 212 18 18 fill:#CC0000 stroke:none
+rect 194 212 18 18 fill:#990000 stroke:none
+rect 212 212 18 18 fill:#770000 stroke:none
+rect 230 212 18 18 fill:#660000 stroke:none
+rect 248 212 18 18 fill:#550000 stroke:none
+rect 266 212 18 18 fill:#440000 stroke:none
+rect 284 212 18 18 fill:#440000 stroke:none
+rect 302 212 18 18 fill:#550000 stroke:none
+rect 320 212 18 18 fill:#660000 stroke:none
+rect 338 212 18 18 fill:#770000 stroke:none
+rect 356 212 18 18 fill:#990000 stroke:none
+rect 374 212 18 18 fill:#CC0000 stroke:none
+rect 392 212 18 18 fill:#FF3300 stroke:none
+rect 410 212 18 18 fill:#FFAA00 stroke:none
+rect 428 212 18 18 fill:#EEFF00 stroke:none
+rect 446 212 18 18 fill:#77FF55 stroke:none
+rect 464 212 18 18 fill:#00FFCC stroke:none
+rect 482 212 18 18 fill:#0099FF stroke:none
+rect 500 212 18 18 fill:#00008B stroke:none
+rect 518 212 18 18 fill:#00008B stroke:none
+rect 536 212 18 18 fill:#00008B stroke:none
+rect 554 212 18 18 fill:#00008B stroke:none
+rect 572 212 18 18 fill:#00008B stroke:none
+
+# Fila 10 = Fila 6
+rect 50 230 18 18 fill:#00008B stroke:none
+rect 68 230 18 18 fill:#0088FF stroke:none
+rect 86 230 18 18 fill:#00EEDD stroke:none
+rect 104 230 18 18 fill:#55FF77 stroke:none
+rect 122 230 18 18 fill:#CCFF00 stroke:none
+rect 140 230 18 18 fill:#FFCC00 stroke:none
+rect 158 230 18 18 fill:#FF6600 stroke:none
+rect 176 230 18 18 fill:#FF1100 stroke:none
+rect 194 230 18 18 fill:#DD0000 stroke:none
+rect 212 230 18 18 fill:#BB0000 stroke:none
+rect 230 230 18 18 fill:#AA0000 stroke:none
+rect 248 230 18 18 fill:#990000 stroke:none
+rect 266 230 18 18 fill:#880000 stroke:none
+rect 284 230 18 18 fill:#880000 stroke:none
+rect 302 230 18 18 fill:#990000 stroke:none
+rect 320 230 18 18 fill:#AA0000 stroke:none
+rect 338 230 18 18 fill:#BB0000 stroke:none
+rect 356 230 18 18 fill:#DD0000 stroke:none
+rect 374 230 18 18 fill:#FF1100 stroke:none
+rect 392 230 18 18 fill:#FF6600 stroke:none
+rect 410 230 18 18 fill:#FFCC00 stroke:none
+rect 428 230 18 18 fill:#CCFF00 stroke:none
+rect 446 230 18 18 fill:#55FF77 stroke:none
+rect 464 230 18 18 fill:#00EEDD stroke:none
+rect 482 230 18 18 fill:#0088FF stroke:none
+rect 500 230 18 18 fill:#00008B stroke:none
+rect 518 230 18 18 fill:#00008B stroke:none
+rect 536 230 18 18 fill:#00008B stroke:none
+rect 554 230 18 18 fill:#00008B stroke:none
+rect 572 230 18 18 fill:#00008B stroke:none
+
+# Fila 11 = Fila 5
+rect 50 248 18 18 fill:#00008B stroke:none
+rect 68 248 18 18 fill:#0077FF stroke:none
+rect 86 248 18 18 fill:#00DDFF stroke:none
+rect 104 248 18 18 fill:#33FF99 stroke:none
+rect 122 248 18 18 fill:#99FF33 stroke:none
+rect 140 248 18 18 fill:#EEFF00 stroke:none
+rect 158 248 18 18 fill:#FFAA00 stroke:none
+rect 176 248 18 18 fill:#FF6600 stroke:none
+rect 194 248 18 18 fill:#FF3300 stroke:none
+rect 212 248 18 18 fill:#FF1100 stroke:none
+rect 230 248 18 18 fill:#EE0000 stroke:none
+rect 248 248 18 18 fill:#DD0000 stroke:none
+rect 266 248 18 18 fill:#CC0000 stroke:none
+rect 284 248 18 18 fill:#CC0000 stroke:none
+rect 302 248 18 18 fill:#DD0000 stroke:none
+rect 320 248 18 18 fill:#EE0000 stroke:none
+rect 338 248 18 18 fill:#FF1100 stroke:none
+rect 356 248 18 18 fill:#FF3300 stroke:none
+rect 374 248 18 18 fill:#FF6600 stroke:none
+rect 392 248 18 18 fill:#FFAA00 stroke:none
+rect 410 248 18 18 fill:#EEFF00 stroke:none
+rect 428 248 18 18 fill:#99FF33 stroke:none
+rect 446 248 18 18 fill:#33FF99 stroke:none
+rect 464 248 18 18 fill:#00DDFF stroke:none
+rect 482 248 18 18 fill:#0077FF stroke:none
+rect 500 248 18 18 fill:#00008B stroke:none
+rect 518 248 18 18 fill:#00008B stroke:none
+rect 536 248 18 18 fill:#00008B stroke:none
+rect 554 248 18 18 fill:#00008B stroke:none
+rect 572 248 18 18 fill:#00008B stroke:none
+
+# Fila 12 = Fila 4
+rect 50 266 18 18 fill:#00008B stroke:none
+rect 68 266 18 18 fill:#0055FF stroke:none
+rect 86 266 18 18 fill:#00BBFF stroke:none
+rect 104 266 18 18 fill:#00FFCC stroke:none
+rect 122 266 18 18 fill:#55FF77 stroke:none
+rect 140 266 18 18 fill:#AAFF22 stroke:none
+rect 158 266 18 18 fill:#EEFF00 stroke:none
+rect 176 266 18 18 fill:#FFCC00 stroke:none
+rect 194 266 18 18 fill:#FF9900 stroke:none
+rect 212 266 18 18 fill:#FF7700 stroke:none
+rect 230 266 18 18 fill:#FF5500 stroke:none
+rect 248 266 18 18 fill:#FF4400 stroke:none
+rect 266 266 18 18 fill:#FF3300 stroke:none
+rect 284 266 18 18 fill:#FF3300 stroke:none
+rect 302 266 18 18 fill:#FF4400 stroke:none
+rect 320 266 18 18 fill:#FF5500 stroke:none
+rect 338 266 18 18 fill:#FF7700 stroke:none
+rect 356 266 18 18 fill:#FF9900 stroke:none
+rect 374 266 18 18 fill:#FFCC00 stroke:none
+rect 392 266 18 18 fill:#EEFF00 stroke:none
+rect 410 266 18 18 fill:#AAFF22 stroke:none
+rect 428 266 18 18 fill:#55FF77 stroke:none
+rect 446 266 18 18 fill:#00FFCC stroke:none
+rect 464 266 18 18 fill:#00BBFF stroke:none
+rect 482 266 18 18 fill:#0055FF stroke:none
+rect 500 266 18 18 fill:#00008B stroke:none
+rect 518 266 18 18 fill:#00008B stroke:none
+rect 536 266 18 18 fill:#00008B stroke:none
+rect 554 266 18 18 fill:#00008B stroke:none
+rect 572 266 18 18 fill:#00008B stroke:none
+
+# Fila 13 = Fila 3
+rect 50 284 18 18 fill:#00008B stroke:none
+rect 68 284 18 18 fill:#0033FF stroke:none
+rect 86 284 18 18 fill:#0099FF stroke:none
+rect 104 284 18 18 fill:#00DDFF stroke:none
+rect 122 284 18 18 fill:#00FFCC stroke:none
+rect 140 284 18 18 fill:#33FF99 stroke:none
+rect 158 284 18 18 fill:#77FF55 stroke:none
+rect 176 284 18 18 fill:#AAFF22 stroke:none
+rect 194 284 18 18 fill:#CCFF00 stroke:none
+rect 212 284 18 18 fill:#EEFF00 stroke:none
+rect 230 284 18 18 fill:#FFEE00 stroke:none
+rect 248 284 18 18 fill:#FFDD00 stroke:none
+rect 266 284 18 18 fill:#FFCC00 stroke:none
+rect 284 284 18 18 fill:#FFCC00 stroke:none
+rect 302 284 18 18 fill:#FFDD00 stroke:none
+rect 320 284 18 18 fill:#FFEE00 stroke:none
+rect 338 284 18 18 fill:#EEFF00 stroke:none
+rect 356 284 18 18 fill:#CCFF00 stroke:none
+rect 374 284 18 18 fill:#AAFF22 stroke:none
+rect 392 284 18 18 fill:#77FF55 stroke:none
+rect 410 284 18 18 fill:#33FF99 stroke:none
+rect 428 284 18 18 fill:#00FFCC stroke:none
+rect 446 284 18 18 fill:#00DDFF stroke:none
+rect 464 284 18 18 fill:#0099FF stroke:none
+rect 482 284 18 18 fill:#0033FF stroke:none
+rect 500 284 18 18 fill:#00008B stroke:none
+rect 518 284 18 18 fill:#00008B stroke:none
+rect 536 284 18 18 fill:#00008B stroke:none
+rect 554 284 18 18 fill:#00008B stroke:none
+rect 572 284 18 18 fill:#00008B stroke:none
+
+# Fila 14 = Fila 2
+rect 50 302 18 18 fill:#00008B stroke:none
+rect 68 302 18 18 fill:#0000FF stroke:none
+rect 86 302 18 18 fill:#0055FF stroke:none
+rect 104 302 18 18 fill:#0099FF stroke:none
+rect 122 302 18 18 fill:#00BBFF stroke:none
+rect 140 302 18 18 fill:#00DDFF stroke:none
+rect 158 302 18 18 fill:#00EEDD stroke:none
+rect 176 302 18 18 fill:#00FFCC stroke:none
+rect 194 302 18 18 fill:#33FF99 stroke:none
+rect 212 302 18 18 fill:#55FF77 stroke:none
+rect 230 302 18 18 fill:#77FF55 stroke:none
+rect 248 302 18 18 fill:#88FF44 stroke:none
+rect 266 302 18 18 fill:#99FF33 stroke:none
+rect 284 302 18 18 fill:#99FF33 stroke:none
+rect 302 302 18 18 fill:#88FF44 stroke:none
+rect 320 302 18 18 fill:#77FF55 stroke:none
+rect 338 302 18 18 fill:#55FF77 stroke:none
+rect 356 302 18 18 fill:#33FF99 stroke:none
+rect 374 302 18 18 fill:#00FFCC stroke:none
+rect 392 302 18 18 fill:#00EEDD stroke:none
+rect 410 302 18 18 fill:#00DDFF stroke:none
+rect 428 302 18 18 fill:#00BBFF stroke:none
+rect 446 302 18 18 fill:#0099FF stroke:none
+rect 464 302 18 18 fill:#0055FF stroke:none
+rect 482 302 18 18 fill:#0000FF stroke:none
+rect 500 302 18 18 fill:#00008B stroke:none
+rect 518 302 18 18 fill:#00008B stroke:none
+rect 536 302 18 18 fill:#00008B stroke:none
+rect 554 302 18 18 fill:#00008B stroke:none
+rect 572 302 18 18 fill:#00008B stroke:none
+
+# Fila 15 = Fila 1
+rect 50 320 18 18 fill:#00008B stroke:none
+rect 68 320 18 18 fill:#0000CD stroke:none
+rect 86 320 18 18 fill:#0000FF stroke:none
+rect 104 320 18 18 fill:#0033FF stroke:none
+rect 122 320 18 18 fill:#0055FF stroke:none
+rect 140 320 18 18 fill:#0077FF stroke:none
+rect 158 320 18 18 fill:#0088FF stroke:none
+rect 176 320 18 18 fill:#0099FF stroke:none
+rect 194 320 18 18 fill:#00AAFF stroke:none
+rect 212 320 18 18 fill:#00BBFF stroke:none
+rect 230 320 18 18 fill:#00CCFF stroke:none
+rect 248 320 18 18 fill:#00DDEE stroke:none
+rect 266 320 18 18 fill:#00EEDD stroke:none
+rect 284 320 18 18 fill:#00EEDD stroke:none
+rect 302 320 18 18 fill:#00DDEE stroke:none
+rect 320 320 18 18 fill:#00CCFF stroke:none
+rect 338 320 18 18 fill:#00BBFF stroke:none
+rect 356 320 18 18 fill:#00AAFF stroke:none
+rect 374 320 18 18 fill:#0099FF stroke:none
+rect 392 320 18 18 fill:#0088FF stroke:none
+rect 410 320 18 18 fill:#0077FF stroke:none
+rect 428 320 18 18 fill:#0055FF stroke:none
+rect 446 320 18 18 fill:#0033FF stroke:none
+rect 464 320 18 18 fill:#0000FF stroke:none
+rect 482 320 18 18 fill:#0000CD stroke:none
+rect 500 320 18 18 fill:#00008B stroke:none
+rect 518 320 18 18 fill:#00008B stroke:none
+rect 536 320 18 18 fill:#00008B stroke:none
+rect 554 320 18 18 fill:#00008B stroke:none
+rect 572 320 18 18 fill:#00008B stroke:none
+
+# Fila 16 (borde y=b, w=0) - azul oscuro
+rect 50 338 18 18 fill:#00008B stroke:none
+rect 68 338 18 18 fill:#00008B stroke:none
+rect 86 338 18 18 fill:#00008B stroke:none
+rect 104 338 18 18 fill:#00008B stroke:none
+rect 122 338 18 18 fill:#00008B stroke:none
+rect 140 338 18 18 fill:#00008B stroke:none
+rect 158 338 18 18 fill:#00008B stroke:none
+rect 176 338 18 18 fill:#00008B stroke:none
+rect 194 338 18 18 fill:#00008B stroke:none
+rect 212 338 18 18 fill:#00008B stroke:none
+rect 230 338 18 18 fill:#00008B stroke:none
+rect 248 338 18 18 fill:#00008B stroke:none
+rect 266 338 18 18 fill:#00008B stroke:none
+rect 284 338 18 18 fill:#00008B stroke:none
+rect 302 338 18 18 fill:#00008B stroke:none
+rect 320 338 18 18 fill:#00008B stroke:none
+rect 338 338 18 18 fill:#00008B stroke:none
+rect 356 338 18 18 fill:#00008B stroke:none
+rect 374 338 18 18 fill:#00008B stroke:none
+rect 392 338 18 18 fill:#00008B stroke:none
+rect 410 338 18 18 fill:#00008B stroke:none
+rect 428 338 18 18 fill:#00008B stroke:none
+rect 446 338 18 18 fill:#00008B stroke:none
+rect 464 338 18 18 fill:#00008B stroke:none
+rect 482 338 18 18 fill:#00008B stroke:none
+rect 500 338 18 18 fill:#00008B stroke:none
+rect 518 338 18 18 fill:#00008B stroke:none
+rect 536 338 18 18 fill:#00008B stroke:none
+rect 554 338 18 18 fill:#00008B stroke:none
+rect 572 338 18 18 fill:#00008B stroke:none
+
+# --- Borde del mapa ---
+rect 50 50 540 306 fill:none stroke:#333 width:1.5
+
+# --- Flecha al maximo ---
+line 284 205 340 380 stroke:#fff width:1.5
+line 340 380 370 380 stroke:#fff width:1.5
+text 373 384 "w_max = 6.63 mm" size:11 anchor:start bold color:#fff
+
+# --- Ejes ---
+text 320 370 "X (6m)" size:10 anchor:middle color:#fff
+text 43 200 "Y" size:10 anchor:middle color:#333 rotate:90
+text 320 46 "X" size:10 anchor:middle color:#333
+
+# --- Cotas del dominio ---
+text 50 410 "0" size:9 anchor:middle color:#333
+text 320 410 "3.0" size:9 anchor:middle color:#333
+text 590 410 "6.0 m" size:9 anchor:middle color:#333
+text 38 50 "0" size:9 anchor:end color:#333
+text 38 200 "2.0" size:9 anchor:end color:#333
+text 38 356 "4.0 m" size:9 anchor:end color:#333
+
+# =====================================================
+# BARRA DE COLOR (LEYENDA)
+# =====================================================
+
+# Barra vertical de gradiente (a la derecha)
+rect 620 50 25 19 fill:#330000 stroke:none
+rect 620 69 25 19 fill:#550000 stroke:none
+rect 620 88 25 19 fill:#770000 stroke:none
+rect 620 107 25 19 fill:#990000 stroke:none
+rect 620 126 25 19 fill:#BB0000 stroke:none
+rect 620 145 25 19 fill:#DD0000 stroke:none
+rect 620 164 25 19 fill:#FF1100 stroke:none
+rect 620 183 25 19 fill:#FF5500 stroke:none
+rect 620 202 25 19 fill:#FF9900 stroke:none
+rect 620 221 25 19 fill:#FFCC00 stroke:none
+rect 620 240 25 19 fill:#EEFF00 stroke:none
+rect 620 259 25 19 fill:#99FF33 stroke:none
+rect 620 278 25 19 fill:#33FF99 stroke:none
+rect 620 297 25 19 fill:#00FFCC stroke:none
+rect 620 316 25 19 fill:#00BBFF stroke:none
+rect 620 335 25 19 fill:#0055FF stroke:none
+
+rect 620 50 25 304 fill:none stroke:#333 width:1
+
+# Valores de la barra
+text 650 62 "6.63" size:9 anchor:start color:#333
+text 650 120 "5.0" size:9 anchor:start color:#333
+text 650 196 "3.3" size:9 anchor:start color:#333
+text 650 272 "1.7" size:9 anchor:start color:#333
+text 650 352 "0.0" size:9 anchor:start color:#333
+text 632 410 "mm" size:10 anchor:middle color:#333
+
+# Isolineas (contornos)
+text 350 430 "Placa SS, E=35GPa, v=0.15, t=0.1m" size:11 anchor:middle color:#555
+text 350 448 "Navier (Kirchhoff) - N=25 terminos" size:10 anchor:middle italic color:#888
+
+# Marca del maximo
+text 350 470 "w_max(a/2, b/2) = 6.63 mm" size:13 anchor:middle bold color:#c62828
+@{end svg}

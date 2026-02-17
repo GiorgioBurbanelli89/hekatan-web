@@ -1,0 +1,506 @@
+@{config comment:%}
+%%ELEMENTOS FINITOS DESDE CERO
+%%Hekatan Calc - Tutorial Completo con Calculos Reales
+
+@{markdown}
+# Elementos Finitos desde Cero
+De 2 resortes a una placa — paso a paso con calculos reales
+@{end markdown}
+
+@{tree title:"Proceso FEM Completo" color:#1565c0}
+Metodo de Elementos Finitos icon:folder
+  PASO 1: Discretizar icon:info
+    Dividir estructura en ELEMENTOS icon:file
+    Cada elemento tiene NODOS icon:file
+    Cada nodo tiene DOF (grados de libertad) icon:file
+  PASO 2: Matriz local [k] icon:gear
+    Rigidez de CADA elemento icon:file
+    En coordenadas del elemento icon:file
+  PASO 3: ENSAMBLAR [K] global icon:star
+    Sumar contribuciones de cada elemento icon:file
+    Nodos compartidos = sumar rigideces icon:file
+  PASO 4: Condiciones de borde icon:warning
+    Apoyos = eliminar filas/columnas icon:file
+    Cargas = vector {F} icon:file
+  PASO 5: RESOLVER icon:check
+    [K]{u} = {F} icon:code
+    {u} = inv(K) . {F} icon:code
+@{end tree}
+
+%═══════════════════════════════════════
+@{markdown}
+---
+## EJEMPLO 1: Dos Resortes (lo mas simple)
+@{end markdown}
+%═══════════════════════════════════════
+
+@{svg 600 190}
+background #fafafa
+% Pared izquierda (apoyo)
+rect 30 50 12 100 fill:#888 stroke:#555 width:2
+line 22 55 42 55 stroke:#555 width:1
+line 22 75 42 75 stroke:#555 width:1
+line 22 95 42 95 stroke:#555 width:1
+line 22 115 42 115 stroke:#555 width:1
+line 22 135 42 135 stroke:#555 width:1
+% Nodo 1
+circle 42 100 8 fill:#1565c0 stroke:#0d47a1 width:2
+text 42 80 "1" size:16 bold color:#1565c0 anchor:middle
+% Resorte 1 (zigzag)
+line 50 100 90 100 stroke:#c62828 width:2
+line 90 100 105 85 stroke:#c62828 width:2
+line 105 85 125 115 stroke:#c62828 width:2
+line 125 115 145 85 stroke:#c62828 width:2
+line 145 85 165 115 stroke:#c62828 width:2
+line 165 115 185 85 stroke:#c62828 width:2
+line 185 85 200 100 stroke:#c62828 width:2
+line 200 100 240 100 stroke:#c62828 width:2
+text 145 65 "k₁ = 100" size:13 bold color:#c62828 anchor:middle
+% Nodo 2
+circle 240 100 8 fill:#1565c0 stroke:#0d47a1 width:2
+text 240 80 "2" size:16 bold color:#1565c0 anchor:middle
+% Resorte 2 (zigzag)
+line 248 100 290 100 stroke:#2e7d32 width:2
+line 290 100 305 85 stroke:#2e7d32 width:2
+line 305 85 325 115 stroke:#2e7d32 width:2
+line 325 115 345 85 stroke:#2e7d32 width:2
+line 345 85 365 115 stroke:#2e7d32 width:2
+line 365 115 385 85 stroke:#2e7d32 width:2
+line 385 85 400 100 stroke:#2e7d32 width:2
+line 400 100 430 100 stroke:#2e7d32 width:2
+text 345 65 "k₂ = 200" size:13 bold color:#2e7d32 anchor:middle
+% Nodo 3
+circle 430 100 8 fill:#1565c0 stroke:#0d47a1 width:2
+text 430 80 "3" size:16 bold color:#1565c0 anchor:middle
+% Fuerza
+arrow 430 100 550 100 stroke:#e65100 width:3
+text 555 100 "F = 50" size:14 bold color:#e65100
+% Labels
+text 145 145 "Elem 1" size:11 color:#c62828 anchor:middle
+text 345 145 "Elem 2" size:11 color:#2e7d32 anchor:middle
+text 42 160 "FIJO" size:10 bold color:#888 anchor:middle
+text 300 180 "3 nodos, 2 elementos, 3 DOF (u₁, u₂, u₃)" size:12 bold color:#333 anchor:middle
+@{end svg}
+
+@{eqdef}
+k₁ = 100 kN/m | Rigidez del resorte 1
+k₂ = 200 kN/m | Rigidez del resorte 2
+F = 50 kN | Fuerza aplicada en nodo 3
+u₁ = 0 | Nodo 1 fijo (apoyo)
+@{end eqdef}
+
+%═══════════════════════════════════════
+@{markdown}
+### PASO 2: Matriz local de cada elemento
+@{end markdown}
+
+@{eq}
+[k] = k × | +1  -1 |
+           | -1  +1 |
+@{end eq}
+
+@{markdown}
+**Por que esta forma?** La fuerza en un resorte es F = k × Δ donde Δ es el desplazamiento relativo:
+- Nodo i: F_i = k·(u_i - u_j) = **+k**·u_i + **-k**·u_j
+- Nodo j: F_j = k·(u_j - u_i) = **-k**·u_i + **+k**·u_j
+@{end markdown}
+
+@{columns 2}
+
+@{markdown}
+#### Elemento 1 (nodos 1→2, rojo)
+@{end markdown}
+
+@{maxima}
+k1: 100;
+K1_local: k1 * matrix([1,-1],[-1,1]);
+@{end maxima}
+
+@{column}
+
+@{markdown}
+#### Elemento 2 (nodos 2→3, verde)
+@{end markdown}
+
+@{maxima}
+k2: 200;
+K2_local: k2 * matrix([1,-1],[-1,1]);
+@{end maxima}
+
+@{end columns}
+
+%═══════════════════════════════════════
+@{markdown}
+### PASO 3: ENSAMBLAJE — La clave del FEM
+
+Cada elemento conecta nodos **i, j** y aporta su rigidez a las filas/columnas i, j de la matriz global.
+- Elem 1 (nodos 1,2) → aporta a filas/columnas 1,2
+- Elem 2 (nodos 2,3) → aporta a filas/columnas 2,3
+- **Nodo 2 compartido** → diagonal recibe k₁ + k₂
+@{end markdown}
+
+@{svg 700 220}
+background #fafafa
+text 350 18 "PROCESO DE ENSAMBLAJE" size:15 bold color:#333 anchor:middle
+% Matriz elem 1
+text 90 45 "[K₁] 2×2" size:12 bold color:#c62828 anchor:middle
+text 60 62 "n1" size:10 color:#c62828 anchor:middle
+text 120 62 "n2" size:10 color:#c62828 anchor:middle
+rect 35 70 130 55 fill:#ffcdd2 stroke:#c62828 width:2 rx:4
+text 60 95 "+100" size:11 bold color:#c62828 anchor:middle
+text 120 95 "-100" size:11 bold color:#c62828 anchor:middle
+text 60 115 "-100" size:11 bold color:#c62828 anchor:middle
+text 120 115 "+100" size:11 bold color:#c62828 anchor:middle
+line 90 70 90 125 stroke:#c62828 width:1
+line 35 100 165 100 stroke:#c62828 width:1
+% +
+text 195 95 "+" size:22 bold color:#333 anchor:middle
+% Matriz elem 2
+text 310 45 "[K₂] 2×2" size:12 bold color:#2e7d32 anchor:middle
+text 280 62 "n2" size:10 color:#2e7d32 anchor:middle
+text 340 62 "n3" size:10 color:#2e7d32 anchor:middle
+rect 255 70 130 55 fill:#c8e6c9 stroke:#2e7d32 width:2 rx:4
+text 280 95 "+200" size:11 bold color:#2e7d32 anchor:middle
+text 340 95 "-200" size:11 bold color:#2e7d32 anchor:middle
+text 280 115 "-200" size:11 bold color:#2e7d32 anchor:middle
+text 340 115 "+200" size:11 bold color:#2e7d32 anchor:middle
+line 310 70 310 125 stroke:#2e7d32 width:1
+line 255 100 385 100 stroke:#2e7d32 width:1
+% =
+text 415 95 "=" size:22 bold color:#333 anchor:middle
+% Matriz GLOBAL
+text 565 35 "[K] GLOBAL 3×3" size:12 bold color:#1565c0 anchor:middle
+text 500 55 "n1" size:10 bold color:#1565c0 anchor:middle
+text 565 55 "n2" size:10 bold color:#1565c0 anchor:middle
+text 630 55 "n3" size:10 bold color:#1565c0 anchor:middle
+rect 465 65 200 85 fill:#e3f2fd stroke:#1565c0 width:2 rx:4
+text 500 87 "+100" size:10 bold color:#c62828 anchor:middle
+text 565 87 "-100" size:10 bold color:#c62828 anchor:middle
+text 630 87 "0" size:10 color:#999 anchor:middle
+text 500 110 "-100" size:10 bold color:#c62828 anchor:middle
+text 565 110 "300" size:10 bold color:#9c27b0 anchor:middle
+text 630 110 "-200" size:10 bold color:#2e7d32 anchor:middle
+text 500 133 "0" size:10 color:#999 anchor:middle
+text 565 133 "-200" size:10 bold color:#2e7d32 anchor:middle
+text 630 133 "+200" size:10 bold color:#2e7d32 anchor:middle
+line 532 65 532 150 stroke:#1565c0 width:1
+line 598 65 598 150 stroke:#1565c0 width:1
+line 465 95 665 95 stroke:#1565c0 width:1
+line 465 120 665 120 stroke:#1565c0 width:1
+% Notas
+text 350 170 "Nodo 2 compartido → diagonal = k₁+k₂ = 100+200 = 300" size:12 bold color:#9c27b0 anchor:middle
+text 350 190 "Los ceros = nodos NO conectados directamente" size:11 color:#666 anchor:middle
+text 350 208 "Awatif hace EXACTAMENTE esto en getGlobalStiffnessMatrix" size:11 bold color:#333 anchor:middle
+@{end svg}
+
+@{markdown}
+#### Ensamblaje con Maxima (calculo real)
+@{end markdown}
+
+@{maxima}
+k1: 100;
+k2: 200;
+/* Matriz global 3x3 ensamblada */
+K_global: matrix(
+  [k1,    -k1,     0  ],
+  [-k1,  k1+k2,  -k2  ],
+  [0,     -k2,    k2   ]
+);
+@{end maxima}
+
+%═══════════════════════════════════════
+@{markdown}
+### PASO 4: Condiciones de borde
+
+Nodo 1 fijo (u₁=0) → eliminamos **fila 1** y **columna 1**:
+@{end markdown}
+
+@{maxima}
+k1: 100;
+k2: 200;
+/* Reducir: eliminar fila/col 1 */
+K_red: matrix([k1+k2, -k2],[-k2, k2]);
+F_vec: matrix([0],[50]);
+det_K: determinant(K_red);
+@{end maxima}
+
+@{markdown}
+Determinante = **20000 ≠ 0** → sistema tiene solucion unica.
+@{end markdown}
+
+%═══════════════════════════════════════
+@{markdown}
+### PASO 5: RESOLVER [K]{u} = {F}
+@{end markdown}
+
+@{eq}
+{u} = [K]⁻¹ × {F}
+@{end eq}
+
+@{maxima}
+k1: 100;
+k2: 200;
+K_red: matrix([k1+k2, -k2],[-k2, k2]);
+F_vec: matrix([0],[50]);
+/* Inversa */
+K_inv: invert(K_red);
+/* SOLUCION */
+u: K_inv . F_vec;
+@{end maxima}
+
+@{eqdef}
+u₁ = 0 (fijo) | Nodo 1 empotrado
+u₂ = 1/2 = 0.50 | Desplazamiento nodo 2
+u₃ = 3/4 = 0.75 | Desplazamiento nodo 3
+@{end eqdef}
+
+%═══════════════════════════════════════
+@{markdown}
+### PASO 6: Post-proceso
+@{end markdown}
+
+@{maxima}
+k1: 100;
+k2: 200;
+u1: 0;
+u2: 1/2;
+u3: 3/4;
+/* Fuerza en resorte 1 */
+F1: k1 * (u2 - u1);
+/* Fuerza en resorte 2 */
+F2: k2 * (u3 - u2);
+/* Reaccion en apoyo */
+R1: -F1;
+/* Equilibrio: R1 + F_aplicada */
+equilibrio: R1 + 50;
+@{end maxima}
+
+@{markdown}
+**Verificacion:** R₁ = -50 kN ← | F = +50 kN → | Suma = 0 ✓ Equilibrio OK
+@{end markdown}
+
+@{svg 600 120}
+background #fafafa
+text 300 15 "DEFORMADA (escala x100)" size:13 bold color:#333 anchor:middle
+% Original (dashed)
+line 50 45 240 45 stroke:#ccc width:2 dash:5,3
+line 240 45 430 45 stroke:#ccc width:2 dash:5,3
+circle 50 45 4 fill:#ccc stroke:#999 width:1
+circle 240 45 4 fill:#ccc stroke:#999 width:1
+circle 430 45 4 fill:#ccc stroke:#999 width:1
+text 50 35 "1" size:11 color:#999 anchor:middle
+text 240 35 "2" size:11 color:#999 anchor:middle
+text 430 35 "3" size:11 color:#999 anchor:middle
+% Deformada
+line 50 80 290 80 stroke:#1565c0 width:3
+line 290 80 505 80 stroke:#2e7d32 width:3
+circle 50 80 6 fill:#c62828 stroke:#b71c1c width:2
+circle 290 80 6 fill:#1565c0 stroke:#0d47a1 width:2
+circle 505 80 6 fill:#1565c0 stroke:#0d47a1 width:2
+text 50 100 "1 (fijo)" size:10 color:#c62828 anchor:middle
+text 290 100 "u₂ = 0.50" size:10 bold color:#1565c0 anchor:middle
+text 505 100 "u₃ = 0.75" size:10 bold color:#1565c0 anchor:middle
+arrow 240 45 290 45 stroke:#e65100 width:1
+arrow 430 45 505 45 stroke:#e65100 width:1
+@{end svg}
+
+%═══════════════════════════════════════
+@{markdown}
+---
+## EJEMPLO 2: Barra Axial
+
+Un resorte tiene rigidez **k**. Una barra axial tiene rigidez **k = EA/L**.
+Misma matriz, solo cambia el valor de k.
+@{end markdown}
+%═══════════════════════════════════════
+
+@{svg 600 180}
+background #fafafa
+% Apoyo
+rect 30 55 12 80 fill:#888 stroke:#555 width:2
+line 22 60 42 60 stroke:#555 width:1
+line 22 80 42 80 stroke:#555 width:1
+line 22 100 42 100 stroke:#555 width:1
+line 22 120 42 120 stroke:#555 width:1
+% Barra 1
+rect 42 80 190 30 fill:#e3f2fd stroke:#1565c0 width:2
+text 137 72 "EA/L₁" size:12 bold color:#1565c0 anchor:middle
+circle 42 95 6 fill:#c62828 stroke:#b71c1c width:2
+text 42 65 "1" size:14 bold color:#c62828 anchor:middle
+circle 232 95 6 fill:#1565c0 stroke:#0d47a1 width:2
+text 232 65 "2" size:14 bold color:#1565c0 anchor:middle
+% Barra 2
+rect 232 80 190 30 fill:#c8e6c9 stroke:#2e7d32 width:2
+text 327 72 "EA/L₂" size:12 bold color:#2e7d32 anchor:middle
+circle 422 95 6 fill:#1565c0 stroke:#0d47a1 width:2
+text 422 65 "3" size:14 bold color:#1565c0 anchor:middle
+% Fuerza
+arrow 422 95 560 95 stroke:#e65100 width:3
+text 565 95 "P" size:16 bold color:#e65100
+% Datos
+text 137 130 "L₁ = 2m" size:11 color:#1565c0 anchor:middle
+text 327 130 "L₂ = 3m" size:11 color:#2e7d32 anchor:middle
+text 300 158 "E=200 GPa, A=0.01 m², P=100 kN" size:11 bold color:#333 anchor:middle
+@{end svg}
+
+@{eqdef}
+k = EA/L | Rigidez axial de una barra
+k₁ = EA/L₁ | Barra 1 (nodos 1→2)
+k₂ = EA/L₂ | Barra 2 (nodos 2→3)
+@{end eqdef}
+
+@{maxima}
+E: 200e6;
+A: 0.01;
+L1: 2;
+L2: 3;
+P: 100;
+k1: E*A/L1;
+k2: E*A/L2;
+/* Reducido (nodo 1 fijo) */
+K_red: matrix([k1+k2, -k2],[-k2, k2]);
+F_vec: matrix([0],[P]);
+u: invert(K_red) . F_vec;
+@{end maxima}
+
+@{eqdef}
+u₂ = P/k₁ = 0.0001 m = 0.1 mm | Desplazamiento nodo 2
+u₃ = P(1/k₁ + 1/k₂) = 0.00025 m = 0.25 mm | Desplazamiento nodo 3
+@{end eqdef}
+
+%═══════════════════════════════════════
+@{markdown}
+---
+## EJEMPLO 3: Viga en Flexion
+
+El salto: de **1 DOF** a **2 DOF** por nodo.
+En vigas cada nodo tiene desplazamiento **v** y rotacion **θ**.
+La matriz local pasa de 2×2 a **4×4**.
+@{end markdown}
+
+@{svg 600 190}
+background #fafafa
+% Viga
+rect 60 75 480 18 fill:#e8eaf6 stroke:#3f51b5 width:2
+% Empotrado izquierdo
+rect 40 58 20 55 fill:#888 stroke:#555 width:2
+line 32 63 60 63 stroke:#555 width:1
+line 32 78 60 78 stroke:#555 width:1
+line 32 93 60 93 stroke:#555 width:1
+line 32 108 60 108 stroke:#555 width:1
+% Roller derecho
+circle 540 103 7 fill:none stroke:#888 width:2
+line 527 110 553 110 stroke:#888 width:2
+% Nodos
+circle 60 84 5 fill:#c62828 stroke:#b71c1c width:2
+text 60 55 "1" size:14 bold color:#c62828 anchor:middle
+circle 300 84 5 fill:#1565c0 stroke:#0d47a1 width:2
+text 300 55 "2" size:14 bold color:#1565c0 anchor:middle
+circle 540 84 5 fill:#1565c0 stroke:#0d47a1 width:2
+text 540 55 "3" size:14 bold color:#1565c0 anchor:middle
+% Carga
+arrow 300 30 300 73 stroke:#e65100 width:3
+text 300 22 "P = 10 kN" size:12 bold color:#e65100 anchor:middle
+% DOFs
+text 60 128 "v₁, θ₁" size:10 color:#c62828 anchor:middle
+text 300 128 "v₂, θ₂" size:10 color:#1565c0 anchor:middle
+text 540 128 "v₃, θ₃" size:10 color:#1565c0 anchor:middle
+text 180 103 "L = 3m" size:11 color:#3f51b5 anchor:middle
+text 420 103 "L = 3m" size:11 color:#3f51b5 anchor:middle
+text 300 155 "2 DOF/nodo × 3 nodos = 6 DOF total" size:11 bold color:#333 anchor:middle
+text 300 172 "EI = 20000 kN·m²" size:11 color:#555 anchor:middle
+@{end svg}
+
+@{eq}
+[k]_viga = (EI/L³) × | 12    6L   -12   6L  |
+                       | 6L    4L²  -6L   2L² |
+                       | -12  -6L    12  -6L  |
+                       | 6L    2L²  -6L   4L² |
+@{end eq}
+
+@{maxima}
+EI: 20000;
+L: 3;
+/* Matriz local viga Euler-Bernoulli 4x4 */
+k_viga: (EI/L^3) * matrix(
+  [12,    6*L,   -12,   6*L  ],
+  [6*L,   4*L^2, -6*L,  2*L^2],
+  [-12,  -6*L,    12,  -6*L  ],
+  [6*L,   2*L^2, -6*L,  4*L^2]
+);
+@{end maxima}
+
+@{maxima}
+EI: 20000;
+L: 3;
+c: EI/L^3;
+/* Ensamblar 6x6, luego reducir */
+/* BC: v1=0, th1=0 (empotrado), v3=0 (roller) */
+/* Libres: v2 (DOF 3), th2 (DOF 4), th3 (DOF 6) */
+K_red: matrix(
+  [24*c,    0,        6*L*c  ],
+  [0,       8*L^2*c,  2*L^2*c],
+  [6*L*c,   2*L^2*c,  4*L^2*c]
+);
+F_red: matrix([10],[0],[0]);
+u_red: float(invert(K_red) . F_red);
+@{end maxima}
+
+%═══════════════════════════════════════
+@{markdown}
+---
+## ESCALANDO: De Resortes a Placa (Awatif)
+@{end markdown}
+
+@{tree title:"Escalando DOFs" color:#9c27b0}
+Elementos Finitos icon:folder
+  Resorte (Ejemplo 1) icon:check
+    1 DOF/nodo (u) - Matriz 2x2 icon:file
+  Barra axial (Ejemplo 2) icon:check
+    1 DOF/nodo (u) - Matriz 2x2 - k=EA/L icon:file
+  Viga (Ejemplo 3) icon:check
+    2 DOF/nodo (v,theta) - Matriz 4x4 icon:file
+  Portico 2D icon:gear
+    3 DOF/nodo (u,v,theta) - Matriz 6x6 icon:file
+  Shell Tri3 AWATIF icon:star
+    6 DOF/nodo (u,v,w,thx,thy,thz) icon:gear
+    Matriz local 18x18 icon:code
+    MISMO ensamblaje que resortes icon:check
+@{end tree}
+
+@{markdown}
+### El ensamblaje en Awatif
+@{end markdown}
+
+@{cpp-explain}
+// Ensamblaje global - IDENTICO al de resortes
+for (int e = 0; e < nElements; e++) {
+    // Nodos del triangulo
+    int n1 = elements[e][0];
+    int n2 = elements[e][1];
+    int n3 = elements[e][2];
+    // Matriz local 18x18 del triangulo
+    MatrixXd Klocal = getLocalStiffnessMatrixShell(e);
+    // Ensamblar: nodo i -> DOFs 6*i a 6*i+5
+    for (int i = 0; i < 18; i++) {
+        for (int j = 0; j < 18; j++) {
+            K_global[gi][gj] += Klocal[i][j];
+        }
+    }
+}
+@{end cpp-explain}
+
+@{markdown}
+### Comparacion final
+
+| Concepto | Resorte | Barra | Viga | **Awatif Tri3** |
+|----------|:-------:|:-----:|:----:|:--------------:|
+| DOF/nodo | 1 | 1 | 2 | **6** |
+| Nodos/elem | 2 | 2 | 2 | **3** |
+| Tam [k] | 2×2 | 2×2 | 4×4 | **18×18** |
+| Rigidez | k | EA/L | EI/L³ | DSG+ANDES |
+| Ensamblaje | Identico | Identico | Identico | **Identico** |
+
+> **El ensamblaje es SIEMPRE el mismo.** Solo cambia el tamano de [k] y cuantos DOF tiene cada nodo.
+> FEM = Discretizar → Matriz local → **Ensamblar** → Aplicar BC → Resolver
+@{end markdown}

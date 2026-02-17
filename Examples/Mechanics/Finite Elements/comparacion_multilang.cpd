@@ -1,0 +1,193 @@
+"COMPARACION: Calcpad vs Python vs Octave
+'====================================
+'Este archivo muestra calculos equivalentes en los tres lenguajes
+'usando la funcionalidad @{python} y @{octave} de Calcpad
+'
+'<h2>TEST 1: Variables Simples</h2>
+'
+'<h3>Calcpad</h3>
+a = 6
+b = 4
+t = 0.1
+c = a + b
+d = a*b
+e = a/b
+'Resultados Calcpad: a='a', b='b', c='c', d='d', e='e
+'
+'<h3>Python</h3>
+@{python}
+a = 6
+b = 4
+t = 0.1
+c = a + b
+d = a * b
+e = a / b
+print(f"Resultados Python: a={a}, b={b}, c={c}, d={d}, e={e}")
+@{end python}
+'
+'<h3>Octave</h3>
+@{octave}
+a = 6;
+b = 4;
+t = 0.1;
+c = a + b;
+d = a * b;
+e = a / b;
+fprintf('Resultados Octave: a=%g, b=%g, c=%g, d=%g, e=%g\n', a, b, c, d, e);
+@{end octave}
+'
+'<hr/>
+'<h2>TEST 2: Matrices</h2>
+'
+'<h3>Calcpad</h3>
+nu = 0.15
+D_calc = [1; nu; 0|nu; 1; 0|0; 0; (1-nu)/2]
+D_calc
+'
+'<h3>Python (numpy)</h3>
+@{python}
+import numpy as np
+nu = 0.15
+D = np.array([
+    [1, nu, 0],
+    [nu, 1, 0],
+    [0, 0, (1-nu)/2]
+])
+print("Matriz D en Python:")
+print(D)
+print(f"\nD[0,0]={D[0,0]}, D[0,1]={D[0,1]}, D[2,2]={D[2,2]}")
+@{end python}
+'
+'<h3>Octave</h3>
+@{octave}
+nu = 0.15;
+D = [1, nu, 0; nu, 1, 0; 0, 0, (1-nu)/2];
+disp('Matriz D en Octave:');
+disp(D);
+fprintf('\nD(1,1)=%g, D(1,2)=%g, D(3,3)=%g\n', D(1,1), D(1,2), D(3,3));
+@{end octave}
+'
+'<hr/>
+'<h2>TEST 3: Bucles y Asignacion de Matrices</h2>
+'
+'<h3>Calcpad</h3>
+n = 4
+v_calc = vector(n)
+#for i = 1 : n
+	v_calc.i = i*10
+#loop
+'Vector v_calc:
+v_calc
+'
+'Matriz A_calc:
+A_calc = matrix(3; 3)
+#for i = 1 : 3
+	#for j = 1 : 3
+		A_calc.(i; j) = i + j
+	#loop
+#loop
+A_calc
+'
+'<h3>Python</h3>
+@{python}
+import numpy as np
+
+# Vector
+n = 4
+v = np.zeros(n)
+for i in range(1, n+1):
+    v[i-1] = i * 10
+print("Vector v en Python:")
+print(v)
+
+# Matriz
+A = np.zeros((3, 3))
+for i in range(1, 4):
+    for j in range(1, 4):
+        A[i-1, j-1] = i + j
+print("\nMatriz A en Python:")
+print(A)
+@{end python}
+'
+'<h3>Octave</h3>
+@{octave}
+% Vector
+n = 4;
+v = zeros(n, 1);
+for i = 1:n
+    v(i) = i * 10;
+end
+disp('Vector v en Octave:');
+disp(v');
+
+% Matriz
+A = zeros(3, 3);
+for i = 1:3
+    for j = 1:3
+        A(i, j) = i + j;
+    end
+end
+disp('Matriz A en Octave:');
+disp(A);
+@{end octave}
+'
+'<hr/>
+'<h2>TEST 4: Operaciones Matriciales</h2>
+'
+'<h3>Calcpad</h3>
+M1 = [1; 2|3; 4]
+M2 = [5; 6|7; 8]
+'M1*M2 =
+M1*M2
+'transp(M1) =
+transp(M1)
+'
+'<h3>Python</h3>
+@{python}
+import numpy as np
+M1 = np.array([[1, 2], [3, 4]])
+M2 = np.array([[5, 6], [7, 8]])
+print("M1 @ M2 =")
+print(M1 @ M2)
+print("\nM1.T =")
+print(M1.T)
+@{end python}
+'
+'<h3>Octave</h3>
+@{octave}
+M1 = [1, 2; 3, 4];
+M2 = [5, 6; 7, 8];
+disp('M1*M2 =');
+disp(M1*M2);
+disp("M1' =");
+disp(M1');
+@{end octave}
+'
+'<hr/>
+'<h2>TEST 5: Exportar Variable de Python a Calcpad</h2>
+'
+@{python}
+import numpy as np
+# Calculo complejo en Python
+resultado = np.pi * 2
+print(f"CALCPAD:pi_doble={resultado}")
+print(f"Calculado en Python: pi*2 = {resultado}")
+@{end python}
+'
+'Usando la variable exportada en Calcpad:
+'pi_doble =
+pi_doble
+'pi_doble * 10 =
+pi_doble * 10
+'
+'<hr/>
+'<h2>RESUMEN DE SINTAXIS</h2>
+'
+'<table border="1" style="border-collapse: collapse; width: 100%;">
+'<tr><th>Operacion</th><th>Calcpad</th><th>Python</th><th>Octave</th></tr>
+'<tr><td>Crear matriz</td><td>[a;b|c;d]</td><td>np.array([[a,b],[c,d]])</td><td>[a,b;c,d]</td></tr>
+'<tr><td>Acceso elemento</td><td>A.(i;j)</td><td>A[i-1,j-1]</td><td>A(i,j)</td></tr>
+'<tr><td>Argumentos</td><td>f(x;y)</td><td>f(x,y)</td><td>f(x,y)</td></tr>
+'<tr><td>Transpuesta</td><td>transp(A)</td><td>A.T</td><td>A`</td></tr>
+'<tr><td>Multiplicacion</td><td>A*B</td><td>A @ B</td><td>A*B</td></tr>
+'</table>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>Hekatan - Cálculo Matemático</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <script src="https://unpkg.com/jquery@3.6.3/dist/jquery.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif;
+            font-size: 11pt;
+            margin: 20px auto;
+            max-width: 900px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+            padding: 30px;
+        }
+
+        .math-container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Arial Nova', Helvetica, sans-serif;
+            color: #2563eb;
+            margin: 1.2em 0 0.6em 0;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            text-align: center;
+            border-bottom: 3px solid #7c3aed;
+            padding-bottom: 15px;
+        }
+
+        h2 {
+            font-size: 2em;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 1.6em;
+            color: #7c3aed;
+        }
+
+        /* FORMULAS MATEMÁTICAS */
+        .eq {
+            font-family: 'Georgia Pro', 'Century Schoolbook', 'Cambria Math', 'Times New Roman', serif;
+            font-size: 1.2em;
+            line-height: 1.8;
+            margin: 15px 0;
+        }
+
+        /* Variables matemáticas */
+        .eq var {
+            color: #2563eb;
+            font-style: italic;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+
+        /* Constantes y números */
+        .eq i {
+            color: #059669;
+            font-style: normal;
+            font-weight: 500;
+        }
+
+        /* Operadores y signos */
+        .eq b {
+            font-weight: 600;
+            color: #1e40af;
+        }
+
+        /* Exponentes y subíndices */
+        .eq sup {
+            font-size: 0.75em;
+            vertical-align: super;
+            color: #7c3aed;
+        }
+
+        .eq sub {
+            font-size: 0.75em;
+            vertical-align: sub;
+            color: #7c3aed;
+        }
+
+        /* Código inline (ecuaciones, expresiones) */
+        code {
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 1.05em;
+            background: #fef3c7;
+            color: #78350f;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid #fbbf24;
+        }
+
+        /* Resaltar ecuaciones en párrafos */
+        p code {
+            font-size: 1.1em;
+        }
+
+        p b {
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        /* Párrafos con mejor espaciado */
+        p {
+            margin: 1em 0;
+            line-height: 1.8;
+        }
+
+        /* FRACCIONES */
+        .dvc {
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
+            line-height: 110%;
+        }
+
+        .dvr {
+            font-size: 1.1em;
+            text-align: center;
+            margin-bottom: 3px;
+            border-bottom: 1.5px solid currentColor;
+            padding-bottom: 2px;
+        }
+
+        .dvs {
+            font-size: 1.1em;
+            text-align: center;
+            padding-top: 2px;
+        }
+
+        .dvl {
+            display: block;
+            border-bottom: 1.5px solid black;
+            margin: 2px 0;
+        }
+
+        /* RAÍCES */
+        .r0, .r1, .r2, .r3 {
+            display: inline-block;
+            margin-top: -2pt;
+            margin-right: 2pt;
+            vertical-align: top;
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: right top;
+        }
+
+        .r0 {
+            background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDEwIDIwIiBoZWlnaHQ9IjE1cHQiIHdpZHRoPSIxMHB4Ij4NCiAgPHBvbHlsaW5lIHBvaW50cz0iMCwxMyAyLDEyIDUsMTkgOSwwIiBzdHlsZT0ic3Ryb2tlOmJsYWNrOyBzdHJva2Utd2lkdGg6MC42cHQ7IHN0cm9rZS1saW5lam9pbjpyb3VuZDsgc3Ryb2tlLWxpbmVjYXA6cm91bmQ7IGZpbGw6bm9uZSIgLz4NCiAgPGxpbmUgeDE9IjIuMiIgeTE9IjEyLjMiIHgyPSI0LjYiIHkyPSIxOC43IiBzdHlsZT0ic3Ryb2tlOmJsYWNrOyBzdHJva2Utd2lkdGg6MC44cHQ7IHN0cm9rZS1saW5lY2FwOnJvdW5kOyIgLz4NCjwvc3ZnPg==");
+            width: 8pt;
+            height: 16pt;
+            margin-left: -8pt;
+        }
+
+        /* MATRICES */
+        .matrix {
+            display: inline-table;
+            font-family: 'Georgia Pro', 'Cambria Math', 'Times New Roman', serif;
+            font-size: 1.1em;
+            margin: 10px 5px;
+            vertical-align: middle;
+        }
+
+        .matrix .tr {
+            display: table-row;
+        }
+
+        .matrix .td {
+            display: table-cell;
+            padding: 4px 8px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .matrix .td:first-child {
+            border-left: 2px solid #2563eb;
+            padding-left: 10px;
+        }
+
+        .matrix .td:last-child {
+            border-right: 2px solid #2563eb;
+            padding-right: 10px;
+        }
+
+        .matrix .tr:first-child .td {
+            border-top: 2px solid #2563eb;
+            padding-top: 8px;
+        }
+
+        .matrix .tr:last-child .td {
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 8px;
+        }
+
+        /* ERRORES Y VALIDACIONES */
+        .err {
+            color: #dc2626;
+            background-color: #fee2e2;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 4px solid #dc2626;
+            display: inline-block;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+
+        .ok {
+            color: #059669;
+            background-color: #d1fae5;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 4px solid #059669;
+            display: inline-block;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+
+        /* INPUTS Y VALORES */
+        input[type="text"] {
+            font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', serif;
+            font-size: 11pt;
+            padding: 6px 10px;
+            border: 2px solid #cbd5e1;
+            border-radius: 6px;
+            text-align: right;
+            background-color: #fefce8;
+            transition: all 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #2563eb;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .value {
+            position: relative;
+            background-color: #eff6ff;
+            border-radius: 3pt;
+            padding: 2px 4px;
+        }
+
+        .value:hover:after {
+            content: attr(data-value);
+            display: block;
+            position: absolute;
+            left: 100%;
+            top: -100%;
+            margin-left: 5pt;
+            padding: 4pt 8pt;
+            border-radius: 4pt;
+            background: #1e293b;
+            color: #fff;
+            font-size: 9pt;
+            white-space: nowrap;
+            z-index: 100;
+        }
+
+        /* TABLAS */
+        table {
+            border-collapse: collapse;
+            margin: 20px 0;
+            width: 100%;
+        }
+
+        table.bordered th {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 10px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        table.bordered td {
+            border: 1px solid #e2e8f0;
+            padding: 8px 10px;
+            text-align: right;
+        }
+
+        /* VECTORES */
+        .vec {
+            font-family: 'Cambria Math', serif;
+            color: #2563eb;
+            font-style: normal;
+            display: inline-block;
+            vertical-align: 2pt;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+
+            .math-container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .eq {
+                font-size: 1.1em;
+            }
+        }
+
+        /* IMPRESIÓN */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .math-container {
+                box-shadow: none;
+                padding: 20px;
+            }
+
+            .eq {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="math-container">

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Hekatan.Wpf": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}

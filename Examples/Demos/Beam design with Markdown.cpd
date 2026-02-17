@@ -1,0 +1,73 @@
+' ============================================
+' Importado de Word (.docx)
+' Versión: Desconocida
+' Archivo: beam design with markdown.docx
+' Fecha: 2026-01-24 12:48:43
+' Título: beam design with markdown
+' ============================================
+
+'RC Beam Design to Eurocode 2
+'.
+'Input data
+'Beam and cross section dimensions
+'Beam length -
+'Cross section dimensions: height -  , width -
+'Loads
+'Uniformly distributed load -  (total, factored)
+'Materials
+'Concrete
+'Characteristic compressive cylinder strength -
+'Partial safety factor for concrete -  ,
+'Design compressive cylinder strength -
+'Factor for effective compression zone depth -
+'Effective compressive strength factor -
+'Ultimate compressive strain -
+'Mean value of axial tensile strength -
+'Steel
+'Longitudinal reinforcement
+'Characteristic yield strength -
+'Partial safety factor for steel -
+'Design yield strength -
+'Modulus of elasticity -
+'Shear reinforcementCharacteristic yield strength -
+'Design yield strength -
+'Results
+'Internal forces
+'Support reaction -
+'Shear force diagram -
+'Design shear force -
+'Bending moment diagram -
+'Design bending moment -
+'Bending design
+'Concrete cover to the center of reinforcement -
+'Effective cross section depth -  cm
+'Relative design bending moment -
+'Compressive zone depth -
+'Relative compression zone depth -
+'Design reinforcement yield strain -
+'Relative depth of compression zone at yielding of bottom reinforcement
+'Limit compression zone depth -
+(ξlim = ξyd for elastic and ξlim = 0.45 for plastic analysis)
+'≤  - Compressive reinforcement is NOT required.
+'Lever arm of internal forces -
+'Required main reinforcement -
+'Selected  bars with size
+'Provided main reinforcement
+'Reinforcement ratio -
+'Minimum reinforcement ratio
+'<
+'Maximum reinforcement ratio -  >
+'Shear design
+'Shear capacity without reinforcement
+',   ,   ,
+'Minimum shear resistance
+'Design check:
+'≤  . Shear reinforcement is NOT required by calculations!
+'Nominal reinforcement will be provided as follows:
+'Shear links with  legs and diameter -
+'Area of one leg -
+'Maximum stirrup spacing -
+'Provided stirrup spacing -
+'Provided shear reinforcement area -  /m
+'Reinforcement ratio -
+'<

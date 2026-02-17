@@ -1,0 +1,222 @@
+"============================================
+"💾 LOCALSTORAGE - GUARDAR DATOS EN EL NAVEGADOR
+"============================================
+"Aprende a guardar datos localmente en el navegador del usuario.
+
+"¿QUÉ ES LOCALSTORAGE?
+"----------------------------------------
+'API que permite guardar datos en el navegador
+'Los datos persisten incluso después de cerrar la página
+'Límite: ~5-10 MB por dominio
+'Solo guarda strings (usa JSON.stringify para objetos)
+
+"MÉTODOS PRINCIPALES
+"----------------------------------------
+'localStorage.setItem(clave, valor) - Guardar
+'localStorage.getItem(clave) - Leer
+'localStorage.removeItem(clave) - Borrar uno
+'localStorage.clear() - Borrar todo
+
+"USO COMÚN
+"----------------------------------------
+'Guardar preferencias del usuario
+'Temas (claro/oscuro)
+'Datos de formularios
+'Puntajes de juegos
+'Configuraciones
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>12 - LocalStorage</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .seccion {
+      background: white;
+      padding: 30px;
+      margin: 20px auto;
+      max-width: 600px;
+      border-radius: 8px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: #1976d2;
+    }
+
+    .btn-delete {
+      background: #f44336;
+    }
+
+    .btn-delete:hover {
+      background: #d32f2f;
+    }
+
+    #resultado {
+      background: #f5f5f5;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+      min-height: 50px;
+    }
+
+    .contador {
+      font-size: 48px;
+      text-align: center;
+      color: #2196f3;
+      margin: 20px 0;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>💾 LocalStorage Demo</h1>
+
+  <!-- #region GUARDAR TEXTO -->
+  <div class="seccion">
+    <h2>📝 Guardar Texto</h2>
+    <input type="text" id="nombre" placeholder="Tu nombre">
+    <textarea id="notas" rows="4" placeholder="Tus notas..."></textarea>
+    <button onclick="guardar()">💾 Guardar</button>
+    <button onclick="cargar()">📂 Cargar</button>
+    <button class="btn-delete" onclick="borrar()">🗑️ Borrar Todo</button>
+    <div id="resultado"></div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region CONTADOR PERSISTENTE -->
+  <div class="seccion">
+    <h2>🔢 Contador Persistente</h2>
+    <p>Este contador se mantiene incluso si cierras la página</p>
+    <div class="contador" id="contador">0</div>
+    <button onclick="incrementar()">➕ Incrementar</button>
+    <button onclick="resetearContador()">🔄 Resetear</button>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region SCRIPTS -->
+  <script>
+    // #region GUARDAR/CARGAR TEXTO
+    function guardar() {
+      const nombre = document.getElementById('nombre').value;
+      const notas = document.getElementById('notas').value;
+
+      localStorage.setItem('nombre', nombre);
+      localStorage.setItem('notas', notas);
+
+      document.getElementById('resultado').innerHTML =
+        '✅ <strong>Guardado!</strong><br>Nombre: ' + nombre + '<br>Notas: ' + notas;
+    }
+
+    function cargar() {
+      const nombre = localStorage.getItem('nombre') || '';
+      const notas = localStorage.getItem('notas') || '';
+
+      document.getElementById('nombre').value = nombre;
+      document.getElementById('notas').value = notas;
+
+      if (nombre || notas) {
+        document.getElementById('resultado').innerHTML =
+          '📂 <strong>Cargado desde LocalStorage</strong>';
+      } else {
+        document.getElementById('resultado').innerHTML =
+          '❌ No hay datos guardados';
+      }
+    }
+
+    function borrar() {
+      localStorage.removeItem('nombre');
+      localStorage.removeItem('notas');
+      document.getElementById('nombre').value = '';
+      document.getElementById('notas').value = '';
+      document.getElementById('resultado').innerHTML = '🗑️ <strong>Datos borrados</strong>';
+    }
+    // #endregion
+
+    // #region CONTADOR PERSISTENTE
+    function actualizarContador() {
+      const contador = localStorage.getItem('contador') || 0;
+      document.getElementById('contador').textContent = contador;
+    }
+
+    function incrementar() {
+      let contador = parseInt(localStorage.getItem('contador') || 0);
+      contador++;
+      localStorage.setItem('contador', contador);
+      actualizarContador();
+    }
+
+    function resetearContador() {
+      localStorage.setItem('contador', 0);
+      actualizarContador();
+    }
+
+    // Cargar contador al inicio
+    actualizarContador();
+    // #endregion
+
+    // #region CARGAR AL INICIO
+    // Intentar cargar datos al cargar la página
+    window.addEventListener('load', () => {
+      const nombre = localStorage.getItem('nombre');
+      const notas = localStorage.getItem('notas');
+
+      if (nombre) document.getElementById('nombre').value = nombre;
+      if (notas) document.getElementById('notas').value = notas;
+
+      if (nombre || notas) {
+        document.getElementById('resultado').innerHTML =
+          '🔄 <strong>Datos cargados automáticamente</strong>';
+      }
+    });
+    // #endregion
+
+    console.log('✅ LocalStorage demo cargado');
+    console.log('💾 Datos actuales:', localStorage);
+  </script>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

@@ -1,0 +1,379 @@
+"============================================
+"🎓 SUBTÍTULOS PARA CURSOS ONLINE
+"============================================
+"Soluciones para agregar subtítulos en español a videos de cursos.
+
+"CASO: Video sin subtítulos en español
+"----------------------------------------
+'Problema: Estás tomando un curso online y el video no tiene subtítulos
+'Solución: Usar herramientas de transcripción automática + extensiones
+
+"OPCIONES DISPONIBLES (de mejor a peor)
+"----------------------------------------
+'1. Extensión de navegador con IA (Más fácil) ⭐⭐⭐⭐⭐
+'2. Descargar video + generar subtítulos (Más preciso) ⭐⭐⭐⭐
+'3. Subtítulos en tiempo real con IA (Rápido) ⭐⭐⭐
+
+@{markdown}
+# 🎓 Cómo Agregar Subtítulos a Videos de Cursos Online
+
+## 🎯 TU CASO ESPECÍFICO
+
+**Problema:**
+- Video de curso: https://people.thatopen.com/c/welcome-master-bim-software-developer/
+- No tiene subtítulos en español
+- Necesitas entenderlo para tu master
+
+**Soluciones (de mejor a peor):**
+
+---
+
+## ⭐ OPCIÓN 1: EXTENSIONES DE CHROME CON IA (RECOMENDADA)
+
+### 🔥 1. Transcribe - Subtitle Generator (GRATIS)
+
+**Mejor opción si el video está en YouTube o Vimeo**
+
+**Qué hace:**
+- Genera subtítulos automáticos con IA
+- Traduce a español automáticamente
+- Sincroniza con el video
+- Funciona offline después de generar
+
+**Cómo instalar:**
+1. Abre Chrome Web Store
+2. Busca "Transcribe - Subtitle Generator"
+3. Click en "Agregar a Chrome"
+4. Ve a tu video del curso
+5. Click en el ícono de la extensión
+6. Selecciona "Generate Spanish subtitles"
+7. Espera 1-2 minutos (procesa el audio)
+8. ¡Los subtítulos aparecen automáticamente!
+
+**Link:** https://chrome.google.com/webstore/detail/transcribe
+
+---
+
+### 🎯 2. Substital - Universal Subtitle Player (GRATIS)
+
+**Mejor opción para cargar archivos .srt externos**
+
+**Qué hace:**
+- Carga subtítulos .srt o .vtt en CUALQUIER video
+- Personaliza tamaño, color, posición
+- Sincroniza manualmente si es necesario
+
+**Cómo usar:**
+1. Instala "Substital" desde Chrome Web Store
+2. Descarga subtítulos en español de tu video (ver Opción 2)
+3. Abre el video del curso
+4. Click en ícono de Substital
+5. Click en "Load subtitle file"
+6. Selecciona el archivo .srt descargado
+7. ¡Listo! Los subtítulos aparecen
+
+**Link:** https://chrome.google.com/webstore/detail/substital
+
+---
+
+### 🌐 3. Google Translate - Live Caption (GRATIS, Built-in Chrome)
+
+**Mejor opción para transcripción en tiempo real**
+
+**Qué hace:**
+- Transcribe el audio en tiempo real
+- Traduce automáticamente
+- No necesita instalación
+
+**Cómo activar:**
+1. En Chrome, ve a `chrome://settings/accessibility`
+2. Activa "Live Caption"
+3. Selecciona idioma: Español
+4. Reproduce el video
+5. ¡Aparecen subtítulos en tiempo real en la parte inferior!
+
+**Nota:** La precisión depende del acento del narrador
+
+---
+
+## ⭐⭐ OPCIÓN 2: GENERAR SUBTÍTULOS CON IA
+
+### 🤖 Whisper AI by OpenAI (GRATIS, MÁS PRECISO)
+
+**Mejor opción si quieres máxima calidad**
+
+**Qué necesitas:**
+- Descargar el audio/video del curso
+- Usar Whisper Web (servicio online)
+
+**Paso a paso:**
+
+#### 1️⃣ Descargar el video/audio
+
+**Opción A: Extensión Video Downloader**
+1. Instala "Video Downloader Professional" (Chrome)
+2. Ve al video del curso
+3. Click en el ícono de la extensión
+4. Descarga el video
+
+**Opción B: Grabar pantalla (si no puedes descargar)**
+1. Usa OBS Studio (gratis) o Snipping Tool de Windows
+2. Graba el video mientras se reproduce
+3. Guarda como .mp4
+
+#### 2️⃣ Generar subtítulos con Whisper
+
+**Opción Online (más fácil):**
+1. Ve a https://huggingface.co/spaces/openai/whisper
+2. Sube tu video/audio
+3. Selecciona "Task: Transcribe"
+4. Selecciona "Language: Spanish" (si quieres directo en español)
+   O "Language: English" → luego traducir
+5. Click en "Submit"
+6. Espera 2-5 minutos
+7. Descarga el archivo .srt generado
+
+**Opción Local (más privado):**
+```bash
+# Necesitas Python instalado
+pip install openai-whisper
+
+# Generar subtítulos
+whisper video.mp4 --model medium --language es --output_format srt
+```
+
+#### 3️⃣ Usar los subtítulos generados
+
+Usa Substital (Opción 1.2) para cargar el archivo .srt en el video
+
+---
+
+### 🌐 Happy Scribe (PAGO pero MUY BUENO)
+
+**Mejor opción si quieres pagar por calidad profesional**
+
+**Precio:** ~€12/hora de video
+**Precisión:** 95-99%
+
+**Cómo usar:**
+1. Ve a https://www.happyscribe.com
+2. Sube tu video
+3. Selecciona "Transcription + Translation to Spanish"
+4. Espera ~10 minutos
+5. Edita si hay errores
+6. Descarga .srt
+7. Usa con Substital
+
+---
+
+## ⭐⭐⭐ OPCIÓN 3: SERVICIOS ONLINE INSTANTÁNEOS
+
+### 📝 YouTube Auto-Caption (GRATIS)
+
+**Si puedes subir el video a YouTube (privado)**
+
+**Cómo:**
+1. Descarga el video del curso
+2. Sube a YouTube como video PRIVADO
+3. YouTube genera subtítulos automáticamente (1-2 horas)
+4. Ve a YouTube Studio → Subtítulos
+5. Descarga los subtítulos generados (.srt)
+6. Usa con Substital en el video original
+
+**Ventajas:**
+- Gratis
+- Buena precisión
+- Traduce automáticamente
+
+**Desventajas:**
+- Toma tiempo (1-2 horas)
+- Necesitas cuenta YouTube
+
+---
+
+### 🎬 Kapwing (GRATIS con límites)
+
+**Servicio online todo-en-uno**
+
+**Cómo:**
+1. Ve a https://www.kapwing.com/tools/subtitle-maker
+2. Sube tu video
+3. Click en "Auto-generate subtitles"
+4. Espera 2-5 minutos
+5. Traduce a español (botón "Translate")
+6. Descarga .srt
+7. Usa con Substital
+
+**Límites gratis:** 2 videos/mes, max 30 minutos
+
+---
+
+## 🛠️ COMPARACIÓN RÁPIDA
+
+| Método | Gratis | Precisión | Velocidad | Dificultad |
+|--------|--------|-----------|-----------|------------|
+| **Transcribe Extension** | ✅ | ⭐⭐⭐⭐ | Rápida | Muy Fácil |
+| **Substital + .srt** | ✅ | ⭐⭐⭐⭐⭐ | Media | Fácil |
+| **Live Caption Chrome** | ✅ | ⭐⭐⭐ | Instantánea | Muy Fácil |
+| **Whisper AI** | ✅ | ⭐⭐⭐⭐⭐ | Media | Media |
+| **Happy Scribe** | ❌ | ⭐⭐⭐⭐⭐ | Rápida | Fácil |
+| **YouTube Auto** | ✅ | ⭐⭐⭐⭐ | Lenta | Fácil |
+| **Kapwing** | ✅ | ⭐⭐⭐⭐ | Rápida | Fácil |
+
+---
+
+## 🎯 RECOMENDACIÓN PARA TU CASO
+
+### 📌 Plan de Acción (Opción Más Rápida):
+
+**1. PRIMERA VEZ (configuración):**
+```
+1. Instala extensión "Transcribe - Subtitle Generator" en Chrome
+   https://chrome.google.com/webstore/detail/transcribe
+
+2. O instala "Live Caption" (ya viene en Chrome)
+   chrome://settings/accessibility → Activar "Live Caption"
+```
+
+**2. PARA CADA VIDEO:**
+```
+1. Abre el video del curso
+2. Click en ícono de la extensión
+3. Genera subtítulos en español
+4. ¡Listo! (toma 1-2 minutos)
+```
+
+### 📌 Plan Alternativo (Mejor Calidad):
+
+**Si la extensión no funciona bien:**
+```
+1. Usa https://huggingface.co/spaces/openai/whisper
+2. Copia la URL del video
+3. Pega en Whisper Web
+4. Genera subtítulos
+5. Descarga .srt
+6. Usa Substital para cargarlo
+```
+
+---
+
+## 💡 CONSEJOS ADICIONALES
+
+### ✅ Para mejorar la precisión:
+
+1. **Usa auriculares:** El audio del video debe ser claro
+2. **Velocidad de reproducción:** Si el narrador habla muy rápido, reduce a 0.75x
+3. **Edita los subtítulos:** Whisper AI genera archivos .srt editables
+4. **Usa múltiples servicios:** Compara resultados si algo no tiene sentido
+
+### ✅ Para términos técnicos (BIM, Revit, etc.):
+
+1. Los transcriptores automáticos pueden confundir términos técnicos
+2. Edita manualmente con:
+   - **Subtitle Edit** (Windows, gratis)
+   - **Aegisub** (multiplataforma, gratis)
+3. Crea un glosario de términos BIM en español/inglés
+
+### ✅ Atajos de teclado útiles:
+
+- **Espacio:** Pausar/Reproducir
+- **← →:** Retroceder/Adelantar 5 segundos
+- **↑ ↓:** Volumen
+- **F:** Pantalla completa
+- **C:** Activar/Desactivar subtítulos (YouTube)
+
+---
+
+## 🔗 ENLACES ÚTILES
+
+### Extensiones de Chrome:
+- **Transcribe:** https://chrome.google.com/webstore (busca "transcribe subtitle")
+- **Substital:** https://chrome.google.com/webstore (busca "substital")
+- **Video Downloader:** https://chrome.google.com/webstore (busca "video downloader")
+
+### Servicios de Transcripción IA:
+- **Whisper Web:** https://huggingface.co/spaces/openai/whisper
+- **Happy Scribe:** https://www.happyscribe.com
+- **Kapwing:** https://www.kapwing.com/tools/subtitle-maker
+- **Rev.com:** https://www.rev.com (pago, humanos)
+
+### Editores de Subtítulos:
+- **Subtitle Edit:** https://nikse.dk/SubtitleEdit (Windows)
+- **Aegisub:** http://www.aegisub.org (multiplataforma)
+- **SubtitleTools:** https://subtitletools.com (online)
+
+### Bases de Datos de Subtítulos:
+- **OpenSubtitles:** https://www.opensubtitles.org
+- **Subdivx:** https://www.subdivx.com (español)
+- **Subscene:** https://subscene.com
+
+---
+
+## ⚠️ NOTAS LEGALES
+
+- ✅ Usar subtítulos para contenido que **ya tienes acceso legal** (tu curso pagado)
+- ✅ Generar subtítulos para **uso personal educativo**
+- ❌ No distribuir subtítulos de contenido con copyright
+- ❌ No compartir videos descargados del curso
+
+---
+
+## 🎓 EJEMPLO PRÁCTICO: TU CURSO BIM
+
+**Video:** https://people.thatopen.com/c/welcome-master-bim-software-developer/
+
+**Pasos recomendados:**
+
+### Opción A: Rápida (5 minutos)
+```
+1. Instala "Live Caption" en Chrome
+   chrome://settings/accessibility
+
+2. Activa "Live Caption"
+
+3. Abre tu video del curso
+
+4. ¡Aparecen subtítulos en tiempo real!
+```
+
+### Opción B: Mejor calidad (15 minutos)
+```
+1. Instala extensión "Transcribe"
+
+2. Ve al video del curso
+
+3. Click en ícono de Transcribe
+
+4. "Generate subtitles" → "Spanish"
+
+5. Espera 2-3 minutos
+
+6. Los subtítulos se cargan automáticamente
+```
+
+### Opción C: Máxima calidad (30 minutos)
+```
+1. Descarga el video con Video Downloader
+
+2. Ve a https://huggingface.co/spaces/openai/whisper
+
+3. Sube el video
+
+4. Task: "Transcribe" → Language: "Spanish"
+
+5. Descarga el .srt generado
+
+6. Instala Substital
+
+7. Carga el .srt en el video original
+```
+
+---
+
+**✅ ¡Con esto podrás seguir tu Master BIM con subtítulos en español!**
+
+**💡 Empieza con la Opción A (Live Caption) - es la más rápida**
+
+**🎯 Si necesitas mejor calidad, usa Opción B o C**
+
+@{end markdown}

@@ -1,0 +1,612 @@
+"============================================
+"ÍNDICE DE EJEMPLOS THREE.JS EN CALCPAD
+"============================================
+"Colección completa de ejemplos progresivos
+"desde lo más básico hasta FEA complejo
+
+@{html}
+<style>
+  .container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px;
+    border-radius: 12px;
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  .hero h1 {
+    margin: 0 0 10px 0;
+    font-size: 42px;
+  }
+
+  .hero p {
+    margin: 0;
+    font-size: 18px;
+    opacity: 0.9;
+  }
+
+  .level {
+    margin-bottom: 40px;
+  }
+
+  .level-title {
+    background: #f5f5f5;
+    padding: 15px 20px;
+    border-left: 5px solid #667eea;
+    margin-bottom: 20px;
+    font-size: 24px;
+    font-weight: bold;
+  }
+
+  .examples-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+  }
+
+  .example-card {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .example-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+  }
+
+  .example-number {
+    display: inline-block;
+    background: #667eea;
+    color: white;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    text-align: center;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 18px;
+    margin-right: 15px;
+  }
+
+  .example-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin: 10px 0;
+  }
+
+  .example-desc {
+    color: #666;
+    line-height: 1.6;
+    margin: 10px 0;
+  }
+
+  .example-tags {
+    margin-top: 15px;
+  }
+
+  .tag {
+    display: inline-block;
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-right: 5px;
+    margin-top: 5px;
+  }
+
+  .difficulty-easy { border-left-color: #4caf50; }
+  .difficulty-medium { border-left-color: #ff9800; }
+  .difficulty-hard { border-left-color: #f44336; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin: 30px 0;
+  }
+
+  .stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    text-align: center;
+  }
+
+  .stat-number {
+    font-size: 32px;
+    font-weight: bold;
+    color: #667eea;
+  }
+
+  .stat-label {
+    color: #666;
+    margin-top: 5px;
+  }
+
+  .footer {
+    background: #f5f5f5;
+    padding: 30px;
+    border-radius: 8px;
+    margin-top: 40px;
+    text-align: center;
+  }
+
+  .btn {
+    display: inline-block;
+    background: #667eea;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    margin: 10px;
+    transition: all 0.3s;
+  }
+
+  .btn:hover {
+    background: #764ba2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+</style>
+
+<div class="container">
+  <div class="hero">
+    <h1>🎨 Three.js en Calcpad</h1>
+    <p>Aprende visualización 3D interactiva desde cero hasta análisis FEA completo</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-number">19</div>
+      <div class="stat-label">Ejemplos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">6</div>
+      <div class="stat-label">Niveles</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">100%</div>
+      <div class="stat-label">Interactivo</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">∞</div>
+      <div class="stat-label">Aprendizaje</div>
+    </div>
+  </div>
+
+  <!-- NIVEL ULTRA BÁSICO -->
+  <div class="level">
+    <div class="level-title" style="border-left-color: #00bcd4; background: #e0f7fa;">
+      ⭐ ¡EMPIEZA AQUÍ! - Three.js Ultra Básico (Pocas Líneas)
+    </div>
+    <div class="examples-grid">
+      <div class="example-card" onclick="window.location='basico/00-EMPEZAR-AQUI.md'">
+        <span class="example-number" style="background: #00bcd4;">📖</span>
+        <div class="example-title">🎯 LEER PRIMERO</div>
+        <div class="example-desc">
+          Si nunca usaste Three.js, EMPIEZA AQUÍ. Guía rápida de conceptos
+          básicos: Scene, Camera, Renderer, Mesh. Solo 2 páginas.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Introducción</span>
+          <span class="tag">Conceptos</span>
+          <span class="tag">5 min</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='basico/01-minimo.cpd'">
+        <span class="example-number" style="background: #00bcd4;">01</span>
+        <div class="example-title">Cubo Verde - Lo Más Simple</div>
+        <div class="example-desc">
+          5 líneas de código. Un cubo verde estático. Cada línea explicada
+          en detalle. No puede ser más simple que esto.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Minimal</span>
+          <span class="tag">5 líneas</span>
+          <span class="tag">Scene</span>
+          <span class="tag">Camera</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='basico/02-con-luz.cpd'">
+        <span class="example-number" style="background: #00bcd4;">02</span>
+        <div class="example-title">Agregar Luz</div>
+        <div class="example-desc">
+          Diferencia entre MeshBasicMaterial (sin luz) y MeshStandardMaterial (con luz).
+          Comparación lado a lado.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Light</span>
+          <span class="tag">Materials</span>
+          <span class="tag">Comparison</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='basico/03-rotando.cpd'">
+        <span class="example-number" style="background: #00bcd4;">03</span>
+        <div class="example-title">Hacer que Rote</div>
+        <div class="example-desc">
+          Introducción a animación. requestAnimationFrame explicado paso a paso.
+          El cubo rota automáticamente.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Animation</span>
+          <span class="tag">Rotation</span>
+          <span class="tag">Loop</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='basico/04-varios-objetos.cpd'">
+        <span class="example-number" style="background: #00bcd4;">04</span>
+        <div class="example-title">Múltiples Objetos</div>
+        <div class="example-desc">
+          Cubo, esfera y cilindro juntos. Aprende todas las geometrías básicas.
+          Incluye plano de piso, grid y ejes.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Geometries</span>
+          <span class="tag">Position</span>
+          <span class="tag">Multiple</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='basico/05-con-controles.cpd'">
+        <span class="example-number" style="background: #00bcd4;">05</span>
+        <div class="example-title">Controles de Mouse</div>
+        <div class="example-desc">
+          OrbitControls: rotar con mouse, zoom con rueda, panear con click derecho.
+          Explora tu escena 3D libremente.
+        </div>
+        <div class="example-tags">
+          <span class="tag">OrbitControls</span>
+          <span class="tag">Mouse</span>
+          <span class="tag">Interactive</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='basico/06-con-calcpad.cpd'">
+        <span class="example-number" style="background: #00bcd4;">06</span>
+        <div class="example-title">🔗 Conectar con Calcpad</div>
+        <div class="example-desc">
+          Usa variables de Calcpad en Three.js. Crea un cubo con dimensiones
+          calculadas. ¡El paso más importante!
+        </div>
+        <div class="example-tags">
+          <span class="tag">Calcpad Integration</span>
+          <span class="tag">Variables</span>
+          <span class="tag">Parametric</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NIVEL 0: FUNDAMENTOS -->
+  <div class="level">
+    <div class="level-title" style="border-left-color: #9c27b0; background: #f3e5f5;">
+      📚 Nivel 0: Fundamentos (HTML, CSS, JavaScript)
+    </div>
+    <div class="examples-grid">
+      <div class="example-card" onclick="window.location='HTML-desde-cero.md'">
+        <span class="example-number" style="background: #9c27b0;">📖</span>
+        <div class="example-title">HTML desde Cero</div>
+        <div class="example-desc">
+          Si no conoces HTML, CSS o JavaScript, empieza aquí. Guía completa
+          con ejemplos prácticos para ingenieros sin experiencia web.
+        </div>
+        <div class="example-tags">
+          <span class="tag">HTML</span>
+          <span class="tag">CSS</span>
+          <span class="tag">JavaScript</span>
+          <span class="tag">Tutorial</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='Animaciones-01-basico.cpd'">
+        <span class="example-number" style="background: #9c27b0;">A1</span>
+        <div class="example-title">Animaciones Básicas</div>
+        <div class="example-desc">
+          Aprende los conceptos fundamentales de animación usando Canvas 2D.
+          4 ejemplos interactivos: movimiento, oscilación, múltiples objetos y controles.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Canvas</span>
+          <span class="tag">Animation Loop</span>
+          <span class="tag">requestAnimationFrame</span>
+          <span class="tag">FPS</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='Animaciones-02-easing.cpd'">
+        <span class="example-number" style="background: #9c27b0;">A2</span>
+        <div class="example-title">Funciones de Easing</div>
+        <div class="example-desc">
+          Movimientos naturales con funciones de suavizado. Aprende linear, ease-in/out,
+          bounce, elastic y cómo crear tus propias curvas de animación.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Easing</span>
+          <span class="tag">Interpolation</span>
+          <span class="tag">Curves</span>
+          <span class="tag">Math</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='Animaciones-03-threejs-aplicado.cpd'">
+        <span class="example-number" style="background: #9c27b0;">A3</span>
+        <div class="example-title">🎯 Aplicando a Three.js</div>
+        <div class="example-desc">
+          Aplica todas las técnicas de animación aprendidas a objetos 3D.
+          Puente entre Canvas 2D y Three.js 3D con 4 ejemplos comparativos.
+        </div>
+        <div class="example-tags">
+          <span class="tag">3D Animation</span>
+          <span class="tag">OrbitControls</span>
+          <span class="tag">Morphing</span>
+          <span class="tag">Bridge</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NIVEL 1: BÁSICO -->
+  <div class="level">
+    <div class="level-title difficulty-easy">
+      🟢 Nivel 1: Fundamentos Básicos
+    </div>
+    <div class="examples-grid">
+      <div class="example-card" onclick="window.location='01-cubo-basico.cpd'">
+        <span class="example-number">01</span>
+        <div class="example-title">Cubo Básico Rotando</div>
+        <div class="example-desc">
+          Tu primer objeto 3D. Aprende los 3 elementos esenciales: Scene, Camera y Renderer.
+          Un cubo verde que rota automáticamente.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Scene</span>
+          <span class="tag">Camera</span>
+          <span class="tag">Mesh</span>
+          <span class="tag">Animation</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='02-cubo-parametrico.cpd'">
+        <span class="example-number">02</span>
+        <div class="example-title">Cubo Paramétrico</div>
+        <div class="example-desc">
+          Conecta Calcpad con Three.js. Las dimensiones del cubo se controlan desde variables de Calcpad
+          usando @{calcpad:variable}.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Variables</span>
+          <span class="tag">Interpolación</span>
+          <span class="tag">Grid</span>
+          <span class="tag">Axes</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NIVEL 2: INTERMEDIO -->
+  <div class="level">
+    <div class="level-title difficulty-medium">
+      🟡 Nivel 2: Geometrías y Controles
+    </div>
+    <div class="examples-grid">
+      <div class="example-card" onclick="window.location='03-geometrias-multiples.cpd'">
+        <span class="example-number">03</span>
+        <div class="example-title">Geometrías Múltiples</div>
+        <div class="example-desc">
+          Esfera, cilindro, cono y toroide. Aprende a crear múltiples objetos,
+          OrbitControls para navegar, y sombras.
+        </div>
+        <div class="example-tags">
+          <span class="tag">OrbitControls</span>
+          <span class="tag">Geometries</span>
+          <span class="tag">Shadows</span>
+          <span class="tag">Lighting</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='04-viga-simple.cpd'">
+        <span class="example-number">04</span>
+        <div class="example-title">Viga Simple</div>
+        <div class="example-desc">
+          Primera estructura de ingeniería. Viga con apoyos, etiquetas de texto,
+          y dimensiones reales de Calcpad.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Structures</span>
+          <span class="tag">Labels</span>
+          <span class="tag">Sprites</span>
+          <span class="tag">Supports</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='05-viga-con-cargas.cpd'">
+        <span class="example-number">05</span>
+        <div class="example-title">Viga con Cargas</div>
+        <div class="example-desc">
+          Visualiza cargas puntuales, distribuidas, reacciones y momentos usando
+          flechas (ArrowHelper) con colores distintivos.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Loads</span>
+          <span class="tag">Arrows</span>
+          <span class="tag">Reactions</span>
+          <span class="tag">Moments</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NIVEL 3: MALLAS FEA -->
+  <div class="level">
+    <div class="level-title difficulty-hard">
+      🟠 Nivel 3: Elementos Finitos
+    </div>
+    <div class="examples-grid">
+      <div class="example-card" onclick="window.location='06-malla-fea-simple.cpd'">
+        <span class="example-number">06</span>
+        <div class="example-title">Malla FEA Simple</div>
+        <div class="example-desc">
+          Crea tu primera malla de elementos finitos. Aprende nodos, elementos,
+          conectividad y BufferGeometry.
+        </div>
+        <div class="example-tags">
+          <span class="tag">FEA</span>
+          <span class="tag">Mesh</span>
+          <span class="tag">Nodes</span>
+          <span class="tag">Elements</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='07-malla-fea-colores.cpd'">
+        <span class="example-number">07</span>
+        <div class="example-title">Malla con Mapa de Colores</div>
+        <div class="example-desc">
+          Visualiza desplazamientos con escala de colores rainbow. Interpola colores
+          automáticamente entre vértices.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Color Map</span>
+          <span class="tag">Rainbow</span>
+          <span class="tag">Displacements</span>
+          <span class="tag">Gradients</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NIVEL 4: ANIMACIONES Y COMPLETO -->
+  <div class="level">
+    <div class="level-title difficulty-hard">
+      🔴 Nivel 4: Avanzado e Interactivo
+    </div>
+    <div class="examples-grid">
+      <div class="example-card" onclick="window.location='08-animacion-carga.cpd'">
+        <span class="example-number">08</span>
+        <div class="example-title">Animación de Carga</div>
+        <div class="example-desc">
+          La carga se aplica gradualmente y la estructura se deforma en tiempo real.
+          Controles de play, pause y velocidad.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Animation</span>
+          <span class="tag">Dynamic</span>
+          <span class="tag">Controls</span>
+          <span class="tag">Real-time</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='09-deformacion-animada.cpd'">
+        <span class="example-number">09</span>
+        <div class="example-title">Vibración Modal</div>
+        <div class="example-desc">
+          Simula el primer modo de vibración de una losa. Oscilación armónica con
+          frecuencia natural calculada.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Modal</span>
+          <span class="tag">Vibration</span>
+          <span class="tag">Harmonic</span>
+          <span class="tag">Frequency</span>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="window.location='10-modelo-completo-fea.cpd'">
+        <span class="example-number">10</span>
+        <div class="example-title">🏆 Modelo FEA Completo</div>
+        <div class="example-desc">
+          ¡El ejemplo definitivo! Panel de control completo con múltiples vistas,
+          resultados, animaciones y opciones interactivas.
+        </div>
+        <div class="example-tags">
+          <span class="tag">Complete</span>
+          <span class="tag">Dashboard</span>
+          <span class="tag">Multi-view</span>
+          <span class="tag">Professional</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <h3>🚀 ¿Por dónde empezar?</h3>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #00bcd4;">
+      <h4 style="margin-top: 0; color: #00bcd4;">🎓 Ruta de Aprendizaje Recomendada:</h4>
+
+      <div style="background: #e0f7fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+        <strong style="color: #00838f;">👉 LA MAYORÍA DE LA GENTE DEBE EMPEZAR AQUÍ:</strong>
+        <ol style="text-align: left; color: #666; line-height: 2; margin-top: 10px;">
+          <li>📖 <strong>basico/00-EMPEZAR-AQUI.md</strong> - Leer conceptos (5 min)</li>
+          <li>🟢 <strong>basico/01-minimo.cpd</strong> - Cubo verde (5 líneas)</li>
+          <li>🟢 <strong>basico/02-con-luz.cpd</strong> - Agregar luz</li>
+          <li>🟢 <strong>basico/03-rotando.cpd</strong> - Hacer que rote</li>
+          <li>🟢 <strong>basico/04-varios-objetos.cpd</strong> - Múltiples objetos</li>
+          <li>🟢 <strong>basico/05-con-controles.cpd</strong> - Mouse controls</li>
+          <li>🔗 <strong>basico/06-con-calcpad.cpd</strong> - Conectar con Calcpad</li>
+        </ol>
+        <p style="color: #666; margin: 10px 0 0 0;">
+          ⏱️ <strong>Tiempo total:</strong> ~30-45 minutos
+        </p>
+      </div>
+
+      <div style="background: #f3e5f5; padding: 15px; border-radius: 8px; margin: 15px 0;">
+        <strong style="color: #6a1b9a;">Si NO conoces HTML/JavaScript:</strong>
+        <ol style="text-align: left; color: #666; line-height: 2; margin-top: 10px;">
+          <li>📖 <strong>HTML-desde-cero.md</strong> - Fundamentos de web</li>
+          <li>🎬 <strong>Animaciones-01</strong>, <strong>02</strong>, <strong>03</strong> - Animación básica</li>
+          <li>Luego sigue la ruta normal arriba ☝️</li>
+        </ol>
+      </div>
+
+      <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0;">
+        <strong style="color: #2e7d32;">Si YA terminaste los ejemplos básicos:</strong>
+        <ol style="text-align: left; color: #666; line-height: 2; margin-top: 10px;">
+          <li>▶️ <strong>01-cubo-basico.cpd</strong> hasta <strong>10-modelo-completo-fea.cpd</strong></li>
+          <li>Ejemplos avanzados con FEA, animaciones complejas, etc.</li>
+        </ol>
+      </div>
+    </div>
+
+    <a href="basico/00-EMPEZAR-AQUI.md" class="btn" style="background: #00bcd4;">⭐ Comenzar (Recomendado)</a>
+    <a href="HTML-desde-cero.md" class="btn" style="background: #9c27b0;">📖 HTML desde Cero</a>
+    <a href="01-cubo-basico.cpd" class="btn">🚀 Ejemplos Avanzados</a>
+
+    <div style="margin-top: 30px; color: #666;">
+      <p><strong>Recursos adicionales:</strong></p>
+      <p>
+        📚 <a href="https://threejs.org/docs/" target="_blank">Three.js Docs</a> |
+        🎓 <a href="https://threejs.org/examples/" target="_blank">Examples</a> |
+        💬 <a href="https://discourse.threejs.org/" target="_blank">Forum</a>
+      </p>
+    </div>
+
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+      <p style="color: #999; font-size: 14px;">
+        Creado para aprender Three.js en Calcpad<br>
+        De lo más simple a lo más complejo 🎨
+      </p>
+    </div>
+  </div>
+</div>
+@{end html}

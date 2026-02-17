@@ -1,0 +1,483 @@
+{
+  "$schema": "ParserDefinition.schema.json",
+  "version": "1.0.0",
+  "description": "Definición completa del parser de Hekatan - todas las expresiones configurables via JSON",
+
+  "parsers": {
+    "calcpad": {
+      "name": "Hekatan Native Parser",
+      "description": "Parser nativo de Hekatan con soporte de unidades",
+      "enabled": true,
+      "isDefault": true,
+
+      "tokenTypes": {
+        "comment": { "id": 1, "name": "Comment" },
+        "text": { "id": 2, "name": "Text" },
+        "html": { "id": 3, "name": "HTML" },
+        "mathHtml": { "id": 4, "name": "MathHTML" },
+        "expression": { "id": 5, "name": "Expression" },
+        "keyword": { "id": 6, "name": "Keyword" },
+        "variable": { "id": 7, "name": "Variable" },
+        "function": { "id": 8, "name": "Function" },
+        "operator": { "id": 9, "name": "Operator" },
+        "number": { "id": 10, "name": "Number" },
+        "unit": { "id": 11, "name": "Unit" },
+        "matrix": { "id": 12, "name": "Matrix" },
+        "vector": { "id": 13, "name": "Vector" }
+      },
+
+      "delimiters": {
+        "comment": {
+          "start": "'",
+          "end": null,
+          "multiline": false,
+          "description": "Comentario de línea"
+        },
+        "text": {
+          "start": "\"",
+          "end": "\"",
+          "escape": "\\\"",
+          "description": "Texto literal"
+        },
+        "html": {
+          "start": "'<",
+          "end": "'>",
+          "description": "HTML embebido"
+        },
+        "mathHtml": {
+          "start": "\"<",
+          "end": "\">",
+          "description": "Expresión matemática en HTML"
+        },
+        "matrix": {
+          "start": "[",
+          "end": "]",
+          "rowSeparator": "|",
+          "colSeparator": ";",
+          "description": "Matriz/Vector"
+        },
+        "functionArgs": {
+          "start": "(",
+          "end": ")",
+          "separator": ";",
+          "description": "Argumentos de función"
+        },
+        "block": {
+          "start": "{",
+          "end": "}",
+          "description": "Bloque de código"
+        }
+      },
+
+      "operators": {
+        "arithmetic": {
+          "+": { "name": "add", "precedence": 10, "associativity": "left", "description": "Suma" },
+          "-": { "name": "subtract", "precedence": 10, "associativity": "left", "description": "Resta" },
+          "*": { "name": "multiply", "precedence": 20, "associativity": "left", "description": "Multiplicación" },
+          "/": { "name": "divide", "precedence": 20, "associativity": "left", "description": "División" },
+          "÷": { "name": "divide", "precedence": 20, "associativity": "left", "alias": "/" },
+          "\\": { "name": "intDivide", "precedence": 20, "associativity": "left", "description": "División entera" },
+          "⦼": { "name": "remainder", "precedence": 20, "associativity": "left", "description": "Resto" },
+          "^": { "name": "power", "precedence": 30, "associativity": "right", "description": "Potencia" },
+          "**": { "name": "power", "precedence": 30, "associativity": "right", "alias": "^" }
+        },
+        "comparison": {
+          "=": { "name": "equal", "precedence": 5, "description": "Igual (asignación/comparación)" },
+          "≡": { "name": "identical", "precedence": 5, "description": "Idéntico" },
+          "≠": { "name": "notEqual", "precedence": 5, "alias": "<>" },
+          "<>": { "name": "notEqual", "precedence": 5, "description": "Diferente" },
+          "<": { "name": "less", "precedence": 5, "description": "Menor que" },
+          ">": { "name": "greater", "precedence": 5, "description": "Mayor que" },
+          "≤": { "name": "lessOrEqual", "precedence": 5, "alias": "<=" },
+          "<=": { "name": "lessOrEqual", "precedence": 5, "description": "Menor o igual" },
+          "≥": { "name": "greaterOrEqual", "precedence": 5, "alias": ">=" },
+          ">=": { "name": "greaterOrEqual", "precedence": 5, "description": "Mayor o igual" }
+        },
+        "logical": {
+          "∧": { "name": "and", "precedence": 3, "description": "AND lógico" },
+          "∨": { "name": "or", "precedence": 2, "description": "OR lógico" },
+          "⊕": { "name": "xor", "precedence": 2, "description": "XOR lógico" },
+          "¬": { "name": "not", "precedence": 25, "unary": true, "description": "NOT lógico" }
+        },
+        "special": {
+          "!": { "name": "factorial", "precedence": 35, "postfix": true, "description": "Factorial" },
+          "°": { "name": "degrees", "precedence": 35, "postfix": true, "description": "Grados" },
+          "%": { "name": "percent", "precedence": 35, "postfix": true, "description": "Porcentaje" },
+          "?": { "name": "evaluate", "precedence": 0, "postfix": true, "description": "Evaluar expresión" }
+        },
+        "assignment": {
+          "=": { "name": "assign", "precedence": 1, "associativity": "right", "description": "Asignación" },
+          "≡": { "name": "globalAssign", "precedence": 1, "associativity": "right", "description": "Asignación global" }
+        }
+      },
+
+      "keywords": {
+        "control": {
+          "#if": { "name": "if", "end": "#end if", "description": "Condición" },
+          "#else": { "name": "else", "description": "Alternativa" },
+          "#else if": { "name": "elseif", "description": "Condición alternativa" },
+          "#repeat": { "name": "repeat", "end": "#loop", "description": "Repetir N veces" },
+          "#while": { "name": "while", "end": "#loop", "description": "Mientras condición" },
+          "#for": { "name": "for", "end": "#loop", "description": "Para cada valor" },
+          "#break": { "name": "break", "description": "Salir del bucle" },
+          "#continue": { "name": "continue", "description": "Siguiente iteración" }
+        },
+        "output": {
+          "#hide": { "name": "hide", "description": "Ocultar salida" },
+          "#show": { "name": "show", "description": "Mostrar salida" },
+          "#pre": { "name": "pre", "description": "Formato preformateado" },
+          "#post": { "name": "post", "description": "Formato post" },
+          "#val": { "name": "val", "description": "Solo mostrar valor" },
+          "#equ": { "name": "equ", "description": "Mostrar ecuación" },
+          "#noc": { "name": "noc", "description": "Sin cálculo" },
+          "#nosub": { "name": "nosub", "description": "Sin sustitución" }
+        },
+        "structure": {
+          "#def": { "name": "def", "end": "#end def", "description": "Definir macro" },
+          "#include": { "name": "include", "description": "Incluir archivo" },
+          "#local": { "name": "local", "description": "Variable local" },
+          "#global": { "name": "global", "description": "Variable global" },
+          "#round": { "name": "round", "description": "Redondear salida" },
+          "#decimals": { "name": "decimals", "description": "Decimales a mostrar" }
+        },
+        "layout": {
+          "#columns": { "name": "columns", "end": "#end columns", "description": "Layout multi-columnas" },
+          "#column": { "name": "column", "description": "Siguiente columna" },
+          "#page": { "name": "page", "description": "Salto de página" }
+        },
+        "visibility_global": {
+          "@{hide}": { "name": "hide_global", "end": "@{end hide}", "description": "Ocultar salida (sintaxis global @{})" },
+          "@{show}": { "name": "show_global", "end": "@{end show}", "description": "Mostrar salida (sintaxis global @{})" }
+        }
+      },
+
+      "functions": {
+        "math": {
+          "abs": { "args": 1, "description": "Valor absoluto" },
+          "sign": { "args": 1, "description": "Signo (-1, 0, 1)" },
+          "sqrt": { "args": 1, "description": "Raíz cuadrada" },
+          "cbrt": { "args": 1, "description": "Raíz cúbica" },
+          "root": { "args": 2, "separator": ";", "description": "Raíz n-ésima: root(x; n)" },
+          "sqr": { "args": 1, "description": "Cuadrado" },
+          "floor": { "args": 1, "description": "Piso (redondear hacia abajo)" },
+          "ceiling": { "args": 1, "description": "Techo (redondear hacia arriba)" },
+          "round": { "args": [1, 2], "description": "Redondear: round(x) o round(x; decimales)" },
+          "trunc": { "args": 1, "description": "Truncar" },
+          "mod": { "args": 2, "description": "Módulo" },
+          "min": { "args": -1, "description": "Mínimo (N argumentos)" },
+          "max": { "args": -1, "description": "Máximo (N argumentos)" },
+          "sum": { "args": -1, "description": "Suma (N argumentos)" },
+          "sumsq": { "args": -1, "description": "Suma de cuadrados" },
+          "srss": { "args": -1, "description": "Raíz de suma de cuadrados" },
+          "product": { "args": -1, "description": "Producto (N argumentos)" },
+          "average": { "args": -1, "description": "Promedio" },
+          "mean": { "args": -1, "alias": "average" },
+          "gcd": { "args": 2, "description": "Máximo común divisor" },
+          "lcm": { "args": 2, "description": "Mínimo común múltiplo" }
+        },
+        "trigonometric": {
+          "sin": { "args": 1, "description": "Seno" },
+          "cos": { "args": 1, "description": "Coseno" },
+          "tan": { "args": 1, "description": "Tangente" },
+          "cot": { "args": 1, "description": "Cotangente" },
+          "sec": { "args": 1, "description": "Secante" },
+          "csc": { "args": 1, "description": "Cosecante" },
+          "asin": { "args": 1, "description": "Arco seno" },
+          "acos": { "args": 1, "description": "Arco coseno" },
+          "atan": { "args": 1, "description": "Arco tangente" },
+          "atan2": { "args": 2, "description": "Arco tangente de y/x" },
+          "acot": { "args": 1, "description": "Arco cotangente" },
+          "asec": { "args": 1, "description": "Arco secante" },
+          "acsc": { "args": 1, "description": "Arco cosecante" }
+        },
+        "hyperbolic": {
+          "sinh": { "args": 1, "description": "Seno hiperbólico" },
+          "cosh": { "args": 1, "description": "Coseno hiperbólico" },
+          "tanh": { "args": 1, "description": "Tangente hiperbólica" },
+          "coth": { "args": 1, "description": "Cotangente hiperbólica" },
+          "sech": { "args": 1, "description": "Secante hiperbólica" },
+          "csch": { "args": 1, "description": "Cosecante hiperbólica" },
+          "asinh": { "args": 1, "description": "Arco seno hiperbólico" },
+          "acosh": { "args": 1, "description": "Arco coseno hiperbólico" },
+          "atanh": { "args": 1, "description": "Arco tangente hiperbólica" },
+          "acoth": { "args": 1, "description": "Arco cotangente hiperbólica" },
+          "asech": { "args": 1, "description": "Arco secante hiperbólica" },
+          "acsch": { "args": 1, "description": "Arco cosecante hiperbólica" }
+        },
+        "exponential": {
+          "exp": { "args": 1, "description": "e^x" },
+          "ln": { "args": 1, "description": "Logaritmo natural" },
+          "log": { "args": 1, "description": "Logaritmo base 10" },
+          "log2": { "args": 1, "description": "Logaritmo base 2" },
+          "log_": { "args": 2, "description": "Logaritmo base n: log_b(x)" }
+        },
+        "matrix": {
+          "len": { "args": 1, "description": "Longitud de vector/filas de matriz" },
+          "size": { "args": 1, "description": "Tamaño [filas, columnas]" },
+          "rows": { "args": 1, "description": "Número de filas" },
+          "cols": { "args": 1, "description": "Número de columnas" },
+          "identity": { "args": 1, "description": "Matriz identidad n×n" },
+          "matrix": { "args": 2, "description": "Matriz de ceros m×n" },
+          "vector": { "args": 1, "description": "Vector de ceros" },
+          "diagonal": { "args": 1, "description": "Matriz diagonal" },
+          "fill": { "args": 3, "description": "Llenar matriz con valor" },
+          "resize": { "args": 3, "description": "Redimensionar matriz" },
+          "join": { "args": 2, "description": "Unir vectores/matrices" },
+          "slice": { "args": 3, "description": "Extraer submatriz" },
+          "row": { "args": 2, "description": "Extraer fila" },
+          "col": { "args": 2, "description": "Extraer columna" },
+          "transp": { "args": 1, "description": "Transpuesta" },
+          "det": { "args": 1, "description": "Determinante" },
+          "inverse": { "args": 1, "description": "Matriz inversa" },
+          "rank": { "args": 1, "description": "Rango" },
+          "trace": { "args": 1, "description": "Traza" },
+          "norm": { "args": 1, "description": "Norma" },
+          "eigenvals": { "args": [1, 2], "description": "Valores propios" },
+          "eigenvecs": { "args": [1, 2], "description": "Vectores propios" },
+          "lsolve": { "args": 2, "description": "Resolver sistema lineal A·x = b" },
+          "lu": { "args": 1, "description": "Factorización LU" },
+          "qr": { "args": 1, "description": "Factorización QR" },
+          "svd": { "args": 1, "description": "Descomposición SVD" },
+          "cholesky": { "args": 1, "description": "Factorización Cholesky" }
+        },
+        "solve": {
+          "$Root": { "args": 1, "block": true, "description": "Encontrar raíz: $Root{f(x) @ x = a : b}" },
+          "$Find": { "args": 1, "block": true, "description": "Resolver sistema: $Find{...}" },
+          "$Sup": { "args": 1, "block": true, "description": "Supremo (máximo): $Sup{f(x) @ x = a : b}" },
+          "$Inf": { "args": 1, "block": true, "description": "Ínfimo (mínimo): $Inf{f(x) @ x = a : b}" },
+          "$Area": { "args": 1, "block": true, "description": "Área bajo curva (integral)" },
+          "$Slope": { "args": 1, "block": true, "description": "Pendiente (derivada)" },
+          "$Sum": { "args": 1, "block": true, "description": "Sumatoria: $Sum{expr @ i = 1 : n}" },
+          "$Product": { "args": 1, "block": true, "description": "Productoria: $Product{expr @ i = 1 : n}" },
+          "$Repeat": { "args": 1, "block": true, "description": "Repetir: $Repeat{expr @ n}" },
+          "$Integral": { "args": 1, "block": true, "description": "Integral definida" },
+          "$Derivative": { "args": 1, "block": true, "description": "Derivada" }
+        },
+        "interpolation": {
+          "take": { "args": 2, "description": "Interpolar de tabla" },
+          "line": { "args": 3, "description": "Interpolación lineal" },
+          "spline": { "args": 3, "description": "Interpolación spline" }
+        },
+        "special": {
+          "if": { "args": 3, "description": "Condicional: if(cond; then; else)" },
+          "switch": { "args": -1, "description": "Switch: switch(val; case1; res1; ...)" },
+          "timer": { "args": 0, "description": "Tiempo transcurrido" },
+          "input": { "args": [1, 4], "description": "Entrada de usuario" },
+          "random": { "args": [0, 2], "description": "Número aleatorio" }
+        },
+        "signal": {
+          "fft": { "args": 1, "description": "Transformada de Fourier" },
+          "ift": { "args": 1, "description": "Transformada inversa de Fourier" },
+          "dft": { "args": 1, "description": "DFT" },
+          "idft": { "args": 1, "description": "DFT inversa" }
+        },
+        "statistics": {
+          "count": { "args": 1, "description": "Contar elementos" },
+          "median": { "args": 1, "description": "Mediana" },
+          "variance": { "args": 1, "description": "Varianza" },
+          "stdev": { "args": 1, "description": "Desviación estándar" },
+          "covariance": { "args": 2, "description": "Covarianza" },
+          "correlation": { "args": 2, "description": "Correlación" }
+        }
+      },
+
+      "constants": {
+        "π": { "value": 3.141592653589793, "aliases": ["pi", "PI"] },
+        "e": { "value": 2.718281828459045, "aliases": ["E"] },
+        "φ": { "value": 1.618033988749895, "aliases": ["phi"] },
+        "γ": { "value": 0.5772156649015329, "aliases": ["gamma_euler"] },
+        "∞": { "value": 1e308, "aliases": ["inf", "infinity"] },
+        "i": { "value": "complex(0,1)", "description": "Unidad imaginaria" },
+        "true": { "value": 1 },
+        "false": { "value": 0 }
+      },
+
+      "numberFormats": {
+        "decimal": { "pattern": "[0-9]+\\.?[0-9]*", "description": "Decimal" },
+        "scientific": { "pattern": "[0-9]+\\.?[0-9]*[eE][+-]?[0-9]+", "description": "Notación científica" },
+        "hexadecimal": { "pattern": "0x[0-9A-Fa-f]+", "prefix": "0x", "description": "Hexadecimal" },
+        "binary": { "pattern": "0b[01]+", "prefix": "0b", "description": "Binario" },
+        "octal": { "pattern": "0o[0-7]+", "prefix": "0o", "description": "Octal" }
+      },
+
+      "variableRules": {
+        "pattern": "[a-zA-Z_α-ωΑ-Ω][a-zA-Z0-9_α-ωΑ-Ω]*'*",
+        "allowGreek": true,
+        "allowPrimes": true,
+        "allowSubscripts": true,
+        "subscriptChar": "_",
+        "reserved": ["if", "else", "for", "while", "true", "false"]
+      }
+    },
+
+    "symbolic": {
+      "name": "AngouriMath Symbolic Parser",
+      "description": "Parser simbólico usando AngouriMath",
+      "enabled": true,
+      "isDefault": false,
+      "engine": "angourimath",
+
+      "delimiters": {
+        "comment": { "start": "//", "end": null },
+        "text": { "start": "\"", "end": "\"" },
+        "functionArgs": { "start": "(", "end": ")", "separator": "," }
+      },
+
+      "operators": {
+        "arithmetic": {
+          "+": { "name": "add", "precedence": 10 },
+          "-": { "name": "subtract", "precedence": 10 },
+          "*": { "name": "multiply", "precedence": 20 },
+          "/": { "name": "divide", "precedence": 20 },
+          "^": { "name": "power", "precedence": 30, "associativity": "right" }
+        }
+      },
+
+      "functions": {
+        "symbolic": {
+          "diff": { "args": 2, "description": "Derivada: diff(expr, var)" },
+          "integrate": { "args": 2, "description": "Integral: integrate(expr, var)" },
+          "simplify": { "args": 1, "description": "Simplificar expresión" },
+          "expand": { "args": 1, "description": "Expandir expresión" },
+          "factor": { "args": 1, "description": "Factorizar expresión" },
+          "solve": { "args": 2, "description": "Resolver ecuación: solve(eq, var)" },
+          "limit": { "args": 3, "description": "Límite: limit(expr, var, value)" },
+          "latex": { "args": 1, "description": "Convertir a LaTeX" }
+        }
+      }
+    },
+
+    "latex": {
+      "name": "LaTeX Math Parser",
+      "description": "Parser que traduce LaTeX a Hekatan",
+      "enabled": true,
+      "isDefault": false,
+      "type": "translator",
+      "targetParser": "calcpad",
+
+      "delimiters": {
+        "comment": { "start": "%", "end": null },
+        "math": { "start": "$", "end": "$" },
+        "displayMath": { "start": "$$", "end": "$$" },
+        "text": { "start": "\\text{", "end": "}" }
+      },
+
+      "translations": {
+        "commands": {
+          "\\frac{#1}{#2}": "(#1)/(#2)",
+          "\\sqrt{#1}": "sqrt(#1)",
+          "\\sqrt[#1]{#2}": "root(#2; #1)",
+          "\\sin": "sin",
+          "\\cos": "cos",
+          "\\tan": "tan",
+          "\\cot": "cot",
+          "\\sec": "sec",
+          "\\csc": "csc",
+          "\\arcsin": "asin",
+          "\\arccos": "acos",
+          "\\arctan": "atan",
+          "\\sinh": "sinh",
+          "\\cosh": "cosh",
+          "\\tanh": "tanh",
+          "\\ln": "ln",
+          "\\log": "log",
+          "\\exp": "exp",
+          "\\pi": "π",
+          "\\infty": "∞",
+          "\\cdot": "*",
+          "\\times": "*",
+          "\\div": "/",
+          "\\pm": "±",
+          "\\mp": "∓",
+          "\\leq": "<=",
+          "\\geq": ">=",
+          "\\neq": "<>",
+          "\\sum_{#1}^{#2}": "$Sum{#1 @ #2}",
+          "\\prod_{#1}^{#2}": "$Product{#1 @ #2}",
+          "\\int_{#1}^{#2}": "$Integral{#1 : #2}",
+          "\\lim_{#1}": "limit(#1)",
+          "\\alpha": "α",
+          "\\beta": "β",
+          "\\gamma": "γ",
+          "\\delta": "δ",
+          "\\epsilon": "ε",
+          "\\theta": "θ",
+          "\\lambda": "λ",
+          "\\mu": "μ",
+          "\\sigma": "σ",
+          "\\phi": "φ",
+          "\\omega": "ω"
+        },
+        "environments": {
+          "matrix": { "start": "\\begin{matrix}", "end": "\\end{matrix}", "convert": "matrix" },
+          "pmatrix": { "start": "\\begin{pmatrix}", "end": "\\end{pmatrix}", "convert": "matrix" },
+          "bmatrix": { "start": "\\begin{bmatrix}", "end": "\\end{bmatrix}", "convert": "matrix" }
+        }
+      }
+    },
+
+    "custom": {
+      "name": "User Custom Parser",
+      "description": "Parser personalizado definido por el usuario",
+      "enabled": false,
+      "isDefault": false,
+      "type": "custom",
+      "assemblyPath": "",
+      "className": "",
+      "configFile": ""
+    }
+  },
+
+  "activeParser": "calcpad",
+
+  "aliasesDescription": "Alias de funciones para diferentes idiomas",
+  "aliases": {
+    "spanish": {
+      "sen": "sin",
+      "cos": "cos",
+      "tg": "tan",
+      "cotg": "cot",
+      "arcsen": "asin",
+      "arccos": "acos",
+      "arctg": "atan",
+      "raiz": "sqrt",
+      "potencia": "pow",
+      "logaritmo": "log",
+      "promedio": "average",
+      "suma": "sum",
+      "producto": "product",
+      "maximo": "max",
+      "minimo": "min",
+      "absoluto": "abs",
+      "redondear": "round",
+      "longitud": "len",
+      "identidad": "identity",
+      "inversa": "inverse",
+      "transpuesta": "transp",
+      "resolver": "lsolve"
+    },
+    "german": {
+      "Wurzel": "sqrt",
+      "Betrag": "abs",
+      "Summe": "sum",
+      "Produkt": "product",
+      "Mittelwert": "average"
+    },
+    "french": {
+      "racine": "sqrt",
+      "valeur_absolue": "abs",
+      "somme": "sum",
+      "produit": "product",
+      "moyenne": "average"
+    }
+  },
+
+  "settings": {
+    "defaultLanguage": "spanish",
+    "enableAliases": true,
+    "caseSensitive": false,
+    "allowMixedParsers": true,
+    "parserSwitchDirective": "@{parser:",
+    "parserEndDirective": "@{end parser}"
+  }
+}

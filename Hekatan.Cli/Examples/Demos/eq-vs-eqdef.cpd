@@ -1,0 +1,78 @@
+@{config comment:%}
+%%Diferencia entre @{eq} y @{eqdef}
+
+@{markdown}
+# Comparacion: @{eq} vs @{eqdef}
+@{end markdown}
+
+@{markdown}
+---
+## 1. @{eq} — Solo muestra la ecuacion (centrada, bonita)
+@{end markdown}
+
+@{eq}
+f(x) = x² + 1
+g(x) = 2x
+f'(x) = d/dx(x² + 1) = 2x = g(x)
+∫₀¹ f(x)dx = x³/3 + x |₀¹ = 4/3
+@{end eq}
+
+@{markdown}
+---
+## 2. @{eqdef} — Ecuacion + descripcion en dos columnas
+@{end markdown}
+
+@{eqdef}
+f(x) = x² + 1 | Funcion cuadratica desplazada
+g(x) = 2x | Derivada de f(x)
+f'(x) = 2x | La derivada elimina la constante
+∫₀¹ f(x)dx = 4/3 | Integral definida de 0 a 1
+@{end eqdef}
+
+@{markdown}
+---
+## 3. Ahora con @{maxima} — Calcula DE VERDAD
+@{end markdown}
+
+@{maxima}
+f(x) := x^2 + 1;
+/* Evaluar f en x=3 */
+f3: f(3);
+/* Derivada */
+df: diff(f(x), x);
+/* Integral definida */
+I: integrate(f(x), x, 0, 1);
+@{end maxima}
+
+@{markdown}
+---
+## 4. Con @{cpp-explain} — Muestra el codigo C++ y la matematica
+@{end markdown}
+
+@{cpp-explain}
+// Funcion cuadratica
+double f(double x) {
+    return x*x + 1;
+}
+// Evaluar en x=3
+double result = f(3);
+// Derivada numerica
+double df = (f(x+h) - f(x-h))/(2*h);
+@{end cpp-explain}
+
+@{markdown}
+---
+## Resumen
+
+| Directiva | Que hace | Calcula? | Tiene descripcion? |
+|-----------|----------|:--------:|:------------------:|
+| **@{eq}** | Muestra ecuacion centrada bonita | No | No |
+| **@{eqdef}** | Ecuacion + descripcion lado a lado | No | **Si** (con \|) |
+| **@{maxima}** | Ejecuta CAS simbolico | **Si** | No |
+| **@{cpp-explain}** | C++ → Math → Octave | No | Traduce automatico |
+
+- `@{eq}` = para mostrar una formula importante sola
+- `@{eqdef}` = para definir nomenclatura (tabla de simbolos)
+- `@{maxima}` = para calcular de verdad
+- `@{cpp-explain}` = para explicar codigo
+@{end markdown}

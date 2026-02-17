@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hekatan - Awatif UI</title>
+
+    <!-- Awatif UI Styles -->
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: #000;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Viewer */
+        #viewer {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+        #viewer canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* Settings Panel (Tweakpane) */
+        #settings {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+        }
+
+        /* Parameters Panel */
+        #parameters {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+        }
+
+        /* Legend */
+        #legend {
+            width: 20px;
+            height: 200px;
+            background: linear-gradient(#ff0000, #ffff00 25%, #00ff00 50%, #00ffff 75%, #0000ff);
+            position: absolute;
+            right: 50px;
+            bottom: 50px;
+            z-index: 2;
+        }
+        #legend .marker {
+            width: 10px;
+            height: 1px;
+            margin-left: 20px;
+            background: white;
+            position: relative;
+        }
+        #legend .marker span {
+            position: absolute;
+            color: white;
+            font-size: 11px;
+            top: -6px;
+            left: 12px;
+            font-family: monospace;
+        }
+
+        /* Tables */
+        #tables {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 40vh;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+        }
+
+        /* Toolbar */
+        #toolbar {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 5px;
+        }
+        #toolbar button {
+            padding: 8px 16px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #toolbar button:hover {
+            background: #444;
+        }
+
+        /* Dialog */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .dialog {
+            background: #1a1a2e;
+            padding: 20px;
+            border-radius: 8px;
+            min-width: 300px;
+            color: white;
+        }
+
+        /* Report */
+        #report {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            z-index: 100;
+        }
+    </style>
+
+    <!-- Import Maps for ES Modules -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/",
+            "tweakpane": "https://unpkg.com/tweakpane@4.0.4/dist/tweakpane.min.js",
+            "vanjs-core": "https://unpkg.com/vanjs-core@1.5.2/src/van.js",
+            "lit-html": "https://unpkg.com/lit-html@3.2.1/lit-html.js"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="app"></div>
+
+    <!-- User's main.ts will be inserted here -->
+    <script type="module">
+        // ============================================================
+        // AWATIF-UI COMPONENTS (Inline for browser compatibility)
+        // ============================================================
+
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { Lut } from 'three/addons/math/Lut.js';
+        import van from 'vanjs-core';
+
+        // Make van globally available
+        window.van = van;
+
+        // ---- getColorMap ----
+        window.getColorMap = function(nodes, elements, values) {
+            const lut = new Lut('rainbow', 512);
+            lut.setMin(Math.min(...values));
+            lut.setMax(Math.max(...values));
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(nodes.flat(), 3));
+            geometry.setIndex(new THREE.Uint16BufferAttribute(elements.filter(e => e.length !== 2).flat(), 1));
+
+            const colors = new Float32Array(nodes.length * 3);
+            for (let i = 0; i < values.length; i++) {
+                const c = lut.getColor(values[i]) || new THREE.Color(0, 0, 0);
+                colors[i * 3] = c.r * 0.8;
+                colors[i * 3 + 1] = c.g * 0.8;
+                colors[i * 3 + 2] = c.b * 0.8;
+            }
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+            return new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+        };
+
+        // ---- getLegend ----
+        window.getLegend = function(values, numMarkers = 5) {
+            const legend = document.createElement('div');
+            legend.id = 'legend';
+
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+
+            for (let i = 0; i < numMarkers; i++) {
+                const ratio = i / (numMarkers - 1);
+                const value = (max - (max - min) * ratio).toFixed(2);
+
+                const marker = document.createElement('div');
+                marker.className = 'marker';
+                marker.style.marginTop = i === 0 ? '0' : `${(200 / (numMarkers - 1)) - 1}px`;
+
+                const span = document.createElement('span');
+                span.textContent = value;
+                marker.appendChild(span);
+                legend.appendChild(marker);
+            }
+
+            return legend;
+        };
+
+        // ---- getViewer ----
+        window.getViewer = function(config = {}) {
+            const { mesh, objects3D, gridSize = 20 } = config;
+
+            THREE.Object3D.DEFAULT_UP = new THREE.Vector3(0, 0, 1);
+
+            const viewer = document.createElement('div');
+            viewer.id = 'viewer';
+
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2e6);
+            camera.position.set(gridSize * 0.5, -gridSize * 0.8, gridSize * 0.5);
+            camera.up.set(0, 0, 1);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            viewer.appendChild(renderer.domElement);
+
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.target.set(gridSize * 0.5, gridSize * 0.5, 0);
+            controls.update();
+
+            // Grid
+            const grid = new THREE.GridHelper(gridSize, gridSize, 0x444444, 0x222222);
+            grid.rotation.x = Math.PI / 2;
+            scene.add(grid);
+
+            // Axes
+            scene.add(new THREE.AxesHelper(gridSize * 0.2));
+
+            // Add mesh if provided
+            if (mesh && mesh.nodes && mesh.elements) {
+                const nodes = mesh.nodes.val || mesh.nodes;
+                const elements = mesh.elements.val || mesh.elements;
+
+                const geom = new THREE.BufferGeometry();
+                geom.setAttribute('position', new THREE.Float32BufferAttribute(nodes.flat(), 3));
+                geom.setIndex(new THREE.Uint16BufferAttribute(elements.flat(), 1));
+
+                // Wireframe
+                scene.add(new THREE.LineSegments(
+                    new THREE.WireframeGeometry(geom),
+                    new THREE.LineBasicMaterial({ color: 0x00ff00 })
+                ));
+            }
+
+            // Add custom objects
+            if (objects3D) {
+                const objs = objects3D.val || objects3D;
+                objs.forEach(obj => scene.add(obj));
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Return object with scene for further manipulation
+            viewer._scene = scene;
+            viewer._camera = camera;
+            viewer._renderer = renderer;
+            viewer._controls = controls;
+
+            return viewer;
+        };
+
+        // ---- getParameters (using Tweakpane) ----
+        window.getParameters = async function(params) {
+            const { Pane } = await import('tweakpane');
+
+            const container = document.createElement('div');
+            container.id = 'parameters';
+
+            const pane = new Pane({ title: 'Parameters', container });
+
+            const tweakParams = {};
+            Object.entries(params).forEach(([key, config]) => {
+                tweakParams[key] = config.value.val !== undefined ? config.value.val : config.value;
+            });
+
+            Object.entries(params).forEach(([key, config]) => {
+                pane.addBinding(tweakParams, key, {
+                    min: config.min || 0,
+                    max: config.max || 100,
+                    step: config.step || 1,
+                    label: config.label || key
+                });
+            });
+
+            pane.on('change', (e) => {
+                const param = params[e.target.key];
+                if (param && param.value.val !== undefined) {
+                    param.value.val = e.value;
+                }
+            });
+
+            return container;
+        };
+
+        // ---- getSettings ----
+        window.getSettings = async function(settings) {
+            const { Pane } = await import('tweakpane');
+
+            const container = document.createElement('div');
+            container.id = 'settings';
+
+            const pane = new Pane({ title: 'Settings', expanded: false, container });
+
+            Object.entries(settings).forEach(([key, value]) => {
+                const val = value.val !== undefined ? value : { val: value };
+                pane.addBinding(val, 'val', { label: key });
+            });
+
+            return container;
+        };
+
+        // ---- getToolbar ----
+        window.getToolbar = function(buttons) {
+            const toolbar = document.createElement('div');
+            toolbar.id = 'toolbar';
+
+            buttons.forEach(btn => {
+                const button = document.createElement('button');
+                button.textContent = btn.label || btn.text;
+                button.onclick = btn.onClick || btn.action;
+                toolbar.appendChild(button);
+            });
+
+            return toolbar;
+        };
+
+        // ---- getDialog ----
+        window.getDialog = function(config) {
+            const { title, content, onClose } = config;
+
+            const overlay = document.createElement('div');
+            overlay.className = 'dialog-overlay';
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                    onClose && onClose();
+                }
+            };
+
+            const dialog = document.createElement('div');
+            dialog.className = 'dialog';
+            dialog.innerHTML = `<h3>${title}</h3><div>${content}</div>`;
+
+            overlay.appendChild(dialog);
+            return overlay;
+        };
+
+        // ---- getReport ----
+        window.getReport = function(data) {
+            const report = document.createElement('div');
+            report.id = 'report';
+
+            if (typeof data === 'string') {
+                report.innerHTML = data;
+            } else {
+                report.innerHTML = Object.entries(data)
+                    .map(([k, v]) => `<strong>${k}:</strong> ${v}`)
+                    .join(' | ');
+            }
+
+            return report;
+        };
+
+        // ---- getTable ----
+        window.getTable = function(data, columns) {
+            const table = document.createElement('table');
+            table.style.cssText = 'width:100%;border-collapse:collapse;color:white;font-size:12px;';
+
+            // Header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            columns.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col.label || col;
+                th.style.cssText = 'padding:8px;border:1px solid #333;background:#222;';
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Body
+            const tbody = document.createElement('tbody');
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                columns.forEach(col => {
+                    const td = document.createElement('td');
+                    td.textContent = row[col.key || col];
+                    td.style.cssText = 'padding:8px;border:1px solid #333;';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+
+            return table;
+        };
+
+        // ---- getTables ----
+        window.getTables = function(tables) {
+            const container = document.createElement('div');
+            container.id = 'tables';
+            container.style.cssText = 'display:flex;gap:10px;padding:10px;overflow-x:auto;';
+
+            tables.forEach(t => {
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = 'flex:1;min-width:200px;';
+                wrapper.innerHTML = `<h4 style="color:white;margin:0 0 5px 0;">${t.title}</h4>`;
+                wrapper.appendChild(getTable(t.data, t.columns));
+                container.appendChild(wrapper);
+            });
+
+            return container;
+        };
+
+        // Make THREE globally available
+        window.THREE = THREE;
+        window.OrbitControls = OrbitControls;
+        window.Lut = Lut;
+
+        // ============================================================
+        // USER CODE PLACEHOLDER - Will be replaced by Hekatan
+        // ============================================================
+        {{USER_CODE}}
+    </script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+"============================================
+"🎬 CANVAS 2D - ANIMACIÓN
+"============================================
+"Aprende a animar objetos con Canvas 2D usando requestAnimationFrame.
+
+"¿QUÉ ES requestAnimationFrame?
+"----------------------------------------
+'Es una función que llama tu código ~60 veces por segundo.
+'Crea animaciones suaves sincronizadas con el navegador.
+'Más eficiente que setInterval o setTimeout.
+
+"PATRÓN BÁSICO DE ANIMACIÓN
+"----------------------------------------
+'1. Borrar el canvas
+'2. Actualizar posiciones/valores
+'3. Dibujar en nuevas posiciones
+'4. Llamar requestAnimationFrame de nuevo
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>Canvas 2D - Animación</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    canvas {
+      border: 2px solid #333;
+      background-color: #222;
+      display: block;
+      margin: 20px auto;
+    }
+
+    .controles {
+      background: white;
+      padding: 20px;
+      max-width: 600px;
+      margin: 20px auto;
+      border-radius: 8px;
+    }
+
+    button {
+      background-color: #2196f3;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+
+    button:hover {
+      background-color: #1976d2;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>Animación con Canvas 2D</h1>
+
+  <canvas id="canvas" width="600" height="400"></canvas>
+
+  <div class="controles">
+    <button onclick="togglePausa()">⏯️ Pausar/Reanudar</button>
+    <button onclick="aumentarVelocidad()">⚡ Más Rápido</button>
+    <button onclick="disminuirVelocidad()">🐌 Más Lento</button>
+  </div>
+
+  <!-- #region SCRIPTS -->
+  <script>
+    // #region CONFIGURACIÓN
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Variables de estado
+    let x = 50;
+    let y = 200;
+    let velocidadX = 2;
+    let velocidadY = 1.5;
+    let pausa = false;
+    let radio = 20;
+    // #endregion
+
+    // #region FUNCIÓN DE ANIMACIÓN
+    function animar() {
+      if (!pausa) {
+        // 1. BORRAR CANVAS
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 2. ACTUALIZAR POSICIÓN
+        x += velocidadX;
+        y += velocidadY;
+
+        // Rebotar en bordes horizontales
+        if (x + radio > canvas.width || x - radio < 0) {
+          velocidadX *= -1;
+        }
+
+        // Rebotar en bordes verticales
+        if (y + radio > canvas.height || y - radio < 0) {
+          velocidadY *= -1;
+        }
+
+        // 3. DIBUJAR CÍRCULO
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.arc(x, y, radio, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Dibujar borde
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // 4. LLAMAR DE NUEVO
+      requestAnimationFrame(animar);
+    }
+    // #endregion
+
+    // #region FUNCIONES DE CONTROL
+    function togglePausa() {
+      pausa = !pausa;
+    }
+
+    function aumentarVelocidad() {
+      velocidadX *= 1.5;
+      velocidadY *= 1.5;
+    }
+
+    function disminuirVelocidad() {
+      velocidadX *= 0.7;
+      velocidadY *= 0.7;
+    }
+    // #endregion
+
+    // #region INICIAR ANIMACIÓN
+    animar();
+    console.log('✅ Animación iniciada');
+    // #endregion
+  </script>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

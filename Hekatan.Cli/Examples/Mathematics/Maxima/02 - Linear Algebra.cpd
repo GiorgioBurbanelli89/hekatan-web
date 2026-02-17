@@ -1,0 +1,91 @@
+"<h1>Linear Algebra with Maxima CAS</h1>"
+"<h2>1. Matrix Operations</h2>"
+'<p>Define matrices and perform operations:</p>
+
+@{maxima}
+/* Define matrices */
+A: matrix([1, 2, 3], [4, 5, 6], [7, 8, 10]);
+
+/* Transpose */
+transpose(A);
+
+/* Determinant */
+determinant(A);
+
+/* Inverse */
+invert(A);
+
+/* Verify A * A^(-1) = I */
+A . invert(A);
+@{end maxima}
+
+"<h2>2. Eigenvalues and Eigenvectors</h2>"
+
+@{maxima}
+/* Symmetric matrix */
+B: matrix([4, 1, 0], [1, 3, 1], [0, 1, 2]);
+
+/* Eigenvalues */
+eigenvalues(B);
+
+/* Eigenvectors */
+eigenvectors(B);
+
+/* Characteristic polynomial */
+charpoly(B, lambda);
+expand(%);
+@{end maxima}
+
+"<h2>3. Systems of Linear Equations</h2>"
+'<p>Solve Ax = b:</p>
+
+@{maxima}
+/* System: 2x + y - z = 8, -3x - y + 2z = -11, -2x + y + 2z = -3 */
+solve([2*x + y - z = 8,
+       -3*x - y + 2*z = -11,
+       -2*x + y + 2*z = -3],
+      [x, y, z]);
+@{end maxima}
+
+"<h2>4. Symbolic Matrix Operations</h2>"
+
+@{maxima}
+/* Matrix with symbolic entries */
+M: matrix([a, b], [c, d]);
+
+/* Determinant */
+determinant(M);
+
+/* Inverse of 2x2 symbolic matrix */
+invert(M);
+
+/* Matrix exponential concept: Cayley-Hamilton */
+charpoly(M, lambda);
+expand(%);
+@{end maxima}
+
+"<h2>5. Matrix Rank and Nullspace</h2>"
+
+@{maxima}
+/* Rank-deficient matrix */
+C: matrix([1, 2, 3], [4, 5, 6], [5, 7, 9]);
+
+/* Determinant (should be 0 for singular matrix) */
+determinant(C);
+
+/* Rank */
+rank(C);
+
+/* Row echelon form */
+echelon(C);
+@{end maxima}
+
+"<h2>6. Export Result to Calcpad</h2>"
+'<p>Compute a numerical value in Maxima and use it in Calcpad:</p>
+
+@{maxima}
+/* Compute determinant of a specific matrix */
+D: matrix([2, 1, 0], [1, 3, 1], [0, 1, 4]);
+det_val: determinant(D);
+printf(true, "CALCPAD:det_D=~a~%", det_val);
+@{end maxima}

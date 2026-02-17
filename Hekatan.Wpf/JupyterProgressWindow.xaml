@@ -1,0 +1,33 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Hekatan.Wpf.JupyterProgressWindow"
+        Title="Iniciando Jupyter Server"
+        Width="400" Height="150"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="ToolWindow"
+        ResizeMode="NoResize"
+        Topmost="True">
+    <Grid Background="#F5F5F5">
+        <StackPanel VerticalAlignment="Center" Margin="20">
+            <TextBlock x:Name="MessageText"
+                       Text="Iniciando Jupyter Server..."
+                       FontSize="14"
+                       FontFamily="Segoe UI"
+                       TextAlignment="Center"
+                       FontWeight="SemiBold"
+                       Foreground="#333"
+                       Margin="0,0,0,15"/>
+            <ProgressBar IsIndeterminate="True"
+                         Height="8"
+                         Background="#DDD"
+                         Foreground="#667eea"/>
+            <TextBlock x:Name="ElapsedTimeText"
+                       Text="0 ms"
+                       FontSize="12"
+                       FontFamily="Consolas"
+                       TextAlignment="Center"
+                       Foreground="#666"
+                       Margin="0,10,0,0"/>
+        </StackPanel>
+    </Grid>
+</Window>

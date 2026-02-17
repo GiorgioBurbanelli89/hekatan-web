@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GNU Octave Output</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        .octave-container {
+            margin: 10px 0;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .octave-header {
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+            background: linear-gradient(135deg, #0790c0 0%, #ff7f00 100%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .octave-header::before {
+            content: ">>>";
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            color: #ff7f00;
+        }
+
+        .octave-output {
+            background-color: #1a1a2e;
+            color: {{OUTPUT_COLOR}};
+            padding: 12px 15px;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .octave-output.error {
+            color: #ff6b6b;
+            border-left: 3px solid #ff6b6b;
+        }
+
+        .octave-output.success {
+            color: #a8e6cf;
+        }
+
+        .octave-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .octave-output::-webkit-scrollbar-track {
+            background: #16213e;
+        }
+
+        .octave-output::-webkit-scrollbar-thumb {
+            background: #0790c0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="octave-container">
+        <div class="octave-header">GNU Octave</div>
+        <div class="octave-output {{STATUS_CLASS}}">{{OUTPUT}}</div>
+    </div>
+</body>
+</html>

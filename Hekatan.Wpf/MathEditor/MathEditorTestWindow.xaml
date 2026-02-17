@@ -1,0 +1,33 @@
+<Window x:Class="Hekatan.Wpf.MathEditor.MathEditorTestWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Hekatan.Wpf.MathEditor"
+        Title="MathEditor - Prueba" Height="450" Width="700"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="100"/>
+        </Grid.RowDefinitions>
+
+        <!-- Editor Matemático -->
+        <local:MathEditorControl x:Name="MathEditor" Grid.Row="0" Margin="10"/>
+
+        <!-- Botones -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+            <Button Content="Obtener Código Hekatan" Click="BtnGetCode_Click"
+                    Padding="15,8" Margin="5" FontSize="14"/>
+            <Button Content="Limpiar" Click="BtnClear_Click"
+                    Padding="15,8" Margin="5" FontSize="14"/>
+        </StackPanel>
+
+        <!-- Output -->
+        <Border Grid.Row="2" BorderBrush="#CCC" BorderThickness="1" Margin="10,0,10,10">
+            <TextBox x:Name="OutputText" IsReadOnly="True"
+                     FontFamily="Consolas" FontSize="14"
+                     TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                     Background="#F8F8F8"/>
+        </Border>
+    </Grid>
+</Window>

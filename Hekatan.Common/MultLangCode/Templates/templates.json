@@ -1,0 +1,147 @@
+{
+  "_comment": "CSS and HTML templates for @{} language output blocks. cssFile = output container CSS. templateFile = full HTML template with math/code rendering CSS. showHeader = whether to show language name header bar (default: true).",
+  "default": {
+    "cssFile": "default.css",
+    "templateFile": "calcpad-template.html",
+    "containerClass": "lang-block",
+    "headerColor": "#4A90E2",
+    "displayName": "Output",
+    "showHeader": true
+  },
+  "calcpad": {
+    "cssFile": "default.css",
+    "templateFile": "calcpad-template.html",
+    "containerClass": "lang-block",
+    "headerColor": "#3f51b5",
+    "displayName": "Hekatan",
+    "showHeader": false
+  },
+  "maxima": {
+    "cssFile": "maxima.css",
+    "templateFile": "calcpad-template.html",
+    "containerClass": "maxima-block",
+    "headerColor": "#4a90d9",
+    "displayName": "Maxima CAS",
+    "showHeader": true
+  },
+  "python": {
+    "cssFile": "python.css",
+    "templateFile": "python-template.html",
+    "containerClass": "python-block",
+    "headerColor": "#3776ab",
+    "displayName": "Python",
+    "showHeader": false
+  },
+  "r": {
+    "cssFile": "r.css",
+    "templateFile": "python-template.html",
+    "containerClass": "r-block",
+    "headerColor": "#276dc3",
+    "displayName": "R",
+    "showHeader": false
+  },
+  "julia": {
+    "cssFile": "julia.css",
+    "templateFile": "python-template.html",
+    "containerClass": "julia-block",
+    "headerColor": "#9558b2",
+    "displayName": "Julia",
+    "showHeader": false
+  },
+  "octave": {
+    "cssFile": "octave.css",
+    "templateFile": "octave-template.html",
+    "containerClass": "octave-block",
+    "headerColor": "#0790c0",
+    "displayName": "GNU Octave",
+    "showHeader": false
+  },
+  "cpp": {
+    "cssFile": "cpp.css",
+    "templateFile": "cpp-template.html",
+    "containerClass": "cpp-block",
+    "headerColor": "#00599c",
+    "displayName": "C++",
+    "showHeader": false
+  },
+  "bash": {
+    "cssFile": "bash.css",
+    "templateFile": "html-template.html",
+    "containerClass": "bash-block",
+    "headerColor": "#4eaa25",
+    "displayName": "Bash",
+    "showHeader": false
+  },
+  "powershell": {
+    "cssFile": "default.css",
+    "templateFile": "html-template.html",
+    "containerClass": "lang-block",
+    "headerColor": "#012456",
+    "displayName": "PowerShell",
+    "showHeader": false
+  },
+  "cmd": {
+    "cssFile": "default.css",
+    "templateFile": "html-template.html",
+    "containerClass": "lang-block",
+    "headerColor": "#000000",
+    "displayName": "Command Prompt",
+    "showHeader": false
+  },
+  "html": {
+    "cssFile": "default.css",
+    "templateFile": "html-template.html",
+    "containerClass": "lang-block",
+    "headerColor": "#e44d26",
+    "displayName": "HTML",
+    "showHeader": false
+  },
+  "csharp": {
+    "cssFile": "default.css",
+    "templateFile": "cpp-template.html",
+    "containerClass": "lang-block",
+    "headerColor": "#68217a",
+    "displayName": "C#",
+    "showHeader": false
+  },
+  "fortran": {
+    "cssFile": "default.css",
+    "templateFile": "cpp-template.html",
+    "containerClass": "lang-block",
+    "headerColor": "#734f96",
+    "displayName": "Fortran",
+    "showHeader": false
+  },
+  "opensees": {
+    "cssFile": "default.css",
+    "templateFile": "calcpad-template.html",
+    "containerClass": "lang-block",
+    "headerColor": "#e67e22",
+    "displayName": "OpenSees",
+    "showHeader": false
+  },
+  "rust": {
+    "cssFile": "default.css",
+    "templateFile": "cpp-template.html",
+    "containerClass": "lang-block",
+    "headerColor": "#dea584",
+    "displayName": "Rust",
+    "showHeader": false
+  },
+  "markdown": {
+    "cssFile": "default.css",
+    "templateFile": "html-template.html",
+    "containerClass": "lang-block",
+    "headerColor": "#083fa1",
+    "displayName": "Markdown",
+    "showHeader": false
+  },
+  "columns": {
+    "cssFile": "columns-math.css",
+    "templateFile": "calcpad-template.html",
+    "containerClass": "columns-container",
+    "headerColor": "#666666",
+    "displayName": "Columns",
+    "showHeader": false
+  }
+}

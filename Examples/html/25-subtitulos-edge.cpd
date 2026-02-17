@@ -1,0 +1,424 @@
+"============================================
+"🎓 SUBTÍTULOS EN MICROSOFT EDGE
+"============================================
+"Soluciones específicas para Microsoft Edge.
+
+"MICROSOFT EDGE tiene las mismas funciones que Chrome
+"----------------------------------------
+'Edge está basado en Chromium (mismo motor que Chrome)
+'Soporta extensiones de Chrome Web Store
+'Tiene Live Captions integrado (¡mejor que Chrome!)
+
+@{markdown}
+# 🎓 Subtítulos en Microsoft Edge - Guía Completa
+
+## 🚀 OPCIÓN 1: LIVE CAPTIONS DE EDGE (LA MÁS FÁCIL - 2 MINUTOS)
+
+### ⚡ Edge tiene subtítulos en vivo INTEGRADOS
+
+**Ventajas sobre Chrome:**
+- ✅ Mejor integración con Windows 11
+- ✅ Funciona en TODOS los videos (YouTube, cursos, Netflix, etc.)
+- ✅ Traduce en tiempo real
+- ✅ NO necesita instalación
+
+---
+
+### 📝 ACTIVAR LIVE CAPTIONS EN EDGE
+
+**Método 1: Configuración (Permanente)**
+
+1. Abre Edge
+2. Ve a: `edge://settings/accessibility`
+3. O navega: **Menú (•••) → Configuración → Accesibilidad**
+4. Busca **"Subtítulos en vivo"** o **"Live Captions"**
+5. Activa el interruptor ✅
+6. Abre tu video: https://people.thatopen.com/c/welcome-master-bim-software-developer/
+7. ¡Los subtítulos aparecen automáticamente!
+
+**Método 2: Atajo rápido (Temporal)**
+
+1. Presiona **Ctrl + Shift + A** mientras ves el video
+2. O click derecho en el video → **"Live Captions"**
+3. ¡Listo! Los subtítulos aparecen
+
+---
+
+### 🎯 CONFIGURAR IDIOMA Y ESTILO
+
+**Cambiar a español:**
+
+1. Ve a `edge://settings/accessibility`
+2. En **"Live Captions"**, click en **"Configurar idioma"**
+3. Selecciona **"Español"** o **"Spanish"**
+4. Los subtítulos ahora aparecerán en español
+
+**Personalizar apariencia:**
+
+1. En la misma página, busca **"Estilo de subtítulos"**
+2. Puedes cambiar:
+   - Tamaño de texto
+   - Fuente
+   - Color de fondo
+   - Color de texto
+   - Opacidad
+
+---
+
+## 🔌 OPCIÓN 2: EXTENSIONES PARA EDGE
+
+### Edge soporta extensiones de Chrome Web Store
+
+**Puedes instalar CUALQUIER extensión de Chrome**
+
+---
+
+### 🎯 1. Substital (RECOMENDADA para archivos .srt)
+
+**Cómo instalar en Edge:**
+
+1. Abre Edge
+2. Ve a: https://chrome.google.com/webstore
+3. Click en **"Permitir extensiones de otras tiendas"** (aparece arriba)
+4. Busca **"Substital"**
+5. Click en **"Obtener"** o **"Add to Edge"**
+6. Confirma la instalación
+
+**Cómo usar:**
+
+1. Descarga subtítulos .srt (ver Opción 3)
+2. Abre tu video del curso
+3. Click en ícono de Substital (barra de herramientas)
+4. **"Load subtitle file"**
+5. Selecciona tu archivo .srt
+6. ¡Los subtítulos aparecen sincronizados!
+
+**Link:** https://chrome.google.com/webstore/detail/substital
+
+---
+
+### 📝 2. Transcribe - Auto Subtitle Generator
+
+**Genera subtítulos automáticamente con IA**
+
+**Cómo instalar:**
+
+1. Ve a Chrome Web Store
+2. Busca **"Transcribe"** o **"Subtitle Generator"**
+3. **"Add to Edge"**
+
+**Cómo usar:**
+
+1. Abre tu video
+2. Click en ícono de Transcribe
+3. **"Generate subtitles"** → Selecciona **"Spanish"**
+4. Espera 2-3 minutos (procesa el audio)
+5. ¡Subtítulos perfectos!
+
+**Ventaja:** Muy buena precisión, se guardan
+**Link:** Busca "transcribe subtitle" en Chrome Web Store
+
+---
+
+### 🌐 3. Language Reactor (Para YouTube/Netflix)
+
+**Si tu curso está en YouTube:**
+
+1. Instala desde Chrome Web Store
+2. Funciona en Edge sin problemas
+3. Subtítulos duales (español + inglés)
+4. Diccionario integrado
+
+---
+
+## 🤖 OPCIÓN 3: WHISPER AI (MÁXIMA CALIDAD)
+
+### Si quieres subtítulos perfectos
+
+**Paso 1: Descargar el video**
+
+**Extensión para Edge:**
+- **Video Downloader Professional**
+- Instalar desde: https://microsoftedge.microsoft.com/addons/
+- O desde Chrome Web Store
+
+**Cómo:**
+1. Instala la extensión
+2. Ve a tu video del curso
+3. Click en el ícono de la extensión
+4. Descarga el video (.mp4)
+
+---
+
+**Paso 2: Generar subtítulos con Whisper**
+
+**Opción Online (sin instalar nada):**
+
+1. Ve a: https://huggingface.co/spaces/openai/whisper
+2. Sube tu video
+3. **Task:** "Transcribe"
+4. **Language:** "Spanish" (para subtítulos directos en español)
+   O "English" (luego traducir)
+5. Click en **"Submit"**
+6. Espera 2-5 minutos
+7. Descarga el archivo **.srt** generado
+
+**Opción Local (Python):**
+
+```bash
+# Instalar Whisper
+pip install openai-whisper
+
+# Generar subtítulos en español
+whisper video.mp4 --model medium --language es --output_format srt
+
+# Genera archivo: video.srt
+```
+
+---
+
+**Paso 3: Usar los subtítulos**
+
+1. Instala **Substital** en Edge
+2. Abre el video del curso
+3. Carga el archivo .srt
+4. ¡Listo!
+
+---
+
+## 📊 COMPARACIÓN: ¿CUÁL USAR?
+
+| Método | Tiempo | Precisión | Dificultad | Gratis |
+|--------|--------|-----------|------------|--------|
+| **Live Captions Edge** | Instantáneo | ⭐⭐⭐ | Muy Fácil | ✅ |
+| **Substital + .srt** | 15 min | ⭐⭐⭐⭐⭐ | Fácil | ✅ |
+| **Transcribe Extension** | 5 min | ⭐⭐⭐⭐ | Muy Fácil | ✅ |
+| **Whisper AI** | 20 min | ⭐⭐⭐⭐⭐ | Media | ✅ |
+
+---
+
+## 🎯 RECOMENDACIÓN PARA TU CURSO BIM
+
+### Para empezar AHORA MISMO:
+
+**1. Activa Live Captions en Edge:**
+```
+1. Presiona Ctrl + Shift + A en el video
+2. O ve a edge://settings/accessibility
+3. Activa "Live Captions"
+4. ¡Listo en 30 segundos!
+```
+
+**Pros:**
+- ✅ Inmediato
+- ✅ No necesita instalación
+- ✅ Funciona offline
+
+**Contras:**
+- ❌ Precisión ~80-85% (puede confundir términos técnicos de BIM)
+
+---
+
+### Si necesitas MEJOR CALIDAD:
+
+**2. Usa Whisper AI + Substital:**
+```
+Día 1 (15 min):
+1. Descarga el video con Video Downloader
+2. Sube a https://huggingface.co/spaces/openai/whisper
+3. Genera subtítulos en español
+4. Descarga el .srt
+
+Día 2 en adelante (1 min):
+1. Abre el video
+2. Carga el .srt con Substital
+3. ¡Perfecto!
+```
+
+**Pros:**
+- ✅ Precisión ~95%
+- ✅ Editable (puedes corregir términos técnicos)
+- ✅ Reutilizable
+
+**Contras:**
+- ❌ Toma tiempo inicial
+
+---
+
+## 💡 CONSEJOS PARA CONTENIDO TÉCNICO (BIM)
+
+### Términos que pueden confundirse:
+
+Edge Live Captions puede confundir:
+- "BIM" → "bin", "beam"
+- "Revit" → "review it", "revisit"
+- "IFC" → "I see"
+- "LOD" → "load"
+
+**Solución:**
+1. Usa Whisper AI (mejor con términos técnicos)
+2. Edita el archivo .srt después con **Subtitle Edit**
+3. Crea un glosario:
+   ```
+   BIM = Building Information Modeling
+   Revit = Software de Autodesk
+   IFC = Industry Foundation Classes
+   LOD = Level of Detail
+   ```
+
+---
+
+## 🔧 HERRAMIENTAS ADICIONALES PARA EDGE
+
+### Microsoft Edge Add-ons Store:
+
+**Video Downloaders:**
+- Video Downloader Professional
+- Flash Video Downloader
+
+**Subtitle Tools:**
+- Substital (desde Chrome Web Store)
+- Universal Subtitle Player
+
+**Traducción:**
+- Microsoft Translator (integrado en Edge)
+- Google Translate
+
+---
+
+## 🎬 TUTORIAL PASO A PASO: TU CURSO BIM
+
+### Video: https://people.thatopen.com/c/welcome-master-bim-software-developer/
+
+**Opción A: Rápida (30 segundos)**
+
+```
+1. Abre el video en Edge
+
+2. Presiona Ctrl + Shift + A
+
+3. ¡Los subtítulos aparecen!
+```
+
+---
+
+**Opción B: Mejor calidad (5 minutos)**
+
+```
+1. Ve a Chrome Web Store en Edge
+
+2. Permite extensiones de otras tiendas
+
+3. Busca e instala "Transcribe"
+
+4. Abre el video
+
+5. Click en ícono de Transcribe
+
+6. "Generate subtitles" → "Spanish"
+
+7. Espera 2-3 minutos
+
+8. ¡Subtítulos perfectos!
+```
+
+---
+
+**Opción C: Máxima calidad (Primera vez: 20 min, luego: 1 min)**
+
+```
+Primera vez:
+1. Instala Video Downloader en Edge
+
+2. Descarga el video del curso
+
+3. Ve a https://huggingface.co/spaces/openai/whisper
+
+4. Sube el video
+
+5. Genera subtítulos en español
+
+6. Descarga el .srt
+
+7. Instala Substital en Edge
+
+8. Carga el .srt en el video
+
+Próximas veces:
+1. Abre video
+2. Carga .srt
+3. ¡Listo!
+```
+
+---
+
+## 📝 ATAJOS DE TECLADO EN EDGE
+
+### Para Live Captions:
+
+- **Ctrl + Shift + A** - Activar/Desactivar Live Captions
+- **Espacio** - Pausar/Reproducir video
+- **← →** - Retroceder/Adelantar 5 segundos
+- **↑ ↓** - Volumen
+- **F** - Pantalla completa
+- **M** - Silenciar
+
+---
+
+## 🔗 ENLACES DIRECTOS PARA EDGE
+
+### Configuración de Edge:
+- **Live Captions:** `edge://settings/accessibility`
+- **Extensiones:** `edge://extensions`
+- **Permisos:** `edge://settings/content`
+
+### Tiendas de Extensiones:
+- **Edge Add-ons:** https://microsoftedge.microsoft.com/addons
+- **Chrome Web Store:** https://chrome.google.com/webstore (compatible)
+
+### Herramientas IA:
+- **Whisper Web:** https://huggingface.co/spaces/openai/whisper
+- **Kapwing:** https://www.kapwing.com/tools/subtitle-maker
+
+### Editores de Subtítulos:
+- **Subtitle Edit:** https://nikse.dk/SubtitleEdit
+- **Aegisub:** http://www.aegisub.org
+
+---
+
+## ✅ CHECKLIST: CONFIGURAR EDGE PARA TU CURSO
+
+**Configuración inicial (5 minutos):**
+
+- [ ] Activar Live Captions en `edge://settings/accessibility`
+- [ ] Permitir extensiones de Chrome Web Store
+- [ ] Instalar Substital (opcional, si quieres cargar .srt)
+- [ ] Instalar Transcribe (opcional, si quieres generar automático)
+- [ ] Configurar idioma a Español en Live Captions
+
+**Para cada video:**
+
+- [ ] Abrir video del curso
+- [ ] Presionar Ctrl + Shift + A para subtítulos
+- [ ] O usar extensión si ya tienes .srt generado
+
+---
+
+## 🎯 SOLUCIÓN INMEDIATA PARA TI
+
+**Ahora mismo, haz esto:**
+
+1. Presiona **Windows + R**
+2. Escribe: `microsoft-edge:edge://settings/accessibility`
+3. Enter
+4. Activa **"Subtítulos en vivo"**
+5. Abre tu curso: https://people.thatopen.com/c/welcome-master-bim-software-developer/
+6. Presiona **Ctrl + Shift + A**
+
+**¡Listo! Ya tienes subtítulos en español en 1 minuto.**
+
+---
+
+**💡 Si la precisión no es suficiente, avísame y te ayudo a configurar Whisper AI para máxima calidad.**
+
+@{end markdown}

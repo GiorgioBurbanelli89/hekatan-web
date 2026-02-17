@@ -1,0 +1,228 @@
+"============================================
+"📚 ÍNDICE COMPLETO - EJEMPLOS HTML
+"============================================
+"TODO lo que puedes hacer con HTML, CSS y JavaScript.
+
+'🎯 22 EJEMPLOS COMPLETOS
+'Desde lo más básico hasta tecnologías avanzadas
+'Cada archivo usa HTML completo dentro de @{html}
+'Usa regiones (carpetas +/-) para organizar el código
+
+"============================================
+"🎯 CÓMO USAR ESTOS EJEMPLOS
+"============================================
+
+'1. Abre cualquier archivo .cpd en Calcpad WPF
+'2. El resultado se muestra automáticamente (si tienes autorun activado)
+'   O presiona F5 para calcular manualmente
+'3. Haz click en los botones +/- para colapsar secciones
+'4. Presiona F12 para abrir DevTools del navegador
+'5. Experimenta cambiando valores (se actualiza automáticamente con autorun)
+
+"============================================
+"📖 LISTA COMPLETA DE EJEMPLOS
+"============================================
+
+"📘 NIVEL 1: FUNDAMENTOS (01-05)
+"----------------------------------------
+'01-hola-mundo.cpd
+'  → HTML más simple: estructura básica
+'  → DOCTYPE, html, head, body
+'  → Títulos, párrafos, listas
+
+'02-estilos-css.cpd
+'  → Dar estilo con CSS
+'  → Colores, fondos, bordes, clases
+'  → Cajas de colores demo
+
+'03-listas-tablas.cpd
+'  → Listas ordenadas/no ordenadas
+'  → Tablas con filas y columnas
+'  → Estilos para tablas
+
+'04-formulario.cpd
+'  → Inputs: text, email, number
+'  → Select, textarea, botones
+'  → Formulario completo
+
+'05-javascript-basico.cpd
+'  → Variables y funciones
+'  → Eventos onclick
+'  → Contador interactivo, saludo
+
+"📗 NIVEL 2: GRÁFICOS 2D (06-08)
+"----------------------------------------
+'06-tipos-tecnologias-web.cpd
+'  → Explicación COMPLETA de tecnologías
+'  → Canvas, SVG, WebGL, Three.js, Chart.js, p5.js
+'  → Comparación y cuándo usar cada una
+'  → Demo Canvas 2D
+
+'07-canvas-animacion.cpd
+'  → Animación con requestAnimationFrame
+'  → Movimiento, rebotes, física
+'  → Controles interactivos
+
+'08-svg-basico.cpd
+'  → Gráficos vectoriales escalables
+'  → Rectángulos, círculos, polígonos, paths
+'  → SVG vs Canvas
+
+"📙 NIVEL 3: MULTIMEDIA Y LAYOUT (09-11)
+"----------------------------------------
+'09-audio-video.cpd
+'  → Reproducir audio y video HTML5
+'  → Formatos soportados
+'  → Controles, autoplay, loop
+
+'10-flexbox-grid.cpd
+'  → Layouts modernos con Flexbox y CSS Grid
+'  → Diferencias entre los dos
+'  → Ejemplos prácticos
+
+'11-animaciones-css.cpd
+'  → Animaciones CSS con @keyframes
+'  → Transiciones suaves
+'  → Hover effects, pulso, rotación, rebote
+
+"📕 NIVEL 4: ALMACENAMIENTO E INTERACCIÓN (12-13)
+"----------------------------------------
+'12-localstorage.cpd
+'  → Guardar datos en el navegador
+'  → localStorage API
+'  → Contador persistente
+
+'13-drag-drop.cpd
+'  → Arrastrar y soltar elementos
+'  → Drag and Drop API HTML5
+'  → Eventos: dragstart, drop
+
+"📔 NIVEL 5: GRÁFICAS Y VISUALIZACIÓN (14-15)
+"----------------------------------------
+'14-chartjs.cpd
+'  → Gráficas profesionales con Chart.js
+'  → Líneas, barras, pie, donut
+'  → Gráficas responsive
+
+'15-canvas-particulas.cpd
+'  → Sistema de partículas avanzado
+'  → Fuegos artificiales, lluvia, nieve
+'  → Clases, arrays, física
+
+"📓 NIVEL 6: APIS WEB Y EFECTOS (16-17)
+"----------------------------------------
+'16-fetch-api.cpd
+'  → Consumir APIs REST
+'  → async/await, Promesas
+'  → JSONPlaceholder, GitHub API
+
+'17-css-filters-transforms.cpd
+'  → Filtros CSS: blur, brightness, grayscale
+'  → Transformaciones: rotate, scale, skew
+'  → Efectos 3D
+
+"📘 NIVEL 7: CREATIVE CODING (18-19)
+"----------------------------------------
+'18-p5js.cpd
+'  → Arte generativo con p5.js
+'  → setup(), draw()
+'  → Sistema de partículas creativo
+
+'19-geolocation.cpd
+'  → Obtener ubicación GPS del usuario
+'  → Geolocation API
+'  → Mostrar en mapa
+
+"📗 NIVEL 8: DISEÑO AVANZADO (20-22)
+"----------------------------------------
+'20-css-variables.cpd
+'  → Variables CSS (Custom Properties)
+'  → Temas dinámicos (claro/oscuro)
+'  → Cambiar colores con JavaScript
+
+'21-responsive-design.cpd
+'  → Diseño adaptable a cualquier pantalla
+'  → Media queries
+'  → Móvil, tablet, desktop
+
+'22-svg-animaciones.cpd
+'  → Animaciones SVG avanzadas
+'  → CSS animations en SVG
+'  → JavaScript para paths dinámicos
+
+"============================================
+"🎓 ORDEN RECOMENDADO DE ESTUDIO
+"============================================
+
+'🟢 PRINCIPIANTES (Empieza aquí)
+'1. 01-hola-mundo
+'2. 02-estilos-css
+'3. 03-listas-tablas
+'4. 04-formulario
+'5. 05-javascript-basico
+
+'🟡 INTERMEDIOS
+'6. 06-tipos-tecnologias-web (lee esto!)
+'7. 08-svg-basico
+'8. 10-flexbox-grid
+'9. 11-animaciones-css
+'10. 12-localstorage
+'11. 21-responsive-design
+'12. 20-css-variables
+
+'🟠 AVANZADOS
+'13. 07-canvas-animacion
+'14. 13-drag-drop
+'15. 14-chartjs
+'16. 16-fetch-api
+'17. 17-css-filters-transforms
+'18. 19-geolocation
+
+'🔴 EXPERTOS
+'19. 15-canvas-particulas
+'20. 18-p5js
+'21. 22-svg-animaciones
+
+"============================================
+"💡 TECNOLOGÍAS CUBIERTAS
+"============================================
+
+'✅ HTML5 básico y avanzado
+'✅ CSS3 completo (Flexbox, Grid, Variables, Filters)
+'✅ JavaScript ES6+ (async/await, clases, arrow functions)
+'✅ Canvas 2D (animaciones, partículas)
+'✅ SVG (básico y animaciones)
+'✅ Chart.js (gráficas)
+'✅ p5.js (creative coding)
+'✅ Web APIs (LocalStorage, Geolocation, Fetch, Drag & Drop)
+'✅ Responsive Design (Media Queries)
+'✅ Animaciones CSS (@keyframes, transitions)
+'✅ Multimedia (Audio, Video)
+
+"============================================
+"📌 RECURSOS ADICIONALES
+"============================================
+
+'🌟 Para Three.js (gráficos 3D):
+'  → Examples/three/basico/ (ejemplos ultra-simples)
+'  → Examples/three/ (niveles 1-5)
+
+'📚 Para más ejemplos de Calcpad:
+'  → Examples/Structural/
+'  → Examples/Mechanics/
+'  → Examples/Math/
+
+"============================================
+"🔍 TIPS IMPORTANTES
+"============================================
+
+'✅ Autorun - Si está activado, los cambios se ven automáticamente
+'✅ F5 - Calcular/Renderizar manualmente (si autorun está desactivado)
+'✅ F12 - Abrir DevTools (inspector, consola)
+'✅ +/- - Colapsar/Expandir regiones
+'✅ Ctrl+F - Buscar en el código
+'✅ Experimenta cambiando valores y observa los cambios en tiempo real
+
+"============================================
+"¡EMPIEZA POR 01-hola-mundo.cpd!
+"============================================

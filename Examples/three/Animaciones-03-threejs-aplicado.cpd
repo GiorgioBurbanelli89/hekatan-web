@@ -1,0 +1,767 @@
+"============================================
+"ANIMACIONES - Parte 3: Aplicando a Three.js
+"============================================
+"Usa las técnicas de animación en objetos 3D
+
+"EXPLICACIÓN:
+"Ahora vamos a aplicar TODO lo que aprendiste en las
+"partes 1 y 2 (movimiento, easing, control) pero en
+"objetos Three.js 3D en lugar de canvas 2D.
+
+@{html}
+<style>
+  .explicacion {
+    background: #e3f2fd;
+    padding: 20px;
+    border-left: 4px solid #2196f3;
+    margin: 20px 0;
+  }
+
+  .controles {
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+  }
+
+  .control-group {
+    margin: 10px 0;
+  }
+
+  .control-group label {
+    display: inline-block;
+    width: 120px;
+    font-weight: bold;
+  }
+
+  button {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+
+  .btn-primary {
+    background: #2196f3;
+    color: white;
+  }
+
+  .btn-success {
+    background: #4caf50;
+    color: white;
+  }
+
+  .btn-warning {
+    background: #ff9800;
+    color: white;
+  }
+
+  select, input[type="range"] {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+
+  .info-panel {
+    background: white;
+    padding: 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    margin: 15px 0;
+  }
+
+  .info-panel h4 {
+    margin-top: 0;
+    color: #333;
+  }
+</style>
+
+<div class="explicacion">
+  <h3>🎯 Objetivo de esta Parte:</h3>
+  <p>
+    Verás cómo los mismos conceptos de animación que aprendiste en canvas
+    se aplican a Three.js. La única diferencia es que en lugar de dibujar
+    en 2D, modificas propiedades de objetos 3D.
+  </p>
+</div>
+
+<!-- EJEMPLO 1: Cubo con easing -->
+<h3>Ejemplo 1: Cubo Moviéndose con Easing</h3>
+<p>El mismo movimiento del Ejemplo 1 de Animaciones-01, pero en 3D</p>
+
+<div class="controles">
+  <div class="control-group">
+    <label>Easing:</label>
+    <select id="easing1">
+      <option value="linear">Linear (constante)</option>
+      <option value="easeInQuad">Ease In (acelerando)</option>
+      <option value="easeOutQuad">Ease Out (frenando)</option>
+      <option value="easeInOutQuad">Ease In-Out (S)</option>
+      <option value="bounce">Bounce (rebote)</option>
+    </select>
+  </div>
+  <button class="btn-primary" id="btn1Start">▶️ Iniciar</button>
+  <button class="btn-warning" id="btn1Reset">🔄 Reiniciar</button>
+</div>
+
+<div id="canvas1" style="width: 100%; height: 400px;"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+  // ===================================================================
+  // EJEMPLO 1: CUBO CON EASING
+  // ===================================================================
+
+  // 1. Setup Three.js
+  const container1 = document.getElementById('canvas1');
+  const scene1 = new THREE.Scene();
+  scene1.background = new THREE.Color(0xf0f0f0);
+
+  const camera1 = new THREE.PerspectiveCamera(
+    75,
+    container1.clientWidth / container1.clientHeight,
+    0.1,
+    1000
+  );
+  camera1.position.set(0, 5, 15);
+  camera1.lookAt(0, 0, 0);
+
+  const renderer1 = new THREE.WebGLRenderer({ antialias: true });
+  renderer1.setSize(container1.clientWidth, container1.clientHeight);
+  container1.appendChild(renderer1.domElement);
+
+  // Iluminación
+  const light1 = new THREE.DirectionalLight(0xffffff, 1);
+  light1.position.set(5, 10, 5);
+  scene1.add(light1);
+  scene1.add(new THREE.AmbientLight(0x404040));
+
+  // Grid y ejes
+  const grid1 = new THREE.GridHelper(20, 20);
+  scene1.add(grid1);
+
+  // Cubo animado
+  const cubeGeom1 = new THREE.BoxGeometry(1, 1, 1);
+  const cubeMat1 = new THREE.MeshStandardMaterial({ color: 0x4caf50 });
+  const cube1 = new THREE.Mesh(cubeGeom1, cubeMat1);
+  cube1.position.set(-8, 0.5, 0);
+  scene1.add(cube1);
+
+  // Cubo de referencia (destino)
+  const cubeRef1 = new THREE.Mesh(
+    cubeGeom1,
+    new THREE.MeshStandardMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.3,
+      wireframe: true
+    })
+  );
+  cubeRef1.position.set(8, 0.5, 0);
+  scene1.add(cubeRef1);
+
+  // Variables de animación
+  let animating1 = false;
+  let t1 = 0;  // Progreso (0 a 1)
+  const startPos1 = -8;
+  const endPos1 = 8;
+  const duration1 = 2;  // 2 segundos
+
+  // Funciones de easing (las mismas que en Animaciones-02)
+  const easingFunctions = {
+    linear: t => t,
+    easeInQuad: t => t * t,
+    easeOutQuad: t => t * (2 - t),
+    easeInOutQuad: t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+    bounce: t => {
+      const n1 = 7.5625, d1 = 2.75;
+      if (t < 1 / d1) {
+        return n1 * t * t;
+      } else if (t < 2 / d1) {
+        return n1 * (t -= 1.5 / d1) * t + 0.75;
+      } else if (t < 2.5 / d1) {
+        return n1 * (t -= 2.25 / d1) * t + 0.9375;
+      } else {
+        return n1 * (t -= 2.625 / d1) * t + 0.984375;
+      }
+    }
+  };
+
+  let currentEasing1 = 'linear';
+
+  document.getElementById('easing1').addEventListener('change', (e) => {
+    currentEasing1 = e.target.value;
+  });
+
+  document.getElementById('btn1Start').addEventListener('click', () => {
+    if (t1 >= 1) t1 = 0;  // Si terminó, reiniciar
+    animating1 = true;
+  });
+
+  document.getElementById('btn1Reset').addEventListener('click', () => {
+    animating1 = false;
+    t1 = 0;
+    cube1.position.x = startPos1;
+  });
+
+  // Loop de animación
+  function animate1() {
+    requestAnimationFrame(animate1);
+
+    if (animating1) {
+      // Incrementar progreso (normalizar por 60 FPS aprox)
+      t1 += 1 / (duration1 * 60);
+
+      if (t1 >= 1) {
+        t1 = 1;
+        animating1 = false;
+      }
+
+      // Aplicar easing
+      const easedT = easingFunctions[currentEasing1](t1);
+
+      // Interpolar posición
+      cube1.position.x = startPos1 + (endPos1 - startPos1) * easedT;
+
+      // Rotación adicional para ver el movimiento 3D
+      cube1.rotation.y = easedT * Math.PI * 2;
+    }
+
+    renderer1.render(scene1, camera1);
+  }
+
+  animate1();
+</script>
+
+<div class="explicacion">
+  <h4>🔍 Comparación Canvas vs Three.js:</h4>
+  <table style="width: 100%; border-collapse: collapse;">
+    <tr style="background: #f9f9f9;">
+      <th style="padding: 10px; border: 1px solid #ddd;">Canvas 2D</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Three.js 3D</th>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>ctx.clearRect()</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>renderer.render(scene, camera)</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>ctx.fillRect(x, y, w, h)</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>cube.position.x = x</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;">Solo X e Y</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">X, Y, y Z (3D)</td>
+    </tr>
+  </table>
+</div>
+
+<!-- EJEMPLO 2: Múltiples objetos -->
+<h3>Ejemplo 2: Múltiples Esferas Oscilando</h3>
+<p>Similar al Ejemplo 2 de Animaciones-01 (oscilación con seno)</p>
+
+<div id="canvas2" style="width: 100%; height: 400px;"></div>
+
+<div class="info-panel">
+  <h4>📊 Información:</h4>
+  <p>
+    FPS: <span id="fps2">0</span> |
+    Esferas: <span id="count2">0</span>
+  </p>
+</div>
+
+<script>
+  // ===================================================================
+  // EJEMPLO 2: MÚLTIPLES ESFERAS OSCILANDO
+  // ===================================================================
+
+  const container2 = document.getElementById('canvas2');
+  const scene2 = new THREE.Scene();
+  scene2.background = new THREE.Color(0xf0f0f0);
+
+  const camera2 = new THREE.PerspectiveCamera(
+    75,
+    container2.clientWidth / container2.clientHeight,
+    0.1,
+    1000
+  );
+  camera2.position.set(0, 10, 20);
+  camera2.lookAt(0, 0, 0);
+
+  const renderer2 = new THREE.WebGLRenderer({ antialias: true });
+  renderer2.setSize(container2.clientWidth, container2.clientHeight);
+  container2.appendChild(renderer2.domElement);
+
+  // Iluminación
+  const light2 = new THREE.DirectionalLight(0xffffff, 1);
+  light2.position.set(10, 10, 10);
+  scene2.add(light2);
+  scene2.add(new THREE.AmbientLight(0x404040));
+
+  // Grid
+  scene2.add(new THREE.GridHelper(30, 30));
+
+  // Crear esferas
+  const spheres2 = [];
+  const numSpheres = 10;
+
+  for (let i = 0; i < numSpheres; i++) {
+    const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+    const material = new THREE.MeshStandardMaterial({
+      color: new THREE.Color().setHSL(i / numSpheres, 0.7, 0.6)
+    });
+    const sphere = new THREE.Mesh(geometry, material);
+
+    // Posición inicial
+    sphere.position.x = (i - numSpheres / 2) * 2;
+    sphere.position.z = 0;
+
+    // Datos de animación
+    sphere.userData = {
+      baseY: 0,
+      amplitude: 2 + Math.random() * 2,  // Amplitud aleatoria
+      frequency: 0.02 + Math.random() * 0.03,  // Frecuencia aleatoria
+      phase: Math.random() * Math.PI * 2  // Fase inicial aleatoria
+    };
+
+    scene2.add(sphere);
+    spheres2.push(sphere);
+  }
+
+  document.getElementById('count2').textContent = spheres2.length;
+
+  // Variables para FPS
+  let frameCount2 = 0;
+  let lastTime2 = performance.now();
+  let time2 = 0;
+
+  function animate2() {
+    requestAnimationFrame(animate2);
+
+    time2 += 1;
+
+    // Actualizar cada esfera
+    spheres2.forEach(sphere => {
+      const data = sphere.userData;
+
+      // Movimiento sinusoidal en Y
+      sphere.position.y = data.baseY +
+        Math.sin(time2 * data.frequency + data.phase) * data.amplitude;
+
+      // Rotación sutil
+      sphere.rotation.y += 0.01;
+    });
+
+    // Calcular FPS
+    frameCount2++;
+    const currentTime2 = performance.now();
+    if (currentTime2 - lastTime2 >= 1000) {
+      document.getElementById('fps2').textContent = frameCount2;
+      frameCount2 = 0;
+      lastTime2 = currentTime2;
+    }
+
+    renderer2.render(scene2, camera2);
+  }
+
+  animate2();
+</script>
+
+<div class="explicacion">
+  <h4>💡 Conceptos Clave:</h4>
+  <ul>
+    <li><strong>userData:</strong> Propiedad de Three.js para guardar datos personalizados en objetos</li>
+    <li><strong>Color().setHSL():</strong> Crea colores rainbow fácilmente (Hue, Saturation, Lightness)</li>
+    <li><strong>Math.sin():</strong> Igual que en canvas, pero aplicado a position.y en 3D</li>
+    <li><strong>Fase (phase):</strong> Desplaza la onda para que no todas oscilen al mismo tiempo</li>
+  </ul>
+</div>
+
+<!-- EJEMPLO 3: Animación con OrbitControls -->
+<h3>Ejemplo 3: Rotación con Controles Interactivos</h3>
+<p>Combina animación automática con controles de usuario (OrbitControls)</p>
+
+<div class="controles">
+  <button class="btn-primary" id="btn3Play">▶️ Play</button>
+  <button class="btn-warning" id="btn3Pause">⏸️ Pause</button>
+  <div class="control-group" style="margin-top: 10px;">
+    <label>Velocidad:</label>
+    <input type="range" id="speed3" min="0" max="5" step="0.1" value="1" style="width: 200px;">
+    <span id="speedValue3">1.0</span>x
+  </div>
+</div>
+
+<div id="canvas3" style="width: 100%; height: 400px;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+  // ===================================================================
+  // EJEMPLO 3: ANIMACIÓN + ORBIT CONTROLS
+  // ===================================================================
+
+  const container3 = document.getElementById('canvas3');
+  const scene3 = new THREE.Scene();
+  scene3.background = new THREE.Color(0x111111);
+
+  const camera3 = new THREE.PerspectiveCamera(
+    75,
+    container3.clientWidth / container3.clientHeight,
+    0.1,
+    1000
+  );
+  camera3.position.set(10, 10, 10);
+
+  const renderer3 = new THREE.WebGLRenderer({ antialias: true });
+  renderer3.setSize(container3.clientWidth, container3.clientHeight);
+  container3.appendChild(renderer3.domElement);
+
+  // OrbitControls - permite rotar la cámara con el mouse
+  const controls3 = new THREE.OrbitControls(camera3, renderer3.domElement);
+  controls3.enableDamping = true;  // Suavizado
+  controls3.dampingFactor = 0.05;
+
+  // Iluminación
+  const light3a = new THREE.PointLight(0xff0000, 1, 50);
+  light3a.position.set(5, 5, 5);
+  scene3.add(light3a);
+
+  const light3b = new THREE.PointLight(0x00ff00, 1, 50);
+  light3b.position.set(-5, 5, -5);
+  scene3.add(light3b);
+
+  const light3c = new THREE.PointLight(0x0000ff, 1, 50);
+  light3c.position.set(0, -5, 5);
+  scene3.add(light3c);
+
+  scene3.add(new THREE.AmbientLight(0x222222));
+
+  // Crear toroide central
+  const torusGeom = new THREE.TorusGeometry(3, 1, 16, 100);
+  const torusMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    metalness: 0.7,
+    roughness: 0.3
+  });
+  const torus = new THREE.Mesh(torusGeom, torusMat);
+  scene3.add(torus);
+
+  // Crear cubos orbitando
+  const orbitCubes = [];
+  const numCubes = 8;
+
+  for (let i = 0; i < numCubes; i++) {
+    const cubeGeom = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const cubeMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color().setHSL(i / numCubes, 1, 0.5)
+    });
+    const cube = new THREE.Mesh(cubeGeom, cubeMat);
+
+    cube.userData = {
+      angle: (i / numCubes) * Math.PI * 2,
+      radius: 6,
+      speed: 1
+    };
+
+    scene3.add(cube);
+    orbitCubes.push(cube);
+  }
+
+  // Variables de control
+  let playing3 = true;
+  let speed3 = 1;
+
+  document.getElementById('btn3Play').addEventListener('click', () => {
+    playing3 = true;
+  });
+
+  document.getElementById('btn3Pause').addEventListener('click', () => {
+    playing3 = false;
+  });
+
+  document.getElementById('speed3').addEventListener('input', (e) => {
+    speed3 = parseFloat(e.target.value);
+    document.getElementById('speedValue3').textContent = speed3.toFixed(1);
+  });
+
+  function animate3() {
+    requestAnimationFrame(animate3);
+
+    if (playing3) {
+      // Rotar toroide central
+      torus.rotation.x += 0.01 * speed3;
+      torus.rotation.y += 0.005 * speed3;
+
+      // Orbitar cubos
+      orbitCubes.forEach(cube => {
+        const data = cube.userData;
+        data.angle += 0.02 * speed3;
+
+        cube.position.x = Math.cos(data.angle) * data.radius;
+        cube.position.z = Math.sin(data.angle) * data.radius;
+        cube.position.y = Math.sin(data.angle * 2) * 2;
+
+        cube.rotation.x += 0.05 * speed3;
+        cube.rotation.y += 0.05 * speed3;
+      });
+    }
+
+    controls3.update();  // Actualizar OrbitControls
+    renderer3.render(scene3, camera3);
+  }
+
+  animate3();
+</script>
+
+<div class="explicacion">
+  <h4>🎮 Interactividad 3D:</h4>
+  <p>
+    <strong>OrbitControls</strong> es uno de los controles más útiles de Three.js:
+  </p>
+  <ul>
+    <li><strong>Click + Arrastrar:</strong> Rotar la cámara alrededor del objeto</li>
+    <li><strong>Rueda del mouse:</strong> Zoom in/out</li>
+    <li><strong>Click derecho + Arrastrar:</strong> Panear (mover) la cámara</li>
+    <li><strong>enableDamping:</strong> Hace que los movimientos sean suaves (como inercia)</li>
+  </ul>
+  <p>
+    <strong>Nota importante:</strong> Debes llamar <code>controls.update()</code> en el loop de animación.
+  </p>
+</div>
+
+<!-- EJEMPLO 4: Animación de transformación -->
+<h3>Ejemplo 4: Morphing (Transformación de Formas)</h3>
+<p>Transición suave entre geometrías diferentes</p>
+
+<div class="controles">
+  <button class="btn-success" id="btn4Cube">📦 Cubo</button>
+  <button class="btn-success" id="btn4Sphere">⚽ Esfera</button>
+  <button class="btn-success" id="btn4Torus">🍩 Toroide</button>
+  <button class="btn-success" id="btn4Cone">🔺 Cono</button>
+  <div class="control-group" style="margin-top: 10px;">
+    <label>Duración:</label>
+    <input type="range" id="morphDuration" min="0.5" max="5" step="0.5" value="2" style="width: 200px;">
+    <span id="morphDurationValue">2.0</span>s
+  </div>
+</div>
+
+<div id="canvas4" style="width: 100%; height: 400px;"></div>
+
+<script>
+  // ===================================================================
+  // EJEMPLO 4: MORPHING ENTRE GEOMETRÍAS
+  // ===================================================================
+
+  const container4 = document.getElementById('canvas4');
+  const scene4 = new THREE.Scene();
+  scene4.background = new THREE.Color(0x1a1a1a);
+
+  const camera4 = new THREE.PerspectiveCamera(
+    75,
+    container4.clientWidth / container4.clientHeight,
+    0.1,
+    1000
+  );
+  camera4.position.set(0, 0, 8);
+
+  const renderer4 = new THREE.WebGLRenderer({ antialias: true });
+  renderer4.setSize(container4.clientWidth, container4.clientHeight);
+  container4.appendChild(renderer4.domElement);
+
+  // Iluminación
+  scene4.add(new THREE.DirectionalLight(0xffffff, 1));
+  scene4.add(new THREE.AmbientLight(0x404040));
+
+  // Objeto principal
+  const material4 = new THREE.MeshStandardMaterial({
+    color: 0x00bcd4,
+    wireframe: false
+  });
+  let currentMesh4 = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material4);
+  scene4.add(currentMesh4);
+
+  // Variables de morphing
+  let morphing4 = false;
+  let morphT4 = 0;
+  let morphDuration4 = 2;
+  let startScale4 = 1;
+  let targetGeometry4 = null;
+
+  // Diccionario de geometrías
+  const geometries4 = {
+    cube: new THREE.BoxGeometry(2, 2, 2),
+    sphere: new THREE.SphereGeometry(1.5, 32, 32),
+    torus: new THREE.TorusGeometry(1.2, 0.5, 16, 100),
+    cone: new THREE.ConeGeometry(1.5, 3, 32)
+  };
+
+  function startMorph(targetType) {
+    if (morphing4) return;  // No permitir múltiples morfeos simultáneos
+
+    targetGeometry4 = geometries4[targetType];
+    morphing4 = true;
+    morphT4 = 0;
+    startScale4 = 1;
+  }
+
+  document.getElementById('btn4Cube').addEventListener('click', () => startMorph('cube'));
+  document.getElementById('btn4Sphere').addEventListener('click', () => startMorph('sphere'));
+  document.getElementById('btn4Torus').addEventListener('click', () => startMorph('torus'));
+  document.getElementById('btn4Cone').addEventListener('click', () => startMorph('cone'));
+
+  document.getElementById('morphDuration').addEventListener('input', (e) => {
+    morphDuration4 = parseFloat(e.target.value);
+    document.getElementById('morphDurationValue').textContent = morphDuration4.toFixed(1);
+  });
+
+  function animate4() {
+    requestAnimationFrame(animate4);
+
+    // Rotación constante
+    currentMesh4.rotation.x += 0.005;
+    currentMesh4.rotation.y += 0.01;
+
+    if (morphing4) {
+      morphT4 += 1 / (morphDuration4 * 60);
+
+      if (morphT4 >= 1) {
+        // Completar el morph
+        morphT4 = 1;
+        morphing4 = false;
+
+        // Reemplazar geometría
+        scene4.remove(currentMesh4);
+        currentMesh4 = new THREE.Mesh(targetGeometry4, material4);
+        currentMesh4.scale.setScalar(1);
+        scene4.add(currentMesh4);
+      } else {
+        // Animación de escala (shrink -> grow)
+        // Primero se encoge (0 a 0.5) y luego crece (0.5 a 1)
+        let scale;
+        if (morphT4 < 0.5) {
+          // Fase 1: Encoger
+          scale = 1 - (morphT4 * 2);  // 1 -> 0
+        } else {
+          // Fase 2: Cambiar geometría y crecer
+          if (morphT4 === 0.5 || Math.abs(morphT4 - 0.5) < 0.01) {
+            scene4.remove(currentMesh4);
+            currentMesh4 = new THREE.Mesh(targetGeometry4, material4);
+            scene4.add(currentMesh4);
+          }
+          scale = (morphT4 - 0.5) * 2;  // 0 -> 1
+        }
+
+        currentMesh4.scale.setScalar(scale);
+      }
+    }
+
+    renderer4.render(scene4, camera4);
+  }
+
+  animate4();
+</script>
+
+<div class="explicacion">
+  <h4>🔄 Técnica de Morphing:</h4>
+  <p>
+    El "morphing" real entre geometrías diferentes es complejo. Esta técnica usa
+    un approach más simple pero efectivo:
+  </p>
+  <ol>
+    <li><strong>Encoger:</strong> Reducir escala de 1 a 0</li>
+    <li><strong>Cambiar:</strong> Reemplazar la geometría en el punto mínimo</li>
+    <li><strong>Crecer:</strong> Aumentar escala de 0 a 1</li>
+  </ol>
+  <p>
+    <code>scale.setScalar(x)</code> aplica la misma escala en X, Y y Z.
+  </p>
+</div>
+
+<div class="explicacion" style="background: #fff3cd; border-left-color: #ffc107;">
+  <h3>📚 Resumen: Canvas 2D → Three.js 3D</h3>
+
+  <table style="width: 100%; margin-top: 15px; border-collapse: collapse;">
+    <tr style="background: #f9f9f9;">
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Concepto</th>
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Canvas 2D</th>
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Three.js 3D</th>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>Loop principal</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>requestAnimationFrame()</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>requestAnimationFrame()</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>Limpiar</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>ctx.clearRect()</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">No necesario*</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>Posición</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>x, y</code></td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>position.x, position.y, position.z</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>Rotación</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">Difícil (transformaciones)</td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>rotation.x, rotation.y, rotation.z</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>Escala</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">Cambiar w/h en fillRect</td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>scale.x, scale.y, scale.z</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>Easing</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">Función + interpolación</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">Función + interpolación</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>Interactividad</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">Event listeners manuales</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">OrbitControls / Raycaster</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;"><strong>Renderizar</strong></td>
+      <td style="padding: 10px; border: 1px solid #ddd;">Dibujar en cada frame</td>
+      <td style="padding: 10px; border: 1px solid #ddd;"><code>renderer.render(scene, camera)</code></td>
+    </tr>
+  </table>
+
+  <p style="margin-top: 15px;">
+    <small>* Three.js maneja el "clear" automáticamente por cada frame.</small>
+  </p>
+
+  <h4 style="margin-top: 20px;">🎯 Lo Importante:</h4>
+  <ul>
+    <li>Las <strong>mismas técnicas de animación</strong> se aplican en 2D y 3D</li>
+    <li>El <strong>mismo loop</strong> con requestAnimationFrame</li>
+    <li>Las <strong>mismas funciones de easing</strong></li>
+    <li>La diferencia principal: en 3D tienes <strong>más ejes (Z) y rotaciones más fáciles</strong></li>
+  </ul>
+
+  <h4 style="margin-top: 20px;">🚀 Próximo Paso:</h4>
+  <p>
+    Ahora estás listo para crear tus propias animaciones 3D complejas.
+    Revisa los ejemplos 06-10 de Three.js para ver cómo aplicar esto
+    a análisis de ingeniería (FEA, deformaciones, vibraciones).
+  </p>
+</div>
+@{end html}
+
+"CONCLUSIÓN:
+"Todo lo que aprendiste en Animaciones-01 y 02 aplica a Three.js
+"Solo cambias:
+"  - ctx.fillRect() → mesh.position.x
+"  - 2D (x,y) → 3D (x,y,z)
+"  - Dibujar manualmente → Modificar propiedades de objetos
+"
+"¡Las matemáticas de animación son IDÉNTICAS!

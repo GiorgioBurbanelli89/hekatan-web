@@ -1,0 +1,166 @@
+"============================================
+"EJEMPLO 4: Viga Simple Paramétrica
+"============================================
+"Viga de sección rectangular con dimensiones
+"controladas desde Calcpad
+
+"GEOMETRÍA DE LA VIGA:
+'Longitud:'L = 6m
+'Ancho:'b = 0.30m
+'Altura:'h = 0.50m
+
+"PROPIEDADES DE LA SECCIÓN:
+'Área de la sección:'
+A = b*h
+'Momento de inercia:'
+I_x = b*h^3/12
+I_y = h*b^3/12
+'Módulo resistente:'
+W_x = b*h^2/6
+
+@{html}
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/examples/js/controls/OrbitControls.js"></script>
+<div id="canvas4" style="width:800px; height:500px; border:2px solid #ccc; margin:10px 0;"></div>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof THREE === 'undefined' || typeof THREE.OrbitControls === 'undefined') {
+    document.getElementById('canvas4').innerHTML = '<p style="color:red;">Error</p>';
+    return;
+  }
+
+  // Variables de Calcpad
+  const L = @{calcpad:L};
+  const b = @{calcpad:b};
+  const h = @{calcpad:h};
+
+  // Escena
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xfafafa);
+
+  // Cámara
+  const camera = new THREE.PerspectiveCamera(50, 800/500, 0.1, 100);
+  camera.position.set(L*0.8, h*2, L*0.6);
+
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(800, 500);
+  renderer.shadowMap.enabled = true;
+  document.getElementById('canvas4').appendChild(renderer.domElement);
+
+  // Controles
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(L/2, 0, 0);
+  controls.update();
+
+  // CREAR VIGA
+  const beamGeom = new THREE.BoxGeometry(L, h, b);
+  const beamMat = new THREE.MeshStandardMaterial({
+    color: 0xbcaaa4,
+    metalness: 0.1,
+    roughness: 0.8
+  });
+  const beam = new THREE.Mesh(beamGeom, beamMat);
+  beam.position.set(L/2, h/2, 0);
+  beam.castShadow = true;
+  scene.add(beam);
+
+  // Wireframe para ver bordes
+  const edges = new THREE.EdgesGeometry(beamGeom);
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+  const wireframe = new THREE.LineSegments(edges, edgeMat);
+  beam.add(wireframe);
+
+  // APOYOS (cilindros en los extremos)
+  const supportRadius = Math.min(b, h) * 0.4;
+  const supportGeom = new THREE.CylinderGeometry(supportRadius, supportRadius, b*1.2, 16);
+  const supportMat = new THREE.MeshStandardMaterial({ color: 0x455a64 });
+
+  // Apoyo izquierdo
+  const support1 = new THREE.Mesh(supportGeom, supportMat);
+  support1.position.set(0, supportRadius/2, 0);
+  support1.rotation.z = Math.PI/2;
+  support1.castShadow = true;
+  scene.add(support1);
+
+  // Apoyo derecho
+  const support2 = new THREE.Mesh(supportGeom, supportMat);
+  support2.position.set(L, supportRadius/2, 0);
+  support2.rotation.z = Math.PI/2;
+  support2.castShadow = true;
+  scene.add(support2);
+
+  // EJES DE COORDENADAS (en el origen)
+  const axesHelper = new THREE.AxesHelper(Math.max(L, h, b) * 0.3);
+  scene.add(axesHelper);
+
+  // Etiquetas de dimensiones (usando sprites)
+  function createTextLabel(text, position) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 256;
+    canvas.height = 64;
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.font = 'Bold 24px Arial';
+    context.fillStyle = '#000000';
+    context.textAlign = 'center';
+    context.fillText(text, 128, 40);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMat = new THREE.SpriteMaterial({ map: texture });
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.position.copy(position);
+    sprite.scale.set(L*0.15, L*0.15*0.25, 1);
+    return sprite;
+  }
+
+  // Etiqueta de longitud
+  const labelL = createTextLabel('L = ' + L.toFixed(2) + ' m',
+    new THREE.Vector3(L/2, -h*0.8, 0));
+  scene.add(labelL);
+
+  // Plano de suelo
+  const planeGeom = new THREE.PlaneGeometry(L*1.5, b*4);
+  const planeMat = new THREE.MeshStandardMaterial({
+    color: 0xeeeeee,
+    side: THREE.DoubleSide
+  });
+  const plane = new THREE.Mesh(planeGeom, planeMat);
+  plane.rotation.x = -Math.PI / 2;
+  plane.position.y = -0.01;
+  plane.receiveShadow = true;
+  scene.add(plane);
+
+  // Iluminación
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  dirLight.position.set(L, h*4, L);
+  dirLight.castShadow = true;
+  scene.add(dirLight);
+
+  // Grid
+  const gridHelper = new THREE.GridHelper(L*1.5, 15);
+  gridHelper.position.y = 0;
+  scene.add(gridHelper);
+
+  // Animación
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  animate();
+});
+</script>
+@{end html}
+
+"Características:
+"- Viga con dimensiones reales de Calcpad
+"- Apoyos cilíndricos en extremos
+"- Etiquetas de texto usando Sprites
+"- Sombras para mayor realismo
+"- Grid y ejes para referencia

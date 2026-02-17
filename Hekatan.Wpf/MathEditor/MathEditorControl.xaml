@@ -1,0 +1,179 @@
+<UserControl x:Class="Hekatan.Wpf.MathEditor.MathEditorControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
+             Focusable="True"
+             Background="White">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Barra de preview - muestra la línea actual con AvalonEdit -->
+        <Border Grid.Row="0" Background="#F5F5DC" BorderBrush="#CCC" BorderThickness="1,1,1,0" Padding="5,3">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Indicador de modo: Expresión (azul) o Texto (verde) - a la izquierda -->
+                    <Border x:Name="ModeIndicatorBorder"
+                            Background="#E3F2FD" BorderBrush="#1976D2" BorderThickness="1"
+                            CornerRadius="3" Padding="6,2" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="ModeIndicatorText" Text="Expresión"
+                                   FontSize="9" FontWeight="Bold" Foreground="#1976D2"/>
+                    </Border>
+                    <TextBlock Text="Hekatan: " FontSize="10" Foreground="#666" FontWeight="Bold"
+                               VerticalAlignment="Center" Margin="0,0,0,0"/>
+
+                    <!-- TextBlock simple para mostrar la línea actual con cursor (click para editar) -->
+                    <TextBlock x:Name="PreviewTextBlock" FontFamily="Consolas" FontSize="10"
+                               Foreground="#333" VerticalAlignment="Center" MinWidth="200"
+                               TextTrimming="CharacterEllipsis" MaxWidth="600"
+                               MouseLeftButtonDown="PreviewTextBlock_MouseLeftButtonDown"
+                               Cursor="IBeam" ToolTip="Click para editar"
+                               AutomationProperties.AutomationId="PreviewTextBlock"/>
+
+                    <!-- AvalonEdit para edición directa con syntax highlighting (oculto por defecto) -->
+                    <Border x:Name="PreviewEditorContainer" BorderThickness="1" BorderBrush="#1976D2"
+                            Background="White" Height="20" MinWidth="200" MaxWidth="600"
+                            VerticalAlignment="Center" Margin="0,0,0,0" Visibility="Collapsed">
+                        <avalonEdit:TextEditor x:Name="PreviewEditor"
+                                               FontFamily="Consolas" FontSize="10"
+                                               Background="White" Foreground="#333"
+                                               VerticalScrollBarVisibility="Hidden"
+                                               HorizontalScrollBarVisibility="Hidden"
+                                               ShowLineNumbers="False"
+                                               WordWrap="False"
+                                               Padding="2,0,0,0"
+                                               KeyDown="PreviewEditor_KeyDown"
+                                               LostFocus="PreviewEditor_LostFocus"
+                                               TextChanged="PreviewEditor_TextChanged"/>
+                    </Border>
+
+                    <!-- DEPRECATED: TextBox antiguo - mantener para referencia temporal -->
+                    <TextBox x:Name="PreviewEditTextBox" FontFamily="Consolas" FontSize="10"
+                             Foreground="#333" VerticalAlignment="Center" MinWidth="200"
+                             MaxWidth="600" Visibility="Collapsed" BorderThickness="1"
+                             BorderBrush="#1976D2" Background="White" Padding="2,0"
+                             KeyDown="PreviewEditTextBox_KeyDown"
+                             LostFocus="PreviewEditTextBox_LostFocus"
+                             TextChanged="PreviewEditTextBox_TextChanged"
+                             AutomationProperties.AutomationId="PreviewEditTextBox"/>
+                </StackPanel>
+
+                <!-- Toggle Código/Visual y Zoom -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,0,0,0">
+                    <TextBlock Text="Vista:" FontSize="9" Foreground="#666" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <RadioButton x:Name="CodeViewRadio" Content="Código" IsChecked="True"
+                                 GroupName="ViewMode" VerticalAlignment="Center" FontSize="9"
+                                 Checked="ViewModeRadio_Checked" Margin="0,0,8,0"/>
+                    <RadioButton x:Name="VisualViewRadio" Content="Visual"
+                                 GroupName="ViewMode" VerticalAlignment="Center" FontSize="9"
+                                 Checked="ViewModeRadio_Checked" Margin="0,0,8,0"/>
+                    <!-- Botón de zoom compacto -->
+                    <Button x:Name="ZoomToggleButton" Width="20" Height="16" Click="ZoomToggleButton_Click"
+                            ToolTip="Zoom (Ctrl+/-)" Background="#F0F0F0" BorderBrush="#CCC"
+                            BorderThickness="1" Padding="0" FontSize="9" FontWeight="Bold" Content="Z"
+                            VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Popup de zoom (aparece al hacer click en el botón Z) -->
+        <Popup x:Name="ZoomPopup" PlacementTarget="{Binding ElementName=ZoomToggleButton}"
+               Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+            <Border Background="#F5F5F5" BorderBrush="#CCC" BorderThickness="1"
+                    CornerRadius="3" Padding="5,3">
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="ZoomOutButton" Content="−" Width="22" Height="18"
+                            Click="ZoomOutButton_Click" ToolTip="Alejar (Ctrl+-)"
+                            FontSize="12" FontWeight="Bold" Padding="0,-2,0,0"/>
+                    <TextBlock x:Name="ZoomLevelText" Text="100%" Width="35" TextAlignment="Center"
+                               VerticalAlignment="Center" FontSize="10" Foreground="#333" Margin="3,0"/>
+                    <Button x:Name="ZoomInButton" Content="+" Width="22" Height="18"
+                            Click="ZoomInButton_Click" ToolTip="Acercar (Ctrl++)"
+                            FontSize="12" FontWeight="Bold" Padding="0,-2,0,0"/>
+                    <Button x:Name="ZoomResetButton" Content="100%" Width="30" Height="18"
+                            Click="ZoomResetButton_Click" ToolTip="Restablecer zoom"
+                            FontSize="9" Margin="3,0,0,0"/>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Contenedor principal con dos vistas -->
+        <Grid Grid.Row="1">
+            <!-- Vista de CÓDIGO (Canvas editable) -->
+            <Border x:Name="CodeViewBorder" BorderBrush="#CCC" BorderThickness="1" Visibility="Visible">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="45"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Columna de números de línea -->
+                    <Border x:Name="LineNumberBorder" Grid.Column="0" Background="#F8F8F8" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0"
+                            VerticalAlignment="Stretch">
+                        <ScrollViewer x:Name="LineNumberScrollViewer"
+                                      VerticalScrollBarVisibility="Hidden"
+                                      HorizontalScrollBarVisibility="Hidden">
+                            <Canvas x:Name="LineNumberCanvas"
+                                    Width="45"
+                                    VerticalAlignment="Top"
+                                    ClipToBounds="True"/>
+                        </ScrollViewer>
+                    </Border>
+
+                    <!-- Área de edición principal -->
+                    <ScrollViewer Grid.Column="1"
+                                  x:Name="EditorScrollViewer"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto"
+                                  ScrollChanged="EditorScrollViewer_ScrollChanged">
+                        <Canvas x:Name="EditorCanvas"
+                                Background="White"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                MinWidth="400" MinHeight="50"
+                                MouseDown="EditorCanvas_MouseDown"
+                                MouseMove="EditorCanvas_MouseMove"
+                                MouseUp="EditorCanvas_MouseUp"
+                                ClipToBounds="True"/>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+            
+            <!-- Vista VISUAL (WebView2 para renderizar HTML) -->
+            <Border x:Name="VisualViewBorder" BorderBrush="#CCC" BorderThickness="1" Visibility="Collapsed">
+                <wv2:WebView2 x:Name="VisualWebView" 
+                              DefaultBackgroundColor="White"/>
+            </Border>
+        </Grid>
+
+        <!-- Popup de autocompletado -->
+        <Popup x:Name="AutoCompletePopup"
+               PlacementTarget="{Binding ElementName=EditorCanvas}"
+               Placement="Relative"
+               StaysOpen="False"
+               AllowsTransparency="True">
+            <Border Background="White"
+                    BorderBrush="#CCC"
+                    BorderThickness="1"
+                    CornerRadius="2">
+                <ListBox x:Name="AutoCompleteListBox"
+                         MaxHeight="200"
+                         MinWidth="150"
+                         MaxWidth="350"
+                         BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+                         PreviewMouseLeftButtonUp="AutoCompleteListBox_PreviewMouseLeftButtonUp"
+                         PreviewKeyDown="AutoCompleteListBox_PreviewKeyDown"/>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

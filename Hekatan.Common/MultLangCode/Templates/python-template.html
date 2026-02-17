@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Output</title>
+    <style>
+        /* ========== Python Parser Template ========== */
+        /* Full template for @{python} output rendering */
+
+        /* Equation rendering (shared math notation) */
+        .eq, table.matrix {
+            font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+        }
+        .eq var { color: #06d; font-size: 105%; }
+        .eq i { color: #086; font-style: normal; font-size: 90%; }
+        .eq b { font-weight: 600; }
+        .eq sub {
+            font-family: Calibri, Candara, Corbel, sans-serif;
+            font-size: 80%; vertical-align: -18%; margin-left: 1pt;
+        }
+        .eq sup {
+            display: inline-block; margin-left: 1pt; margin-top: -3pt; font-size: 75%;
+        }
+        .dvc, .dvr, .dvs {
+            display: inline-block; vertical-align: middle; white-space: nowrap;
+        }
+        .dvc { padding-left: 2pt; padding-right: 2pt; text-align: center; line-height: 110%; }
+        .dvl { display: block; border-bottom: solid 1pt black; margin-top: 1pt; margin-bottom: 1pt; }
+        .matrix { display: inline-table; }
+        .matrix .tr { display: table-row; }
+        .matrix .td {
+            white-space: nowrap; padding: 0 2pt; min-width: 10pt;
+            display: table-cell; font-size: 10pt; text-align: center;
+        }
+        .matrix .td:first-child, .matrix .td:last-child {
+            width: 0.75pt; min-width: 0.75pt; max-width: 0.75pt; padding: 0 1pt;
+        }
+        .matrix .td:first-child { border-left: solid 1pt black; }
+        .matrix .td:last-child { border-right: solid 1pt black; }
+        .matrix .tr:first-child .td:first-child,
+        .matrix .tr:first-child .td:last-child { border-top: solid 1pt black; }
+        .matrix .tr:last-child .td:first-child,
+        .matrix .tr:last-child .td:last-child { border-bottom: solid 1pt black; }
+
+        /* Verification */
+        .ok { color: Green; background-color: #F0FFF0; }
+        .err { color: Crimson; background-color: #FEE; }
+
+        /* Python code block - syntax highlighted */
+        .code-py {
+            background: #f8f8f8;
+            border-left: 3px solid #3776ab;
+            border-radius: 3px;
+            padding: 6px 8px; margin: 6px 0;
+            font-family: Consolas, 'Fira Code', monospace;
+            font-size: 8pt; line-height: 1.4; white-space: pre;
+        }
+        /* Python syntax highlighting classes */
+        .code-py .kw { color: #008000; font-weight: bold; }  /* keywords: import, def, for */
+        .code-py .fn { color: #0000ff; }                      /* function names */
+        .code-py .st { color: #ba2121; }                      /* strings */
+        .code-py .cm { color: #408080; font-style: italic; }  /* comments */
+        .code-py .nm { color: #666666; }                      /* numbers */
+        .code-py .op { color: #666666; }                      /* operators */
+        .code-py .bi { color: #008000; }                      /* builtins: print, len */
+
+        /* Python output — clean, no window chrome */
+    </style>
+</head>
+<body>
+</body>
+</html>

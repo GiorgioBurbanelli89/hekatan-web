@@ -1,0 +1,48 @@
+﻿using Hekatan.Document.Archive;
+using Hekatan.WebApi.Configs;
+using Hekatan.WebApi.Utils.Encrypt;
+using Hekatan.WebApi.Utils.Web.Service;
+
+namespace Hekatan.WebApi.Services.Hekatan
+{
+    /// <summary>
+    /// read cpd settings for web api
+    /// </summary>
+    /// <param name="appConfig"></param>
+    /// <param name="storageConfig"></param>
+    public class WebCpdReaderSettings(
+        AppSettings<AppConfig> appConfig,
+        AppSettings<StorageConfig> storageConfig
+    ) : CpdReaderSettings, ISingletonService
+    {
+        private readonly string _baseUrl = appConfig.Value.BaseUrl;
+
+        /// <summary>
+        /// override to save src as static file
+        /// </summary>
+        /// <param name="cpdFilePath"></param>
+        /// <param name="zipSrcEntryPath"></param>
+        /// <param name="zipSrcLocalPath"></param>
+        /// <returns></returns>
+        public override string CreateSrcPath(
+            string cpdFilePath,
+            string zipSrcEntryPath,
+            string zipSrcLocalPath
+        )
+        {
+            var publicPath = Path.Combine(
+                "public/cpd-resources",
+                cpdFilePath.ToMD5(),
+                zipSrcEntryPath
+            );
+
+            // save src file to public
+            var localPublicPath = Path.Combine(storageConfig.Value.Root, publicPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(localPublicPath)!);
+            // copy file
+            File.Move(zipSrcLocalPath, localPublicPath, true);
+            // return web path
+            return $"{_baseUrl}/{publicPath.Replace(Path.DirectorySeparatorChar, '/')}";
+        }
+    }
+}

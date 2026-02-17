@@ -1,0 +1,86 @@
+"============================================
+"02 - ESTILOS CSS BÁSICOS
+"============================================
+"Aprende a dar estilo a tu HTML con CSS.
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>02 - Estilos CSS</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #2196f3;
+      text-align: center;
+    }
+
+    .caja {
+      background-color: white;
+      padding: 20px;
+      margin: 10px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .azul {
+      background-color: #e3f2fd;
+      border-left: 4px solid #2196f3;
+    }
+
+    .verde {
+      background-color: #c8e6c9;
+      border-left: 4px solid #4caf50;
+    }
+
+    .rojo {
+      background-color: #ffcdd2;
+      border-left: 4px solid #f44336;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>Estilos CSS Básicos</h1>
+
+  <div class="caja azul">
+    <h3>Caja Azul</h3>
+    <p>Esta caja tiene fondo azul claro y borde azul.</p>
+  </div>
+
+  <div class="caja verde">
+    <h3>Caja Verde</h3>
+    <p>Esta caja tiene fondo verde claro y borde verde.</p>
+  </div>
+
+  <div class="caja rojo">
+    <h3>Caja Roja</h3>
+    <p>Esta caja tiene fondo rojo claro y borde rojo.</p>
+  </div>
+
+  <div class="caja">
+    <h3>🎨 CSS Básico</h3>
+    <p><strong>color:</strong> Color del texto</p>
+    <p><strong>background-color:</strong> Color de fondo</p>
+    <p><strong>padding:</strong> Espacio interno</p>
+    <p><strong>margin:</strong> Espacio externo</p>
+    <p><strong>border:</strong> Borde</p>
+  </div>
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

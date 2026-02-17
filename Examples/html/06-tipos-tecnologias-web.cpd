@@ -1,0 +1,262 @@
+"============================================
+"🌐 TIPOS DE TECNOLOGÍAS WEB
+"============================================
+"Explicación de las diferentes tecnologías que puedes usar en HTML.
+
+"============================================
+"📚 1. HTML BÁSICO
+"============================================
+
+'Qué es: Lenguaje de marcado para estructurar contenido
+'Usa: Texto, imágenes, enlaces, listas, tablas
+'Ventaja: Simple, universalmente soportado
+'Desventaja: Solo contenido estático, sin interactividad
+'Ejemplos: Páginas web simples, documentación
+
+"============================================
+"🎨 2. CSS (Cascading Style Sheets)
+"============================================
+
+'Qué es: Lenguaje para dar estilo visual al HTML
+'Usa: Colores, fuentes, espaciado, layouts, animaciones
+'Ventaja: Separa contenido de presentación
+'Desventaja: Solo apariencia, sin lógica
+'Ejemplos: Diseño responsive, temas, efectos visuales
+
+"============================================
+"⚡ 3. JAVASCRIPT
+"============================================
+
+'Qué es: Lenguaje de programación para navegadores
+'Usa: Interactividad, validación, manipulación del DOM
+'Ventaja: Permite lógica y programación completa
+'Desventaja: Puede ser complejo para principiantes
+'Ejemplos: Calculadoras, formularios dinámicos, juegos
+
+"============================================
+"🖌️ 4. CANVAS 2D
+"============================================
+
+'Qué es: API de JavaScript para dibujar gráficos 2D píxel por píxel
+'Usa: ctx.fillRect(), ctx.arc(), ctx.drawImage()
+'Ventaja: Rápido para animaciones 2D, juegos
+'Desventaja: Hay que dibujar todo manualmente
+'Ejemplos: Gráficas personalizadas, efectos visuales, juegos 2D
+
+"============================================
+"🔷 5. SVG (Scalable Vector Graphics)
+"============================================
+
+'Qué es: Formato de gráficos vectoriales basado en XML
+'Usa: <svg>, <rect>, <circle>, <path>
+'Ventaja: Escalable sin perder calidad, manipulable con CSS/JS
+'Desventaja: Puede ser lento con muchos elementos
+'Ejemplos: Iconos, logos, diagramas, mapas
+
+"============================================
+"🎮 6. WEBGL
+"============================================
+
+'Qué es: API de bajo nivel para gráficos 3D usando GPU
+'Usa: Shaders (GLSL), buffers, matrices de transformación
+'Ventaja: Máximo rendimiento 3D
+'Desventaja: MUY complejo, requiere matemáticas avanzadas
+'Ejemplos: Motores 3D, visualizaciones científicas
+
+"============================================
+"🌟 7. THREE.JS
+"============================================
+
+'Qué es: Biblioteca JavaScript que simplifica WebGL
+'Usa: Scene, Camera, Renderer, Mesh, Geometry, Material
+'Ventaja: Mucho más fácil que WebGL puro
+'Desventaja: Añade peso a la página
+'Ejemplos: Modelos 3D interactivos, juegos 3D, visualizaciones
+
+"============================================
+"📊 8. CHART.JS / D3.JS
+"============================================
+
+'Qué es: Bibliotecas para crear gráficas y visualizaciones de datos
+'Usa (Chart.js): new Chart(), tipos: bar, line, pie
+'Usa (D3.js): Selección de datos, escalas, ejes
+'Ventaja: Gráficas profesionales con poco código
+'Desventaja: D3.js tiene curva de aprendizaje
+'Ejemplos: Dashboards, reportes, análisis de datos
+
+"============================================
+"🎭 9. P5.JS
+"============================================
+
+'Qué es: Biblioteca para arte generativo y creatividad
+'Usa: setup(), draw(), createCanvas()
+'Ventaja: Muy fácil para arte y animaciones creativas
+'Desventaja: No optimizado para producción
+'Ejemplos: Arte generativo, visualizaciones creativas, sketches
+
+"============================================
+"🏗️ 10. BABYLON.JS
+"============================================
+
+'Qué es: Motor 3D completo (competidor de Three.js)
+'Usa: Engine, Scene, Camera, Mesh, Materials
+'Ventaja: Más potente que Three.js, mejor para juegos
+'Desventaja: Más pesado y complejo
+'Ejemplos: Juegos 3D, simulaciones, realidad virtual
+
+"============================================
+"📊 COMPARACIÓN RÁPIDA
+"============================================
+
+'FACILIDAD (de más fácil a más difícil):
+'1. HTML básico
+'2. CSS
+'3. JavaScript básico
+'4. SVG
+'5. p5.js
+'6. Canvas 2D
+'7. Chart.js
+'8. Three.js
+'9. D3.js
+'10. Babylon.js
+'11. WebGL
+
+'POTENCIA GRÁFICA (de menos a más potente):
+'1. HTML básico
+'2. CSS
+'3. SVG
+'4. Canvas 2D
+'5. Chart.js / D3.js
+'6. p5.js
+'7. Three.js
+'8. Babylon.js
+'9. WebGL
+
+"============================================
+"🎯 ¿CUÁL USAR?
+"============================================
+
+'Para contenido estático → HTML + CSS
+'Para interactividad simple → JavaScript
+'Para gráficas 2D simples → SVG
+'Para animaciones 2D → Canvas 2D
+'Para gráficos de datos → Chart.js
+'Para visualizaciones complejas → D3.js
+'Para 3D simple/intermedio → Three.js
+'Para juegos 3D complejos → Babylon.js
+'Para control total 3D → WebGL
+
+"============================================
+"📌 EJEMPLOS EN ESTA CARPETA
+"============================================
+
+'Archivos actuales:
+'→ 01-hola-mundo.cpd (HTML básico)
+'→ 02-estilos-css.cpd (CSS)
+'→ 03-listas-tablas.cpd (HTML + CSS)
+'→ 04-formulario.cpd (HTML + inputs)
+'→ 05-javascript-basico.cpd (JavaScript)
+'→ 06-tipos-tecnologias-web.cpd (este archivo)
+
+'Para Three.js:
+'→ Ve a Examples/three/basico/
+
+"============================================
+"DEMOSTRACIÓN: Canvas 2D
+"============================================
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>Demo Canvas 2D</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    canvas {
+      border: 2px solid #333;
+      background-color: white;
+      display: block;
+      margin: 20px auto;
+    }
+
+    .info {
+      background: white;
+      padding: 20px;
+      max-width: 600px;
+      margin: 20px auto;
+      border-radius: 8px;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>Demostración: Canvas 2D</h1>
+
+  <canvas id="miCanvas" width="600" height="400"></canvas>
+
+  <div class="info">
+    <h3>🎨 Este canvas dibuja con JavaScript</h3>
+    <p>Rectángulos, círculos, líneas y texto usando la API Canvas 2D.</p>
+  </div>
+
+  <!-- #region SCRIPTS -->
+  <script>
+    // #region OBTENER CANVAS
+    const canvas = document.getElementById('miCanvas');
+    const ctx = canvas.getContext('2d');
+    // #endregion
+
+    // #region DIBUJAR RECTÁNGULO
+    ctx.fillStyle = '#2196f3';
+    ctx.fillRect(50, 50, 150, 100);
+    // #endregion
+
+    // #region DIBUJAR CÍRCULO
+    ctx.fillStyle = '#4caf50';
+    ctx.beginPath();
+    ctx.arc(400, 100, 60, 0, Math.PI * 2);
+    ctx.fill();
+    // #endregion
+
+    // #region DIBUJAR LÍNEA
+    ctx.strokeStyle = '#f44336';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(100, 250);
+    ctx.lineTo(500, 250);
+    ctx.stroke();
+    // #endregion
+
+    // #region DIBUJAR TEXTO
+    ctx.fillStyle = '#333';
+    ctx.font = '30px Arial';
+    ctx.fillText('¡Hola Canvas!', 200, 350);
+    // #endregion
+
+    console.log('✅ Canvas 2D dibujado');
+  </script>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

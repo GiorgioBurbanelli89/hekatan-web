@@ -1,0 +1,160 @@
+"============================================
+"📐 FLEXBOX Y CSS GRID
+"============================================
+"Aprende los dos sistemas más potentes de layout en CSS.
+
+"FLEXBOX
+"----------------------------------------
+'Diseñado para layouts en UNA dimensión (fila o columna)
+'Perfecto para: navbars, menús, alinear elementos
+'Propiedades principales:
+'  display: flex
+'  justify-content (horizontal)
+'  align-items (vertical)
+'  flex-direction (row/column)
+
+"CSS GRID
+"----------------------------------------
+'Diseñado para layouts en DOS dimensiones (filas Y columnas)
+'Perfecto para: páginas completas, galerías, dashboards
+'Propiedades principales:
+'  display: grid
+'  grid-template-columns
+'  grid-template-rows
+'  gap
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>10 - Flexbox y Grid</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .seccion {
+      background: white;
+      padding: 30px;
+      margin: 20px auto;
+      max-width: 900px;
+      border-radius: 8px;
+    }
+
+    /* FLEXBOX */
+    .flex-container {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background: #e3f2fd;
+      padding: 20px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+
+    .flex-item {
+      background: #2196f3;
+      color: white;
+      padding: 20px;
+      margin: 5px;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    /* CSS GRID */
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      background: #c8e6c9;
+      padding: 20px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+
+    .grid-item {
+      background: #4caf50;
+      color: white;
+      padding: 30px;
+      text-align: center;
+      border-radius: 4px;
+    }
+
+    .grid-item:first-child {
+      grid-column: span 2;
+    }
+
+    code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>Layouts Modernos: Flexbox y Grid</h1>
+
+  <!-- #region FLEXBOX -->
+  <div class="seccion">
+    <h2>📦 Flexbox (1 Dimensión)</h2>
+    <p><code>display: flex; justify-content: space-around;</code></p>
+
+    <div class="flex-container">
+      <div class="flex-item">Item 1</div>
+      <div class="flex-item">Item 2</div>
+      <div class="flex-item">Item 3</div>
+    </div>
+
+    <h3>Propiedades comunes:</h3>
+    <ul>
+      <li><code>justify-content: center / space-between / space-around</code></li>
+      <li><code>align-items: center / flex-start / flex-end</code></li>
+      <li><code>flex-direction: row / column</code></li>
+    </ul>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region CSS GRID -->
+  <div class="seccion">
+    <h2>🎯 CSS Grid (2 Dimensiones)</h2>
+    <p><code>display: grid; grid-template-columns: repeat(3, 1fr);</code></p>
+
+    <div class="grid-container">
+      <div class="grid-item">Grande (span 2)</div>
+      <div class="grid-item">3</div>
+      <div class="grid-item">4</div>
+      <div class="grid-item">5</div>
+      <div class="grid-item">6</div>
+    </div>
+
+    <h3>Propiedades comunes:</h3>
+    <ul>
+      <li><code>grid-template-columns: 1fr 2fr 1fr</code></li>
+      <li><code>grid-template-rows: 100px auto</code></li>
+      <li><code>gap: 10px</code></li>
+      <li><code>grid-column: span 2</code> (para items)</li>
+    </ul>
+  </div>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

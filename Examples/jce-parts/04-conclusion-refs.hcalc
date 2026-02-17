@@ -1,0 +1,89 @@
+'<!-- ============== PAGE 10 cont. - CONCLUSION ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Method of incompatible modes – overview and application
+right: Građevinar 1/2018
+barside: right
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{markdown}
+## 4. Conclusion
+
+This work presents a brief overview of the method of incompatible modes. The authors have placed them into two common areas of application: failure analysis and enhancement of behaviour. In the context of failure analysis, incompatible modes have been used to introduce displacement and strain functions whose parameters enable description of failure within the element itself. The procedure has been demonstrated on a 1D element for both strain and displacement discontinuities.
+
+In the context of enhancement of the finite elements' capabilities, incompatible modes have been used to enrich the field of available displacements of standard shape functions. Additional quadratic shapes that have been added greatly improve the bending behaviour of such elements. Both 2D and 3D examples are presented.
+
+It has been demonstrated that the method of incompatible modes has good properties in both areas of application and that its use should be encouraged. Additional degrees of freedom could be eliminated through condensation, or reduced through the use of the operator split procedure. Results obtained using incompatible modes are superior to the ones involving "standard" finite elements, i.e., comparable results could only be obtained using a much higher number of "un-enhanced" finite elements.
+
+### Acknowledgements
+
+This work was supported by the Croatian Science Foundation Grant No. 9068 *Multi-scale concrete model with parameter identification*, and by the French Embassy in Croatia through the French Government scholarship for doctoral level. The support is gratefully acknowledged.
+@{end markdown}
+
+@{column}
+
+@{end columns}
+
+@{footer}
+left: 28
+right: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+@{end footer}
+
+'<!-- ============== PAGE 11 - REFERENCES ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Građevinar 1/2018
+right: Ivica Kožar, Tea Rukavina, Adnan Ibrahimbegović
+barside: left
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{reference REFERENCES}
+[1] Wilson, E.L., Ibrahimbegovic, A.: Addition of incompatible displacement modes for the calculation of element stiffness and stress, Finite Elements in Analysis and Design, 7 (1990), pp. 229-242, https://doi.org/10.1016/0168-874X(90)90034-C
+[2] Wilson, E.L., Taylor, R.L., Doherty, W.P., Ghaboussi, J.: Incompatible displacement models, In Fenves, S.J., Perrone, N., Robinson, A.R., Schnobrich, C. (editors), Numerical and Computer Methods in Structural Mechanics, Academic Press, pp. 43-57, 1973, https://doi.org/10.1016/B978-0-12-253250-4.50008-7
+[3] Ibrahimbegovic, A., Wilson, E.L.: A modified method of incompatible modes, Communications in Applied Numerical Methods, 7 (1991), pp. 187-194, https://doi.org/10.1002/cnm.1630070303
+[4] Zienkiewicz, O.C., Taylor, R.L., Zhu, J.Z.: The finite element method: its basis and fundamentals, 7th edition, Butterworth-Heinemann, 2013.
+[5] Simo, J.C., Rifai, M.S.: A class of mixed assumed strain methods and the method of incompatible modes, International Journal for Numerical Methods in Engineering, 29 (1990), pp. 1595-1638, https://doi.org/10.1002/nme.1620290802
+[6] Gharzeddine, F., Ibrahimbegovic, A.: Incompatible mode method for finite deformation quasi-incompressible elasticity, Computational Mechanics, 24 (2000), pp.419-425, https://doi.org/10.1007/s004660050001
+[7] Ibrahimbegovic, A.: Nonlinear solid mechanics, theoretical formulations and finite element solution methods, Springer, 2009.
+[8] Ibrahimbegovic, A., Frey, F.: Geometrically nonlinear method of incompatible modes in application to finite elasticity with independent rotation field, International Journal for Numerical Methods in Engineering, 36 (1993), pp. 4185-4200, https://doi.org/10.1002/nme.1620362406
+[9] Kozar, I., Ibrahimbegovic, A.: Finite element formulation of the finite rotation solid element, Finite Elements in Analysis and Design, 20 (1995) 2, pp. 101-126, https://doi.org/10.1016/0168-874X(95)00014-K
+[10] Fresl, K., Lazarević, D., Hak, S., Šavor Novak, M.: On the design of walls with openings, GRAĐEVINAR, 67 (2015) 2, pp. 103-121.
+@{end reference}
+
+@{column}
+@{reference}
+[11] Washizu, K.: Variational methods in elasticity and plasticity, 2nd edition, Pergamon Press, 1975.
+[12] Ibrahimbegovic, A., Melnyk, S.: Embedded discontinuity finite element method for modeling of localized failure in heterogeneous materials with structured mesh: an alternative to extended finite element method, Computational Mechanics, 40 (2007) 1, pp.149-155, https://doi.org/10.1007/s00466-006-0091-4
+[13] Jukic, M., Brank, B., Ibrahimbegovic, A.: Failure analysis of reinforced concrete frames by beam finite element that combines damage, plasticity and embedded discontinuity, Engineering Structures, 75 (2014), pp. 507-527, https://doi.org/10.1016/j.engstruct.2014.06.017
+[14] Brancherie, D.: Modeles continus et discrets pour les problemes de localisation et de rupture fragile et ou ductile, PhD thesis, Ecole Normale Superieure de Cachan, 2003.
+[15] Dominguez, N., Brancherie, D., Davenne, L., Ibrahimbegovic, A.: Prediction of crack pattern distribution in reinforced concrete by coupling a strong discontinuity model of concrete cracking and a bond-slip of reinforcement model, Engineering Computations, 22 (2005) 5-6, pp. 558-582, https://doi.org/10.1108/02644400510603014
+[16] Ibrahimbegovic, A., Boulkertous, A., Davenne, L., Brancherie, D.: Modelling of reinforced-concrete structures providing crack-spacing based on X-FEM, ED-FEM and novel operator split solution procedure, International Journal for Numerical Methods in Engineering, 83 (2010) 4, pp. 452-481, https://doi.org/10.1002/nme.2838
+[17] Ibrahimbegovic, A., Brancherie, D.: Combined hardening and softening constitutive model of plasticity: precursor to shear slip line failure, Computational Mechanics, 31 (2003) 1-2, pp. 88-100, https://doi.org/10.1007/s00466-002-0396-x
+[18] Inc. Wolfram Research: Mathematica, 2015.
+[19] Taylor, R.L.: FEAP - Finite Element Analysis Program, 2014.
+@{end reference}
+
+@{end columns}
+
+@{footer}
+left: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+right: 29
+@{end footer}

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bash Output</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        .bash-container {
+            margin: 10px 0;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .bash-header {
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+            background: linear-gradient(135deg, #4eaa25 0%, #3d8c1e 100%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bash-header::before {
+            content: "$";
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .bash-output {
+            background-color: #300a24;
+            color: {{OUTPUT_COLOR}};
+            padding: 12px 15px;
+            font-family: 'Ubuntu Mono', 'Cascadia Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .bash-output.error {
+            color: #ef2929;
+            border-left: 3px solid #ef2929;
+        }
+
+        .bash-output.success {
+            color: #ffffff;
+        }
+
+        .bash-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .bash-output::-webkit-scrollbar-track {
+            background: #2e0b21;
+        }
+
+        .bash-output::-webkit-scrollbar-thumb {
+            background: #4eaa25;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bash-container">
+        <div class="bash-header">Bash</div>
+        <div class="bash-output {{STATUS_CLASS}}">{{OUTPUT}}</div>
+    </div>
+</body>
+</html>

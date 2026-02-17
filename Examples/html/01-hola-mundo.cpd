@@ -1,0 +1,36 @@
+"============================================
+"01 - HOLA MUNDO EN HTML
+"============================================
+"El ejemplo más simple de HTML. Aprende la estructura básica.
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>01 - Hola Mundo</title>
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>¡Hola Mundo!</h1>
+  <p>Este es mi primer documento HTML.</p>
+
+  <h2>¿Qué aprendiste?</h2>
+  <ul>
+    <li>&lt;!DOCTYPE html&gt; - Declara HTML5</li>
+    <li>&lt;html&gt; - Contenedor principal</li>
+    <li>&lt;head&gt; - Metadatos (no visible)</li>
+    <li>&lt;body&gt; - Contenido visible</li>
+    <li>&lt;h1&gt; - Título principal</li>
+    <li>&lt;p&gt; - Párrafo</li>
+  </ul>
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

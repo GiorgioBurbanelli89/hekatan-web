@@ -1,0 +1,410 @@
+"============================================
+"📝 SUBTÍTULOS EN VIDEOS HTML5
+"============================================
+"Aprende a agregar subtítulos a videos web.
+
+"¿CÓMO FUNCIONAN LOS SUBTÍTULOS?
+"----------------------------------------
+'HTML5 usa la etiqueta <track> para subtítulos
+'Formato: WebVTT (.vtt) o SRT convertido a VTT
+'Permite múltiples idiomas
+'El navegador los muestra automáticamente
+
+"FORMATO WebVTT
+"----------------------------------------
+'WEBVTT
+'
+'1
+'00:00:00.000 --> 00:00:05.000
+'Primer subtítulo en español
+'
+'2
+'00:00:05.000 --> 00:00:10.000
+'Segundo subtítulo
+
+"EXTENSIONES DE NAVEGADOR PARA VIDEOS EXTERNOS
+"----------------------------------------
+'🎥 YouTube:
+'  - Tiene subtítulos automáticos (auto-generados)
+'  - Puedes activarlos en el botón CC
+'  - Extensión: "Substital" para personalizar
+
+'🌐 Videos de cualquier sitio:
+'  - Extensión: "Substital" (Chrome/Edge)
+'  - Extensión: "Language Reactor" (Chrome)
+'  - Permite cargar archivos .srt o .vtt externos
+
+'📹 Videos locales o embebidos:
+'  - Usar <track> en HTML5 (este ejemplo)
+
+"CONVERTIR SRT A VTT
+"----------------------------------------
+'Herramientas online gratuitas:
+'  - subtitle.ninja
+'  - gotranscript.com/subtitle-converter
+'O simplemente agregar "WEBVTT" al inicio del archivo SRT
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>23 - Subtítulos en Videos</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .seccion {
+      background: white;
+      padding: 30px;
+      margin: 20px auto;
+      max-width: 900px;
+      border-radius: 8px;
+    }
+
+    video {
+      width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    ::cue {
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      font-size: 20px;
+      font-family: Arial, sans-serif;
+    }
+
+    .info {
+      background: #e3f2fd;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #2196f3;
+    }
+
+    .warning {
+      background: #fff3e0;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #ff9800;
+    }
+
+    pre {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    .extension-card {
+      background: #f5f5f5;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border-left: 4px solid #4caf50;
+    }
+
+    button {
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    button:hover {
+      background: #1976d2;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>📝 Subtítulos en Videos HTML5</h1>
+
+  <!-- #region VIDEO CON SUBTÍTULOS -->
+  <div class="seccion">
+    <h2>🎬 Video con Subtítulos (Demo)</h2>
+    <p>Este video tiene subtítulos en español e inglés. Activa los subtítulos con el botón CC.</p>
+
+    <video controls crossorigin="anonymous">
+      <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+
+      <!-- Subtítulos en español -->
+      <track label="Español" kind="subtitles" srclang="es" src="data:text/vtt;base64,V0VCVlRUCgowMDowMDowMC4wMDAgLS0+IDAwOjAwOjA1LjAwMArigJRCaWcgQnVjayBCdW5ueQoKMDA6MDA6MDUuMDAwIC0tPiAwMDowMDoxMC4wMDAKVW4gY29uZWpvIGdyYW5kZSB5IHN1cyBhbWlnb3MKCjAwOjAwOjEwLjAwMCAtLT4gMDA6MDA6MTUuMDAwCkVuIHVuIGJvc3F1ZSBtw6FnaWNvCgowMDowMDoxNS4wMDAgLS0+IDAwOjAwOjIwLjAwMApWaXZlbiBhdmVudHVyYXMgaW5jcmXDrWJsZXM=" default>
+
+      <!-- Subtítulos en inglés -->
+      <track label="English" kind="subtitles" srclang="en" src="data:text/vtt;base64,V0VCVlRUCgowMDowMDowMC4wMDAgLS0+IDAwOjAwOjA1LjAwMApCaWcgQnVjayBCdW5ueQoKMDA6MDA6MDUuMDAwIC0tPiAwMDowMDoxMC4wMDAKQSBiaWcgcmFiYml0IGFuZCBoaXMgZnJpZW5kcwoKMDA6MDA6MTAuMDAwIC0tPiAwMDowMDoxNS4wMDAKSW4gYSBtYWdpY2FsIGZvcmVzdAoKMDA6MDA6MTUuMDAwIC0tPiAwMDowMDoyMC4wMDAKTGl2ZSBpbmNyZWRpYmxlIGFkdmVudHVyZXM=">
+
+      Tu navegador no soporta el tag de video.
+    </video>
+
+    <div class="info">
+      <h4>💡 Cómo activar los subtítulos:</h4>
+      <ol>
+        <li>Haz click en el botón <strong>CC</strong> (closed captions) en el reproductor</li>
+        <li>Selecciona el idioma (Español o English)</li>
+        <li>Los subtítulos aparecerán automáticamente</li>
+      </ol>
+    </div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region CÓDIGO HTML -->
+  <div class="seccion">
+    <h2>💻 Código HTML para Subtítulos</h2>
+    <pre>&lt;video controls&gt;
+  &lt;source src="video.mp4" type="video/mp4"&gt;
+
+  &lt;!-- Subtítulos en español --&gt;
+  &lt;track label="Español"
+         kind="subtitles"
+         srclang="es"
+         src="subtitulos-es.vtt"
+         default&gt;
+
+  &lt;!-- Subtítulos en inglés --&gt;
+  &lt;track label="English"
+         kind="subtitles"
+         srclang="en"
+         src="subtitles-en.vtt"&gt;
+&lt;/video&gt;</pre>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region FORMATO WebVTT -->
+  <div class="seccion">
+    <h2>📄 Formato de Archivo WebVTT (.vtt)</h2>
+    <p>Los subtítulos se guardan en archivos .vtt con este formato:</p>
+
+    <pre>WEBVTT
+
+1
+00:00:00.000 --> 00:00:05.000
+Este es el primer subtítulo
+
+2
+00:00:05.000 --> 00:00:10.000
+Este es el segundo subtítulo
+Puede tener múltiples líneas
+
+3
+00:00:10.000 --> 00:00:15.000
+&lt;i&gt;Puede usar formato HTML&lt;/i&gt;
+&lt;b&gt;Como negrita&lt;/b&gt;</pre>
+
+    <div class="info">
+      <h4>⏱️ Formato de tiempo:</h4>
+      <p><code>HH:MM:SS.mmm --> HH:MM:SS.mmm</code></p>
+      <p>Ejemplo: <code>00:01:30.500 --> 00:01:35.000</code></p>
+    </div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region EXTENSIONES DE NAVEGADOR -->
+  <div class="seccion">
+    <h2>🔌 Extensiones para Videos Externos (YouTube, Netflix, etc.)</h2>
+
+    <div class="extension-card">
+      <h3>🎯 Substital (Recomendado)</h3>
+      <p><strong>Para:</strong> Chrome, Edge, Firefox</p>
+      <p><strong>Qué hace:</strong></p>
+      <ul>
+        <li>Carga subtítulos externos (.srt, .vtt) en CUALQUIER video</li>
+        <li>YouTube, Vimeo, videos HTML5, etc.</li>
+        <li>Personaliza tamaño, color, posición</li>
+        <li>Sincroniza subtítulos con el video</li>
+      </ul>
+      <p><strong>Instalar:</strong> Busca "Substital" en Chrome Web Store</p>
+    </div>
+
+    <div class="extension-card">
+      <h3>📚 Language Reactor (antes Language Learning with Netflix)</h3>
+      <p><strong>Para:</strong> Chrome</p>
+      <p><strong>Qué hace:</strong></p>
+      <ul>
+        <li>Subtítulos duales (dos idiomas simultáneos)</li>
+        <li>Netflix, YouTube, otros servicios</li>
+        <li>Perfecto para aprender idiomas</li>
+        <li>Diccionario integrado</li>
+      </ul>
+      <p><strong>Instalar:</strong> Busca "Language Reactor" en Chrome Web Store</p>
+    </div>
+
+    <div class="extension-card">
+      <h3>🎥 Subtitles for YouTube</h3>
+      <p><strong>Para:</strong> Chrome, Firefox</p>
+      <p><strong>Qué hace:</strong></p>
+      <ul>
+        <li>Carga subtítulos .srt externos en YouTube</li>
+        <li>Personaliza apariencia</li>
+        <li>Sincronización manual</li>
+      </ul>
+      <p><strong>Instalar:</strong> Busca "Subtitles for YouTube" en tu tienda de extensiones</p>
+    </div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region HERRAMIENTAS -->
+  <div class="seccion">
+    <h2>🛠️ Herramientas para Crear/Editar Subtítulos</h2>
+
+    <h3>Online (Gratis):</h3>
+    <ul>
+      <li><strong>SubtitleTools.com</strong> - Editor y convertidor SRT/VTT</li>
+      <li><strong>Subtitle.ninja</strong> - Editor visual de subtítulos</li>
+      <li><strong>GoTranscript Subtitle Converter</strong> - Convertir formatos</li>
+      <li><strong>Kapwing</strong> - Generar subtítulos automáticos con IA</li>
+    </ul>
+
+    <h3>Software (Desktop):</h3>
+    <ul>
+      <li><strong>Subtitle Edit</strong> - Editor profesional (Windows, gratis)</li>
+      <li><strong>Aegisub</strong> - Editor avanzado (multiplataforma, gratis)</li>
+      <li><strong>Subtitle Workshop</strong> - Editor clásico (Windows)</li>
+    </ul>
+
+    <h3>Generar subtítulos automáticos:</h3>
+    <ul>
+      <li><strong>YouTube Auto-Captions</strong> - Sube el video a YouTube, genera automáticamente</li>
+      <li><strong>Google Cloud Speech-to-Text</strong> - API para transcripción</li>
+      <li><strong>Whisper AI (OpenAI)</strong> - IA de transcripción muy precisa</li>
+    </ul>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region CREAR SUBTÍTULOS MANUALMENTE -->
+  <div class="seccion">
+    <h2>✍️ Cómo Crear Subtítulos Manualmente</h2>
+
+    <h3>Opción 1: Crear archivo .vtt desde cero</h3>
+    <pre>1. Abre un editor de texto (Notepad, VSCode, etc.)
+2. Escribe:
+
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:05.000
+Tu primer subtítulo aquí
+
+2
+00:00:05.000 --> 00:00:10.000
+Tu segundo subtítulo aquí
+
+3. Guarda como "subtitulos.vtt" (importante: extensión .vtt)
+4. Coloca el archivo en la misma carpeta que tu HTML
+5. Referencia en &lt;track src="subtitulos.vtt"&gt;</pre>
+
+    <h3>Opción 2: Usar herramientas online</h3>
+    <ol>
+      <li>Ve a <strong>subtitle.ninja</strong></li>
+      <li>Sube tu video</li>
+      <li>Escribe los subtítulos sincronizados</li>
+      <li>Descarga como .vtt o .srt</li>
+    </ol>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region JAVASCRIPT PARA SUBTÍTULOS -->
+  <div class="seccion">
+    <h2>⚡ Controlar Subtítulos con JavaScript</h2>
+
+    <button onclick="activarSubtitulos()">✅ Activar Subtítulos</button>
+    <button onclick="desactivarSubtitulos()">❌ Desactivar Subtítulos</button>
+    <button onclick="cambiarIdioma('es')">🇪🇸 Español</button>
+    <button onclick="cambiarIdioma('en')">🇺🇸 English</button>
+
+    <pre style="margin-top: 20px;">function activarSubtitulos() {
+  const video = document.querySelector('video');
+  const tracks = video.textTracks;
+
+  for (let track of tracks) {
+    track.mode = 'showing';
+  }
+}
+
+function cambiarIdioma(lang) {
+  const video = document.querySelector('video');
+  const tracks = video.textTracks;
+
+  for (let track of tracks) {
+    if (track.language === lang) {
+      track.mode = 'showing';
+    } else {
+      track.mode = 'hidden';
+    }
+  }
+}</pre>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region SCRIPTS -->
+  <script>
+    // #region FUNCIONES DE CONTROL
+    function activarSubtitulos() {
+      const video = document.querySelector('video');
+      const tracks = video.textTracks;
+
+      for (let track of tracks) {
+        if (track.kind === 'subtitles') {
+          track.mode = 'showing';
+        }
+      }
+      alert('✅ Subtítulos activados');
+    }
+
+    function desactivarSubtitulos() {
+      const video = document.querySelector('video');
+      const tracks = video.textTracks;
+
+      for (let track of tracks) {
+        track.mode = 'hidden';
+      }
+      alert('❌ Subtítulos desactivados');
+    }
+
+    function cambiarIdioma(lang) {
+      const video = document.querySelector('video');
+      const tracks = video.textTracks;
+
+      for (let track of tracks) {
+        if (track.language === lang) {
+          track.mode = 'showing';
+        } else {
+          track.mode = 'hidden';
+        }
+      }
+      alert(`🌐 Idioma cambiado a: ${lang === 'es' ? 'Español' : 'English'}`);
+    }
+    // #endregion
+
+    console.log('✅ Demo de subtítulos cargada');
+    console.log('Video tracks:', document.querySelector('video').textTracks);
+  </script>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

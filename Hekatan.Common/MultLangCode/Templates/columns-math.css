@@ -1,0 +1,88 @@
+/* ========== Columns Math/Code Display Styles ========== */
+/* Shared styles for formatted equation display and code blocks inside @{columns} */
+/* These complement the Calcpad template.html styles (.eq, .dvc, .dvl, .matrix) */
+
+/* Column equation container - compact font for multi-column layout */
+.col-eq { font-size: 9pt; }
+.col-eq .eq { font-size: 9pt; }
+.col-eq .matrix .td { font-size: 8pt; }
+
+/* Verification checkmarks */
+.ok { color: green; background-color: #F0FFF0; padding: 1px 4px; font-size: 9pt; }
+
+/* ========== Code Block Styles per Language ========== */
+
+/* Calcpad native code block */
+.code-cp {
+    background: #f5f5f5;
+    border-left: 3px solid #3f51b5;
+    border-radius: 3px;
+    padding: 6px 8px;
+    margin: 6px 0;
+    font-family: Consolas, 'Fira Code', monospace;
+    font-size: 7pt;
+    line-height: 1.4;
+    white-space: pre;
+}
+
+/* Python code block */
+.code-py {
+    background: #f8f8f8;
+    border-left: 3px solid #f37726;
+    border-radius: 3px;
+    padding: 6px 8px;
+    margin: 6px 0;
+    font-family: Consolas, 'Fira Code', monospace;
+    font-size: 7pt;
+    line-height: 1.4;
+    white-space: pre;
+}
+
+/* GNU Octave / MATLAB code block */
+.code-m {
+    background: #1e1e2e;
+    color: #e0e0e0;
+    border-radius: 3px;
+    padding: 6px 8px;
+    margin: 6px 0;
+    font-family: Consolas, 'Fira Code', monospace;
+    font-size: 7pt;
+    line-height: 1.4;
+    white-space: pre;
+}
+.code-m .pr { color: #66d9ef; }
+.code-m .cm { color: #75715e; }
+.code-m .nm { color: #ae81ff; }
+
+/* C++ code block */
+.code-cpp {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border-left: 3px solid #659ad2;
+    border-radius: 3px;
+    padding: 6px 8px;
+    margin: 6px 0;
+    font-family: Consolas, 'Fira Code', monospace;
+    font-size: 7pt;
+    line-height: 1.4;
+    white-space: pre;
+}
+.code-cpp .kw { color: #569cd6; }
+.code-cpp .ty { color: #4ec9b0; }
+.code-cpp .nm { color: #b5cea8; }
+.code-cpp .cm { color: #6a9955; }
+.code-cpp .ns { color: #4ec9b0; }
+.code-cpp .st { color: #ce9178; }
+.code-cpp .fn { color: #dcdcaa; }
+.code-cpp .inc { color: #c586c0; }
+
+/* Columns layout responsive */
+@media (max-width: 900px) {
+    .columns-container { flex-direction: column !important; }
+    .columns-container .column { min-width: 100% !important; max-width: 100% !important; }
+}
+
+/* Print: prevent columns from breaking across pages */
+@media print {
+    .columns-container { break-inside: avoid; }
+}

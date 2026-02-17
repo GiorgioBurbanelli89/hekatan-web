@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>Hekatan CAD + IFC</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+            onerror="console.warn('Three.js CDN failed, 3D view unavailable')"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"
+            onerror="console.warn('OrbitControls CDN failed')"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web-ifc@0.0.66/web-ifc-api-iife.js"
+            onerror="console.warn('web-ifc CDN failed, IFC loading unavailable')"></script>
+    <link rel="stylesheet" href="cad.css">
+</head>
+<body>
+<div class="app">
+    <!-- HEADER -->
+    <div class="header">
+        <h1>CALCPAD CAD+IFC</h1>
+        <div class="sep"></div>
+        <div class="ctrl-group">
+            <label>Escala:</label>
+            <input type="number" id="escala" value="1" min="0.01" step="0.1">
+            <label>px/</label>
+            <select id="unidad"><option value="mm">mm</option><option value="cm" selected>cm</option><option value="m">m</option></select>
+        </div>
+        <div class="sep"></div>
+        <div class="ctrl-group">
+            <label>Vista:</label>
+            <select id="viewMode">
+                <option value="2d-top" selected>Planta (XY)</option>
+                <option value="2d-front">Frontal (XZ)</option>
+                <option value="2d-side">Lateral (YZ)</option>
+                <option value="3d">3D Perspectiva</option>
+            </select>
+        </div>
+        <div class="sep"></div>
+        <div class="ctrl-group">
+            <label>Color:</label>
+            <input type="color" id="colorPicker" value="#ffffff" style="width:28px;height:22px;padding:0;border:1px solid #555;border-radius:3px;cursor:pointer;background:#3c3c3c;">
+        </div>
+        <div class="sep"></div>
+        <div class="ctrl-group">
+            <label>X:</label><input type="number" id="inputX" value="0" step="0.1">
+            <label>Y:</label><input type="number" id="inputY" value="0" step="0.1">
+            <label>Z:</label><input type="number" id="inputZ" value="0" step="0.1">
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+        <!-- TOOLBAR -->
+        <div class="toolbar">
+            <button class="tool-btn active" id="btnSelect" title="Seleccionar (V)"><svg viewBox="0 0 20 20"><path d="M4 2l12 8-6 1-3 7z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span>Sel</span></button>
+            <button class="tool-btn" id="btnPan" title="Pan (H)"><svg viewBox="0 0 20 20"><path d="M10 2v16M2 10h16M10 2l-2 3h4zM10 18l-2-3h4zM2 10l3-2v4zM18 10l-3-2v4z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><span>Pan</span></button>
+            <div class="tool-div"></div>
+            <button class="tool-btn" id="btnLinea" title="Linea (L)"><svg viewBox="0 0 20 20"><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="1.5"/><circle cx="3" cy="17" r="1.5" fill="#4ec9b0"/><circle cx="17" cy="3" r="1.5" fill="#4ec9b0"/></svg><span>Lin</span></button>
+            <button class="tool-btn" id="btnPolilinea" title="Polilinea (P)"><svg viewBox="0 0 20 20"><path d="M3 17L8 7L17 11" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="3" cy="17" r="1.5" fill="#4ec9b0"/><circle cx="8" cy="7" r="1.5" fill="#4ec9b0"/><circle cx="17" cy="11" r="1.5" fill="#4ec9b0"/></svg><span>PLin</span></button>
+            <div class="tool-div"></div>
+            <button class="tool-btn" id="btnRectangulo" title="Rectangulo (R)"><svg viewBox="0 0 20 20"><rect x="3" y="5" width="14" height="10" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span>Rect</span></button>
+            <button class="tool-btn" id="btnCirculo" title="Circulo (C)"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="1.5" fill="#4ec9b0"/></svg><span>Circ</span></button>
+            <button class="tool-btn" id="btnElipse" title="Elipse (E)"><svg viewBox="0 0 20 20"><ellipse cx="10" cy="10" rx="8" ry="5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="1.5" fill="#4ec9b0"/></svg><span>Elip</span></button>
+            <button class="tool-btn" id="btnArco" title="Arco (A)"><svg viewBox="0 0 20 20"><path d="M3 17Q10 3 17 17" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="3" cy="17" r="1.5" fill="#4ec9b0"/><circle cx="17" cy="17" r="1.5" fill="#4ec9b0"/></svg><span>Arco</span></button>
+            <div class="tool-div"></div>
+            <button class="tool-btn" id="btnCota" title="Cota/Dimension (D)"><svg viewBox="0 0 20 20"><line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="1.3"/><line x1="3" y1="6" x2="3" y2="14" stroke="currentColor" stroke-width="1.2"/><line x1="17" y1="6" x2="17" y2="14" stroke="currentColor" stroke-width="1.2"/><polygon points="3,10 7,8.5 7,11.5" fill="currentColor"/><polygon points="17,10 13,8.5 13,11.5" fill="currentColor"/></svg><span>Dim</span></button>
+            <div class="tool-div"></div>
+            <button class="tool-btn" id="btnMano" title="Mano libre (F)"><svg viewBox="0 0 20 20"><path d="M5 15C5 12 7 4 10 4s3 2 3 4v6c0-1 2-1 2-1V8c0-2 2-2 2 0v8c0 3-3 4-6 4s-6-1-6-5z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><span>Free</span></button>
+            <div class="tool-div"></div>
+            <button class="tool-btn" id="btnDeshacer" title="Deshacer (Ctrl+Z)"><svg viewBox="0 0 20 20"><path d="M5 8h8a4 4 0 010 8H8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5L5 8l3 3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span>Undo</span></button>
+            <button class="tool-btn" id="btnZoomFit" title="Zoom Encuadrar (Z)"><svg viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3,2"/><path d="M2 2l4 4M18 2l-4 4M2 18l4-4M18 18l-4-4" stroke="currentColor" stroke-width="1"/></svg><span>Fit</span></button>
+            <div class="tool-div"></div>
+            <button class="tool-btn" id="btnIfc" title="Cargar archivo IFC" style="color:#4ec9b0;"><svg viewBox="0 0 20 20"><path d="M3 3h8l4 4v10H3z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M11 3v4h4" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="5" y="14" font-size="5" fill="currentColor" font-weight="bold">IFC</text></svg><span>IFC</span></button>
+            <button class="tool-btn" id="btnLimpiar" title="Limpiar todo" style="margin-top:auto;"><svg viewBox="0 0 20 20"><path d="M5 7h10l-1 10H6z M3 7h14 M8 7V5h4v2" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><span>Clear</span></button>
+        </div>
+
+        <!-- CANVAS -->
+        <div class="canvas-wrap">
+            <div class="canvas-area" id="canvasArea">
+                <canvas id="lienzo" tabindex="0"></canvas>
+                <canvas id="canvas3d" tabindex="0"></canvas>
+                <div class="coord-overlay" id="coordOverlay">0, 0</div>
+                <div class="zoom-indicator" id="zoomIndicator">100%</div>
+                <div class="canvas-hint" id="canvasHint">Rueda: Zoom | Clic medio: Pan<br>Dibujar con herramientas de la izquierda</div>
+                <!-- Dynamic Input - floating near cursor -->
+                <div class="dyn-input" id="dynInput">
+                    <div style="display:flex;flex-direction:column;align-items:flex-start;">
+                        <div class="dyn-cmd" id="dynCmd" style="display:none;position:relative;">
+                            <div class="cmd-autocomplete" id="cmdAutocomplete"></div>
+                            <input type="text" id="dynCmdInput" placeholder="Comando..." spellcheck="false" autocomplete="off">
+                        </div>
+                        <div class="dyn-input-box" id="dynCoordBox">
+                            <span class="di-lbl" id="dynLabel1">X:</span>
+                            <input type="text" id="dynX" value="0" spellcheck="false">
+                            <span class="di-sep">,</span>
+                            <span class="di-lbl" id="dynLabel2">Y:</span>
+                            <input type="text" id="dynY" value="0" spellcheck="false">
+                            <span class="di-sep" id="dynZSep">,</span>
+                            <span class="di-lbl" id="dynZLabel">Z:</span>
+                            <input type="text" id="dynZ" value="0" spellcheck="false" style="width:50px;">
+                            <span class="di-sep" id="dynAngSep" style="display:none;">&lt;</span>
+                            <span class="di-lbl" id="dynAngLabel" style="display:none;">&ang;</span>
+                            <input type="text" id="dynAng" value="0" style="display:none;width:48px;" spellcheck="false">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="panel">
+            <!-- TREE -->
+            <div class="panel-section" style="flex:1;min-height:0;">
+                <div class="panel-hd" id="hdTree">
+                    <span>OBJETOS <span id="objCount" style="color:#808080;font-weight:normal;">0</span></span>
+                    <span class="chevron" id="chevTree">&#9660;</span>
+                </div>
+                <div class="panel-bd" id="panelTree" style="flex:1;overflow-y:auto;">
+                    <ul class="tree" id="objTree"></ul>
+                </div>
+            </div>
+            <!-- PROPS -->
+            <div class="panel-section">
+                <div class="panel-hd" id="hdProps">
+                    <span>PROPIEDADES</span>
+                    <span class="chevron" id="chevProps">&#9660;</span>
+                </div>
+                <div class="panel-bd" id="panelProps" style="min-height:80px;max-height:180px;padding:6px;">
+                    <p style="color:#555;font-style:italic;font-size:11px;">Seleccione un objeto</p>
+                </div>
+            </div>
+            <!-- IFC -->
+            <div class="panel-section" style="flex:1;min-height:0;">
+                <div class="panel-hd" id="hdIfc">
+                    <span>IFC <span id="ifcCount" style="color:#808080;font-weight:normal;">0</span></span>
+                    <span class="chevron" id="chevIfc">&#9660;</span>
+                </div>
+                <div class="panel-bd" id="panelIfc" style="flex:1;overflow-y:auto;">
+                    <div id="ifcInfo" style="padding:4px 6px;">
+                        <p style="color:#555;font-style:italic;font-size:11px;">Arrastre un archivo .ifc o use el boton IFC</p>
+                    </div>
+                    <div id="ifcTree" style="max-height:200px;overflow-y:auto;"></div>
+                </div>
+            </div>
+            <!-- CLI -->
+            <div class="panel-section" style="flex:1;min-height:0;">
+                <div class="panel-hd" id="hdCli">
+                    <span>CLI <span style="color:#808080;font-weight:normal;">comandos</span></span>
+                    <span class="chevron" id="chevCli">&#9660;</span>
+                </div>
+                <div class="panel-bd" id="panelCli" style="flex:1;display:flex;flex-direction:column;padding:4px;">
+                    <textarea id="cliOutput" readonly style="flex:1;min-height:60px;background:#0d1117;color:#9cdcfe;border:1px solid #333;font:11px Consolas,monospace;resize:none;padding:4px;"></textarea>
+                    <div style="display:flex;gap:4px;margin-top:4px;">
+                        <input type="text" id="cliInput" placeholder="line 0,0 100,50" spellcheck="false" autocomplete="off" style="flex:1;background:#161b22;color:#e6e6e6;border:1px solid #444;font:11px Consolas,monospace;padding:4px 6px;">
+                        <button class="btn-sm btn-p" id="cliRun" style="padding:2px 10px;">&#9654;</button>
+                    </div>
+                </div>
+            </div>
+            <!-- EXPORT -->
+            <div class="panel-section">
+                <div class="panel-hd" id="hdExport">
+                    <span>EXPORTAR</span>
+                    <span class="chevron" id="chevExport">&#9660;</span>
+                </div>
+                <div class="panel-bd" id="panelExport">
+                    <div class="exp-area">
+                        <div class="exp-btns">
+                            <button class="btn-sm btn-p" id="btnExpCpd">Hekatan .cpd</button>
+                            <button class="btn-sm btn-s" id="btnExpSvg">SVG</button>
+                            <button class="btn-sm btn-s" id="btnCopy">Copiar</button>
+                        </div>
+                        <textarea id="expOut" readonly placeholder="Click 'Hekatan .cpd' para exportar..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATUSBAR -->
+    <div class="statusbar">
+        <div class="st-item"><span class="st-lbl">X:</span><span id="stX">0</span></div>
+        <div class="st-item"><span class="st-lbl">Y:</span><span id="stY">0</span></div>
+        <div class="st-item"><span class="st-lbl">Z:</span><span id="stZ">0</span></div>
+        <div class="st-sep"></div>
+        <div class="st-item"><span class="st-lbl">L:</span><span id="stLen">0</span></div>
+        <div class="st-item"><span class="st-lbl">&ang;:</span><span id="stAng">0</span></div>
+        <div class="st-sep"></div>
+        <div class="st-item" id="stMode">SELECCIONAR</div>
+        <div class="st-sep"></div>
+        <div class="st-item" id="stSnap" style="color:#aaa;">--</div>
+        <div style="flex:1;"></div>
+        <div class="st-item"><span id="stInfo" style="opacity:.7;">v0.7</span></div>
+    </div>
+
+    <!-- SNAP BAR - AutoCAD style, always visible -->
+    <div class="snap-bar" id="snapBar">
+        <span class="snap-bar-label">SNAP:</span>
+        <div class="snap-item on" data-snap="endpoint" title="Punto final">
+            <svg class="si-icon" viewBox="0 0 16 16"><rect x="4" y="4" width="8" height="8" fill="none" stroke="#e06c5a" stroke-width="1.5"/></svg>
+            <span class="si-label">End</span>
+        </div>
+        <div class="snap-item on" data-snap="midpoint" title="Punto medio">
+            <svg class="si-icon" viewBox="0 0 16 16"><polygon points="8,2 14,13 2,13" fill="none" stroke="#4ec9b0" stroke-width="1.5"/></svg>
+            <span class="si-label">Mid</span>
+        </div>
+        <div class="snap-item on" data-snap="center" title="Centro">
+            <svg class="si-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#dcdcaa" stroke-width="1.5"/></svg>
+            <span class="si-label">Cen</span>
+        </div>
+        <div class="snap-item on" data-snap="quadrant" title="Cuadrante">
+            <svg class="si-icon" viewBox="0 0 16 16"><polygon points="8,1 15,8 8,15 1,8" fill="none" stroke="#c586c0" stroke-width="1.5"/></svg>
+            <span class="si-label">Quad</span>
+        </div>
+        <div class="snap-sep"></div>
+        <div class="snap-item" data-snap="intersection" title="Interseccion">
+            <svg class="si-icon" viewBox="0 0 16 16"><line x1="1" y1="1" x2="15" y2="15" stroke="#569cd6" stroke-width="1.3"/><line x1="15" y1="1" x2="1" y2="15" stroke="#569cd6" stroke-width="1.3"/></svg>
+            <span class="si-label">Int</span>
+        </div>
+        <div class="snap-item" data-snap="perpendicular" title="Perpendicular">
+            <svg class="si-icon" viewBox="0 0 16 16"><line x1="2" y1="14" x2="14" y2="14" stroke="#d7ba7d" stroke-width="1.3"/><line x1="2" y1="2" x2="2" y2="14" stroke="#d7ba7d" stroke-width="1.3"/><rect x="2" y="10" width="4" height="4" fill="none" stroke="#d7ba7d" stroke-width="1"/></svg>
+            <span class="si-label">Perp</span>
+        </div>
+        <div class="snap-item on" data-snap="nearest" title="Cercano">
+            <svg class="si-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="4" fill="none" stroke="#9cdcfe" stroke-width="1.3"/></svg>
+            <span class="si-label">Near</span>
+        </div>
+        <div class="snap-item" data-snap="extension" title="Extension">
+            <svg class="si-icon" viewBox="0 0 16 16"><line x1="1" y1="13" x2="10" y2="4" stroke="#808080" stroke-width="1.3"/><line x1="10" y1="4" x2="15" y2="0" stroke="#808080" stroke-width="1" stroke-dasharray="2,2"/></svg>
+            <span class="si-label">Ext</span>
+        </div>
+        <div class="snap-sep"></div>
+        <!-- Mode toggles at right -->
+        <div class="mode-toggles">
+            <button class="tgl-btn tgl-snap on" id="tglSnap" title="Snap ON/OFF (F3)">SNAP</button>
+            <button class="tgl-btn tgl-ortho on" id="tglOrtho" title="Modo ortogonal (F8)">ORTHO</button>
+            <button class="tgl-btn tgl-grid on" id="tglGrid" title="Mostrar rejilla">GRID</button>
+            <button class="tgl-btn tgl-sgrid" id="tglSGrid" title="Snap a rejilla">SGRID</button>
+            <button class="tgl-btn tgl-otrack on" id="tglOTrack" title="Object Snap Tracking (F11)">OTRACK</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

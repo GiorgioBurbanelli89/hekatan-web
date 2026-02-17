@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Command Prompt Output</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        .cmd-container {
+            margin: 10px 0;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .cmd-header {
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cmd-header::before {
+            content: "C:\\>";
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            color: #cccccc;
+        }
+
+        .cmd-output {
+            background-color: #000000;
+            color: {{OUTPUT_COLOR}};
+            padding: 12px 15px;
+            font-family: 'Consolas', 'Lucida Console', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .cmd-output.error {
+            color: #ff6b6b;
+            border-left: 3px solid #ff6b6b;
+        }
+
+        .cmd-output.success {
+            color: #cccccc;
+        }
+
+        .cmd-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .cmd-output::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .cmd-output::-webkit-scrollbar-thumb {
+            background: #555555;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="cmd-container">
+        <div class="cmd-header">Command Prompt</div>
+        <div class="cmd-output {{STATUS_CLASS}}">{{OUTPUT}}</div>
+    </div>
+</body>
+</html>

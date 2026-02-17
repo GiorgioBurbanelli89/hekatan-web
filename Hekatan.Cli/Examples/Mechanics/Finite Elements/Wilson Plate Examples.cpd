@@ -1,0 +1,102 @@
+"Ejemplos de Placa - Edward Wilson (Cap.8) + Benchmark FEM
+'<hr />
+'<p><b>Referencia:</b> Wilson, E.L. <i>"Analisis Tridimensional Estatico y Dinamico de Estructuras"</i></p>
+'<p>Capitulo 8 - Elementos de Flexion en Placas. Tablas 8.2, 8.3 y 8.4.</p>
+'<p><b>Teoria:</b> Wilson presenta dos variantes del elemento de placa cuadrilatero:</p>
+'<p>- <b>DKE</b> (Discrete Kirchhoff Element): fija cortante = 0 (placa delgada, igual a DKQ de Batoz 1982)</p>
+'<p>- <b>DSE</b> (Discrete Shear Element): incluye cortante (placa gruesa, tipo Mindlin-Reissner)</p>
+'<p>El DKE equivale al <b>Thin Plate</b> de SAP2000. El DSE equivale al <b>Thick Plate</b> de SAP2000.</p>
+'<h3>Wilson Tabla 8.4 - Placa Cuadrada, Carga Uniforme (Malla 16x16)</h3>
+'<p>Placa cuadrada simplemente apoyada, a = 10, q = 1, E = 10920000, v = 0.3 (adimensional).</p>
+'<table>
+'<tr><th>Espesor h</th><th>w*h^3 DKE (Kirchhoff)</th><th>w*h^3 DSE (Mindlin)</th><th>Navier (exacto)</th></tr>
+'<tr><td>0.01 (placa delgada)</td><td>9.807</td><td>9.815</td><td>9.807</td></tr>
+'<tr><td>1.0 (placa gruesa)</td><td>9.807</td><td>10.32</td><td>9.807</td></tr>
+'</table>
+'<table>
+'<tr><th>Espesor h</th><th>Mx DKE</th><th>Mx DSE</th></tr>
+'<tr><td>0.01</td><td>1.142</td><td>1.144</td></tr>
+'<tr><td>1.0</td><td>1.142</td><td>1.144</td></tr>
+'</table>
+'<p><b>Conclusion Wilson:</b> DKE = Navier exacto para placa delgada.
+'DSE da 10.32 para placa gruesa (incluye cortante = +5.2%).</p>
+'<hr />
+'<h3>Benchmark 6x4m - Solucion Analitica Navier (Kirchhoff)</h3>
+'<p>Placa rectangular simplemente apoyada, carga uniforme.</p>
+'<table><tr><td>
+'Dimension X -'a = 6m
+'Dimension Y -'b = 4m
+'Espesor -'t = 0.1m
+'Carga uniforme -'q = 10*(kN/m^2)
+'Modulo de elasticidad -'E = 35000MPa
+'Relacion de Poisson -'ν = 0.15
+'Terminos de la serie -'N = 25
+'</td></tr></table>
+#rad
+#post
+'Rigidez a flexion -'D = E*t^3/(12*(1 - ν^2))
+α = a/b
+α_2 = α^2
+q_0 = 16*q/π^2
+'Funciones auxiliares
+k(n) = 2*n + 1
+k_2(n) = 4*n*(n + 1) + 1
+A(m; n) = k_2(m) + α_2*k_2(n)' => 'A_1(m; n) = 1/A(m; n)^2
+B(m; n) = k_2(m) + ν*α_2*k_2(n)' => 'B_1(m; n) = B(m; n)/A(m; n)^2
+C(m; n) = ν*k_2(m) + α_2*k_2(n)' => 'C_1(m; n) = C(m; n)/A(m; n)^2
+S_a(m; x) = sin(k(m)*π/a*x)/k(m)', 'S_b(n; y) = sin(k(n)*π/b*y)/k(n)
+#hide
+PlotWidth = 50*a
+PlotHeight = 50*b
+PlotStep = 10
+#post
+'Deflexion
+w(x; y) = q_0*(a/π)^4/D*$Sum{S_a(m; x)*$Sum{A_1(m; n)*S_b(n; y) @ n = 0 : N} @ m = 0 : N}|mm
+'Momentos
+M_x(x; y) = q_0*(a/π)^2*$Sum{S_a(m; x)*$Sum{B_1(m; n)*S_b(n; y) @ n = 0 : N} @ m = 0 : N}
+M_y(x; y) = q_0*(a/π)^2*$Sum{S_a(m; x)*$Sum{C_1(m; n)*S_b(n; y) @ n = 0 : N} @ m = 0 : N}
+'<h4>Resultados en el centro</h4>
+'Deflexion maxima
+$Map{-w(x; y) @ x = 0m : a & y = 0m : b}
+'Valor maximo -'w(a/2; b/2)
+'Momento Mx, kNm/m
+$Map{M_x(x; y) @ x = 0m : a & y = 0m : b}
+'Valor maximo -'M_x(a/2; b/2)|kNm/m
+'Momento My, kNm/m
+$Map{M_y(x; y) @ x = 0m : a & y = 0m : b}
+'Valor maximo -'M_y(a/2; b/2)|kNm/m
+'<hr />
+'<h3>Comparacion FEM vs Navier (Placa Delgada t = 0.1m)</h3>
+'<p>Resultados de 4 solvers FEM, malla 30x20 (651 nodos, 600 elementos):</p>
+'<table>
+'<tr><th>Solver</th><th>Elemento</th><th>Autores</th><th>DOF/nodo</th><th>Teoria</th><th>w centro (mm)</th><th>% Navier</th></tr>
+'<tr style="background:#e8f5e9"><td><b>Navier</b></td><td>Analitico</td><td>Navier (1820)</td><td>---</td><td>Kirchhoff</td><td><b>6.6269</b></td><td><b>100.00%</b></td></tr>
+'<tr><td>BFS</td><td>Hermite bicubico</td><td>Bogner, Fox, Schmit (1965)</td><td>4</td><td>Kirchhoff</td><td>6.6270</td><td>100.00%</td></tr>
+'<tr><td>DKQ = SAP2000</td><td>Kirchhoff discreto</td><td>Batoz, Ben Tahar (1982)</td><td>6</td><td>Kirchhoff</td><td>6.6234</td><td>99.95%</td></tr>
+'<tr><td>PyNite</td><td>MITC4</td><td>Dvorkin, Bathe (1984)</td><td>6</td><td>Mindlin</td><td>6.6602</td><td>100.50%</td></tr>
+'<tr><td>Awatif</td><td>Q4 Mindlin</td><td>Hughes, Taylor (1977)</td><td>6</td><td>Mindlin</td><td>6.6788</td><td>100.78%</td></tr>
+'</table>
+'<h3>Comparacion FEM vs Navier (Placa Gruesa t = 0.4m)</h3>
+#val
+'Espesor grueso -'t_g = 0.4m
+#noc
+D_g = E*t_g^3/(12*(1 - ν^2))
+w_g(x; y) = q_0*(a/π)^4/D_g*$Sum{S_a(m; x)*$Sum{A_1(m; n)*S_b(n; y) @ n = 0 : N} @ m = 0 : N}|mm
+#val
+'Deflexion Kirchhoff centro (t=0.4m) -'w_g(a/2; b/2)
+#post
+'<table>
+'<tr><th>Solver</th><th>w centro (mm)</th><th>% Kirchhoff</th><th>% Mindlin</th><th>Observacion</th></tr>
+'<tr style="background:#e8f5e9"><td><b>Navier Kirchhoff</b></td><td><b>0.1035</b></td><td><b>100.0%</b></td><td>97.0%</td><td>Ignora cortante</td></tr>
+'<tr style="background:#e8f5e9"><td><b>Navier Mindlin</b></td><td><b>0.1067</b></td><td>103.1%</td><td><b>100.0%</b></td><td>Incluye cortante (+3%)</td></tr>
+'<tr><td>BFS (Kirchhoff)</td><td>0.1035</td><td>100.0%</td><td>97.0%</td><td>Solo flexion, le falta 3%</td></tr>
+'<tr><td>DKQ = SAP2000</td><td>0.1035</td><td>100.0%</td><td>97.0%</td><td>Solo flexion, le falta 3%</td></tr>
+'<tr><td>PyNite MITC4</td><td>0.1132</td><td>109.3%</td><td>106.1%</td><td>Mindlin, sobrepasa</td></tr>
+'<tr><td>Awatif Q4</td><td>0.1129</td><td>109.0%</td><td>105.8%</td><td>Mindlin, sobrepasa</td></tr>
+'</table>
+'<hr />
+'<h3>Conclusiones</h3>
+'<p><b>Para placa delgada</b> (L/t > 20): Kirchhoff y Mindlin dan resultados practicamente iguales.</p>
+'<p><b>Para placa gruesa</b> (L/t < 20): Kirchhoff subestima ~3% al ignorar cortante.
+'Se necesita Mindlin (DSE/DKMQ/MITC4) para resultados correctos.</p>
+'<p><b>DKQ = DKE de Wilson = Thin Plate de SAP2000</b>: mismos resultados.</p>

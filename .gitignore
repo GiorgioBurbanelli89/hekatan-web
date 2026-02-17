@@ -1,0 +1,223 @@
+# ============================================
+# Hekatan Calc .gitignore
+# Solo codigo fuente - todo se compila en destino
+# ============================================
+
+# Build folders
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
+**/.vs/
+
+# Node.js
+**/node_modules/
+package-lock.json
+
+# Compiled binaries
+*.dll
+*.exe
+*.pdb
+*.wasm
+
+# Temporary files
+*.tmp
+*_wpftmp.csproj
+*.user
+*.suo
+tmpclaude-*
+
+# Logs
+*.log
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+nul
+
+# SAP2000 / ETABS files
+*.Y$$
+*.$2k
+*.edb
+*.e2k
+
+# Large/generated files
+*.pdf
+*.chm
+*.ifc
+
+# Generated HTML output
+*-output.html
+test-*.html
+test_*.html
+
+# ============================================
+# Carpetas que NO son codigo fuente
+# ============================================
+
+# Documentacion/trabajo externo
+Api Etabs/
+API Sap 2000/
+Api_Etabs_Documentacion/
+API_SAP2000_EXTRAIDO/
+arreglar/
+Avances/
+awatif-2.0.0/
+capturas/
+capturas_etabs/
+CEINT Python Etabs/
+change hekatan calc/
+code-cli/
+cpd/
+csi_api_docs/
+Desarrolador SmathStudio/
+docs-api/
+e2k/
+edb/
+Ensamblaje_Placas_images/
+ETABS_API_CHM_EXTRACTED/
+ETABS_CHM_EXTRACTED/
+Extension-Edge-Subtitulos/
+GenericDebugger.WPF/
+gif_frames/
+gif_frames_actual/
+html-output/
+INFORME_ETABS/
+Iniciatico/
+json/
+jupyter-notebooks/
+Luigy/
+markdown/
+Mathcadprime Custom Functions/
+MathCadPrime/
+md/
+Modelos Etabs/
+Pdf suelo/
+Pdf/
+python api sap 2000 claude/
+Recortes de imagenes/
+Recortes Pdf/
+Rubbish/
+sap_api_docs/
+sap2000-models/
+Script Api Sap 2000 Python/
+scripts/
+smath/
+TEMP_CHM_EXTRACT/
+temp_mcdx_explore/
+TestCmd/
+Tests/
+TestWordConversion/
+tools/
+triangle_shewchuk/
+txt/
+Word/
+
+# Test files in root
+test-*.cpd
+test-*.hcalc
+test_*.cpd
+test_*.hcalc
+wilson-*.html
+
+# Claude files
+.claude/
+
+# Other
+*.jsonl
+temp_*
+hekatan/
+
+# Documentation/session files (not source)
+CHANGELOG.md
+CHANGES.md
+COMO_FUNCIONA_PARSER_EXTERNO.md
+CONTINUAR_IFC_CLI.md
+CPP_EXPLAIN_FEATURE.md
+GUIA_AGREGAR_PARSER_EXTERNO.md
+REGISTRO_SESION_IFC.md
+.env.example
+.megaignore
+.msh
+
+# Build/test outputs in root
+build_check.ps1
+build_out.txt
+build_result.txt
+gen_result.txt
+generate_html.ps1
+package.json
+books_as_pdf.html
+cpp_ejemplo_basico.html
+cpp_explain_template.html
+
+# Debug folders
+calcpad-debug
+calcpad-debugger
+
+# Screenshots
+screenshot_*.png
+
+# Test/demo files in root (loose)
+rigidez_viga*
+test_identity_matrix.*
+"-o *"
+-o *
+
+# Installers/large downloads
+Miniforge3-*.sh
+GenericDebugger.sln
+GenericDebugger.slnx
+
+# Examples — only keep .cpd, .hcalc and essential demo assets
+Examples/fragments/
+Examples/libs/
+Examples/libs*
+Examples/Binario IFC/
+Examples/**/*.html
+Examples/**/*.json
+Examples/**/*.py
+Examples/**/*.m
+Examples/**/*.ifc
+Examples/**/*.sdb
+Examples/**/*.msh
+Examples/**/*.ico
+Examples/**/*.Y*
+Examples/**/*.K_*
+Examples/**/*.OUT
+Examples/**/*.txt
+Examples/**/*.docx
+Examples/**/*.s2k
+Examples/**/*.$et
+Examples/**/*.bat
+Examples/**/*.cpdifc
+Examples/**/*.cpdifc.json
+Examples/COMO-*.md
+Examples/COMPARACION_*
+Examples/galpon-*.html
+Examples/visor*
+Examples/**/*.md
+Examples/**/*.odt
+Examples/**/*.xlsx
+Examples/**/*.sh
+Examples/**/*.ps1
+Examples/**/*.pyc
+Examples/**/__pycache__/
+Examples/**/*.jpeg
+Examples/**/*.jpg
+Examples/**/*.svg
+Examples/**/*.ipynb
+Examples/**/*.cpp
+Examples/**/*.tcl
+Examples/jce-images/
+Examples/jce-build.sh
+
+# CLI Examples HTML output (generated, not source)
+Hekatan.Cli/Examples/**/*.html
+
+# IFC viewer HTML outputs
+ifc/visor_ifc_completo.html
+
+# Backup files
+*.bak

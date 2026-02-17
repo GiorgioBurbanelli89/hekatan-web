@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Julia Output</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        .julia-container {
+            margin: 10px 0;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .julia-header {
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+            background: linear-gradient(135deg, #9558b2 0%, #389826 50%, #cb3c33 100%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .julia-header::before {
+            content: "julia>";
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            color: #4063d8;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .julia-output {
+            background-color: #1e1e2e;
+            color: {{OUTPUT_COLOR}};
+            padding: 12px 15px;
+            font-family: 'JuliaMono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .julia-output.error {
+            color: #cb3c33;
+            border-left: 3px solid #cb3c33;
+        }
+
+        .julia-output.success {
+            color: #a6e3a1;
+        }
+
+        .julia-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .julia-output::-webkit-scrollbar-track {
+            background: #181825;
+        }
+
+        .julia-output::-webkit-scrollbar-thumb {
+            background: #9558b2;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="julia-container">
+        <div class="julia-header">Julia</div>
+        <div class="julia-output {{STATUS_CLASS}}">{{OUTPUT}}</div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,601 @@
+"HEKATAN CALC - DEMO COMPLETO DE TODAS LAS DIRECTIVAS @{}
+'Este archivo demuestra CADA directiva @{} soportada por Hekatan Calc.
+'Incluye directivas built-in y lenguajes externos.
+
+"1. Variables Hekatan nativas
+a = 6
+b = 4
+c = a + b
+t = 0.15
+E = 35000000
+ν = 0.15
+D = E*t^3/(12*(1 - ν^2))
+'Rigidez a flexion: D
+
+"2. @{eq} - Ecuaciones formato display
+@{eq}
+w(x,y) = Σ A_mn · sin(mπx/a) · sin(nπy/b)
+[K]{u} = {F}
+{u} = [K]⁻¹{F}
+σ = E · ε
+@{end eq}
+
+"3. @{eqdef} - Ecuaciones con definiciones
+@{eqdef}
+F = m × a | Segunda ley de Newton
+σ = F / A | Esfuerzo = Fuerza / Area
+ε = ΔL / L | Deformacion unitaria
+D = Et³/12(1-ν²) | Rigidez a flexion de placa
+[K]{u} = {F} | Sistema de rigidez FEM
+@{end eqdef}
+
+"4. @{function} - Definir funciones matematicas
+@{function}
+function y = cuadrado(x)
+  y = x^2
+end
+
+function y = hipotenusa(a, b)
+  y = sqrt(a^2 + b^2)
+end
+
+cubo(x) = x^3
+doble(x) = 2*x
+@{end function}
+
+"5. @{plot} - Graficas de funciones SVG
+@{plot}
+title: Funciones Trigonometricas
+xlabel: x (rad)
+ylabel: f(x)
+xmin: 0
+xmax: 6.28
+points: 80
+function: sin(x)
+legend: sin(x)
+color: #1565c0
+function: cos(x)
+legend: cos(x)
+color: #c62828
+style: dash
+grid: true
+@{end plot}
+
+@{plot}
+title: Funciones definidas por usuario
+xlabel: x
+ylabel: f(x)
+xmin: -3
+xmax: 3
+points: 60
+function: cuadrado(x)
+legend: x²
+color: #228B22
+function: cubo(x)
+legend: x³
+color: #4169E1
+grid: true
+@{end plot}
+
+"6. @{svg} - Dibujo vectorial DSL
+@{svg 600 200}
+background #f0f8ff
+rect 10 10 580 180 fill:#e3f2fd stroke:#1565c0 width:2 rx:8
+circle 100 100 40 fill:#1565c0 stroke:#0d47a1 width:2
+circle 500 100 40 fill:#c62828 stroke:#b71c1c width:2
+arrow 140 100 460 100 stroke:#333 width:2
+text 300 60 "Elemento viga k=EI/L" size:14 bold color:#333 anchor:middle
+text 100 160 "Nodo i" size:12 color:#1565c0 anchor:middle
+text 500 160 "Nodo j" size:12 color:#c62828 anchor:middle
+text 300 120 "F →" size:16 bold color:#e65100 anchor:middle
+@{end svg}
+
+"7. @{tree} - Diagrama de arbol jerarquico
+@{tree title:"Directivas Hekatan Calc" color:#1565c0}
+Hekatan Calc @{} Directivas icon:folder
+  Matematicas icon:gear
+    @{eq} Ecuaciones icon:file
+    @{eqdef} Ec+Definiciones icon:file
+    @{function} Funciones icon:file
+    $int Integral icon:file
+    $deriv Derivada icon:file
+    $gauss Cuadratura icon:file
+  Visualizacion icon:star
+    @{plot} Graficas 2D icon:file
+    @{svg} Dibujo vectorial icon:file
+    @{three} Escena 3D icon:file
+    @{triangle} Mallas FEM icon:file
+    @{tree} Arboles icon:file
+  Layout icon:info
+    @{columns} Multi-columna icon:file
+    @{table} Tablas icon:file
+    @{markdown} Markdown icon:file
+  Codigo icon:code
+    @{cpp} C++ highlight icon:file
+    @{explain} Pseudocodigo icon:file
+    @{cpp-explain} 3 columnas icon:file
+  Lenguajes Externos icon:warning
+    @{python} Python icon:file
+    @{js} JavaScript icon:file
+    @{ts} TypeScript icon:file
+    @{c} C icon:file
+    @{fortran} Fortran icon:file
+    @{rust} Rust icon:file
+    @{bash} Bash icon:file
+    @{powershell} PowerShell icon:file
+    @{octave} Octave icon:file
+    @{maxima} Maxima CAS icon:file
+  Contenido icon:check
+    @{html} HTML directo icon:file
+    @{css} Estilos CSS icon:file
+    @{image} Imagenes base64 icon:file
+@{end tree}
+
+"8. @{table} - Tablas de datos
+@{table}
+headers: Propiedad, Simbolo, Valor, Unidad
+data:
+Modulo de elasticidad, E, 35000000, kPa
+Coeficiente Poisson, v, 0.15, -
+Espesor, t, 0.15, m
+Largo, a, 6, m
+Ancho, b, 4, m
+Rigidez flexion, D, 10070.33, kN·m
+style: bordered
+@{end table}
+
+"9. @{markdown} - Markdown con variables Hekatan
+@{markdown}
+### Resumen del Analisis Estructural
+
+Esta placa rectangular tiene las siguientes propiedades:
+
+- **Largo**: $a m
+- **Ancho**: $b m
+- **Espesor**: $t m
+- **Modulo E**: $E kPa
+- **Poisson**: $ν
+
+> La rigidez a flexion D = E·t³/12(1-ν²) depende del **cubo** del espesor.
+
+| Parametro | Valor |
+|-----------|-------|
+| a/b | 1.5 |
+| a/t | 40 |
+@{end markdown}
+
+"10. @{three} - Escena 3D interactiva (Three.js)
+@{three 700 400}
+background #1a1a2e
+camera 8 6 8 look:2,1.5,2 fov:50
+light ambient color:#404050 intensity:0.5
+light directional 10 12 8 color:#ffffff intensity:0.8
+grid size:12 step:12 color:#333355
+
+# Nodos base
+node 0 0 0 color:#44ff44 size:0.08
+node 4 0 0 color:#44ff44 size:0.08
+node 4 0 4 color:#44ff44 size:0.08
+node 0 0 4 color:#44ff44 size:0.08
+
+# Nodos nivel 1
+node 0 3 0 color:#44ff44 size:0.08
+node 4 3 0 color:#44ff44 size:0.08
+node 4 3 4 color:#44ff44 size:0.08
+node 0 3 4 color:#44ff44 size:0.08
+
+# Columnas
+beam 0 0 0 0 3 0 color:#aaaaaa radius:0.08
+beam 4 0 0 4 3 0 color:#aaaaaa radius:0.08
+beam 4 0 4 4 3 4 color:#aaaaaa radius:0.08
+beam 0 0 4 0 3 4 color:#aaaaaa radius:0.08
+
+# Vigas
+beam 0 3 0 4 3 0 color:#4488ff radius:0.06
+beam 4 3 0 4 3 4 color:#4488ff radius:0.06
+beam 4 3 4 0 3 4 color:#4488ff radius:0.06
+beam 0 3 4 0 3 0 color:#4488ff radius:0.06
+
+# Losa
+plate 0,3,0 4,3,0 4,3,4 0,3,4 color:#6699cc opacity:0.4
+@{end three}
+
+"11. @{triangle} - Malla FEM Delaunay
+@{triangle 600 400}
+vertex 0 0
+vertex 6 0
+vertex 6 4
+vertex 0 4
+segment 0 1
+segment 1 2
+segment 2 3
+segment 3 0
+quality:25 area:0.5
+fill:#6699bb stroke:#2255aa nodecolor:#dd3333
+show:mesh,nodes,boundary,labels
+title:"Placa 6x4 - Malla triangular"
+@{end triangle}
+
+"12. @{cpp} - C++ syntax highlighting
+@{cpp}
+#include <Eigen/Dense>
+using namespace Eigen;
+
+// Rigidez a flexion de placa Kirchhoff
+double getFlexuralRigidity(double E, double t, double nu) {
+    return E * pow(t, 3) / (12.0 * (1.0 - nu * nu));
+}
+
+// Matriz constitutiva Db
+Matrix3d getDb(double E, double t, double nu) {
+    double D = getFlexuralRigidity(E, t, nu);
+    Matrix3d Db;
+    Db << 1,  nu, 0,
+          nu, 1,  0,
+          0,  0,  (1-nu)/2;
+    return D * Db;
+}
+@{end cpp}
+
+"13. @{cpp} con int main - Compilacion y ejecucion
+@{cpp}
+#include <iostream>
+#include <cmath>
+int main() {
+    double E = 35e6, t = 0.15, nu = 0.15;
+    double D = E * pow(t, 3) / (12.0 * (1.0 - nu * nu));
+    std::cout << "D = " << D << " kN·m" << std::endl;
+    std::cout << "Esbeltez a/t = " << 6.0/t << std::endl;
+    return 0;
+}
+@{end cpp}
+
+"14. @{explain spanish} - Pseudocodigo en espanol
+@{explain spanish}
+double D = E * pow(t, 3) / (12.0 * (1.0 - nu * nu));
+for (int i = 0; i < nNodes; i++) {
+    if (supports[i] == 1) {
+        K[i][i] = 1e20;
+    }
+}
+double w_max = *max_element(w.begin(), w.end());
+return w_max;
+@{end explain}
+
+"15. @{cpp-explain} - Tres columnas C++/Calcpad/Octave
+@{cpp-explain}
+// Rigidez a flexion
+double D = (E*t*t*t)/(12.0*(1.0-nu*nu));
+// Matriz constitutiva
+Matrix3d Db;
+Db << 1, nu, 0,
+      nu, 1, 0,
+      0, 0, (1-nu)/2;
+// Escalar por D
+Db = D * Db;
+// Area del triangulo
+double Ae = 0.5 * abs(x21*y31 - x31*y21);
+@{end cpp-explain}
+
+"16. @{maxima} - Algebra simbolica CAS
+@{maxima}
+/* Rigidez a flexion */
+D: E*t^3/(12*(1-nu^2));
+/* Sustituir valores */
+D_val: subst([E=35e6, t=0.15, nu=0.15], D);
+/* Derivada parcial */
+dD_dt: diff(D, t);
+/* Simplificar */
+dD_simple: ratsimp(dD_dt);
+@{end maxima}
+
+"17. @{html} - HTML directo embebido
+@{html}
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; margin: 10px 0;">
+  <h3 style="margin:0;">Hekatan Calc - @{html} Demo</h3>
+  <p style="margin:5px 0 0;">HTML puro embebido directamente en el documento</p>
+</div>
+@{end html}
+
+"18. @{css} + @{html} combinados
+@{css}
+.hekatan-box {
+    background: #e8f5e9;
+    border: 2px solid #4caf50;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    font-family: 'Segoe UI', sans-serif;
+}
+.hekatan-box h4 { color: #2e7d32; margin: 0 0 5px; }
+.hekatan-box p { color: #333; margin: 0; }
+@{end css}
+
+@{html}
+<div class="hekatan-box">
+  <h4>CSS + HTML combinados</h4>
+  <p>@{css} define estilos, @{html} los aplica</p>
+</div>
+@{end html}
+
+"19. Integracion numerica: $int
+#hide
+f_int(x) = x^2
+#show
+I_1 = $int{f_int(x) @ x = 0 : 1}
+'Integral x^2 de 0 a 1 = I_1
+
+#hide
+f_sin(x) = sin(x)
+#show
+I_2 = $int{f_sin(x) @ x = 0 : π}
+'Integral sin(x) de 0 a pi = I_2
+
+"20. Derivada numerica: $deriv
+#hide
+g_cube(x) = x^3
+#show
+d_1 = $deriv{g_cube(x) @ x = 2}
+'Derivada x^3 en x=2 = d_1
+
+"21. Cuadratura Gauss: $gauss
+#hide
+p_gauss(x) = x^2 + 1
+#show
+G_1 = $gauss{p_gauss(xi) @ xi = 2}
+'Gauss n=2 de (x^2+1) = G_1
+
+"22. @{columns 2} - Layout multi-columna con Hekatan math
+@{columns 2}
+'**Propiedades del Material**
+G = E/(2*(1 + ν))
+κ = 5/6
+λ_esb = a/t
+@{column}
+'**Resultados**
+r = a/b
+Area = a*b
+Volumen = a*b*t
+@{end columns}
+
+"23. @{columns 3} - Tres columnas mixtas
+@{columns 3}
+'**Calcpad**
+x = a*b
+y = x + c
+@{column}
+'**Python**
+@{python}
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+print(f"<p>Python: a+b = {6+4}</p>")
+@{end python}
+@{column}
+'**JavaScript**
+@{js}
+const suma = 6 + 4;
+console.log(`JS: a+b = ${suma}`);
+@{end js}
+@{end columns}
+
+"24. @{python} - Ejecucion Python
+@{python}
+import sys, math
+sys.stdout.reconfigure(encoding='utf-8')
+E, t, nu = 35e6, 0.15, 0.15
+D = E * t**3 / (12 * (1 - nu**2))
+print(f"<p><b>Python:</b> D = {D:.2f} kN·m</p>")
+print(f"<p>Esbeltez a/t = {6/t:.1f}</p>")
+print(f"<p>pi = {math.pi:.10f}</p>")
+@{end python}
+
+"25. @{js} - Ejecucion JavaScript (Node.js)
+@{js}
+const E = 35e6, t = 0.15, nu = 0.15;
+const D = E * Math.pow(t, 3) / (12 * (1 - nu * nu));
+console.log(`JavaScript: D = ${D.toFixed(2)} kN·m`);
+console.log(`sqrt(2) = ${Math.sqrt(2).toFixed(10)}`);
+@{end js}
+
+"26. @{ts} - TypeScript
+@{ts}
+const E: number = 35e6;
+const t: number = 0.15;
+const nu: number = 0.15;
+const D: number = E * Math.pow(t, 3) / (12 * (1 - nu * nu));
+console.log(`TypeScript: D = ${D.toFixed(2)} kN·m`);
+@{end ts}
+
+"27. @{c} - Compilacion y ejecucion C
+@{c}
+#include <stdio.h>
+#include <math.h>
+int main() {
+    double E = 35e6, t = 0.15, nu = 0.15;
+    double D = E * pow(t, 3) / (12.0 * (1.0 - nu * nu));
+    printf("C: D = %.2f kN·m\n", D);
+    printf("C: a/t = %.1f\n", 6.0/t);
+    return 0;
+}
+@{end c}
+
+"28. @{fortran} - Compilacion y ejecucion Fortran
+@{fortran}
+program plate_rigidity
+  implicit none
+  real(8) :: E, t, nu, D
+  E = 35.0d6
+  t = 0.15d0
+  nu = 0.15d0
+  D = E * t**3 / (12.0d0 * (1.0d0 - nu**2))
+  print *, "Fortran: D =", D, "kN·m"
+  print *, "Fortran: a/t =", 6.0d0/t
+end program plate_rigidity
+@{end fortran}
+
+"29. @{rust} - Compilacion y ejecucion Rust
+@{rust}
+fn main() {
+    let e: f64 = 35e6;
+    let t: f64 = 0.15;
+    let nu: f64 = 0.15;
+    let d = e * t.powi(3) / (12.0 * (1.0 - nu * nu));
+    println!("Rust: D = {:.2} kN·m", d);
+    println!("Rust: a/t = {:.1}", 6.0 / t);
+}
+@{end rust}
+
+"30. @{bash} - Script Bash
+@{bash}
+echo "Bash: Hekatan Calc v1.0.0"
+echo "Bash: Fecha = $(date +%Y-%m-%d)"
+echo "Bash: Directorio = $(pwd)"
+@{end bash}
+
+"31. @{powershell} - Script PowerShell
+@{powershell}
+Write-Output "PowerShell: Hekatan Calc v1.0.0"
+Write-Output "PowerShell: .NET version = $($PSVersionTable.PSVersion)"
+@{end powershell}
+
+"32. @{octave} - GNU Octave/MATLAB
+@{octave}
+E = 35e6; t = 0.15; nu = 0.15;
+D = E * t^3 / (12 * (1 - nu^2));
+disp(["Octave: D = " num2str(D) " kN·m"]);
+x = [1 2 3 4 5];
+disp(["Octave: sum(1:5) = " num2str(sum(x))]);
+@{end octave}
+
+"33. @{lua} - Script Lua
+@{lua}
+local E, t, nu = 35e6, 0.15, 0.15
+local D = E * t^3 / (12 * (1 - nu^2))
+print(string.format("Lua: D = %.2f kN·m", D))
+@{end lua}
+
+"34. @{perl} - Script Perl
+@{perl}
+my $E = 35e6; my $t = 0.15; my $nu = 0.15;
+my $D = $E * $t**3 / (12 * (1 - $nu**2));
+printf "Perl: D = %.2f kN·m\n", $D;
+@{end perl}
+
+"35. @{columns 4} - Lenguajes compilados en columnas
+@{columns 4}
+'**C++**
+@{cpp}
+#include <iostream>
+#include <cmath>
+int main() {
+    double D = 35e6*pow(0.15,3)/(12*(1-0.15*0.15));
+    std::cout << "C++ D=" << D << std::endl;
+    return 0;
+}
+@{end cpp}
+@{column}
+'**C**
+@{c}
+#include <stdio.h>
+#include <math.h>
+int main() {
+    double D = 35e6*pow(0.15,3)/(12*(1-0.15*0.15));
+    printf("C D=%.2f\n", D);
+    return 0;
+}
+@{end c}
+@{column}
+'**Fortran**
+@{fortran}
+program calc
+  implicit none
+  real(8) :: D
+  D = 35.0d6*0.15d0**3/(12.0d0*(1.0d0-0.15d0**2))
+  print *, "Fortran D=", D
+end program calc
+@{end fortran}
+@{column}
+'**Rust**
+@{rust}
+fn main() {
+    let d: f64 = 35e6*0.15_f64.powi(3)/(12.0*(1.0-0.15*0.15));
+    println!("Rust D={:.2}", d);
+}
+@{end rust}
+@{end columns}
+
+"36. @{columns 4} - Lenguajes interpretados en columnas
+@{columns 4}
+'**Python**
+@{python}
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+D = 35e6*0.15**3/(12*(1-0.15**2))
+print(f"<p>Python D={D:.2f}</p>")
+@{end python}
+@{column}
+'**JavaScript**
+@{js}
+const D = 35e6*Math.pow(0.15,3)/(12*(1-0.15*0.15));
+console.log(`JS D=${D.toFixed(2)}`);
+@{end js}
+@{column}
+'**Bash**
+@{bash}
+echo "Bash OK"
+echo "uname: $(uname -s)"
+@{end bash}
+@{column}
+'**PowerShell**
+@{powershell}
+$D = 35e6*[Math]::Pow(0.15,3)/(12*(1-0.15*0.15))
+Write-Output "PS D=$([Math]::Round($D,2))"
+@{end powershell}
+@{end columns}
+
+"37. RESUMEN FINAL
+@{tree title:"Resultado del Test - Todas las directivas" color:#2e7d32}
+Directivas @{} Probadas icon:folder
+  Built-in Matematicas icon:gear
+    @{eq} Ecuaciones display icon:check
+    @{eqdef} Ecuaciones+definiciones icon:check
+    @{function} Funciones usuario icon:check
+    $int Integracion numerica icon:check
+    $deriv Derivadas icon:check
+    $gauss Cuadratura Gauss icon:check
+  Visualizacion icon:star
+    @{plot} Graficas SVG icon:check
+    @{svg} Dibujo vectorial icon:check
+    @{three} Escena 3D Three.js icon:check
+    @{triangle} Mallas Delaunay icon:check
+    @{tree} Arboles jerarquia icon:check
+  Layout y Contenido icon:info
+    @{columns} Multi-columna icon:check
+    @{table} Tablas datos icon:check
+    @{markdown} Markdown+variables icon:check
+    @{html} HTML directo icon:check
+    @{css} Estilos CSS icon:check
+  Codigo C++ icon:code
+    @{cpp} Syntax highlight icon:check
+    @{cpp} Compilar+ejecutar icon:check
+    @{explain} Pseudocodigo icon:check
+    @{cpp-explain} 3 columnas icon:check
+  Algebra Simbolica icon:star
+    @{maxima} Maxima CAS icon:star
+  Lenguajes Compilados icon:warning
+    @{c} C (gcc) icon:check
+    @{fortran} Fortran (gfortran) icon:check
+    @{rust} Rust (rustc) icon:check
+  Lenguajes Interpretados icon:check
+    @{python} Python icon:check
+    @{js} JavaScript (Node) icon:check
+    @{ts} TypeScript (tsx) icon:check
+    @{bash} Bash icon:check
+    @{powershell} PowerShell icon:check
+    @{octave} GNU Octave icon:check
+    @{lua} Lua icon:check
+    @{perl} Perl icon:check
+@{end tree}
+
+resultado = c
+'Verificacion final: a + b = c

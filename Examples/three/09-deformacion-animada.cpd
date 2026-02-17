@@ -1,0 +1,373 @@
+"============================================
+"EJEMPLO 9: Deformación Animada
+"============================================
+"Oscilación de la estructura mostrando el
+"primer modo de vibración
+
+"LOSA Y MATERIAL:
+a = 6m
+b = 4m
+t = 0.20m
+E = 25e9Pa
+ν = 0.2
+ρ = 2500kg/m³'Densidad
+
+"CARGA ESTÁTICA:
+q = 5kN/m²
+
+"MALLA:
+n_x = 15
+n_y = 10
+
+#val
+D = E*t^3/(12*(1 - ν^2))
+β = 0.00406
+w_max = β*q*b^4/D|mm
+
+'Frecuencia natural fundamental (aproximada):'
+'Para losa simplemente apoyada'
+ω_11 = (π^2/b^2)*sqrt(D/(ρ*t))*(1 + (b/a)^2)|rad/s
+f_11 = ω_11/(2*π)|Hz
+T_11 = 1/f_11|s
+
+@{html}
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/examples/js/controls/OrbitControls.js"></script>
+
+<div style="background:#e8eaf6; padding:15px; margin:10px 0; border-left:4px solid#5c6bc0;">
+  <strong>🔊 Modo de Vibración 1,1</strong><br>
+  Frecuencia: @{calcpad:f_11} Hz | Período: @{calcpad:T_11} s<br>
+  <button id="toggleVib" style="padding:8px 20px; margin-top:10px; cursor:pointer; font-size:16px;">⏸️ Pausar</button>
+  <label style="margin-left:20px;">Amplitud: </label>
+  <input type="range" id="ampSlider" min="0" max="5" step="0.5" value="2" style="width:150px;">
+  <span id="ampValue">2.0x</span>
+</div>
+
+<div id="canvas9" style="width:1000px; height:700px; border:2px solid #ccc; margin:10px 0;"></div>
+
+<div id="timeInfo" style="background:#fff3cd; padding:15px; margin:10px 0; border-left:4px solid #ffc107;">
+  Tiempo: <span id="timeValue">0.00</span> s |
+  Amplitud actual: <span id="dispValue">0.00</span> mm
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof THREE === 'undefined' || typeof THREE.OrbitControls === 'undefined') {
+    document.getElementById('canvas9').innerHTML = '<p style="color:red;">Error</p>';
+    return;
+  }
+
+  // Variables
+  const a = @{calcpad:a};
+  const b = @{calcpad:b};
+  const t = @{calcpad:t};
+  const nx = @{calcpad:n_x};
+  const ny = @{calcpad:n_y};
+  const wMaxStatic = @{calcpad:w_max} / 1000;  // m
+  const omega = @{calcpad:ω_11};  // rad/s
+  const period = @{calcpad:T_11};  // s
+
+  // Estado de animación
+  let time = 0;
+  let isVibrating = true;
+  let amplitudeFactor = 2.0;  // Multiplicador de amplitud
+
+  // Escena
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xfafafa);
+
+  // Cámara
+  const camera = new THREE.PerspectiveCamera(45, 1000/700, 0.1, 1000);
+  camera.position.set(a*1.4, b*1.3, b*1.6);
+
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(1000, 700);
+  document.getElementById('canvas9').appendChild(renderer.domElement);
+
+  // Controles
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(a/2, 0, b/2);
+  controls.update();
+
+  // ===================================================================
+  // TOPOLOGÍA
+  // ===================================================================
+
+  const elements = [];
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      const n1 = j * (nx + 1) + i;
+      const n2 = j * (nx + 1) + (i + 1);
+      const n3 = (j + 1) * (nx + 1) + (i + 1);
+      const n4 = (j + 1) * (nx + 1) + i;
+      elements.push([n1, n2, n3, n4]);
+    }
+  }
+
+  // ===================================================================
+  // FUNCIÓN PARA CALCULAR POSICIONES CON VIBRACIÓN
+  // ===================================================================
+
+  function calculateNodesVibration(t) {
+    const nodes = [];
+    const displacements = [];
+
+    // Amplitud de vibración = amplitudeFactor * wMaxStatic * cos(ω*t)
+    const amplitude = amplitudeFactor * wMaxStatic * Math.cos(omega * t);
+
+    for (let j = 0; j <= ny; j++) {
+      for (let i = 0; i <= nx; i++) {
+        const x = i * a / nx;
+        const z = j * b / ny;
+
+        // Forma del modo: sin(π*x/a) * sin(π*z/b)
+        const modeShape = Math.sin(Math.PI * x / a) * Math.sin(Math.PI * z / b);
+        const w = -amplitude * modeShape;
+
+        nodes.push(new THREE.Vector3(x, w, z));
+        displacements.push(w);
+      }
+    }
+
+    return { nodes, displacements };
+  }
+
+  // Color map
+  function getColorFromValue(value) {
+    const color = new THREE.Color();
+    if (value < 0.25) {
+      const t = value / 0.25;
+      color.setRGB(0, t, 1);
+    } else if (value < 0.5) {
+      const t = (value - 0.25) / 0.25;
+      color.setRGB(0, 1, 1 - t);
+    } else if (value < 0.75) {
+      const t = (value - 0.5) / 0.25;
+      color.setRGB(t, 1, 0);
+    } else {
+      const t = (value - 0.75) / 0.25;
+      color.setRGB(1, 1 - t, 0);
+    }
+    return color;
+  }
+
+  // ===================================================================
+  // GEOMETRÍA DINÁMICA
+  // ===================================================================
+
+  const geometry = new THREE.BufferGeometry();
+  let positionsArray = new Float32Array(elements.length * 6 * 3);
+  let colorsArray = new Float32Array(elements.length * 6 * 3);
+
+  geometry.setAttribute('position', new THREE.BufferAttribute(positionsArray, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
+
+  const material = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    side: THREE.DoubleSide,
+    metalness: 0.2,
+    roughness: 0.7
+  });
+
+  const slab = new THREE.Mesh(geometry, material);
+  scene.add(slab);
+
+  // Wireframe
+  const wireframeGeom = new THREE.WireframeGeometry(geometry);
+  const wireframeMat = new THREE.LineBasicMaterial({
+    color: 0x212121,
+    opacity: 0.4,
+    transparent: true
+  });
+  const wireframe = new THREE.LineSegments(wireframeGeom, wireframeMat);
+  scene.add(wireframe);
+
+  // ===================================================================
+  // ACTUALIZAR GEOMETRÍA
+  // ===================================================================
+
+  function updateGeometry(t) {
+    const { nodes, displacements } = calculateNodesVibration(t);
+    const maxDisp = Math.max(...displacements.map(Math.abs));
+    const normalizedDisp = displacements.map(d => Math.abs(d) / (maxDisp || 1));
+
+    let idx = 0;
+    elements.forEach((elem) => {
+      const [n1, n2, n3, n4] = elem;
+      const p1 = nodes[n1];
+      const p2 = nodes[n2];
+      const p3 = nodes[n3];
+      const p4 = nodes[n4];
+
+      const c1 = getColorFromValue(normalizedDisp[n1]);
+      const c2 = getColorFromValue(normalizedDisp[n2]);
+      const c3 = getColorFromValue(normalizedDisp[n3]);
+      const c4 = getColorFromValue(normalizedDisp[n4]);
+
+      // Triángulo 1
+      positionsArray[idx] = p1.x; positionsArray[idx+1] = p1.y; positionsArray[idx+2] = p1.z;
+      colorsArray[idx] = c1.r; colorsArray[idx+1] = c1.g; colorsArray[idx+2] = c1.b;
+      idx += 3;
+
+      positionsArray[idx] = p2.x; positionsArray[idx+1] = p2.y; positionsArray[idx+2] = p2.z;
+      colorsArray[idx] = c2.r; colorsArray[idx+1] = c2.g; colorsArray[idx+2] = c2.b;
+      idx += 3;
+
+      positionsArray[idx] = p3.x; positionsArray[idx+1] = p3.y; positionsArray[idx+2] = p3.z;
+      colorsArray[idx] = c3.r; colorsArray[idx+1] = c3.g; colorsArray[idx+2] = c3.b;
+      idx += 3;
+
+      // Triángulo 2
+      positionsArray[idx] = p1.x; positionsArray[idx+1] = p1.y; positionsArray[idx+2] = p1.z;
+      colorsArray[idx] = c1.r; colorsArray[idx+1] = c1.g; colorsArray[idx+2] = c1.b;
+      idx += 3;
+
+      positionsArray[idx] = p3.x; positionsArray[idx+1] = p3.y; positionsArray[idx+2] = p3.z;
+      colorsArray[idx] = c3.r; colorsArray[idx+1] = c3.g; colorsArray[idx+2] = c3.b;
+      idx += 3;
+
+      positionsArray[idx] = p4.x; positionsArray[idx+1] = p4.y; positionsArray[idx+2] = p4.z;
+      colorsArray[idx] = c4.r; colorsArray[idx+1] = c4.g; colorsArray[idx+2] = c4.b;
+      idx += 3;
+    });
+
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.color.needsUpdate = true;
+    geometry.computeVertexNormals();
+
+    wireframe.geometry.dispose();
+    wireframe.geometry = new THREE.WireframeGeometry(geometry);
+
+    return amplitudeFactor * wMaxStatic * Math.cos(omega * t);
+  }
+
+  // ===================================================================
+  // CONFIGURACIÓN ESTÁTICA DE SIN DEFORMAR (REFERENCIA)
+  // ===================================================================
+
+  const refPositions = [];
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      const x1 = i * a / nx;
+      const x2 = (i + 1) * a / nx;
+      const z1 = j * b / ny;
+      const z2 = (j + 1) * b / ny;
+
+      refPositions.push(x1, 0, z1, x2, 0, z1, x2, 0, z2);
+      refPositions.push(x1, 0, z1, x2, 0, z2, x1, 0, z2);
+    }
+  }
+
+  const refGeom = new THREE.BufferGeometry();
+  refGeom.setAttribute('position', new THREE.Float32BufferAttribute(refPositions, 3));
+
+  const refWireframe = new THREE.LineSegments(
+    new THREE.EdgesGeometry(refGeom),
+    new THREE.LineBasicMaterial({ color: 0xbdbdbd, opacity: 0.15, transparent: true })
+  );
+  scene.add(refWireframe);
+
+  // ===================================================================
+  // APOYOS
+  // ===================================================================
+
+  const supportGeom = new THREE.SphereGeometry(0.12, 16, 16);
+  const supportMat = new THREE.MeshStandardMaterial({ color: 0x37474f });
+
+  [[0,0], [a,0], [a,b], [0,b]].forEach(([x,z]) => {
+    const support = new THREE.Mesh(supportGeom, supportMat);
+    support.position.set(x, -0.12, z);
+    scene.add(support);
+  });
+
+  // ===================================================================
+  // ILUMINACIÓN
+  // ===================================================================
+
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+
+  const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.5);
+  dirLight1.position.set(a, b*3, b);
+  scene.add(dirLight1);
+
+  const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+  dirLight2.position.set(-a, b*2, -b);
+  scene.add(dirLight2);
+
+  const gridHelper = new THREE.GridHelper(Math.max(a,b)*1.5, 30);
+  gridHelper.position.y = -amplitudeFactor * wMaxStatic - 0.2;
+  scene.add(gridHelper);
+
+  const axesHelper = new THREE.AxesHelper(Math.max(a,b)*0.4);
+  scene.add(axesHelper);
+
+  // ===================================================================
+  // CONTROLES
+  // ===================================================================
+
+  document.getElementById('toggleVib').addEventListener('click', (e) => {
+    isVibrating = !isVibrating;
+    e.target.textContent = isVibrating ? '⏸️ Pausar' : '▶️ Reanudar';
+  });
+
+  document.getElementById('ampSlider').addEventListener('input', (e) => {
+    amplitudeFactor = parseFloat(e.target.value);
+    document.getElementById('ampValue').textContent = amplitudeFactor.toFixed(1) + 'x';
+
+    // Ajustar posición del grid
+    gridHelper.position.y = -amplitudeFactor * wMaxStatic - 0.2;
+  });
+
+  // ===================================================================
+  // ANIMACIÓN
+  // ===================================================================
+
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    if (isVibrating) {
+      time += clock.getDelta();
+      const currentDisp = updateGeometry(time);
+
+      // Actualizar UI
+      document.getElementById('timeValue').textContent = time.toFixed(2);
+      document.getElementById('dispValue').textContent = (currentDisp * 1000).toFixed(2);
+    }
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  // Inicializar
+  updateGeometry(0);
+  animate();
+});
+</script>
+@{end html}
+
+"ANÁLISIS MODAL:
+"
+"1. MODO FUNDAMENTAL (1,1):
+"   - Forma: sin(πx/a) × sin(πz/b)
+"   - Un antinode en el centro
+"   - Frecuencia ω₁₁ = @{calcpad:ω_11} rad/s
+"
+"2. ECUACIÓN DE MOVIMIENTO:
+"   w(x,z,t) = A × φ(x,z) × cos(ωt)
+"   donde φ(x,z) es la forma del modo
+"
+"3. AMPLITUD:
+"   - Puede ajustarse con el slider
+"   - Amplitud = factor × deflexión estática
+"
+"4. ANIMACIÓN:
+"   - Usa THREE.Clock para tiempo real
+"   - La geometría se actualiza cada frame
+"   - Los colores muestran la distribución
+"
+"Este ejemplo simula vibración libre del
+"primer modo de una losa simplemente apoyada

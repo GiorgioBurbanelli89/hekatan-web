@@ -1,0 +1,98 @@
+'<!-- ============== PAGE 1 - COVER ============== -->
+@{header}
+left: DOI: https://doi.org/10.14256/JCE.2078.2017
+right: Građevinar 1/2018
+barside: right
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2 32:68}
+
+@{column}
+@{markdown}
+<div style="text-align:right; font-size:8pt; color:#555; line-height:1.5; margin-top:10pt;">
+Primljen / Received: 12.4.2017.<br>
+Ispravljen / Corrected: 12.6.2017.<br>
+Prihvaćen / Accepted: 20.6.2017.<br>
+Dostupno online / Available online: 10.2.2018.
+</div>
+@{end markdown}
+
+@{column}
+@{title}
+text: Method of incompatible modes – overview and application
+@{end title}
+
+@{end columns}
+
+@{markdown}
+<div style="color:#F27835; font-size:9pt; font-weight:bold; margin:8pt 0 6pt 0;">Authors:</div>
+@{end markdown}
+
+@{columns 2 32:68}
+
+@{column}
+@{author}
+photo: jce-images/image1.png
+name: Prof. Ivica Kožar, PhD. CE
+affiliation: University of Rijeka\nFaculty of Civil Engineering
+email: ivica.kozar@gradri.uniri.hr
+@{end author}
+
+@{author}
+photo: jce-images/image2.png
+name: Tea Rukavina, MCE
+affiliation: University of Rijeka\nFaculty of Civil Engineering\nUniversité de Technologie de Compiègne\nSorbonne Universités, France
+email: tea.rukavina@uniri.hr
+@{end author}
+
+@{author}
+photo: jce-images/image3.png
+name: Prof. Adnan Ibrahimbegović, PhD. CE
+affiliation: Université de Technologie de Compiègne\nSorbonne Universités, France
+email: adnan.ibrahimbegovic@utc.fr
+@{end author}
+
+@{column}
+@{markdown}
+<div style="text-align:right; font-size:8.5pt; color:#555; font-style:italic;">Subject review</div>
+<div style="color:#F27835; font-size:9pt; font-style:italic;">Ivica Kožar, Tea Rukavina, Adnan Ibrahimbegović</div>
+<div style="font-size:10pt; font-weight:bold; margin:3pt 0 5pt 0;">Method of incompatible modes – overview and application</div>
+@{end markdown}
+
+@{abstract english}
+The finite-element method has been in use in the engineering community for over 50 years, a period during which it has been constantly improved. One important improvement is the addition of required displacement modes ("incompatible modes") into the element's shape functions. Such addition violates the continuity condition, and has to be realised according to certain rules if convergence is to be achieved. The benefits are shown in the element's behaviour under unfavourable loading conditions, and in the possibility of a simplified treatment of strain or displacement discontinuities.
+keywords: finite element, shape function, bending analysis, discontinuity analysis, static condensation
+@{end abstract}
+
+@{markdown}
+<div style="text-align:right; font-size:8.5pt; color:#555; font-style:italic; margin-top:6pt;">Pregledni rad</div>
+<div style="color:#F27835; font-size:9pt; font-style:italic;">Ivica Kožar, Tea Rukavina, Adnan Ibrahimbegović</div>
+<div style="font-size:10pt; font-weight:bold; margin:3pt 0 5pt 0;">Metoda nekompatibilnih modova – pregled i primjena</div>
+@{end markdown}
+
+@{abstract croatian}
+Metoda konačnih elemenata koristi se u inženjerskoj zajednici već više od 50 godina i za to je vrijeme stalno poboljšavana. Jedno od bitnih poboljšanja odnosi se na uvođenje dodatnih funkcija za opisivanje pomaka ("nekompatibilnih modova") u interpolacije elemenata. Takvo dodavanje ne zadovoljava uvjet kontinuiteta i mora biti provedeno uz određene uvjete kako bi se postigla konvergencija. Prednosti korištenja ove metode jesu poboljšano ponašanje elemenata u nepovoljnim uvjetima opterećenja te mogućnost jednostavnog uzimanja u obzir diskontinuiteta u polju pomaka ili deformacija.
+keywords: konačni element, funkcija oblika, analiza savijanja, analiza diskontinuiteta, statička kondenzacija
+@{end abstract}
+
+@{markdown}
+<div style="text-align:right; font-size:8.5pt; color:#555; font-style:italic; margin-top:6pt;">Übersichtsarbeit</div>
+<div style="color:#F27835; font-size:9pt; font-style:italic;">Ivica Kožar, Tea Rukavina, Adnan Ibrahimbegović</div>
+<div style="font-size:10pt; font-weight:bold; margin:3pt 0 5pt 0;">Methode der inkompatiblen modi – übersicht und anwendung</div>
+@{end markdown}
+
+@{abstract german}
+Die Finite-Elemente-Methode wird in der Ingenieurgemeinschaft seit mehr als 50 Jahre angewendet, und wurde während dieser Zeit ständig verbessert. Eines der wichtigsten Verbesserungen bezieht sich auf die Einführung zusätzlicher Funktionen für die Beschreibung der Verschiebung ("inkompatible Modi") bei der Interpolation der Elemente. Eine solche Ergänzung erfüllt nicht die Bedingung der Kontinuität und muss unter bestimmten Bedingungen durchgeführt werden, um eine Konvergenz zu erreichen. Die Vorteile der Anwendung dieser Methode liegen im verbesserten Verhalten der Elemente unter ungünstigen Belastungsbedingungen sowie der Möglichkeit einer einfachen Berücksichtigung der Diskontinuität im Bereich der Verschiebung oder Verformung.
+keywords: Finite-Elemente, Formfunktion, Biegeanalyse, Diskontinuitätsanalyse, statische Kondensation
+@{end abstract}
+
+@{end columns}
+
+@{footer}
+left: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+right: 19
+@{end footer}

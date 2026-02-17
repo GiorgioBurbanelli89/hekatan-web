@@ -1,0 +1,143 @@
+"============================================
+"05 - JAVASCRIPT BÁSICO
+"============================================
+"Aprende a agregar interactividad con JavaScript.
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>05 - JavaScript Básico</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .caja {
+      background: white;
+      padding: 30px;
+      max-width: 400px;
+      margin: 20px auto;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    button {
+      background-color: #2196f3;
+      color: white;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px;
+    }
+
+    button:hover {
+      background-color: #1976d2;
+    }
+
+    #contador {
+      font-size: 48px;
+      font-weight: bold;
+      color: #2196f3;
+      margin: 20px 0;
+    }
+
+    #mensaje {
+      font-size: 20px;
+      color: #666;
+      min-height: 30px;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>JavaScript Interactivo</h1>
+
+  <!-- #region CONTADOR -->
+  <div class="caja">
+    <h2>Contador</h2>
+    <div id="contador">0</div>
+    <button onclick="incrementar()">➕ Incrementar</button>
+    <button onclick="decrementar()">➖ Decrementar</button>
+    <button onclick="resetear()">🔄 Resetear</button>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region SALUDO -->
+  <div class="caja">
+    <h2>Saludo Personalizado</h2>
+    <input type="text" id="nombreInput" placeholder="Tu nombre" style="padding: 10px; font-size: 16px; width: 80%; margin: 10px;">
+    <br>
+    <button onclick="saludar()">👋 Saludar</button>
+    <div id="mensaje"></div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region SCRIPTS -->
+  <script>
+    // #region VARIABLES
+    let contador = 0;
+    // #endregion
+
+    // #region FUNCIONES CONTADOR
+    function incrementar() {
+      contador++;
+      actualizarContador();
+    }
+
+    function decrementar() {
+      contador--;
+      actualizarContador();
+    }
+
+    function resetear() {
+      contador = 0;
+      actualizarContador();
+    }
+
+    function actualizarContador() {
+      document.getElementById('contador').textContent = contador;
+    }
+    // #endregion
+
+    // #region FUNCIÓN SALUDO
+    function saludar() {
+      const nombre = document.getElementById('nombreInput').value;
+      const mensaje = document.getElementById('mensaje');
+
+      if (nombre.trim() === '') {
+        mensaje.textContent = '❌ Por favor escribe tu nombre';
+        mensaje.style.color = '#f44336';
+      } else {
+        mensaje.textContent = '¡Hola ' + nombre + '! 👋';
+        mensaje.style.color = '#4caf50';
+      }
+    }
+    // #endregion
+
+    console.log('✅ JavaScript cargado correctamente');
+  </script>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

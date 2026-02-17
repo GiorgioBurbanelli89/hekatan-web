@@ -1,0 +1,286 @@
+"============================================
+"🎨 CSS VARIABLES (CUSTOM PROPERTIES)
+"============================================
+"Aprende a usar variables CSS para crear temas dinámicos.
+
+"¿QUÉ SON CSS VARIABLES?
+"----------------------------------------
+'Variables reutilizables en CSS
+'Se definen con --nombre: valor
+'Se usan con var(--nombre)
+'Pueden cambiarse con JavaScript
+'Perfectas para: temas, colores, tamaños
+
+"SINTAXIS
+"----------------------------------------
+'Definir: --color-principal: #2196f3;
+'Usar: background: var(--color-principal);
+'Con fallback: var(--color, blue)
+
+"SCOPE
+"----------------------------------------
+':root { } - Variables globales
+'elemento { } - Variables locales al elemento
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>20 - CSS Variables</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    /* Variables globales */
+    :root {
+      --color-principal: #2196f3;
+      --color-secundario: #f44336;
+      --color-fondo: #f0f0f0;
+      --color-texto: #333;
+      --espaciado: 20px;
+      --borde-radio: 8px;
+      --fuente-familia: Arial, sans-serif;
+    }
+
+    /* Tema oscuro */
+    [data-theme="dark"] {
+      --color-principal: #64b5f6;
+      --color-secundario: #ef5350;
+      --color-fondo: #1a1a1a;
+      --color-texto: #ffffff;
+    }
+
+    /* Tema verde */
+    [data-theme="green"] {
+      --color-principal: #4caf50;
+      --color-secundario: #ff9800;
+      --color-fondo: #e8f5e9;
+      --color-texto: #1b5e20;
+    }
+
+    body {
+      font-family: var(--fuente-familia);
+      background-color: var(--color-fondo);
+      color: var(--color-texto);
+      padding: var(--espaciado);
+      transition: all 0.3s;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--color-principal);
+    }
+
+    .seccion {
+      background: white;
+      padding: calc(var(--espaciado) * 1.5);
+      margin: var(--espaciado) auto;
+      max-width: 800px;
+      border-radius: var(--borde-radio);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    [data-theme="dark"] .seccion {
+      background: #2a2a2a;
+    }
+
+    [data-theme="green"] .seccion {
+      background: #f1f8e9;
+    }
+
+    button {
+      background: var(--color-principal);
+      color: white;
+      border: none;
+      padding: calc(var(--espaciado) * 0.6) calc(var(--espaciado) * 1.2);
+      border-radius: var(--borde-radio);
+      cursor: pointer;
+      margin: 5px;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      filter: brightness(1.2);
+      transform: translateY(-2px);
+    }
+
+    .demo-box {
+      background: var(--color-principal);
+      color: white;
+      padding: var(--espaciado);
+      margin: 10px 0;
+      border-radius: var(--borde-radio);
+      text-align: center;
+    }
+
+    .demo-box-secundario {
+      background: var(--color-secundario);
+      color: white;
+      padding: var(--espaciado);
+      margin: 10px 0;
+      border-radius: var(--borde-radio);
+      text-align: center;
+    }
+
+    .controles {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .slider-container {
+      margin: var(--espaciado) 0;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .color-preview {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--color-principal);
+      display: inline-block;
+      margin: 10px;
+      border: 3px solid var(--color-texto);
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>🎨 CSS Variables (Custom Properties)</h1>
+
+  <!-- #region TEMAS -->
+  <div class="seccion">
+    <h2>🌈 Cambiar Tema</h2>
+    <div class="controles">
+      <button onclick="cambiarTema('light')">☀️ Tema Claro</button>
+      <button onclick="cambiarTema('dark')">🌙 Tema Oscuro</button>
+      <button onclick="cambiarTema('green')">🌿 Tema Verde</button>
+    </div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region CAMBIAR COLORES -->
+  <div class="seccion">
+    <h2>🎨 Cambiar Color Principal</h2>
+
+    <div class="controles">
+      <button onclick="cambiarColor('#2196f3')">🔵 Azul</button>
+      <button onclick="cambiarColor('#f44336')">🔴 Rojo</button>
+      <button onclick="cambiarColor('#4caf50')">🟢 Verde</button>
+      <button onclick="cambiarColor('#ff9800')">🟠 Naranja</button>
+      <button onclick="cambiarColor('#9c27b0')">🟣 Morado</button>
+    </div>
+
+    <div>
+      <label>Color personalizado:</label>
+      <input type="color" id="colorPicker" onchange="cambiarColor(this.value)" value="#2196f3">
+      <span class="color-preview"></span>
+    </div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region CAMBIAR TAMAÑOS -->
+  <div class="seccion">
+    <h2>📏 Cambiar Espaciado</h2>
+
+    <div class="slider-container">
+      <label>Espaciado: <span id="espaciadoValor">20</span>px</label>
+      <input type="range" min="10" max="50" value="20"
+             oninput="cambiarEspaciado(this.value)">
+    </div>
+
+    <div class="slider-container">
+      <label>Radio de bordes: <span id="radioValor">8</span>px</label>
+      <input type="range" min="0" max="30" value="8"
+             oninput="cambiarRadio(this.value)">
+    </div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region DEMO -->
+  <div class="seccion">
+    <h2>🎯 Demo de Elementos</h2>
+    <div class="demo-box">
+      Caja con color principal
+    </div>
+    <div class="demo-box-secundario">
+      Caja con color secundario
+    </div>
+  </div>
+  <!-- #endregion -->
+
+  <!-- #region SCRIPTS -->
+  <script>
+    // #region CAMBIAR TEMA
+    function cambiarTema(tema) {
+      document.documentElement.setAttribute('data-theme', tema);
+      console.log('Tema cambiado a:', tema);
+    }
+    // #endregion
+
+    // #region CAMBIAR COLOR
+    function cambiarColor(color) {
+      document.documentElement.style.setProperty('--color-principal', color);
+      document.getElementById('colorPicker').value = color;
+      console.log('Color principal cambiado a:', color);
+    }
+    // #endregion
+
+    // #region CAMBIAR ESPACIADO
+    function cambiarEspaciado(valor) {
+      document.documentElement.style.setProperty('--espaciado', valor + 'px');
+      document.getElementById('espaciadoValor').textContent = valor;
+    }
+    // #endregion
+
+    // #region CAMBIAR RADIO
+    function cambiarRadio(valor) {
+      document.documentElement.style.setProperty('--borde-radio', valor + 'px');
+      document.getElementById('radioValor').textContent = valor;
+    }
+    // #endregion
+
+    console.log('✅ CSS Variables demo cargado');
+    console.log('Variables actuales:', getComputedStyle(document.documentElement));
+  </script>
+  <!-- #endregion -->
+
+  <!-- #region CÓDIGO DE EJEMPLO -->
+  <div class="seccion">
+    <h3>💻 Código Básico:</h3>
+    <pre style="background: var(--color-fondo); padding: 15px; border-radius: var(--borde-radio);">
+/* CSS */
+:root {
+  --color-principal: #2196f3;
+  --espaciado: 20px;
+}
+
+.elemento {
+  background: var(--color-principal);
+  padding: var(--espaciado);
+}
+
+/* JavaScript */
+document.documentElement.style.setProperty(
+  '--color-principal',
+  '#f44336'
+);
+    </pre>
+  </div>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

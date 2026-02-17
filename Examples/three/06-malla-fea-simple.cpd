@@ -1,0 +1,309 @@
+"============================================
+"EJEMPLO 6: Malla FEA Simple
+"============================================
+"Creación de una malla de elementos finitos
+"Losa rectangular dividida en elementos
+
+"GEOMETRÍA DE LA LOSA:
+'Ancho (X):'a = 4m
+'Largo (Y):'b = 3m
+'Espesor:'t = 0.20m
+
+"DISCRETIZACIÓN:
+'Elementos en X:'n_x = 8
+'Elementos en Y:'n_y = 6
+
+#val
+'Tamaño de elemento en X:'
+Δx = a/n_x
+'Tamaño de elemento en Y:'
+Δy = b/n_y
+'Total de elementos:'
+n_elem = n_x*n_y
+'Total de nodos:'
+n_nodos = (n_x + 1)*(n_y + 1)
+
+@{html}
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/examples/js/controls/OrbitControls.js"></script>
+<div id="canvas6" style="width:900px; height:600px; border:2px solid #ccc; margin:10px 0;"></div>
+<div style="background:#e8f5e9; padding:15px; margin:10px 0; border-left:4px solid #4caf50;">
+  <strong>🔍 Información de la Malla:</strong><br>
+  Elementos: @{calcpad:n_elem} | Nodos: @{calcpad:n_nodos}<br>
+  Tamaño de elemento: @{calcpad:Δx} × @{calcpad:Δy} m
+</div>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof THREE === 'undefined' || typeof THREE.OrbitControls === 'undefined') {
+    document.getElementById('canvas6').innerHTML = '<p style="color:red;">Error</p>';
+    return;
+  }
+
+  // Variables de Calcpad
+  const a = @{calcpad:a};      // Ancho
+  const b = @{calcpad:b};      // Largo
+  const t = @{calcpad:t};      // Espesor
+  const nx = @{calcpad:n_x};   // Elementos en X
+  const ny = @{calcpad:n_y};   // Elementos en Y
+
+  // Escena
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf8f9fa);
+
+  // Cámara
+  const camera = new THREE.PerspectiveCamera(50, 900/600, 0.1, 1000);
+  camera.position.set(a*1.2, Math.max(a,b)*1.5, b*1.2);
+
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(900, 600);
+  document.getElementById('canvas6').appendChild(renderer.domElement);
+
+  // Controles
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(a/2, 0, b/2);
+  controls.update();
+
+  // ===================================================================
+  // CREAR MALLA DE ELEMENTOS FINITOS
+  // ===================================================================
+
+  // Paso 1: Generar nodos
+  const nodes = [];
+  for (let j = 0; j <= ny; j++) {
+    for (let i = 0; i <= nx; i++) {
+      const x = i * a / nx;
+      const z = j * b / ny;
+      nodes.push(new THREE.Vector3(x, 0, z));
+    }
+  }
+
+  console.log('Total de nodos:', nodes.length);
+
+  // Paso 2: Generar elementos (cada elemento es un cuadrado con 4 nodos)
+  const elements = [];
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      // Índices de los 4 nodos del elemento (en sentido antihorario)
+      const n1 = j * (nx + 1) + i;
+      const n2 = j * (nx + 1) + (i + 1);
+      const n3 = (j + 1) * (nx + 1) + (i + 1);
+      const n4 = (j + 1) * (nx + 1) + i;
+
+      elements.push([n1, n2, n3, n4]);
+    }
+  }
+
+  console.log('Total de elementos:', elements.length);
+
+  // Paso 3: Crear geometría usando BufferGeometry
+  // Cada elemento cuadrado se divide en 2 triángulos
+  const positions = [];
+  const normals = [];
+  const colors = [];
+
+  elements.forEach((elem, idx) => {
+    const [n1, n2, n3, n4] = elem;
+
+    // Posiciones de los 4 nodos
+    const p1 = nodes[n1];
+    const p2 = nodes[n2];
+    const p3 = nodes[n3];
+    const p4 = nodes[n4];
+
+    // Primer triángulo: n1-n2-n3
+    positions.push(p1.x, p1.y, p1.z);
+    positions.push(p2.x, p2.y, p2.z);
+    positions.push(p3.x, p3.y, p3.z);
+
+    // Segundo triángulo: n1-n3-n4
+    positions.push(p1.x, p1.y, p1.z);
+    positions.push(p3.x, p3.y, p3.z);
+    positions.push(p4.x, p4.y, p4.z);
+
+    // Normales (apuntando hacia arriba)
+    for (let i = 0; i < 6; i++) {
+      normals.push(0, 1, 0);
+    }
+
+    // Color (por ahora uniforme - verde claro)
+    const color = new THREE.Color(0x81c784);
+    for (let i = 0; i < 6; i++) {
+      colors.push(color.r, color.g, color.b);
+    }
+  });
+
+  // Crear BufferGeometry
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeVertexNormals();
+
+  // Material
+  const material = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    side: THREE.DoubleSide,
+    metalness: 0.1,
+    roughness: 0.8
+  });
+
+  // Crear mesh de la losa
+  const slab = new THREE.Mesh(geometry, material);
+  scene.add(slab);
+
+  // ===================================================================
+  // AGREGAR WIREFRAME (MALLA)
+  // ===================================================================
+
+  const wireframeGeometry = new THREE.EdgesGeometry(geometry);
+  const wireframeMaterial = new THREE.LineBasicMaterial({
+    color: 0x263238,
+    linewidth: 2
+  });
+  const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
+  scene.add(wireframe);
+
+  // ===================================================================
+  // VISUALIZAR NODOS
+  // ===================================================================
+
+  const nodeGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+  const nodeMaterial = new THREE.MeshBasicMaterial({ color: 0xf44336 });
+
+  nodes.forEach((node, idx) => {
+    const nodeMesh = new THREE.Mesh(nodeGeometry, nodeMaterial);
+    nodeMesh.position.copy(node);
+    scene.add(nodeMesh);
+  });
+
+  // ===================================================================
+  // AGREGAR BORDES DE LA LOSA (más gruesos)
+  // ===================================================================
+
+  const borderMaterial = new THREE.LineBasicMaterial({
+    color: 0x000000,
+    linewidth: 4
+  });
+
+  // Borde inferior
+  const border1 = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(a, 0, 0)
+    ]),
+    borderMaterial
+  );
+  scene.add(border1);
+
+  // Borde derecho
+  const border2 = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(a, 0, 0),
+      new THREE.Vector3(a, 0, b)
+    ]),
+    borderMaterial
+  );
+  scene.add(border2);
+
+  // Borde superior
+  const border3 = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(a, 0, b),
+      new THREE.Vector3(0, 0, b)
+    ]),
+    borderMaterial
+  );
+  scene.add(border3);
+
+  // Borde izquierdo
+  const border4 = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, b),
+      new THREE.Vector3(0, 0, 0)
+    ]),
+    borderMaterial
+  );
+  scene.add(border4);
+
+  // ===================================================================
+  // EJES Y REFERENCIAS
+  // ===================================================================
+
+  // Ejes de coordenadas
+  const axesHelper = new THREE.AxesHelper(Math.max(a, b) * 0.5);
+  scene.add(axesHelper);
+
+  // Grid de referencia
+  const gridSize = Math.max(a, b) * 1.5;
+  const gridHelper = new THREE.GridHelper(gridSize, 20);
+  gridHelper.position.y = -0.01;
+  scene.add(gridHelper);
+
+  // Plano de fondo
+  const planeGeom = new THREE.PlaneGeometry(gridSize, gridSize);
+  const planeMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.3
+  });
+  const plane = new THREE.Mesh(planeGeom, planeMat);
+  plane.rotation.x = -Math.PI / 2;
+  plane.position.y = -0.02;
+  scene.add(plane);
+
+  // ===================================================================
+  // ILUMINACIÓN
+  // ===================================================================
+
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+
+  const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.5);
+  dirLight1.position.set(a, b*2, b);
+  scene.add(dirLight1);
+
+  const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+  dirLight2.position.set(-a, b*2, -b);
+  scene.add(dirLight2);
+
+  // ===================================================================
+  // ANIMACIÓN
+  // ===================================================================
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  animate();
+});
+</script>
+@{end html}
+
+"CONCEPTOS CLAVE DE ESTA MALLA FEA:
+"
+"1. NODOS: Puntos en el espacio (esferas rojas)
+"   - Se generan en una cuadrícula regular
+"   - Cada nodo tiene coordenadas (x, y, z)
+"
+"2. ELEMENTOS: Regiones entre nodos (cuadrados verdes)
+"   - Cada elemento conecta 4 nodos
+"   - Se subdividen en 2 triángulos para renderizar
+"
+"3. CONECTIVIDAD: Lista de nodos que forman cada elemento
+"   - elements[i] = [n1, n2, n3, n4]
+"   - Define la topología de la malla
+"
+"4. BufferGeometry: Geometría optimizada de Three.js
+"   - positions: Coordenadas de vértices
+"   - normals: Vectores perpendiculares (iluminación)
+"   - colors: Colores por vértice
+"
+"En los siguientes ejemplos agregaremos:
+"- Colores basados en valores (tensiones, desplazamientos)
+"- Condiciones de borde
+"- Cargas aplicadas
+"- Deformaciones animadas

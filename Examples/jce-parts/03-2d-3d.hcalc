@@ -1,0 +1,251 @@
+'<!-- ============== PAGE 8 - SECTION 3 ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Method of incompatible modes – overview and application
+right: Građevinar 1/2018
+barside: right
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{markdown}
+## 3. Incompatible mode method in 2D and 3D
+### 3.1. 2D finite element
+#### 3.1.1. Formulation of Q4 element
+
+The formulation of the isoparametric quadrilateral 2D element is well known and one of many finite element references can be consulted in this respect, e.g., [4]. The geometry is represented as follows
+@{end markdown}
+
+@{eq}
+x(ξ,η) = N_1(ξ,η)*x_1 + N_2(ξ,η)*x_2 + … + N_r(ξ,η)*x_r
+y(ξ,η) = N_1(ξ,η)*y_1 + N_2(ξ,η)*y_2 + … + N_r(ξ,η)*y_r    (47)
+@{end eq}
+
+@{column}
+@{markdown}
+where ξ, η ∈ [−1,1] are isoparametric coordinates N_i(ξ,η) are shape functions and x_i, y_i are nodal coordinates, i = (1,2,3,4), as presented in Figure 9.
+@{end markdown}
+
+@{figure}
+src: jce-images/image47.png
+caption: Figure 9. Isoparametric Q4 element
+width: 70%
+@{end figure}
+
+@{markdown}
+Displacements u and v are interpolated in the same manner
+@{end markdown}
+
+@{eq}
+u(ξ,η) = N_1(ξ,η)*u_1 + N_2(ξ,η)*u_2 + … + N_r(ξ,η)*u_r
+v(ξ,η) = N_1(ξ,η)*v_1 + N_2(ξ,η)*v_2 + … + N_r(ξ,η)*v_r    (48)
+@{end eq}
+
+@{markdown}
+where u_i, v_i are nodal displacements, i = (1,2,3,4). The geometry and displacement shape functions are equal for isoparametric finite elements. Isoparametric quadrilateral 2D element shape functions, in matrix notation, are
+@{end markdown}
+
+@{eq}
+N(ξ,η) = ¼ * [(1−ξ)(1−η); (1+ξ)(1−η); (1+ξ)(1+η); (1−ξ)(1+η)]^T    (49)
+@{end eq}
+
+@{markdown}
+The chosen shape functions result in element eigenvectors as depicted in Figure 10 (only two are shown as the other two are similar).
+@{end markdown}
+
+@{figure}
+src: jce-images/image50.jpeg
+caption: Figure 10. Characteristic Q4 element eigenvectors
+width: 90%
+@{end figure}
+
+@{end columns}
+
+@{footer}
+left: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+right: 25
+@{end footer}
+
+'<!-- ============== PAGE 8 ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Method of incompatible modes – overview and application
+right: Građevinar 1/2018
+barside: right
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{markdown}
+The relation between strains and displacements is as usual, and for a 2D plain stress / plane strain problem it reads as follows
+@{end markdown}
+
+@{eq}
+ε = [ε_x; ε_y; γ_{xy}]^T = [∂u/∂x; ∂v/∂y; ∂u/∂y + ∂v/∂x]^T = B*u    (50-51)
+@{end eq}
+
+@{markdown}
+The shape functions N_i(ξ,η) depend on isoparametric coordinates ξ, η, and the derivatives are obtained by applying the chain rule for derivatives of composite functions.
+
+The required partial derivatives of shape functions over global coordinates are finally computed.
+
+In the case of small displacements and linear elasticity, the principle of minimum potential energy can be applied, and so the element stiffness matrix and the consistent load vector are obtained.
+
+And the structure equilibrium equation is then **K u** − **f** = **0**.
+
+We would like to transform our integrals into isoparametric coordinates, and so a change of variables is necessary.
+@{end markdown}
+
+@{column}
+@{markdown}
+And the stiffness matrix now reads in the transformed coordinates.
+
+The actual integration is carried out numerically, i.e., applying the Gauss integration rule. In that case the integral is replaced with summation, where m, n represent the number of integration points along each isoparametric coordinate within the element, w_m, w_n are weighting coefficients and ξ_m, η_n are coordinates of the Gauss integration points.
+
+### 3.1.2 Addition of incompatible modes
+
+Figure 10 shows that the described Q4 element cannot describe bending very well (when the opposite sides rotate as in bending, the other two remain straight and not curved and so the spurious shear stress develops making the element unrealistically stiff). This might be compensated with the addition of the missing displacements of quadratic type
+@{end markdown}
+
+@{eq}
+[u; v; w] = [N_i*I]*[u_i; v_i; w_i] + [M_j*I]*[α_j; α_j; α_j]    (60)
+@{end eq}
+
+@{markdown}
+where α₁, α₂ are the incompatible mode parameters to be determined, and the incompatible modes shape functions are M₁ = 1 − ξ² and M₂ = 1 − η². Displacements in the direction ξ corresponding to the newly added functions (incompatible modes) are shown in Figure 11 (red crosses represent internal element points so the change in "density" is visible).
+@{end markdown}
+
+@{end columns}
+
+@{footer}
+left: 26
+right: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+@{end footer}
+
+'<!-- ============== PAGE 9 ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Građevinar 1/2018
+right: Ivica Kožar, Tea Rukavina, Adnan Ibrahimbegović
+barside: left
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{markdown}
+The strain-displacement matrix corresponding to the incompatible modes is formulated so that the patch test condition from Eq. (19) is satisfied, where **G** for the Q4 element is computed accordingly.
+
+The complete **B** matrix with the added incompatible modes is now **B**_m = [**B G**], and the stiffness matrix formulation proceeds as usual, with **B** matrix replaced by **B**_m matrix.
+
+In this case, the displacement vector **u** and the external force vector also have to be augmented with the incompatible mode parameters α, and so we obtain the augmented system.
+
+We now have a system of equations like Eq. (23). The thus formed new element is named Q6.
+
+#### 3.1.3. Example
+
+The behaviour of the new Q6 element can be observed in the example of a cantilever beam loaded in bending. Figure 12 shows that there is a force and a moment loading. This is not a real patch test, however. It can be seen in [9] that both 2D and 3D incompatible quad elements pass the patch test. The figure is not proportional, it is a thin cantilever, so that the exact solution is easily calculated; the data is E = 3E7, ν = 0.33 (Poisson's ratio), plane stress, L = 3.0, h = 0.2 (length/height ratio is 15). The comparison of results without and with incompatible modes is shown in the following table:
+@{end markdown}
+
+@{table}
+headers: Displacements; exact; without IM; with IM
+Loading 1; 0.562; 0.169; 0.544
+Loading 2; 0.112; 0.033; 0.113
+@{end table}
+
+@{column}
+@{markdown}
+Graphical comparison of "standard" and "incompatible modes" of Q4 elements is presented in Figure 13. Stresses in elements with incompatible nodes are recovered in the same way as for elements without incompatible modes.
+
+### 3.2. 3D finite element
+#### 3.2.1. Formulation of Q8 element
+
+In principle, the Q8 element is equal to the Q4 element but expanded in the third dimension, so there are more degrees of freedom. Due to this fact, the formulation of the Q8 element will only be briefly exposed. The isoparametric approximation for the geometry and displacements inside an element follows the standard formulation, where shape interpolation functions are standard isoparametric functions (see [4]).
+
+The interpolation matrix element **N** is defined as:
+
+N_i = ⅛*(1 + ξ_i*ξ)*(1 + η_i*η)*(1 + ζ_i*ζ)
+
+where ξ_i, η_i, ζ_i are nodal isoparametric coordinates. Equations for the strain-displacement matrix **B**, stiffness matrix **K**, and consistent loading matrix **f** are similar to those for the Q4 element.
+@{end markdown}
+
+@{end columns}
+
+@{footer}
+left: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+right: 27
+@{end footer}
+
+'<!-- ============== PAGE 10 ============== -->
+@{pagebreak}
+@{end pagebreak}
+
+@{header}
+left: Method of incompatible modes – overview and application
+right: Građevinar 1/2018
+barside: right
+color: #F27835
+textcolor: #FDFDFD
+rightcolor: #F27835
+linecolor: #F27835
+@{end header}
+
+@{columns 2}
+
+@{column}
+@{markdown}
+#### 3.2.2. Addition of incompatible modes
+
+The Q8 element suffers from the same lack of bending shapes as the Q4, and the remedy is based on the same idea: the addition of the missing shapes.
+
+The incompatible mode shape functions are defined as follows:
+
+M̂₁ = (1 − ξ²); M̂₂ = (1 − η²); M̂₃ = (1 − ζ²)
+
+The strain-displacement matrix is defined as **B**_m = [**B G**], where matrices **B** and **G** for the Q8 element are computed in a similar manner as for the Q4 element.
+
+The system of equations is again formed as in Eq. (64).
+
+#### 3.2.3. Example
+
+The analysis is performed for the structure in Figure 14 with the data E = 3E7, ν = 0.33, plane stress, L = 3.0, h = 0.2, and t = 0.1. The structure is the same as in the 2D example for the Q4 element, and so the comparison between elements is possible. The results of the analysis are presented in Table 2.
+@{end markdown}
+
+@{column}
+
+@{table}
+headers: Displacements; exact; without IM; with IM
+Loading 1; 0.562; 0.167; 0.544
+Loading 2; 0.112; 0.033; 0.112
+@{end table}
+
+@{markdown}
+The comparison with the Q4 element shows that displacements due to the force are slightly less accurate, while the accuracy of the displacements due to the moment is about the same. It should be noted that the Q8 element is numerically much more complex: the element stiffness matrix is 24 x 24 and with incompatible modes (without condensation) it is 32 x 32, compared to 8x8 and 12 x 12 for the Q4 element.
+@{end markdown}
+
+@{end columns}
+
+@{footer}
+left: 28
+right: GRAĐEVINAR <b>70</b> (2018) 1, 19-29
+@{end footer}

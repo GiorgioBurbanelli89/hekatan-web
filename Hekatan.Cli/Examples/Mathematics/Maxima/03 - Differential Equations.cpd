@@ -1,0 +1,84 @@
+"<h1>Differential Equations with Maxima CAS</h1>"
+"<h2>1. First-Order ODEs</h2>"
+'<p>Maxima can solve many types of ordinary differential equations:</p>
+
+@{maxima}
+/* Separable equation: dy/dx = x*y */
+ode2('diff(y, x) - x*y, y, x);
+
+/* Linear first-order: dy/dx + 2*y = exp(-x) */
+ode2('diff(y, x) + 2*y - exp(-x), y, x);
+
+/* Exact equation: (2*x*y + 3)*dx + (x^2 - 1)*dy = 0 */
+ode2(2*x*y + 3 + (x^2 - 1)*'diff(y, x), y, x);
+@{end maxima}
+
+"<h2>2. Second-Order ODEs</h2>"
+'<p>Homogeneous and non-homogeneous equations:</p>
+
+@{maxima}
+/* Harmonic oscillator: y'' + 4*y = 0 */
+ode2('diff(y, x, 2) + 4*y, y, x);
+
+/* Damped oscillator: y'' + 2*y' + 5*y = 0 */
+ode2('diff(y, x, 2) + 2*'diff(y, x) + 5*y, y, x);
+
+/* Non-homogeneous: y'' - 3*y' + 2*y = exp(3*x) */
+ode2('diff(y, x, 2) - 3*'diff(y, x) + 2*y - exp(3*x), y, x);
+@{end maxima}
+
+"<h2>3. Initial Value Problems (IVP)</h2>"
+'<p>Solve ODE with initial conditions:</p>
+
+@{maxima}
+/* y'' + y = 0, y(0) = 1, y'(0) = 0 */
+sol: ode2('diff(y, x, 2) + y, y, x);
+ic2(sol, x = 0, y = 1, 'diff(y, x) = 0);
+@{end maxima}
+
+@{maxima}
+/* y' + y = x, y(0) = 1 */
+sol1: ode2('diff(y, x) + y - x, y, x);
+ic1(sol1, x = 0, y = 1);
+@{end maxima}
+
+"<h2>4. Boundary Value Problems (BVP)</h2>"
+
+@{maxima}
+/* y'' + y = 0, y(0) = 0, y(%pi/2) = 1 */
+sol_bvp: ode2('diff(y, x, 2) + y, y, x);
+bc2(sol_bvp, x = 0, y = 0, x = %pi/2, y = 1);
+@{end maxima}
+
+"<h2>5. Laplace Transforms</h2>"
+'<p>Solve ODEs using Laplace transforms:</p>
+
+@{maxima}
+/* Laplace transform of basic functions */
+laplace(t^2, t, s);
+
+laplace(exp(-a*t)*sin(b*t), t, s);
+
+laplace(t*exp(-2*t)*cos(3*t), t, s);
+@{end maxima}
+
+@{maxima}
+/* Inverse Laplace transform */
+ilt(1/(s^2 + 4), s, t);
+
+ilt(s/(s^2 + 2*s + 5), s, t);
+
+ilt(1/((s+1)*(s+2)), s, t);
+@{end maxima}
+
+"<h2>6. System of ODEs</h2>"
+
+@{maxima}
+/* System: dx/dt = -x + 2*y, dy/dt = x - 2*y */
+/* Using desolve for systems */
+atvalue(x(t), t = 0, 1)$
+atvalue(y(t), t = 0, 0)$
+desolve(['diff(x(t), t) = -x(t) + 2*y(t),
+          'diff(y(t), t) = x(t) - 2*y(t)],
+         [x(t), y(t)]);
+@{end maxima}

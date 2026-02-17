@@ -1,0 +1,276 @@
+'@(h1 Elemento CASCARA y Analisis Modal)
+'Basado en: @(b Edward L. Wilson - Cap. 10 (Cascara) y Cap. 12-14 (Dinamico))
+
+'@(hr)
+'@(h2 1. Elemento CASCARA = Membrana + Flexion)
+'Wilson Cap. 10.2: El elemento de cascara mas simple combina:
+'- @(b Membrana) (Cap. 9): u, v, theta_z por nodo (3 DOF)
+'- @(b Flexion) (Cap. 8): w, theta_x, theta_y por nodo (3 DOF)
+'= @(b CASCARA): 6 DOF por nodo x 4 nodos = 24 DOF total
+
+@{plot}
+title: Elemento CASCARA Q4 - 6 DOF por Nodo
+xlim: -3, 5
+ylim: -2, 5
+width: 700
+height: 500
+xlabel: x
+ylabel: y
+
+rect: 0, 0, 3, 3, #CCDDEE, fill
+
+point: 0, 0, #CC0000, 8, filled
+point: 3, 0, #CC0000, 8, filled
+point: 3, 3, #CC0000, 8, filled
+point: 0, 3, #CC0000, 8, filled
+
+arrow: 0, 0, 0.8, 0, #0033CC, 1.5
+arrow: 0, 0, 0, 0.8, #0033CC, 1.5
+arrow: 0, 0, -0.4, 0.4, #006600, 1.5
+
+text: 0.9, -0.2, "u", #0033CC, 10
+text: -0.3, 0.9, "v", #0033CC, 10
+text: -0.7, 0.5, "w", #006600, 10
+
+circle: 0, 0, 0.25, #CC0000
+text: -0.7, -0.4, "theta_x", #CC0000, 9
+text: 0.5, 0.5, "theta_y", #CC0000, 9
+text: -0.3, -0.7, "theta_z", #CC0000, 9
+
+text: 1.5, 1.5, "CASCARA", #003366, 14
+
+text: 3.5, 4, "Membrana (u,v,theta_z)", #0033CC, 10
+text: 3.5, 3.5, "= Esfuerzo en el plano", #0033CC, 9
+text: 3.5, 2.5, "Flexion (w,theta_x,theta_y)", #006600, 10
+text: 3.5, 2, "= Momentos fuera del plano", #006600, 9
+text: 3.5, 1, "Total: 6 DOF/nodo", #CC0000, 12
+
+line: 3.3, 4, 3.3, 1, #999999
+@{end plot}
+
+'@(h3 1.1 Matriz de Rigidez del Elemento Cascara)
+'La matriz se forma por bloques:
+'@(b k_shell = [k_membrane, 0; 0, k_bending]) (en coordenadas locales)
+'Luego se transforma a coordenadas globales con la matriz T
+
+'@(h3 1.2 Propiedades del material)
+E_s = 29000'ksi (Acero)
+nu_s = 0.30'(Poisson acero)
+G_s = E_s/(2*(1 + nu_s))
+rho = 0.283'lb/in^3 (densidad acero)
+t_s = 0.5'in (espesor shell)
+
+'@(h3 1.3 Rigidez de Membrana)
+'Esfuerzo plano (Ec. 1.14): E_bar * [1, nu, 0; nu, 1, 0; 0, 0, (1-nu)/2]
+E_bar = E_s/(1 - nu_s^2)
+
+'@(h3 1.4 Rigidez de Flexion)
+D_bend = E_s*t_s^3/(12*(1 - nu_s^2))
+
+'@(hr)
+'@(h2 2. Analisis Dinamico - Equilibrio (Cap. 12))
+'Wilson Ec. 3.47: @(b M u'' + K u = R)
+'Con amortiguamiento: @(b M u'' + C u' + K u = R(t))
+
+'@(h3 2.1 Ecuacion de valores propios)
+'Para vibracion libre: R = 0, u = phi * sin(omega*t)
+'@(b K phi = omega^2 M phi) (Ec. 12.12)
+'Donde omega = frecuencia angular, phi = forma modal
+
+@{plot}
+title: Primeros 3 Modos de Vibracion - Viga en Cantilever
+xlim: -0.5, 12
+ylim: -2, 2
+width: 700
+height: 400
+xlabel: x/L
+ylabel: phi(x)
+points: 300
+
+function: sin(1.875*x/10)
+function2: sin(4.694*x/10)
+color: #0033CC
+color2: #CC0000
+linewidth: 2.5
+linewidth2: 2
+legend: Modo 1 (f1)
+legend2: Modo 2 (f2)
+style2: dashed
+
+hline: 0, #AAAAAA
+vline: 0, #333333
+
+text: 8, 1.5, "Modo 1: f1", #0033CC, 11
+text: 5, -1.5, "Modo 2: f2", #CC0000, 11
+@{end plot}
+
+'@(h3 2.2 Frecuencias naturales)
+'Para viga en cantilever (L=120 in, seccion W12x26):
+L_v = 120'in
+I_v = 204'in^4
+A_v = 7.65'in^2
+w_v = A_v*rho/386.4
+
+'Primer modo (beta_1*L = 1.875):
+beta_1 = 1.875/L_v
+omega_1 = beta_1^2*sqr(E_s*I_v/(w_v))
+f_1 = omega_1/(2*pi)
+T_1 = 1/f_1
+
+'@(hr)
+'@(h2 3. Metodo de Superposicion Modal (Cap. 13))
+'Wilson Cap. 13: Desacoplar el sistema M u'' + K u = R
+'Usando la transformacion modal: u = PHI * q
+'Donde PHI = matriz de modos, q = coordenadas modales
+
+'@(h3 3.1 Ecuaciones modales desacopladas)
+'q_n'' + 2*xi_n*omega_n*q_n' + omega_n^2*q_n = phi_n^T*R / M_n
+'Donde M_n = phi_n^T * M * phi_n = masa modal efectiva
+
+'@(h3 3.2 Factor de Participacion de Masa (Ec. 13.16))
+'@(b Gamma_n = phi_n^T * M * r / M_n)
+'Donde r = vector de influencia sismica
+
+'Ejemplo: Edificio de 3 pisos
+m_1 = 100'ton (piso 1)
+m_2 = 100'ton (piso 2)
+m_3 = 80'ton (piso 3)
+M_total = m_1 + m_2 + m_3
+
+'@(hr)
+'@(h2 4. Vectores LDR - Innovacion de Wilson (Cap. 14))
+'Los vectores @(b Ritz Dependientes de Carga (LDR)) son la innovacion
+'principal de Wilson para analisis dinamico.
+
+'@(h3 4.1 Concepto)
+'En vez de calcular TODOS los modos propios exactos (costoso),
+'Wilson propone generar vectores Ritz que son:
+'1. Mas rapidos de calcular que eigenvectores
+'2. Mas precisos para la respuesta a cargas especificas
+'3. La base del algoritmo LDR en SAP2000 y ETABS
+
+'@(h3 4.2 Algoritmo LDR (Ec. 14.8))
+'Paso 1: Resolver K * x_1 = R (carga estatica)
+'Paso 2: Ortogonalizar: x_1' = x_1 / sqrt(x_1^T * M * x_1)
+'Paso 3: Para i = 2, 3, ... N:
+'   K * x_i = M * x_(i-1)
+'   Ortogonalizar x_i contra todos los anteriores (Gram-Schmidt)
+'Paso 4: Resolver el problema reducido (N << total DOFs)
+
+@{plot}
+title: Comparacion: Eigenvectores vs Vectores LDR (Wilson Fig 14.3)
+xlim: -1, 7
+ylim: -0.5, 4
+width: 700
+height: 400
+xlabel: Numero de vectores
+ylabel: Error relativo (%)
+
+x: 1, 2, 3, 4, 5, 6
+y: 3.5, 1.2, 0.4, 0.15, 0.05, 0.02
+x2: 1, 2, 3, 4, 5, 6
+y2: 2.0, 0.5, 0.1, 0.02, 0.005, 0.001
+
+color: #CC0000
+color2: #0033CC
+symbol: circle
+symbol2: square
+legend: Eigenvectores exactos
+legend2: Vectores LDR (Wilson)
+linewidth: 2
+linewidth2: 2.5
+
+eq: 2, 3.2, "LDR converge mas rapido", #0033CC, 11
+eq: 2, 2.8, "para carga especifica", #0033CC, 10
+@{end plot}
+
+'@(hr)
+'@(h2 5. Espectro de Respuesta CQC (Cap. 15))
+'Wilson Cap. 15: Combinacion modal para sismo
+'@(b CQC (Complete Quadratic Combination)) de Der Kiureghian/Wilson
+
+'@(h3 5.1 Respuesta modal maxima)
+'Para cada modo n: R_n = Gamma_n * Sa(T_n) * phi_n
+
+'@(h3 5.2 Combinacion CQC (Ec. 15.12))
+'R_max = sqrt(SUM_i SUM_j R_i * rho_ij * R_j)
+'Donde rho_ij = coeficiente de correlacion:
+'rho_ij = 8*sqrt(xi_i*xi_j)*(xi_i+r*xi_j)*r^(3/2) / ((1-r^2)^2 + 4*xi_i*xi_j*r*(1+r^2) + 4*(xi_i^2+xi_j^2)*r^2)
+'r = omega_i/omega_j
+
+'Amortiguamiento tipico:
+xi = 0.05'(5%)
+
+'Para modos con frecuencias iguales (r=1):
+rho_ii = 1.0
+'Para modos bien separados (r=0):
+rho_ij_sep = 0
+
+'@(h3 5.3 Espectro de Diseno NEC-SE-DS)
+
+@{plot}
+title: Espectro de Respuesta - NEC Ecuador (Wilson Cap 15)
+xlim: 0, 4
+ylim: 0, 1.2
+width: 700
+height: 400
+xlabel: Periodo T (s)
+ylabel: Sa/g
+points: 300
+
+x: 0, 0.1, 0.55, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0
+y: 0.56, 0.56, 0.56, 0.308, 0.205, 0.154, 0.123, 0.103, 0.088, 0.077
+
+color: #CC0000
+linewidth: 2.5
+legend: Sa (Z=0.50, Suelo D)
+
+text: 0.2, 0.7, "Meseta", #CC0000, 11
+text: 1.5, 0.4, "Rama descendente", #CC0000, 10
+text: 0.2, 0.4, "T0", #333333, 10
+text: 0.55, 0.65, "Tc = 0.55s", #003366, 10
+
+hline: 0, #AAAAAA
+
+eq: 2, 1, "Sa = n*Z*Fa*(Tc/T)^r", #003366, 12
+eq: 2, 0.85, "Z=0.50, Fa=1.12, n=1.80", #006600, 10
+@{end plot}
+
+'@(hr)
+'@(h2 6. Integracion Numerica Paso-a-Paso (Cap. 20))
+'Wilson presenta 3 metodos principales:
+
+'@(h3 6.1 Metodo de Newmark (Ec. 20.1))
+'u(t+dt) = u(t) + dt*u'(t) + dt^2*((1/2-beta)*u''(t) + beta*u''(t+dt))
+'u'(t+dt) = u'(t) + dt*((1-gamma)*u''(t) + gamma*u''(t+dt))
+'Para beta=1/4, gamma=1/2: Aceleracion promedio (incondicional estable)
+
+'@(h3 6.2 Factor de Wilson-theta (Ec. 20.5))
+'@(b theta >= 1.37) para estabilidad incondicional
+'Wilson usa theta = 1.42 (optimo)
+theta_W = 1.42
+
+'@(h3 6.3 Metodo HHT (Hilber-Hughes-Taylor, Ec. 20.7))
+'Agrega disipacion numerica de modos altos
+'alpha = -1/3 a 0 (alpha=0 es Newmark clasico)
+
+'@(hr)
+'@(h2 7. Resumen de Algoritmos de Wilson)
+
+'@(h3 Ecuaciones fundamentales:)
+'1. Estatico: @(b K u = R)
+'2. Dinamico: @(b M u'' + C u' + K u = R(t))
+'3. Eigenvalor: @(b K phi = omega^2 M phi)
+'4. CQC: @(b R = sqrt(SUM_ij R_i rho_ij R_j))
+'5. Rigidez: @(b k = INT B^T E B dV)
+'6. Masa: @(b m = INT N^T rho N dV)
+
+'@(h3 Elementos disponibles:)
+'- Frame 2D/3D (Cap 4): 6 DOF/nodo
+'- Isoparametrico Q4/Q8 (Cap 5): 2 DOF/nodo
+'- Incompatible (Cap 6): mejora Q4
+'- Flexion Losa (Cap 8): 3 DOF/nodo
+'- Membrana con theta_z (Cap 9): 3 DOF/nodo
+'- CASCARA (Cap 10): 6 DOF/nodo
+'- Solido 3D (Cap 5): 3 DOF/nodo
+

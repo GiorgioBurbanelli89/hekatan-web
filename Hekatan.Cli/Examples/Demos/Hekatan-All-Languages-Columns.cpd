@@ -1,0 +1,206 @@
+"Hekatan Calc - Todos los lenguajes en @{columns}
+a = 6
+b = 4
+c = a + b
+
+"=== GRUPO 1: Python + JavaScript + TypeScript + C++ ===
+@{columns 4}
+'**Python**
+@{python}
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+D = 35e6 * 0.15**3 / (12 * (1 - 0.04))
+print(f"D = {D:.2f}")
+@{end python}
+@{column}
+'**JavaScript**
+@{js}
+const D = 35e6 * Math.pow(0.15, 3) / (12 * (1 - 0.04));
+console.log(`D = ${D.toFixed(2)}`);
+@{end js}
+@{column}
+'**TypeScript**
+@{ts}
+const D: number = 35e6 * Math.pow(0.15, 3) / (12 * (1 - 0.04));
+console.log(`D = ${D.toFixed(2)}`);
+@{end ts}
+@{column}
+'**C++**
+@{cpp}
+#include <iostream>
+#include <cmath>
+#include <iomanip>
+int main() {
+    double D = 35e6 * pow(0.15, 3) / (12.0 * (1.0 - 0.04));
+    std::cout << "D = " << std::fixed << std::setprecision(2) << D << std::endl;
+    return 0;
+}
+@{end cpp}
+@{end columns}
+
+"=== GRUPO 2: C + Fortran + Rust + C# ===
+@{columns 4}
+'**C**
+@{c}
+#include <stdio.h>
+#include <math.h>
+int main() {
+    double D = 35e6 * pow(0.15, 3) / (12.0 * (1.0 - 0.04));
+    printf("D = %.2f\n", D);
+    return 0;
+}
+@{end c}
+@{column}
+'**Fortran**
+@{fortran}
+program test
+  implicit none
+  double precision :: D
+  D = 35d6 * (0.15d0)**3 / (12.0d0 * (1.0d0 - 0.04d0))
+  write(*,'(A,F10.2)') "D = ", D
+end program test
+@{end fortran}
+@{column}
+'**Rust**
+@{rust}
+fn main() {
+    let d = 35e6_f64 * 0.15_f64.powi(3) / (12.0 * (1.0 - 0.04));
+    println!("D = {:.2}", d);
+}
+@{end rust}
+@{column}
+'**C#**
+@{csharp}
+using System;
+class Program {
+    static void Main() {
+        double D = 35e6 * Math.Pow(0.15, 3) / (12.0 * (1.0 - 0.04));
+        Console.WriteLine($"D = {D:F2}");
+    }
+}
+@{end csharp}
+@{end columns}
+
+"=== GRUPO 3: Bash + PowerShell + Lua + Perl ===
+@{columns 4}
+'**Bash**
+@{bash}
+echo "Bash OK - Hekatan"
+@{end bash}
+@{column}
+'**PowerShell**
+@{powershell}
+Write-Output "PowerShell OK - Hekatan"
+@{end powershell}
+@{column}
+'**Lua**
+@{lua}
+print("Lua OK - Hekatan")
+@{end lua}
+@{column}
+'**Perl**
+@{perl}
+print "Perl OK - Hekatan\n";
+@{end perl}
+@{end columns}
+
+"=== GRUPO 4: Octave + Julia + Go + Ruby ===
+@{columns 4}
+'**Octave**
+@{octave}
+disp("Octave OK - Hekatan");
+x = [1 2 3 4 5];
+disp(sum(x));
+@{end octave}
+@{column}
+'**Julia**
+@{julia}
+println("Julia OK - Hekatan")
+@{end julia}
+@{column}
+'**Go**
+@{go}
+package main
+import "fmt"
+func main() {
+    fmt.Println("Go OK - Hekatan")
+}
+@{end go}
+@{column}
+'**Ruby**
+@{ruby}
+puts "Ruby OK - Hekatan"
+@{end ruby}
+@{end columns}
+
+"=== GRUPO 5: PHP + Haskell + D + R ===
+@{columns 4}
+'**PHP**
+@{php}
+<?php echo "PHP OK - Hekatan\n"; ?>
+@{end php}
+@{column}
+'**Haskell**
+@{haskell}
+main :: IO ()
+main = putStrLn "Haskell OK - Hekatan"
+@{end haskell}
+@{column}
+'**D**
+@{d}
+import std.stdio;
+void main() {
+    writeln("D OK - Hekatan");
+}
+@{end d}
+@{column}
+'**R**
+@{r}
+cat("R OK - Hekatan\n")
+@{end r}
+@{end columns}
+
+"=== GRUPO 6: Markdown + HTML + CSS + OpenSees ===
+@{columns 4}
+'**Markdown**
+@{markdown}
+**Markdown OK**
+- Renderizado directo
+- Soporte completo
+@{end markdown}
+@{column}
+'**HTML**
+@{html}
+<p style="color:green;font-weight:bold;">HTML OK - Hekatan</p>
+<ul><li>Renderizado directo</li></ul>
+@{end html}
+@{column}
+'**CSS**
+@{css}
+.demo { color: blue; font-size: 16px; }
+@{end css}
+@{column}
+'**OpenSees**
+@{opensees}
+puts "OpenSees OK - Hekatan"
+@{end opensees}
+@{end columns}
+
+"=== GRUPO 7: Calcpad + cpp-explain ===
+@{columns 2}
+'**Calcpad Math**
+x = a*b
+y = x + c
+resultado = y^2
+@{column}
+'**Code Explain**
+@{cpp-explain}
+double K[6][6];
+for (int i = 0; i < 6; i++)
+    for (int j = 0; j < 6; j++)
+        K[i][j] = E * A / L;
+@{end cpp-explain}
+@{end columns}
+
+"=== RESUMEN ===
+Total = a + b + c

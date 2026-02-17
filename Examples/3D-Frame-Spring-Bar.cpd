@@ -1,0 +1,369 @@
+"3D Frame - Double Axial Spring on a Bar Element
+@{hide}
+L = 5m
+'Cross-section area -'S_c = 0.005m^2
+'Young modulus -'E_s = 210000MPa|kN/m^2
+'Axial rigidity -'EA = E_s*S_c|kN
+'Spring stiffness at A -'k_A = 50000kN/m
+'Spring stiffness at B -'k_B = 80000kN/m
+'Applied force -'F = 100kN
+'Load position ratio -'α = 0.4
+'Load position -'s = α*L
+'Stiffness ratio -'EA_L = EA/L|kN/m
+'Denominator -'D_n = k_A*k_B + EA_L*(k_A + k_B)|kN^2/m^2
+'Displacement at A -'u_A = F*(EA_L + k_B*(1 - α))/D_n|mm
+'Displacement at B -'u_B = F*(EA_L + k_A*α)/D_n|mm
+'Reaction at A (FEM) -'X_A1 = -k_A*u_A|kN
+'Reaction at B (FEM) -'X_B1 = -k_B*u_B|kN
+'Equilibrium check 1 -'Chk_1 = X_A1 + X_B1 + F|kN
+'Left bar stiffness -'EA_αL = EA/(α*L)|kN/m
+'Right bar stiffness -'EA_bL = EA/((1 - α)*L)|kN/m
+'Equiv left stiffness -'k_L = k_A*EA_αL/(k_A + EA_αL)|kN/m
+'Equiv right stiffness -'k_R = k_B*EA_bL/(k_B + EA_bL)|kN/m
+'Reaction at A (intuition) -'X_A2 = -F*k_L/(k_L + k_R)|kN
+'Reaction at B (intuition) -'X_B2 = -F*k_R/(k_L + k_R)|kN
+'Equilibrium check 2 -'Chk_2 = X_A2 + X_B2 + F|kN
+'Total compliance -'C_tot = 1/k_L + 1/k_R|m/kN
+'Compliance check -'C_chk = 1/k_A + 1/k_B + L/EA|m/kN
+uAv = u_A
+uBv = u_B
+XA1v = X_A1
+XB1v = X_B1
+XA2v = X_A2
+XB2v = X_B2
+kLv = k_L
+kRv = k_R
+@{end hide}
+#val
+
+'<style>
+'@import url("https://fonts.googleapis.com/css2?family=CMU+Serif&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap");
+'* { box-sizing: border-box; }
+'body {
+'  background-color: #FAF8EF !important;
+'  font-family: "Libre Baskerville", "Georgia Pro", Georgia, "Times New Roman", serif !important;
+'  font-size: 11.5pt;
+'  line-height: 1.55;
+'  color: #111;
+'  max-width: 700px;
+'  margin: 0 auto;
+'  padding: 0 25px;
+'}
+'h1.page-title {
+'  font-size: 1.65em;
+'  font-weight: 700;
+'  margin: 0.8em 0 0.4em;
+'  line-height: 1.3;
+'}
+'h2.page-subtitle {
+'  font-size: 1.2em;
+'  font-weight: 700;
+'  margin: 0.6em 0 0.3em;
+'}
+'.cover { text-align: center; padding: 60px 0 30px; }
+'.cover .title-red { color: #c00; font-family: "Libre Baskerville", serif; }
+'.cover .title-blue { color: #0044cc; font-family: "Libre Baskerville", serif; font-style: italic; }
+'.cover .question { color: #c00; font-family: "Libre Baskerville", serif; font-size: 13pt; margin-top: 20px; }
+'.eq-row {
+'  display: flex;
+'  align-items: center;
+'  margin: 0.6em 0;
+'  gap: 8px;
+'}
+'.eq-center {
+'  flex: 1;
+'  text-align: center;
+'  font-family: "Libre Baskerville", "Georgia Pro", Georgia, serif;
+'  font-size: 12pt;
+'  font-style: italic;
+'}
+'.eq-num {
+'  min-width: 45px;
+'  text-align: right;
+'  font-size: 11pt;
+'  color: #333;
+'}
+'.page-footer {
+'  display: flex;
+'  justify-content: space-between;
+'  align-items: center;
+'  border-top: 1.5px solid #111;
+'  margin-top: 2em;
+'  padding-top: 4px;
+'  font-size: 10pt;
+'}
+'.page-break { page-break-after: always; margin-bottom: 3em; border-bottom: 2px dashed #ccc; padding-bottom: 2em; }
+'.fig-caption { text-align: center; font-size: 10.5pt; margin: 8px 0 16px; }
+'.fig-caption b { font-weight: 400; }
+'.figbox {
+'  width: 100%;
+'  max-width: 680px;
+'  height: 400px;
+'  margin: 16px auto;
+'  border: 1px solid #ccc;
+'  border-radius: 6px;
+'  overflow: hidden;
+'  background: #FAF8EF;
+'}
+'.bold-word { font-weight: 700; }
+'.two-col { display: flex; gap: 2em; justify-content: center; margin: 1em 0; }
+'.two-col > div { flex: 1; text-align: center; }
+'p { margin: 0.4em 0; text-align: justify; }
+'.centered { text-align: center; }
+'@media print {
+'  .page-break { border-bottom: none; page-break-after: always; }
+'  body { max-width: 100%; margin: 0; padding: 0 20mm; }
+'}
+'</style>
+
+'<!-- ═══════════ PAGE 1: COVER ═══════════ -->
+'<div class="cover">
+'<p class="title-red" style="font-size:16pt; margin-bottom:0;">Good intuition vs.</p>
+'<p class="title-red" style="font-size:28pt; font-weight:700; margin-top:0;">Tedious calculations ?</p>
+'<p class="title-blue" style="font-size:20pt; margin-top:8px;">X<sub>A</sub> = ?,&ensp; X<sub>B</sub> = ?</p>
+'</div>
+'<div id="f1" class="figbox" style="height:420px;"></div>
+'<p class="centered question" style="color:#c00; font-size:13pt; margin-top:18px;">Is there a way to quickly find the end reactions in a way<br>that does not require too much time and cardio ?</p>
+'<div class="page-break"></div>
+
+'<!-- ═══════════ PAGE 2: REMINDER ═══════════ -->
+'<h1 class="page-title">Reminder : equilibrium in elastic conditions</h1>
+'<p>In such an indeterminate situation, equilibrium equations alone are not enough to solve the problem as-is.</p>
+'<div id="f2" class="figbox" style="height:380px;"></div>
+'<p class="fig-caption">Figure 1: A double axial spring on a bar element.</p>
+'<p>Since equilibrium writes as such with two unknowns :</p>
+'<div class="eq-row"><div class="eq-center"><i>X<sub>A</sub> + X<sub>B</sub> + F = 0,</i></div><div class="eq-num">(1)</div></div>
+'<p>we may need to bring out the extra set of tools that allows for proper structural comprehension and analysis : compatibility and understanding of <span class="bold-word">stiffness</span>. Some (known) extra equations are as follows :</p>
+'<div class="eq-row"><div class="eq-center"><i>X<sub>A</sub> = &minus;k<sub>A</sub> u<sub>A</sub>;</i></div><div class="eq-num">(2)</div></div>
+'<div class="eq-row"><div class="eq-center"><i>X<sub>B</sub> = &minus;k<sub>B</sub> u<sub>B</sub>;</i></div><div class="eq-num">(3)</div></div>
+'<p><span class="bold-word">what&rsquo;s next ?</span></p>
+'<div class="page-footer"><span>2</span><span style="font-variant:small-caps;">Y.Derrazi</span></div>
+'<div class="page-break"></div>
+
+'<!-- ═══════════ PAGE 3: TEDIOUS (FEM) ═══════════ -->
+'<h1 class="page-title">Tedious : matrix analysis/finite element formulation</h1>
+'<p>Such a problem can be written, if we know our finite elements right, in the following form :</p>
+'<div class="eq-row"><div class="eq-center"><b><i>K</i></b> &middot; <b><i>q</i></b> = <b><i>F</i></b> + <b><i>F<sub>s</sub></i></b></div><div class="eq-num">(4)</div></div>
+'<div id="f3" class="figbox" style="height:380px;"></div>
+'<p class="fig-caption">Figure 2: A double axial spring on a bar element.</p>
+'<p>Which, in explicit form, is rearranged as :</p>
+'<div class="eq-row">
+'<div class="eq-center" style="font-size:11pt;">
+'<table style="margin:0 auto; border-collapse:collapse; font-family:inherit; font-style:italic;">
+'<tr>
+'<td rowspan="2" style="font-size:200%; padding-right:2px; vertical-align:middle;">[</td>
+'<td style="text-align:center; padding:2px 8px;"><sup>ES</sup>&frasl;<sub>L</sub> + k<sub>A</sub></td>
+'<td style="text-align:center; padding:2px 8px;">&minus;<sup>ES</sup>&frasl;<sub>L</sub></td>
+'<td rowspan="2" style="font-size:200%; padding-left:2px; vertical-align:middle;">]</td>
+'<td rowspan="2" style="padding:0 4px; vertical-align:middle;">&middot;</td>
+'<td rowspan="2" style="font-size:200%; padding-right:2px; vertical-align:middle;">[</td>
+'<td style="text-align:center; padding:2px 6px;">u<sub>A</sub></td>
+'<td rowspan="2" style="font-size:200%; padding-left:2px; vertical-align:middle;">]</td>
+'<td rowspan="2" style="padding:0 4px; vertical-align:middle;">=</td>
+'<td rowspan="2" style="font-size:200%; padding-right:2px; vertical-align:middle;">[</td>
+'<td style="text-align:center; padding:2px 6px;">(1 &minus; &alpha;)F</td>
+'<td rowspan="2" style="font-size:200%; padding-left:2px; vertical-align:middle;">]</td>
+'</tr>
+'<tr>
+'<td style="text-align:center; padding:2px 8px;">&minus;<sup>ES</sup>&frasl;<sub>L</sub></td>
+'<td style="text-align:center; padding:2px 8px;"><sup>ES</sup>&frasl;<sub>L</sub> + k<sub>B</sub></td>
+'<td style="text-align:center; padding:2px 6px;">u<sub>B</sub></td>
+'<td style="text-align:center; padding:2px 6px;">&alpha;F</td>
+'</tr>
+'</table>
+'</div>
+'<div class="eq-num">(5)</div>
+'</div>
+'<p>The system of equations obtained is consistent with equilibrium, compatibility and understanding of stiffness, but is <span class="bold-word">too tedious</span> for a back-of-the-enveloppe calculation.</p>
+'<div class="page-footer"><span>3</span><span style="font-variant:small-caps;">Y.Derrazi</span></div>
+'<div class="page-break"></div>
+
+'<!-- ═══════════ PAGE 4: INTUITION (CAPACITANCE) ═══════════ -->
+'<h1 class="page-title">Intuition : Capacitance=Stiffness</h1>
+'<p>Let&rsquo;s consider a mental split of the bar into two parts : the left side and the right side w.r.t to the load application point.</p>
+'<div id="f4" class="figbox" style="height:400px;"></div>
+'<p class="fig-caption">Figure 3: Perceived left and right stiffnesses.</p>
+'<p>We can infer that the left side of the bar has an axial stiffness of <i><sup>ES</sup>&frasl;<sub>&alpha;L</sub></i> and is paired <span class="bold-word">in series</span> with a spring of stiffness <i>k<sub>A</sub></i>.</p>
+'<p>We can also infer that the right side of the bar has an axial stiffness of <i><sup>ES</sup>&frasl;<sub>(1&minus;&alpha;)L</sub></i> and is also paired <span class="bold-word">in series</span> with a spring of stiffness <i>k<sub>B</sub></i>.</p>
+'<p>We will use the analogy that springs are assembled exactly <i>like capacitors in an electric circuit</i>.</p>
+'<div class="page-footer"><span>4</span><span style="font-variant:small-caps;">Y.Derrazi</span></div>
+'<div class="page-break"></div>
+
+'<!-- ═══════════ PAGE 5: COMPLIANCE ASSEMBLY ═══════════ -->
+'<h1 class="page-title">Intuition : Capacitance=Stiffness</h1>
+'<p>This analogy will therefore allow us to sum up the <span class="bold-word">compliances in series</span> as per the following figure :</p>
+'<div id="f5" class="figbox" style="height:420px;"></div>
+'<p class="fig-caption">Figure 4: Compliance assembly.</p>
+'<p>We define the left-side stiffness <i>k<sub>L</sub></i> as the equivalent stiffness of <i>k<sub>A</sub></i> in series with <i><sup>ES</sup>&frasl;<sub>&alpha;L</sub></i>, we also define the right-side stiffness <i>k<sub>R</sub></i> as the equivalent stiffness of <i>k<sub>B</sub></i> in series with <i><sup>ES</sup>&frasl;<sub>(1&minus;&alpha;)L</sub></i>.</p>
+'<div class="eq-row"><div class="eq-center"><sup>1</sup>&frasl;<sub><i>k<sub>L</sub></i></sub> &ensp;=&ensp; <sup>1</sup>&frasl;<sub><i>k<sub>A</sub></i></sub> + &alpha; <sup><i>L</i></sup>&frasl;<sub><i>ES</i></sub> ;</div><div class="eq-num">(6)</div></div>
+'<div class="eq-row"><div class="eq-center"><sup>1</sup>&frasl;<sub><i>k<sub>R</sub></i></sub> &ensp;=&ensp; <sup>1</sup>&frasl;<sub><i>k<sub>B</sub></i></sub> + (1 &minus; &alpha;) <sup><i>L</i></sup>&frasl;<sub><i>ES</i></sub> ;</div><div class="eq-num">(7)</div></div>
+'<p><span class="bold-word">How do we obtain the end reactions ? Take a guess.</span></p>
+'<div class="page-footer"><span>5</span><span style="font-variant:small-caps;">Y.Derrazi</span></div>
+'<div class="page-break"></div>
+
+'<!-- ═══════════ PAGE 6: VOLTAGE DIVIDER ═══════════ -->
+'<h1 class="page-title">Intuition : Voltage divider meets &lsquo;stiffness attracts force&rsquo;</h1>
+'<p>The end-reactions will intuitively be such as each node will receive a percentage of the force <i>F</i> that depends on its relative stiffness, up to a correct sign to ensure equilibrium</p>
+'<div id="f6" class="figbox" style="height:420px;"></div>
+'<p class="fig-caption">Figure 5: End result.</p>
+'<p>Note that <i><sup>1</sup>&frasl;<sub>k<sub>L</sub></sub> + <sup>1</sup>&frasl;<sub>k<sub>R</sub></sub> = <sup>1</sup>&frasl;<sub>k<sub>A</sub></sub> + <sup>1</sup>&frasl;<sub>k<sub>B</sub></sub> + <sup>L</sup>&frasl;<sub>ES</sub></i> is effectively the total equivalent compliance of the whole system. Problem solved.</p>
+'<div class="page-footer"><span>6</span><span style="font-variant:small-caps;">Y.Derrazi</span></div>
+'<div class="page-break"></div>
+
+'<!-- ═══════════ PAGE 7: SUMMARY ═══════════ -->
+'<h1 class="page-title">Summary : Results</h1>
+'<h2 class="page-subtitle">Method 1 : Finite element formulation</h2>
+'<p>The finite element formulation gives the following results for <i>u<sub>A</sub></i> and <i>u<sub>B</sub></i> :</p>
+'<div class="eq-row"><div class="eq-center"><i>u<sub>A</sub></i> = 'u_A' mm &ensp;&rArr;&ensp; <i>X<sub>A</sub></i> = 'X_A1' kN</div><div class="eq-num">(8)</div></div>
+'<div class="eq-row"><div class="eq-center"><i>u<sub>B</sub></i> = 'u_B' mm &ensp;&rArr;&ensp; <i>X<sub>B</sub></i> = 'X_B1' kN</div><div class="eq-num">(9)</div></div>
+
+'<h2 class="page-subtitle">Method 2 : Series stiffness assembly + force divider</h2>
+'<p>The left and right side stiffnesses compute as follows :</p>
+'<div class="eq-row"><div class="eq-center"><i>k<sub>L</sub></i> = 'k_L' kN/m</div><div class="eq-num">(10)</div></div>
+'<div class="eq-row"><div class="eq-center"><i>k<sub>R</sub></i> = 'k_R' kN/m</div><div class="eq-num">(11)</div></div>
+'<p>Knowing that :</p>
+'<div class="eq-row"><div class="eq-center"><i>k<sub>L</sub> + k<sub>R</sub></i> / (<i>k<sub>L</sub> &middot; k<sub>R</sub></i>) = total compliance</div><div class="eq-num">(12)</div></div>
+'<p>we directly obtain :</p>
+'<div class="eq-row"><div class="eq-center"><i>X<sub>A</sub></i> = &minus;F &middot; <sup><i>k<sub>L</sub></i></sup>&frasl;<sub><i>k<sub>R</sub> + k<sub>L</sub></i></sub> = 'X_A2' kN</div><div class="eq-num">(13)</div></div>
+'<div class="eq-row"><div class="eq-center"><i>X<sub>B</sub></i> = &minus;F &middot; <sup><i>k<sub>R</sub></i></sup>&frasl;<sub><i>k<sub>R</sub> + k<sub>L</sub></i></sub> = 'X_B2' kN</div><div class="eq-num">(14)</div></div>
+'<div class="page-footer"><span>7</span><span style="font-variant:small-caps;">Y.Derrazi</span></div>
+
+'<!-- ═══════════ 3D FIGURES (Three.js ES Module) ═══════════ -->
+'<script type="module">
+'import * as THREE from "three";
+'import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+'
+'function mkIBeam(sc,L,bf,hw,tf,tw,col,opa,offX){
+'  offX=offX||0;
+'  var s=new THREE.Shape();
+'  s.moveTo(-bf/2,-hw/2);s.lineTo(bf/2,-hw/2);s.lineTo(bf/2,-hw/2+tf);
+'  s.lineTo(tw/2,-hw/2+tf);s.lineTo(tw/2,hw/2-tf);s.lineTo(bf/2,hw/2-tf);
+'  s.lineTo(bf/2,hw/2);s.lineTo(-bf/2,hw/2);s.lineTo(-bf/2,hw/2-tf);
+'  s.lineTo(-tw/2,hw/2-tf);s.lineTo(-tw/2,-hw/2+tf);s.lineTo(-bf/2,-hw/2+tf);
+'  s.lineTo(-bf/2,-hw/2);
+'  var g=new THREE.ExtrudeGeometry(s,{depth:L,bevelEnabled:false});
+'  g.rotateY(Math.PI/2); if(offX)g.translate(offX,0,0);
+'  sc.add(new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:col,metalness:0.45,roughness:0.35,transparent:true,opacity:opa})));
+'}
+'function mkSpring(sc,x0,y0,z0,dx,len,col,L){
+'  var n=8,amp=0.04*L,pts=[];
+'  for(var i=0;i<=n*4;i++){var t=i/(n*4);
+'  pts.push(new THREE.Vector3(x0+dx*len*t,y0+Math.sin(t*n*Math.PI*2)*amp*(1-0.5*Math.abs(2*t-1)),z0));}
+'  sc.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:col,linewidth:2})));
+'  var w=new THREE.Mesh(new THREE.BoxGeometry(0.01*L,0.12*L,0.12*L),new THREE.MeshStandardMaterial({color:0x444444}));
+'  w.position.set(x0+dx*len,y0,z0);sc.add(w);
+'}
+'function mkLabel(sc,t,p,col,sz,L){
+'  var cv=document.createElement("canvas"),cx=cv.getContext("2d");
+'  cv.width=512;cv.height=128;cx.fillStyle=col||"#000";
+'  cx.font="bold "+(sz||42)+"px serif";cx.textAlign="center";cx.textBaseline="middle";
+'  cx.fillText(t,256,64);
+'  var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true}));
+'  sp.position.copy(p);sp.scale.set(0.22*L,0.06*L,1);sc.add(sp);
+'}
+'function mkScene(id,L,al){
+'  var sp=al*L;
+'  var c=document.getElementById(id),W=c.offsetWidth||680,H=c.offsetHeight||400;
+'  var sc=new THREE.Scene();sc.background=new THREE.Color(0xFAF8EF);
+'  var cam=new THREE.PerspectiveCamera(38,W/H,0.01,100);
+'  cam.position.set(-0.3*L,0.85*L,1.7*L);cam.lookAt(L/2,0,0);
+'  var rn=new THREE.WebGLRenderer({antialias:true});rn.setSize(W,H);
+'  while(c.firstChild)c.removeChild(c.firstChild);c.appendChild(rn.domElement);
+'  var ct=new OrbitControls(cam,rn.domElement);ct.target.set(L/2,0,0);ct.update();
+'  sc.add(new THREE.DirectionalLight(0xffffff,0.9).translateX(-3).translateY(6).translateZ(8));
+'  sc.add(new THREE.AmbientLight(0xffffff,0.5));
+'  var gd=new THREE.GridHelper(2*L,20,0xdddddd,0xeeeeee);
+'  gd.position.set(L/2,-0.18*L*0.5-0.18*L,0);sc.add(gd);
+'  return {sc:sc,cam:cam,rn:rn,ct:ct,sp:sp,W:W,H:H};
+'}
+'function animLoop(rn,sc,cam){(function a(){requestAnimationFrame(a);rn.render(sc,cam)})();}
+'
+'var L='L', al='α', sp=al*L;
+'var bf=0.16*L,hw=0.18*L,tf=0.025*L,tw=0.015*L,sL=0.2*L;
+'
+'["f1","f2","f3"].forEach(function(fid){
+'  var o=mkScene(fid,L,al);var sc=o.sc;
+'  mkIBeam(sc,L,bf,hw,tf,tw,0xC0C0C0,0.88,0);
+'  mkSpring(sc,0,0,0,-1,sL,0x0000FF,L);
+'  mkSpring(sc,L,0,0,1,sL,0x0000FF,L);
+'  sc.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(sp-0.18*L,0,0),0.18*L,0xFF0000,0.04*L,0.025*L));
+'  mkLabel(sc,"A",new THREE.Vector3(-0.1*L,-hw/2-0.1*L,-bf/2-0.06*L),"#000",52,L);
+'  mkLabel(sc,"B",new THREE.Vector3(L+0.12*L,-hw/2-0.1*L,bf/2+0.08*L),"#000",52,L);
+'  mkLabel(sc,"F",new THREE.Vector3(sp-0.08*L,0.06*L,0),"#F00",50,L);
+'  mkLabel(sc,"kA",new THREE.Vector3(-sL/2,0.07*L,0.04*L),"#00F",40,L);
+'  mkLabel(sc,"kB",new THREE.Vector3(L+sL/2,0.07*L,0.04*L),"#00F",40,L);
+'  mkLabel(sc,"XA",new THREE.Vector3(-0.04*L,-0.08*L,0),"#F00",36,L);
+'  mkLabel(sc,"XB",new THREE.Vector3(L+0.06*L,-0.08*L,0),"#F00",36,L);
+'  mkLabel(sc,"L",new THREE.Vector3(L/2,-hw/2-0.12*L,0),"#000",44,L);
+'  mkLabel(sc,"s=\u03B1L",new THREE.Vector3(sp/2,hw/2+0.08*L,0),"#000",32,L);
+'  mkLabel(sc,"Sect. S",new THREE.Vector3(sp+0.12*L,hw/2+0.06*L,0.06*L),"#000",28,L);
+'  animLoop(o.rn,sc,o.cam);
+'});
+'
+'(function(){
+'  var o=mkScene("f4",L,al);var sc=o.sc;
+'  mkIBeam(sc,sp,bf,hw,tf,tw,0x90CAF9,0.75,0);
+'  mkIBeam(sc,L-sp,bf,hw,tf,tw,0xFFCC80,0.75,sp);
+'  mkSpring(sc,0,0,0,-1,sL,0x0000FF,L);
+'  mkSpring(sc,L,0,0,1,sL,0x0000FF,L);
+'  sc.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(sp-0.18*L,0,0),0.18*L,0xFF0000,0.04*L,0.025*L));
+'  var spts=[new THREE.Vector3(sp,-hw/2-0.12*L,-bf/2-0.06*L),new THREE.Vector3(sp,hw/2+0.12*L,bf/2+0.06*L)];
+'  var sl=new THREE.Line(new THREE.BufferGeometry().setFromPoints(spts),new THREE.LineDashedMaterial({color:0x1565C0,dashSize:0.02*L,gapSize:0.01*L}));
+'  sl.computeLineDistances();sc.add(sl);
+'  mkLabel(sc,"A",new THREE.Vector3(-0.1*L,-hw/2-0.1*L,0),"#000",50,L);
+'  mkLabel(sc,"B",new THREE.Vector3(L+0.12*L,-hw/2-0.1*L,0),"#000",50,L);
+'  mkLabel(sc,"F",new THREE.Vector3(sp-0.1*L,0.07*L,0),"#F00",50,L);
+'  mkLabel(sc,"kA",new THREE.Vector3(-sL/2,0.07*L,0.04*L),"#00F",38,L);
+'  mkLabel(sc,"kB",new THREE.Vector3(L+sL/2,0.07*L,0.04*L),"#00F",38,L);
+'  mkLabel(sc,"Left: ES/(\u03B1L)",new THREE.Vector3(sp/2,-hw/2-0.16*L,0),"#1565C0",26,L);
+'  mkLabel(sc,"Right: ES/((1-\u03B1)L)",new THREE.Vector3(sp+(L-sp)/2,-hw/2-0.16*L,0),"#E65100",26,L);
+'  animLoop(o.rn,sc,o.cam);
+'})();
+'
+'(function(){
+'  var o=mkScene("f5",L,al);var sc=o.sc;
+'  mkIBeam(sc,sp,bf,hw,tf,tw,0x90CAF9,0.75,0);
+'  mkIBeam(sc,L-sp,bf,hw,tf,tw,0xFFCC80,0.75,sp);
+'  mkSpring(sc,0,0,0,-1,sL,0x0000FF,L);
+'  mkSpring(sc,L,0,0,1,sL,0x0000FF,L);
+'  sc.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(sp-0.18*L,0,0),0.18*L,0xFF0000,0.04*L,0.025*L));
+'  var spts=[new THREE.Vector3(sp,-hw/2-0.12*L,-bf/2-0.06*L),new THREE.Vector3(sp,hw/2+0.12*L,bf/2+0.06*L)];
+'  var sl=new THREE.Line(new THREE.BufferGeometry().setFromPoints(spts),new THREE.LineDashedMaterial({color:0x1565C0,dashSize:0.02*L,gapSize:0.01*L}));
+'  sl.computeLineDistances();sc.add(sl);
+'  mkLabel(sc,"A",new THREE.Vector3(-0.1*L,-hw/2-0.1*L,0),"#000",50,L);
+'  mkLabel(sc,"B",new THREE.Vector3(L+0.12*L,-hw/2-0.1*L,0),"#000",50,L);
+'  mkLabel(sc,"F",new THREE.Vector3(sp-0.1*L,0.07*L,0),"#F00",50,L);
+'  mkLabel(sc,"kA",new THREE.Vector3(-sL/2,0.07*L,0.04*L),"#00F",38,L);
+'  mkLabel(sc,"kB",new THREE.Vector3(L+sL/2,0.07*L,0.04*L),"#00F",38,L);
+'  mkLabel(sc,"1/kL = 1/kA + \u03B1L/ES",new THREE.Vector3(sp/2-0.1*L,-hw/2-0.18*L,-bf/2-0.06*L),"#00F",22,L);
+'  mkLabel(sc,"1/kR = 1/kB + (1-\u03B1)L/ES",new THREE.Vector3(sp+(L-sp)/2+0.1*L,-hw/2-0.18*L,bf/2+0.06*L),"#00F",22,L);
+'  animLoop(o.rn,sc,o.cam);
+'})();
+'
+'(function(){
+'  var o=mkScene("f6",L,al);var sc=o.sc;
+'  var XAv='XA2v',XBv='XB2v';
+'  mkIBeam(sc,L,bf,hw,tf,tw,0xC0C0C0,0.85,0);
+'  mkSpring(sc,0,0,0,-1,sL,0x0000FF,L);
+'  mkSpring(sc,L,0,0,1,sL,0x0000FF,L);
+'  sc.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(sp-0.18*L,0,0),0.18*L,0xFF0000,0.04*L,0.025*L));
+'  sc.add(new THREE.ArrowHelper(new THREE.Vector3(-1,0,0),new THREE.Vector3(0.12*L,-0.06*L,0),0.12*L,0xFF0000,0.03*L,0.02*L));
+'  sc.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(L-0.12*L,-0.06*L,0),0.12*L,0xFF0000,0.03*L,0.02*L));
+'  var spts=[new THREE.Vector3(sp,-hw/2-0.12*L,-bf/2-0.06*L),new THREE.Vector3(sp,hw/2+0.12*L,bf/2+0.06*L)];
+'  var sl=new THREE.Line(new THREE.BufferGeometry().setFromPoints(spts),new THREE.LineDashedMaterial({color:0x1565C0,dashSize:0.02*L,gapSize:0.01*L}));
+'  sl.computeLineDistances();sc.add(sl);
+'  mkLabel(sc,"A",new THREE.Vector3(-0.1*L,-hw/2-0.1*L,0),"#000",50,L);
+'  mkLabel(sc,"B",new THREE.Vector3(L+0.12*L,-hw/2-0.1*L,0),"#000",50,L);
+'  mkLabel(sc,"F",new THREE.Vector3(sp-0.1*L,0.07*L,0),"#F00",50,L);
+'  mkLabel(sc,"kA",new THREE.Vector3(-sL/2,0.07*L,0.04*L),"#00F",38,L);
+'  mkLabel(sc,"kB",new THREE.Vector3(L+sL/2,0.07*L,0.04*L),"#00F",38,L);
+'  var xa=Math.abs(XAv).toFixed(1),xb=Math.abs(XBv).toFixed(1);
+'  mkLabel(sc,"Left-side reaction",new THREE.Vector3(sp/2-0.08*L,-hw/2-0.14*L,-bf/2-0.06*L),"#000",24,L);
+'  mkLabel(sc,"XA = -kL/(kL+kR)\u00B7F",new THREE.Vector3(sp/2-0.08*L,-hw/2-0.2*L,-bf/2-0.06*L),"#F00",22,L);
+'  mkLabel(sc,"Right-side reaction",new THREE.Vector3(sp+(L-sp)/2+0.08*L,-hw/2-0.14*L,bf/2+0.06*L),"#000",24,L);
+'  mkLabel(sc,"XB = -kR/(kL+kR)\u00B7F",new THREE.Vector3(sp+(L-sp)/2+0.08*L,-hw/2-0.2*L,bf/2+0.06*L),"#F00",22,L);
+'  mkLabel(sc,"XA = "+xa+" kN",new THREE.Vector3(0.05*L,-0.13*L,0),"#F00",32,L);
+'  mkLabel(sc,"XB = "+xb+" kN",new THREE.Vector3(L-0.05*L,-0.13*L,0),"#F00",32,L);
+'  animLoop(o.rn,sc,o.cam);
+'})();
+'</script>

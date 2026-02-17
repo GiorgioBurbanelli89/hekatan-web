@@ -1,0 +1,86 @@
+' ============================================
+' Demo de @{markdown} y @{table}
+' Parsers externos SIN HTML visible en editor
+' ============================================
+
+"EJEMPLO: Markdown Limpio + Cálculos Calcpad
+'-------------------------------------------
+
+' Primero definimos variables en Calcpad normal
+#nosub
+a = 5
+b = 3
+c = a + b
+#varsub
+
+' Ahora usamos @{markdown} para texto limpio
+' (sin ver <> en el editor)
+
+@{markdown}
+# Resultados del Cálculo
+
+Este es un documento con **formato limpio**.
+
+Los valores calculados son:
+- Variable a = $a
+- Variable b = $b
+- Suma c = $c
+
+También podemos usar expresiones Calcpad inline:
+El doble de a es @{calcpad:2*a}
+@{end markdown}
+
+"EJEMPLO: Matriz como Tabla
+'---------------------------
+
+' Crear una matriz en Calcpad
+M = [1; 2; 3| 4; 5; 6| 7; 8; 9]
+
+' Mostrar como tabla bonita con @{table}
+@{table}
+M
+headers=Col A, Col B, Col C
+rows=Fila 1, Fila 2, Fila 3
+style=bordered
+@{end table}
+
+"EJEMPLO: Vector como Tabla
+'--------------------------
+
+' Vector de resultados
+V = [10; 20; 30; 40; 50]
+
+@{table}
+V
+headers=Nodo 1, Nodo 2, Nodo 3, Nodo 4, Nodo 5
+style=minimal
+@{end table}
+
+"COMBINANDO TODO
+'---------------
+
+' Más cálculos
+x = 10
+y = 20
+Area = x*y
+Perimetro = 2*(x+y)
+
+@{markdown}
+## Resumen de Geometría
+
+Para un rectángulo de **$x × $y**:
+
+| Propiedad | Valor |
+|-----------|-------|
+| Área | $Area |
+| Perímetro | $Perimetro |
+
+> Nota: Los valores se sustituyen automáticamente
+@{end markdown}
+
+' Exportar tabla a CSV (opcional)
+'@{table}
+'M
+'headers=A,B,C
+'export=resultados.csv
+'@{end table}

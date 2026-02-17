@@ -1,0 +1,11 @@
+<Window x:Class="Hekatan.Wpf.MathcadPrimeEditor.MathcadPrimeEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Hekatan.Wpf.MathcadPrimeEditor"
+        Title="MathCad Prime Editor - Hekatan" Height="700" Width="1000"
+        Icon="/Hekatan.ico"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <local:MathcadPrimeEditorControl x:Name="EditorControl"/>
+    </Grid>
+</Window>

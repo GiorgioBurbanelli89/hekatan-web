@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{LANGUAGE}} Output - Hekatan</title>
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            margin: 10px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .header {
+            background-color: #007acc;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px 4px 0 0;
+            font-weight: bold;
+        }
+        .output {
+            background-color: #252526;
+            border: 1px solid #3c3c3c;
+            border-top: none;
+            padding: 12px;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.5;
+            border-radius: 0 0 4px 4px;
+        }
+        .error {
+            color: #f44747;
+        }
+        .success {
+            color: #4ec9b0;
+        }
+        .info {
+            color: #569cd6;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">{{LANGUAGE}} Output</div>
+    <div class="output {{CLASS}}">{{OUTPUT}}</div>
+</body>
+</html>

@@ -1,0 +1,70 @@
+"============================================
+"EJEMPLO 1: Cubo Básico Rotando
+"============================================
+"Este es el ejemplo más simple de Three.js
+"Solo muestra un cubo verde rotando
+
+@{html}
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/build/three.min.js"></script>
+<div id="canvas1" style="width:600px; height:400px; border:2px solid #ccc; margin:10px 0;"></div>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof THREE === 'undefined') {
+    document.getElementById('canvas1').innerHTML = '<p style="color:red;">Error: Three.js no se pudo cargar</p>';
+    return;
+  }
+
+  // 1. CREAR ESCENA
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf0f0f0);
+
+  // 2. CREAR CÁMARA
+  const camera = new THREE.PerspectiveCamera(
+    75,           // Campo de visión
+    600/400,      // Aspecto (ancho/alto)
+    0.1,          // Plano cercano
+    1000          // Plano lejano
+  );
+  camera.position.z = 5;
+
+  // 3. CREAR RENDERIZADOR
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(600, 400);
+  document.getElementById('canvas1').appendChild(renderer.domElement);
+
+  // 4. CREAR GEOMETRÍA Y MATERIAL
+  const geometry = new THREE.BoxGeometry(2, 2, 2);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    wireframe: false
+  });
+  const cube = new THREE.Mesh(geometry, material);
+  scene.add(cube);
+
+  // 5. ILUMINACIÓN (opcional para MeshBasicMaterial)
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(5, 5, 5);
+  scene.add(light);
+
+  // 6. ANIMACIÓN
+  function animate() {
+    requestAnimationFrame(animate);
+
+    // Rotar el cubo
+    cube.rotation.x += 0.01;
+    cube.rotation.y += 0.01;
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+});
+</script>
+@{end html}
+
+"Conceptos clave:
+"- Scene: El contenedor de todos los objetos 3D
+"- Camera: Define el punto de vista
+"- Renderer: Dibuja la escena en el canvas
+"- Mesh: Combinación de geometría + material
+"- animate(): Función que se ejecuta cada frame

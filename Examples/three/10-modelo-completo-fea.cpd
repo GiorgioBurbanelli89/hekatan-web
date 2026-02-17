@@ -1,0 +1,490 @@
+"============================================
+"EJEMPLO 10: Modelo FEA Completo Interactivo
+"============================================
+"Análisis completo con múltiples vistas:
+"- Malla sin deformar
+"- Desplazamientos
+"- Reacciones
+"- Momentos
+
+"GEOMETRÍA:
+a = 8m
+b = 5m
+t = 0.25m
+
+"MATERIAL:
+E = 30e9Pa
+ν = 0.2
+ρ = 2500kg/m³
+
+"CARGAS:
+q = 12kN/m²
+
+"CONDICIONES DE BORDE:
+'Apoyos:'apoyo_tipo$ = "Simplemente apoyada"
+
+"DISCRETIZACIÓN:
+n_x = 16
+n_y = 10
+
+#val
+'Propiedades calculadas:'
+D = E*t^3/(12*(1 - ν^2))
+β = 0.00406
+w_max = β*q*b^4/D|mm
+
+'Reacciones totales (aproximadas):'
+R_total = q*a*b
+R_corner = R_total/4|kN
+
+'Momentos máximos (centro):'
+α_x = 0.0479
+α_y = 0.0368
+M_x = α_x*q*b^2|kN·m/m
+M_y = α_y*q*b^2|kN·m/m
+
+@{html}
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.145/examples/js/controls/OrbitControls.js"></script>
+
+<!-- Panel de control -->
+<div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; padding:20px; border-radius:8px; margin:10px 0;">
+  <h3 style="margin-top:0;">🎛️ Panel de Control - Análisis FEA Completo</h3>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px; margin-top:15px;">
+    <div>
+      <strong>Vista:</strong><br>
+      <select id="viewMode" style="width:100%; padding:8px; margin-top:5px; font-size:14px;">
+        <option value="deformed">Deformada</option>
+        <option value="undeformed">Sin deformar</option>
+        <option value="both">Ambas</option>
+      </select>
+    </div>
+
+    <div>
+      <strong>Mostrar:</strong><br>
+      <select id="displayMode" style="width:100%; padding:8px; margin-top:5px; font-size:14px;">
+        <option value="displacements">Desplazamientos</option>
+        <option value="reactions">Reacciones</option>
+        <option value="moments">Momentos</option>
+        <option value="mesh">Solo malla</option>
+      </select>
+    </div>
+
+    <div>
+      <strong>Factor de escala:</strong><br>
+      <input type="range" id="scaleSlider" min="1" max="10" value="5" style="width:100%;">
+      <span id="scaleValue">5x</span>
+    </div>
+  </div>
+
+  <div style="margin-top:15px;">
+    <label><input type="checkbox" id="showGrid" checked> Mostrar grid</label>
+    <label style="margin-left:20px;"><input type="checkbox" id="showAxes" checked> Mostrar ejes</label>
+    <label style="margin-left:20px;"><input type="checkbox" id="showSupports" checked> Mostrar apoyos</label>
+    <label style="margin-left:20px;"><input type="checkbox" id="showWireframe" checked> Wireframe</label>
+  </div>
+
+  <button id="resetView" style="margin-top:15px; padding:10px 20px; background:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">
+    🔄 Resetear Vista
+  </button>
+</div>
+
+<div id="canvas10" style="width:1200px; height:800px; border:2px solid #ccc; margin:10px 0; background:#fafafa;"></div>
+
+<!-- Información del análisis -->
+<div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px; margin:10px 0;">
+  <div style="background:#e3f2fd; padding:15px; border-left:4px solid #2196f3;">
+    <strong>📐 Geometría</strong><br>
+    Dimensiones: @{calcpad:a} × @{calcpad:b} m<br>
+    Espesor: @{calcpad:t} m<br>
+    Elementos: @{calcpad:n_x*n_y}<br>
+    Nodos: @{calcpad:(n_x+1)*(n_y+1)}
+  </div>
+
+  <div style="background:#f3e5f5; padding:15px; border-left:4px solid #9c27b0;">
+    <strong>📊 Resultados</strong><br>
+    Deflexión máx: <span id="maxDefl">@{calcpad:w_max}</span> mm<br>
+    Momento Mx: @{calcpad:M_x} kN·m/m<br>
+    Momento My: @{calcpad:M_y} kN·m/m<br>
+    Reacción/apoyo: @{calcpad:R_corner} kN
+  </div>
+
+  <div style="background:#e8f5e9; padding:15px; border-left:4px solid #4caf50;">
+    <strong>🎨 Escala de Colores</strong><br>
+    <div style="height:20px; background:linear-gradient(to right, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000); margin:5px 0;"></div>
+    Mín <span style="float:right;">Máx</span>
+  </div>
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof THREE === 'undefined' || typeof THREE.OrbitControls === 'undefined') {
+    document.getElementById('canvas10').innerHTML = '<p style="color:red;">Error cargando Three.js</p>';
+    return;
+  }
+
+  // Variables de Calcpad
+  const a = @{calcpad:a};
+  const b = @{calcpad:b};
+  const t = @{calcpad:t};
+  const E = @{calcpad:E};
+  const nu = @{calcpad:ν};
+  const q = @{calcpad:q} * 1000;
+  const nx = @{calcpad:n_x};
+  const ny = @{calcpad:n_y};
+  const D = @{calcpad:D};
+  const wMaxTheory = @{calcpad:w_max} / 1000;
+
+  // Estado
+  let viewMode = 'deformed';
+  let displayMode = 'displacements';
+  let scaleFactor = 5;
+  let showGrid = true;
+  let showAxes = true;
+  let showSupports = true;
+  let showWireframe = true;
+
+  // Escena
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xfafafa);
+
+  // Cámara
+  const camera = new THREE.PerspectiveCamera(45, 1200/800, 0.1, 1000);
+  camera.position.set(a*1.5, b*1.5, b*1.8);
+
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(1200, 800);
+  renderer.shadowMap.enabled = true;
+  document.getElementById('canvas10').appendChild(renderer.domElement);
+
+  // Controles
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(a/2, 0, b/2);
+  controls.update();
+
+  // ===================================================================
+  // GENERAR TOPOLOGÍA
+  // ===================================================================
+
+  const elements = [];
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      const n1 = j * (nx + 1) + i;
+      const n2 = j * (nx + 1) + (i + 1);
+      const n3 = (j + 1) * (nx + 1) + (i + 1);
+      const n4 = (j + 1) * (nx + 1) + i;
+      elements.push([n1, n2, n3, n4]);
+    }
+  }
+
+  // ===================================================================
+  // CALCULAR NODOS Y RESULTADOS
+  // ===================================================================
+
+  function calculateResults() {
+    const nodes = [];
+    const displacements = [];
+    const reactions = [];
+    const moments = [];
+
+    for (let j = 0; j <= ny; j++) {
+      for (let i = 0; i <= nx; i++) {
+        const x = i * a / nx;
+        const z = j * b / ny;
+
+        // Desplazamiento
+        const w = -wMaxTheory * Math.sin(Math.PI * x / a) * Math.sin(Math.PI * z / b);
+        nodes.push(new THREE.Vector3(x, w * scaleFactor, z));
+        displacements.push(Math.abs(w));
+
+        // Reacciones (solo en bordes)
+        const onEdge = (i === 0 || i === nx || j === 0 || j === ny);
+        const reaction = onEdge ? Math.abs(w) * q * (a/nx) * (b/ny) : 0;
+        reactions.push(reaction);
+
+        // Momentos (aproximados)
+        const mx = -D * Math.pow(Math.PI/a, 2) * Math.sin(Math.PI*x/a) * Math.sin(Math.PI*z/b) * wMaxTheory;
+        const my = -D * Math.pow(Math.PI/b, 2) * Math.sin(Math.PI*x/a) * Math.sin(Math.PI*z/b) * wMaxTheory;
+        const momentMag = Math.sqrt(mx*mx + my*my);
+        moments.push(momentMag);
+      }
+    }
+
+    return { nodes, displacements, reactions, moments };
+  }
+
+  // ===================================================================
+  // FUNCIÓN DE COLOR
+  // ===================================================================
+
+  function getColorFromValue(value) {
+    const color = new THREE.Color();
+    if (value < 0.25) {
+      const t = value / 0.25;
+      color.setRGB(0, t, 1);
+    } else if (value < 0.5) {
+      const t = (value - 0.25) / 0.25;
+      color.setRGB(0, 1, 1 - t);
+    } else if (value < 0.75) {
+      const t = (value - 0.5) / 0.25;
+      color.setRGB(t, 1, 0);
+    } else {
+      const t = (value - 0.75) / 0.25;
+      color.setRGB(1, 1 - t, 0);
+    }
+    return color;
+  }
+
+  // ===================================================================
+  // CREAR GEOMETRÍA
+  // ===================================================================
+
+  let slabDeformed, slabUndeformed, wireframeObj;
+  let gridHelper, axesHelper, supports;
+
+  function createMeshes() {
+    // Limpiar objetos anteriores
+    scene.children = scene.children.filter(child =>
+      !(child instanceof THREE.Mesh) && !(child instanceof THREE.LineSegments) &&
+      !(child instanceof THREE.GridHelper) && !(child instanceof THREE.AxesHelper)
+    );
+
+    const results = calculateResults();
+    let values;
+
+    switch(displayMode) {
+      case 'displacements':
+        values = results.displacements;
+        break;
+      case 'reactions':
+        values = results.reactions;
+        break;
+      case 'moments':
+        values = results.moments;
+        break;
+      default:
+        values = results.displacements;
+    }
+
+    const maxValue = Math.max(...values);
+    const normalizedValues = values.map(v => v / (maxValue || 1));
+
+    // Geometría deformada
+    if (viewMode === 'deformed' || viewMode === 'both') {
+      const positions = [];
+      const colors = [];
+
+      elements.forEach(elem => {
+        const [n1, n2, n3, n4] = elem;
+        const p1 = results.nodes[n1];
+        const p2 = results.nodes[n2];
+        const p3 = results.nodes[n3];
+        const p4 = results.nodes[n4];
+
+        const c1 = getColorFromValue(normalizedValues[n1]);
+        const c2 = getColorFromValue(normalizedValues[n2]);
+        const c3 = getColorFromValue(normalizedValues[n3]);
+        const c4 = getColorFromValue(normalizedValues[n4]);
+
+        // Triángulo 1
+        positions.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z);
+        colors.push(c1.r, c1.g, c1.b, c2.r, c2.g, c2.b, c3.r, c3.g, c3.b);
+
+        // Triángulo 2
+        positions.push(p1.x, p1.y, p1.z, p3.x, p3.y, p3.z, p4.x, p4.y, p4.z);
+        colors.push(c1.r, c1.g, c1.b, c3.r, c3.g, c3.b, c4.r, c4.g, c4.b);
+      });
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      geometry.computeVertexNormals();
+
+      const material = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        side: THREE.DoubleSide,
+        metalness: 0.2,
+        roughness: 0.7
+      });
+
+      slabDeformed = new THREE.Mesh(geometry, material);
+      slabDeformed.castShadow = true;
+      scene.add(slabDeformed);
+
+      // Wireframe
+      if (showWireframe) {
+        wireframeObj = new THREE.LineSegments(
+          new THREE.EdgesGeometry(geometry),
+          new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.3, transparent: true })
+        );
+        scene.add(wireframeObj);
+      }
+    }
+
+    // Geometría sin deformar
+    if (viewMode === 'undeformed' || viewMode === 'both') {
+      const positions = [];
+      elements.forEach(elem => {
+        const [n1, n2, n3, n4] = elem;
+        const x1 = (n1 % (nx + 1)) * a / nx;
+        const z1 = Math.floor(n1 / (nx + 1)) * b / ny;
+        const x2 = (n2 % (nx + 1)) * a / nx;
+        const z2 = Math.floor(n2 / (nx + 1)) * b / ny;
+        const x3 = (n3 % (nx + 1)) * a / nx;
+        const z3 = Math.floor(n3 / (nx + 1)) * b / ny;
+        const x4 = (n4 % (nx + 1)) * a / nx;
+        const z4 = Math.floor(n4 / (nx + 1)) * b / ny;
+
+        positions.push(x1, 0, z1, x2, 0, z2, x3, 0, z3);
+        positions.push(x1, 0, z1, x3, 0, z3, x4, 0, z4);
+      });
+
+      const undefGeom = new THREE.BufferGeometry();
+      undefGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+      slabUndeformed = new THREE.LineSegments(
+        new THREE.EdgesGeometry(undefGeom),
+        new THREE.LineBasicMaterial({ color: 0x9e9e9e, opacity: 0.2, transparent: true })
+      );
+      scene.add(slabUndeformed);
+    }
+  }
+
+  // ===================================================================
+  // ELEMENTOS DE ESCENA
+  // ===================================================================
+
+  function updateSceneElements() {
+    // Grid
+    if (gridHelper) scene.remove(gridHelper);
+    if (showGrid) {
+      gridHelper = new THREE.GridHelper(Math.max(a,b)*1.8, 40);
+      gridHelper.position.y = -wMaxTheory * scaleFactor - 0.3;
+      scene.add(gridHelper);
+    }
+
+    // Ejes
+    if (axesHelper) scene.remove(axesHelper);
+    if (showAxes) {
+      axesHelper = new THREE.AxesHelper(Math.max(a,b)*0.5);
+      scene.add(axesHelper);
+    }
+
+    // Apoyos
+    if (supports) supports.forEach(s => scene.remove(s));
+    supports = [];
+    if (showSupports) {
+      const supportGeom = new THREE.SphereGeometry(0.15, 16, 16);
+      const supportMat = new THREE.MeshStandardMaterial({ color: 0x263238 });
+      [[0,0], [a,0], [a,b], [0,b]].forEach(([x,z]) => {
+        const support = new THREE.Mesh(supportGeom, supportMat);
+        support.position.set(x, -0.15, z);
+        support.castShadow = true;
+        supports.push(support);
+        scene.add(support);
+      });
+    }
+  }
+
+  // ===================================================================
+  // ILUMINACIÓN
+  // ===================================================================
+
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+
+  const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.5);
+  dirLight1.position.set(a*2, b*3, b*2);
+  dirLight1.castShadow = true;
+  scene.add(dirLight1);
+
+  const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+  dirLight2.position.set(-a, b*2, -b);
+  scene.add(dirLight2);
+
+  // ===================================================================
+  // EVENT LISTENERS
+  // ===================================================================
+
+  document.getElementById('viewMode').addEventListener('change', (e) => {
+    viewMode = e.target.value;
+    createMeshes();
+  });
+
+  document.getElementById('displayMode').addEventListener('change', (e) => {
+    displayMode = e.target.value;
+    createMeshes();
+  });
+
+  document.getElementById('scaleSlider').addEventListener('input', (e) => {
+    scaleFactor = parseInt(e.target.value);
+    document.getElementById('scaleValue').textContent = scaleFactor + 'x';
+    createMeshes();
+    updateSceneElements();
+  });
+
+  ['showGrid', 'showAxes', 'showSupports', 'showWireframe'].forEach(id => {
+    document.getElementById(id).addEventListener('change', (e) => {
+      eval(id + ' = e.target.checked');
+      createMeshes();
+      updateSceneElements();
+    });
+  });
+
+  document.getElementById('resetView').addEventListener('click', () => {
+    camera.position.set(a*1.5, b*1.5, b*1.8);
+    controls.target.set(a/2, 0, b/2);
+    controls.update();
+  });
+
+  // ===================================================================
+  // INICIALIZAR Y ANIMAR
+  // ===================================================================
+
+  createMeshes();
+  updateSceneElements();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  console.log('Modelo FEA completo cargado correctamente');
+});
+</script>
+@{end html}
+
+"=================================================
+"CARACTERÍSTICAS DEL MODELO COMPLETO:
+"=================================================
+"
+"✅ MÚLTIPLES VISTAS:
+"   - Deformada con colores
+"   - Sin deformar (referencia)
+"   - Ambas superpuestas
+"
+"✅ MÚLTIPLES RESULTADOS:
+"   - Desplazamientos verticales
+"   - Reacciones en apoyos
+"   - Momentos flectores
+"
+"✅ CONTROLES INTERACTIVOS:
+"   - Factor de escala ajustable
+"   - Toggle de grid, ejes, apoyos
+"   - Toggle de wireframe
+"   - Reset de cámara
+"
+"✅ VISUALIZACIÓN PROFESIONAL:
+"   - Mapas de colores rainbow
+"   - Sombras en tiempo real
+"   - Iluminación múltiple
+"   - Interface moderna
+"
+"Este es el ejemplo más completo que integra
+"todos los conceptos aprendidos en Three.js
+"aplicados al análisis de elementos finitos.

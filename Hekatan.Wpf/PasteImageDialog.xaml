@@ -1,0 +1,85 @@
+<Window x:Class="Hekatan.Wpf.PasteImageDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Pegar Imagen"
+        Height="320"
+        Width="450"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Seleccione cómo desea pegar la imagen:"
+                   FontWeight="SemiBold" Margin="0,0,0,15"/>
+
+        <!-- Option 1: Base64 -->
+        <RadioButton x:Name="RadioBase64" Grid.Row="1" GroupName="PasteOption"
+                     IsChecked="True" Margin="0,5,0,5">
+            <StackPanel>
+                <TextBlock Text="Embeber como Base64" FontWeight="Medium"/>
+                <TextBlock Text="La imagen se guarda dentro del documento. Portable, no requiere archivos externos."
+                           FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,2,0,0"/>
+            </StackPanel>
+        </RadioButton>
+
+        <!-- Option 2: Local File -->
+        <RadioButton x:Name="RadioLocalFile" Grid.Row="2" GroupName="PasteOption" Margin="0,5,0,5">
+            <StackPanel>
+                <TextBlock Text="Guardar como archivo local" FontWeight="Medium"/>
+                <TextBlock Text="La imagen se guarda como archivo PNG en la carpeta del documento."
+                           FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,2,0,0"/>
+            </StackPanel>
+        </RadioButton>
+
+        <!-- Option 3: Imgur Upload -->
+        <RadioButton x:Name="RadioImgur" Grid.Row="3" GroupName="PasteOption" Margin="0,5,0,5"
+                     Checked="RadioImgur_Checked" Unchecked="RadioImgur_Unchecked">
+            <StackPanel>
+                <TextBlock Text="Subir a Imgur (Internet)" FontWeight="Medium"/>
+                <TextBlock Text="La imagen se sube a Imgur y se obtiene una URL pública."
+                           FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,2,0,0"/>
+            </StackPanel>
+        </RadioButton>
+
+        <!-- Imgur Client-ID Panel (shown when Imgur is selected) -->
+        <StackPanel x:Name="ImgurPanel" Grid.Row="4" Margin="20,10,0,0" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Client-ID:" VerticalAlignment="Center" Width="70"/>
+                <TextBox x:Name="ImgurClientIdTextBox" Width="250" Margin="5,0,0,0"/>
+            </StackPanel>
+            <TextBlock Margin="0,5,0,0" FontSize="11" Foreground="Gray" TextWrapping="Wrap">
+                <Run Text="1. "/>
+                <Hyperlink x:Name="ImgurRegisterLink" Click="ImgurRegisterLink_Click">
+                    Registrar nueva aplicación
+                </Hyperlink>
+                <Run Text=" (si no tienes una)"/>
+            </TextBlock>
+            <TextBlock Margin="0,2,0,0" FontSize="11" Foreground="Gray" TextWrapping="Wrap">
+                <Run Text="2. "/>
+                <Hyperlink x:Name="ImgurAppsLink" Click="ImgurAppsLink_Click">
+                    Ver mis aplicaciones
+                </Hyperlink>
+                <Run Text=" (para obtener tu Client-ID)"/>
+            </TextBlock>
+            <TextBlock Text="(El Client-ID se guardará para futuros usos)" FontSize="10" Foreground="DarkGray" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+            <Button x:Name="OkButton" Content="Aceptar" Width="80" Height="28"
+                    Margin="0,0,10,0" IsDefault="True" Click="OkButton_Click"/>
+            <Button x:Name="CancelButton" Content="Cancelar" Width="80" Height="28"
+                    IsCancel="True" Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

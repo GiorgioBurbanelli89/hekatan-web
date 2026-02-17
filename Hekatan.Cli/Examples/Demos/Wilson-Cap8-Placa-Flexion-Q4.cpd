@@ -1,0 +1,294 @@
+'@(h1 Elemento de Flexion en Losa - Cuadrilateral Q4)
+'Basado en: @(b Edward L. Wilson - Cap. 8: Elementos de Flexion en Losa)
+'3 DOF por nodo: w (desplazamiento), theta_x, theta_y (rotaciones)
+
+'@(hr)
+'@(h2 1. Geometria del Elemento Q4)
+'Elemento cuadrilateral de 4 nodos en coordenadas naturales (xi, eta)
+
+@{plot}
+title: Elemento Q4 de Flexion - Coordenadas Naturales
+xlim: -2, 2
+ylim: -2, 2
+width: 600
+height: 600
+xlabel: xi
+ylabel: eta
+
+rect: -1, -1, 2, 2, #3366CC, fill
+
+point: -1, -1, #CC0000, 8, filled
+point: 1, -1, #CC0000, 8, filled
+point: 1, 1, #CC0000, 8, filled
+point: -1, 1, #CC0000, 8, filled
+
+text: -1.4, -1.3, "1 (-1,-1)", #333333, 11
+text: 1.1, -1.3, "2 (1,-1)", #333333, 11
+text: 1.1, 1.2, "3 (1,1)", #333333, 11
+text: -1.4, 1.2, "4 (-1,1)", #333333, 11
+
+arrow: -1, -1, -1, -0.5, #CC0000, 1.5
+text: -1.5, -0.3, "w, theta_x, theta_y", #CC0000, 9
+
+hline: 0, #AAAAAA
+vline: 0, #AAAAAA
+
+text: 0.1, -1.7, "xi", #003366, 12
+text: -1.7, 0.1, "eta", #003366, 12
+
+eq: -0.8, 0, "3 DOF/nodo x 4 = 12 DOF", #003366, 11
+@{end plot}
+
+'@(h3 1.1 Funciones de Forma Bilineales (Ec. 5.11))
+'N_i = 1/4 (1 + xi_i * xi)(1 + eta_i * eta)
+
+'Para nodo 1 (xi=-1, eta=-1):
+'N_1 = 1/4 (1 - xi)(1 - eta)
+
+'Para nodo 2 (xi=1, eta=-1):
+'N_2 = 1/4 (1 + xi)(1 - eta)
+
+'Para nodo 3 (xi=1, eta=1):
+'N_3 = 1/4 (1 + xi)(1 + eta)
+
+'Para nodo 4 (xi=-1, eta=1):
+'N_4 = 1/4 (1 - xi)(1 + eta)
+
+@{plot}
+title: Funciones de Forma N1 a N4 (corte eta=0)
+function: (1-x)/2
+function2: (1+x)/2
+color: #0033CC
+color2: #CC0000
+linewidth: 2.5
+linewidth2: 2.5
+legend: N1 = (1-xi)/2
+legend2: N2 = (1+xi)/2
+xlim: -1.5, 1.5
+ylim: -0.2, 1.2
+width: 600
+height: 350
+xlabel: xi
+ylabel: N(xi)
+points: 200
+
+hline: 0, #AAAAAA
+vline: 0, #AAAAAA
+point: -1, 1, #0033CC, 7, filled
+point: 1, 0, #0033CC, 7, filled
+point: -1, 0, #CC0000, 7, filled
+point: 1, 1, #CC0000, 7, filled
+
+text: -0.8, 0.8, "N1(-1)=1", #0033CC, 10
+text: 0.5, 0.8, "N2(1)=1", #CC0000, 10
+@{end plot}
+
+'@(hr)
+'@(h2 2. Relaciones de Flexion en Placa Delgada)
+'Wilson Cap. 8, Seccion 8.2-8.3
+
+'@(h3 2.1 Desplazamiento transversal)
+'w(xi,eta) = SUM(N_i * w_i) (interpolacion bilineal)
+
+'@(h3 2.2 Curvaturas (Ec. 8.3))
+'Las curvaturas de la placa son:
+'kappa_x = -d^2w/dx^2
+'kappa_y = -d^2w/dy^2
+'kappa_xy = -2 * d^2w/(dx*dy)
+
+'En notacion matricial:
+'kappa = {kappa_x, kappa_y, kappa_xy} = B * u_e
+
+'@(h3 2.3 Matriz Constitutiva de Flexion (Ec. 8.4))
+'Para placa isotropica:
+'@(b D = (E*t^3)/(12*(1-nu^2)) * [1, nu, 0; nu, 1, 0; 0, 0, (1-nu)/2])
+
+'Datos del material:
+E_m = 30000'ksi (concreto)
+nu = 0.20'(Poisson)
+t = 6'in (espesor de losa)
+
+'Rigidez de flexion de la placa:
+D_f = E_m*t^3/(12*(1 - nu^2))
+
+'Componentes de la matriz D:
+D_11 = D_f*1
+D_12 = D_f*nu
+D_33 = D_f*(1 - nu)/2
+
+'@(hr)
+'@(h2 3. Matriz de Rigidez del Elemento (Ec. 3.18))
+'@(b k = integral integral B^T D B |J| d_xi d_eta)
+'Evaluada con cuadratura de Gauss 2x2
+
+'@(h3 3.1 Puntos de Gauss 2x2)
+'Punto 1: xi = -1/sqrt(3), eta = -1/sqrt(3)
+xi_g = 1/sqr(3)
+'Puntos de integracion:
+'(-xi_g, -xi_g), (xi_g, -xi_g), (xi_g, xi_g), (-xi_g, xi_g)
+'Pesos: w_1 = w_2 = 1.0
+
+@{plot}
+title: Puntos de Gauss 2x2 en Elemento Q4
+xlim: -1.5, 1.5
+ylim: -1.5, 1.5
+width: 500
+height: 500
+xlabel: xi
+ylabel: eta
+
+rect: -1, -1, 2, 2, #CCDDEE, fill
+
+point: -0.577, -0.577, #CC0000, 9, filled
+point: 0.577, -0.577, #CC0000, 9, filled
+point: 0.577, 0.577, #CC0000, 9, filled
+point: -0.577, 0.577, #CC0000, 9, filled
+
+point: -1, -1, #333333, 6, filled
+point: 1, -1, #333333, 6, filled
+point: 1, 1, #333333, 6, filled
+point: -1, 1, #333333, 6, filled
+
+text: -0.8, -0.8, "G1", #CC0000, 10
+text: 0.6, -0.8, "G2", #CC0000, 10
+text: 0.6, 0.8, "G3", #CC0000, 10
+text: -0.8, 0.8, "G4", #CC0000, 10
+
+hline: 0, #AAAAAA
+vline: 0, #AAAAAA
+
+eq: -1.3, 1.3, "xi_g = 1/sqrt(3) = 0.577", #003366, 10
+eq: -1.3, 1.1, "w_g = 1.0", #003366, 10
+@{end plot}
+
+'@(h3 3.2 Jacobiano para elemento rectangular)
+'Para un elemento rectangular de a x b:
+a = 60'in (dimension en x, 5 ft)
+b = 48'in (dimension en y, 4 ft)
+
+'Jacobiano:
+J_11 = a/2
+J_22 = b/2
+det_J = J_11*J_22
+
+'@(h3 3.3 Integracion numerica)
+'k = SUM_i SUM_j [B^T(xi_i, eta_j) * D * B(xi_i, eta_j) * |J| * w_i * w_j]
+'Con 2x2 Gauss: 4 puntos de evaluacion, pesos = 1.0
+
+'@(hr)
+'@(h2 4. Ejemplo: Placa Cuadrada con Soporte Simple)
+'Wilson Ejemplo 8.9.2: Carga puntual P en el centro
+
+@{plot}
+title: Placa Cuadrada - Soporte Simple (Wilson 8.9.2)
+xlim: -1, 7
+ylim: -1, 7
+width: 600
+height: 600
+xlabel: x
+ylabel: y
+
+rect: 0, 0, 6, 6, #CCDDEE, fill
+
+line: 0, 0, 6, 0, #333333
+line: 6, 0, 6, 6, #333333
+line: 6, 6, 0, 6, #333333
+line: 0, 6, 0, 0, #333333
+
+point: 0, 0, #CC0000, 7, filled
+point: 3, 0, #CC0000, 7, filled
+point: 6, 0, #CC0000, 7, filled
+point: 6, 3, #CC0000, 7, filled
+point: 6, 6, #CC0000, 7, filled
+point: 3, 6, #CC0000, 7, filled
+point: 0, 6, #CC0000, 7, filled
+point: 0, 3, #CC0000, 7, filled
+
+point: 3, 3, #0033CC, 9, filled
+arrow: 3, 4, 3, 3.2, #0033CC, 2
+text: 2.2, 4.3, "P (carga)", #0033CC, 11
+
+text: 2.5, -0.7, "Soporte Simple", #CC0000, 10
+text: 6.3, 2.5, "Soporte Simple", #CC0000, 10
+text: 2.5, 6.3, "Soporte Simple", #CC0000, 10
+text: -1, 2.5, "SS", #CC0000, 10
+
+eq: 1, 5, "w_max = alpha * P*a^2 / D", #003366, 12
+eq: 1, 4.5, "alpha = 0.01160 (Timoshenko)", #006600, 11
+@{end plot}
+
+'@(h3 4.1 Solucion analitica (Navier))
+'Para placa cuadrada simplemente apoyada con carga puntual P:
+P_load = 1'kip
+
+'Dimension de la placa:
+a_p = 120'in (10 ft x 10 ft)
+
+'Rigidez de flexion:
+D_plate = E_m*t^3/(12*(1 - nu^2))
+
+'Deflexion maxima (serie de Navier):
+'w_max = alpha * P * a^2 / D
+alpha_w = 0.01160
+w_max = alpha_w*P_load*a_p^2/D_plate
+
+'Momento maximo en el centro:
+'M_max = beta * P
+beta_M = 0.0611
+M_max = beta_M*P_load*a_p^2/a_p
+
+'@(h3 4.2 Resultados de FEM (malla 4x4))
+'Con malla 4x4 = 16 elementos Q4:
+'w_FEM aprox 1.003 * w_analitico (error < 0.3%)
+w_FEM = 1.003*w_max
+
+'@(hr)
+'@(h2 5. Ecuacion de Equilibrio Dinamico (Cap. 12))
+'Wilson extiende al caso dinamico:
+'@(b M u'' + C u' + K u = R(t))
+'Donde:
+'M = SUM integral(N^T rho N dV) = Matriz de masa consistente
+'C = Matriz de amortiguamiento
+'K = Matriz de rigidez
+'R(t) = Vector de cargas dependiente del tiempo
+
+'@(h3 5.1 Frecuencia natural (1 GDL))
+'Para un sistema de 1 GDL: omega = sqrt(K/M)
+'Periodo: T = 2*pi/omega
+
+@{plot}
+title: Respuesta Dinamica - Sistema 1 GDL (Wilson Cap 12)
+function: sin(6.28*x)*exp(-0.3*x)
+color: #0033CC
+linewidth: 2.5
+legend: u(t) = sin(wt) * exp(-xi*w*t)
+xlim: 0, 10
+ylim: -1.2, 1.2
+width: 700
+height: 350
+xlabel: t (s)
+ylabel: u(t)
+points: 400
+
+function2: exp(-0.3*x)
+color2: #CC0000
+linewidth2: 1.5
+style2: dashed
+legend2: Envolvente = exp(-xi*w*t)
+
+hline: 0, #AAAAAA
+
+text: 7, 0.8, "Vibracion amortiguada", #003366, 11
+text: 7, -0.6, "xi = 5% amortiguamiento", #CC0000, 10
+@{end plot}
+
+'@(hr)
+'@(h2 6. Resumen - Formulacion de Wilson)
+'El elemento de flexion Q4 de Wilson tiene las siguientes caracteristicas:
+'1. @(b 12 DOF) (3 por nodo: w, theta_x, theta_y)
+'2. Funciones de forma @(b bilineales) (no requiere C1 continuidad)
+'3. Integracion @(b Gauss 2x2)
+'4. Satisface la @(b prueba de grupo) (convergencia garantizada)
+'5. Compatible con elementos de @(b portico) (mismos DOF de rotacion)
+'6. Se combina con @(b membrana) para formar CASCARA (Cap 10)
+

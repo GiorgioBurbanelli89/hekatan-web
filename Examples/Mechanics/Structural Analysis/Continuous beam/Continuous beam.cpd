@@ -1,0 +1,52 @@
+' ============================================
+' Importado de Word (.docx)
+' Versión: Microsoft Office Word
+' Archivo: continuous beam.docx
+' Fecha: 2026-01-24 12:53:29
+' Título: continuous beam
+' ============================================
+
+'Analysis of continuous beam by force method
+'Input data
+'Span lengths -
+'Number of spans -
+'Coordinates of supports -
+'Total beam length -
+'Load -
+'Material
+'Elastic modulus -
+'Poisson′s ratio -
+'Shear modulus -
+'Cross section
+'Rectangular with dimensions:  ,
+'Area -
+'Moment of inertia -
+'Shear area -
+'Solution
+'The solution will be performed by the force method with a primary system - simply supported beam with internal supports removed and replaced by unknown forces Xi
+'Bending moments
+'- in section a due to unit force at distance x from the beginning of the beam:
+'- in section a, due to unit force Xi:
+'- due to external loads in primary system:
+'Shear forces
+'- in section a due to unit force at distance x from the beginning of the beam:
+'- in section a, due to unit force Xi:
+'- due to external loads in primary system:
+'Number of unknowns by force method -
+'Flexibility coefficients
+',
+',
+'Calculation of the unknown forces Xi
+'Results
+'Bending moment diagram -
+'Shear force diagram -
+'Deflections
+'- in section a, due to unit force Xi:
+'- due to external loads in primary system:
+'Maximum deflection -
+'At a distance from the origin -
+'Comparison with Stadyps 6.0 structural analysis software
+'Loads and support reactions, kN
+'Bending moments, kNm
+'Shear forces, kN
+'Deflections, mm

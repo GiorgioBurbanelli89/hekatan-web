@@ -1,0 +1,187 @@
+@{config comment:%}
+%%KIRCHHOFF vs MINDLIN - Teoría de Placas
+%%Hekatan Calc - Benchmark Placa Simply Supported
+
+@(h2 1. Datos de la Placa)
+
+a = 6
+b = 4
+t = 0.1
+q = 10
+E = 35000000
+ν = 0.15
+
+@(h2 2. Propiedades)
+
+%Rigidez a flexión:
+D = E*t^3/(12*(1 - ν^2))
+%Módulo de cortante:
+G = E/(2*(1 + ν))
+%Factor corrección cortante Mindlin:
+κ = 5/6
+%Esbeltez L/t:
+λ = a/t
+
+@(h2 3. Serie de Navier - Kirchhoff)
+
+@{eqdef}
+w_K = (16·q)/(π⁶·D) · ΣΣ 1/(m·n·(m²/a² + n²/b²)²) | Deflexión Kirchhoff (m,n impares)
+w_s = (16·q)/(π⁴·κ·G·t) · ΣΣ 1/(m·n·(m²/a² + n²/b²)) | Corrección cortante Mindlin
+w_M = w_K + w_s | Deflexión total Mindlin
+@{end eqdef}
+
+%Suma de serie (m,n = 1,3,5,7,9):
+#hide
+f(m; n) = 1/(m*n*(m^2/a^2 + n^2/b^2)^2)
+S = f(1;1) + f(1;3) + f(1;5) + f(1;7) + f(1;9) + f(3;1) + f(3;3) + f(3;5) + f(3;7) + f(3;9) + f(5;1) + f(5;3) + f(5;5) + f(5;7) + f(5;9) + f(7;1) + f(7;3) + f(7;5) + f(7;7) + f(7;9) + f(9;1) + f(9;3) + f(9;5) + f(9;7) + f(9;9)
+g(m; n) = 1/(m*n*(m^2/a^2 + n^2/b^2))
+R = g(1;1) + g(1;3) + g(1;5) + g(1;7) + g(1;9) + g(3;1) + g(3;3) + g(3;5) + g(3;7) + g(3;9) + g(5;1) + g(5;3) + g(5;5) + g(5;7) + g(5;9) + g(7;1) + g(7;3) + g(7;5) + g(7;7) + g(7;9) + g(9;1) + g(9;3) + g(9;5) + g(9;7) + g(9;9)
+#show
+
+@(h3 Resultado Kirchhoff - solo flexión)
+w_K = 16*q/(π^6*D)*S*1000
+'w_K ='w_K' mm
+
+@(h3 Resultado Mindlin - flexión + cortante)
+w_s = 16*q/(π^4*κ*G*t)*R*1000
+'w_cortante ='w_s' mm
+
+w_M = w_K + w_s
+'w_Mindlin ='w_M' mm
+
+p = w_s/w_M*100
+'Aporte cortante ='p' %
+
+@(h2 4. Diferencia Visual Kirchhoff vs Mindlin)
+
+@{svg 700 280}
+background #fafafa
+% Kirchhoff
+text 170 20 "KIRCHHOFF" size:16 bold color:#1565c0
+text 170 40 "θ = dw/dx (perpendicular)" size:11 color:#666
+rect 50 60 240 80 fill:#e3f2fd stroke:#1565c0 width:2
+line 170 60 170 140 stroke:#1565c0 width:2 dash:5,3
+text 175 100 "θ" size:14 bold color:#1565c0
+text 50 155 "Sección SIEMPRE perpendicular" size:10 color:#1565c0
+text 50 170 "γ_xz = 0 (sin cortante)" size:10 color:#1565c0
+% Mindlin
+text 530 20 "MINDLIN" size:16 bold color:#c62828
+text 530 40 "θ ≠ dw/dx (independiente)" size:11 color:#666
+rect 410 60 240 80 fill:#ffebee stroke:#c62828 width:2
+line 530 60 545 140 stroke:#c62828 width:2 dash:5,3
+text 548 100 "θ" size:14 bold color:#c62828
+arc 530 65 20 270 285 stroke:#c62828 width:1
+text 410 155 "Sección puede ROTAR" size:10 color:#c62828
+text 410 170 "γ_xz ≠ 0 (CON cortante)" size:10 color:#c62828
+% Flechas de flexión
+text 140 200 "↕ Solo curvatura κ" size:12 color:#1565c0
+text 480 200 "↕ Curvatura κ + Cortante γ" size:12 color:#c62828
+% Separador
+line 350 15 350 220 stroke:#999 width:1 dash:3,3
+text 340 240 "Awatif Tri3 DSG usa MINDLIN" size:14 bold color:#333
+text 305 260 "Para L/t > 20 → Mindlin ≈ Kirchhoff (diferencia < 2%)" size:11 color:#666
+@{end svg}
+
+@(h2 5. Comparación por Espesor)
+
+@{columns 2}
+
+@(h3 Placa DELGADA - L/t = 60)
+#hide
+t_1 = 0.1
+D_1 = E*t_1^3/(12*(1 - ν^2))
+wK_1 = 16*q/(π^6*D_1)*S*1000
+ws_1 = 16*q/(π^4*κ*G*t_1)*R*1000
+wM_1 = wK_1 + ws_1
+p_1 = ws_1/wM_1*100
+#show
+'t = 0.1 m
+'Kirchhoff ='wK_1' mm
+'Mindlin   ='wM_1' mm
+@(color:green Cortante despreciable)
+'Aporte cortante ='p_1' %
+
+@{column}
+
+@(h3 Placa MEDIA - L/t = 20)
+#hide
+t_2 = 0.3
+D_2 = E*t_2^3/(12*(1 - ν^2))
+wK_2 = 16*q/(π^6*D_2)*S*1000
+ws_2 = 16*q/(π^4*κ*G*t_2)*R*1000
+wM_2 = wK_2 + ws_2
+p_2 = ws_2/wM_2*100
+#show
+'t = 0.3 m
+'Kirchhoff ='wK_2' mm
+'Mindlin   ='wM_2' mm
+@(color:orange Cortante notable)
+'Aporte cortante ='p_2' %
+
+@{end columns}
+
+@{columns 2}
+
+@(h3 Placa GRUESA - L/t = 10)
+#hide
+t_3 = 0.6
+D_3 = E*t_3^3/(12*(1 - ν^2))
+wK_3 = 16*q/(π^6*D_3)*S*1000
+ws_3 = 16*q/(π^4*κ*G*t_3)*R*1000
+wM_3 = wK_3 + ws_3
+p_3 = ws_3/wM_3*100
+#show
+'t = 0.6 m
+'Kirchhoff ='wK_3' mm
+'Mindlin   ='wM_3' mm
+@(color:red Cortante significativo)
+'Aporte cortante ='p_3' %
+
+@{column}
+
+@(h3 Placa MUY GRUESA - L/t = 5)
+#hide
+t_4 = 1.2
+D_4 = E*t_4^3/(12*(1 - ν^2))
+wK_4 = 16*q/(π^6*D_4)*S*1000
+ws_4 = 16*q/(π^4*κ*G*t_4)*R*1000
+wM_4 = wK_4 + ws_4
+p_4 = ws_4/wM_4*100
+#show
+'t = 1.2 m
+'Kirchhoff ='wK_4' mm
+'Mindlin   ='wM_4' mm
+@(color:red Kirchhoff INADECUADO)
+'Aporte cortante ='p_4' %
+
+@{end columns}
+
+@(h2 6. Conclusión)
+
+@{tree title:"Teorías de Placas" color:#1565c0}
+Placa (shell element) icon:folder
+  Kirchhoff (delgada) icon:info
+    Solo flexión κ icon:file
+    θ = dw/dx (dependiente) icon:file
+    γ = 0 (sin cortante) icon:file
+    Válido L/t > 20 icon:check
+  Mindlin-Reissner (general) icon:star
+    Flexión κ + Cortante γ icon:file
+    θ independiente de w icon:file
+    γ ≠ 0 (con cortante) icon:file
+    Válido cualquier L/t icon:check
+    Awatif Tri3 DSG icon:gear
+      Bending: Bb (directo) icon:code
+      Shear: DSG + cell smoothing icon:code
+      Membrane: ANDES (Felippa) icon:code
+    Modos Incompatibles Wilson icon:warning
+      Solo para Q4 (4 nodos) icon:file
+      Funciones burbuja 1-ξ² icon:file
+      NO aplica a triángulos icon:file
+@{end tree}
+
+@(b Kirchhoff) = solo flexión (curvatura κ)
+@(b Mindlin) = flexión + cortante transversal (κ + γ)
+@(b Awatif Tri3 DSG) = Mindlin con malla fina de triángulos Delaunay
+%Para L/t > 20: Mindlin ≈ Kirchhoff (mismo resultado)
+%Para L/t < 10: Mindlin es NECESARIO (Kirchhoff subestima)

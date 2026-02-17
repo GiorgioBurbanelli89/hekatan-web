@@ -1,0 +1,154 @@
+"============================================
+"🔷 SVG BÁSICO
+"============================================
+"Aprende a crear gráficos vectoriales con SVG.
+
+"¿QUÉ ES SVG?
+"----------------------------------------
+'SVG = Scalable Vector Graphics (Gráficos Vectoriales Escalables)
+'Usa matemáticas para dibujar, no píxeles
+'Se puede escalar sin perder calidad
+'Se puede manipular con CSS y JavaScript
+
+"SVG vs CANVAS
+"----------------------------------------
+'SVG:
+'  → Basado en DOM (cada forma es un elemento)
+'  → Escalable infinitamente
+'  → Mejor para diagramas, iconos, logos
+'  → Más lento con muchos elementos
+
+'Canvas:
+'  → Basado en píxeles
+'  → Más rápido para animaciones
+'  → Mejor para juegos, efectos
+'  → No escalable (se pixela)
+
+"FORMAS BÁSICAS EN SVG
+"----------------------------------------
+'<rect> → Rectángulo
+'<circle> → Círculo
+'<ellipse> → Elipse
+'<line> → Línea
+'<polyline> → Línea multi-punto
+'<polygon> → Polígono cerrado
+'<path> → Forma personalizada (muy poderosa)
+'<text> → Texto
+
+@{html}
+<!DOCTYPE html>
+<html lang="es">
+
+<!-- #region HEAD -->
+<head>
+  <meta charset="UTF-8">
+  <title>SVG Básico</title>
+
+  <!-- #region ESTILOS -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    svg {
+      border: 2px solid #333;
+      background-color: white;
+      display: block;
+      margin: 20px auto;
+    }
+
+    .info {
+      background: white;
+      padding: 20px;
+      max-width: 600px;
+      margin: 20px auto;
+      border-radius: 8px;
+      text-align: left;
+    }
+
+    /* Estilos CSS para SVG */
+    .circulo-animado {
+      transition: fill 0.3s;
+      cursor: pointer;
+    }
+
+    .circulo-animado:hover {
+      fill: #ff9800;
+    }
+  </style>
+  <!-- #endregion -->
+</head>
+<!-- #endregion -->
+
+<!-- #region BODY -->
+<body>
+  <h1>Gráficos Vectoriales con SVG</h1>
+
+  <!-- #region SVG -->
+  <svg width="600" height="400">
+
+    <!-- Rectángulo -->
+    <rect x="50" y="50" width="150" height="100"
+          fill="#2196f3" stroke="#1976d2" stroke-width="3"/>
+
+    <!-- Círculo normal -->
+    <circle cx="400" cy="100" r="60"
+            fill="#4caf50" stroke="#388e3c" stroke-width="3"/>
+
+    <!-- Círculo con animación CSS (hover) -->
+    <circle class="circulo-animado" cx="300" cy="250" r="50"
+            fill="#f44336"/>
+
+    <!-- Línea -->
+    <line x1="100" y1="300" x2="500" y2="300"
+          stroke="#9c27b0" stroke-width="5"/>
+
+    <!-- Polígono (triángulo) -->
+    <polygon points="500,350 550,250 450,250"
+             fill="#ff9800" stroke="#f57c00" stroke-width="2"/>
+
+    <!-- Texto -->
+    <text x="50" y="380" font-size="24" fill="#333" font-family="Arial">
+      ¡Hola SVG!
+    </text>
+
+    <!-- Elipse -->
+    <ellipse cx="150" cy="250" rx="60" ry="40"
+             fill="#00bcd4" opacity="0.7"/>
+
+  </svg>
+  <!-- #endregion -->
+
+  <div class="info">
+    <h3>🎨 Elementos en este SVG:</h3>
+    <ul>
+      <li><strong>Rectángulo azul:</strong> &lt;rect&gt;</li>
+      <li><strong>Círculo verde:</strong> &lt;circle&gt;</li>
+      <li><strong>Círculo rojo (hover):</strong> &lt;circle&gt; con CSS</li>
+      <li><strong>Línea morada:</strong> &lt;line&gt;</li>
+      <li><strong>Triángulo naranja:</strong> &lt;polygon&gt;</li>
+      <li><strong>Texto negro:</strong> &lt;text&gt;</li>
+      <li><strong>Elipse cyan:</strong> &lt;ellipse&gt;</li>
+    </ul>
+    <p><strong>💡 Tip:</strong> Pasa el mouse sobre el círculo rojo</p>
+  </div>
+
+  <!-- #region SCRIPTS -->
+  <script>
+    console.log('✅ SVG cargado');
+    console.log('💡 Inspecciona el SVG con F12 → Elements');
+  </script>
+  <!-- #endregion -->
+
+</body>
+<!-- #endregion -->
+
+</html>
+@{end html}

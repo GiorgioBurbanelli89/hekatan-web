@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{LANGUAGE_NAME}} Output</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif;
+            font-size: 11pt;
+            margin: 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+        }
+
+        .code-container {
+            margin: 10px 0;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .code-header {
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+            background-color: {{HEADER_COLOR}};
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .code-header .icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .code-output {
+            background-color: #1e1e1e;
+            color: {{OUTPUT_COLOR}};
+            padding: 12px 15px;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .code-output.error {
+            color: #f44747;
+        }
+
+        .code-output.success {
+            color: #4ec9b0;
+        }
+
+        /* Scrollbar styling */
+        .code-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .code-output::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        .code-output::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .code-output::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="code-container">
+        <div class="code-header">
+            {{LANGUAGE_NAME}}
+        </div>
+        <div class="code-output {{STATUS_CLASS}}">{{OUTPUT}}</div>
+    </div>
+</body>
+</html>
