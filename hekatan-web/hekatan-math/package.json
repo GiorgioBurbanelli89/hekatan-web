@@ -5,7 +5,9 @@
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./cas": "./src/cas/index.ts"
+    "./cas": "./src/cas/index.ts",
+    "./cas/*": "./src/cas/*",
+    "./*": "./src/*"
   },
   "dependencies": {
     "pyodide": "^0.27.5"
