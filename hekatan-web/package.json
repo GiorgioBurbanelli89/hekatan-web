@@ -1,0 +1,10 @@
+{
+  "name": "hekatan-web",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["hekatan-math", "hekatan-ui"],
+  "scripts": {
+    "dev": "npm run dev --workspace=hekatan-ui",
+    "build": "npm run build --workspace=hekatan-math && npm run build --workspace=hekatan-ui"
+  }
+}

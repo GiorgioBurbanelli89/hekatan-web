@@ -1,0 +1,105 @@
+/* ─── Hekatan Editor Styles ─── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f5f5; color: #1a1a2e; }
+
+.app-header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white; padding: 0.8rem 1.5rem; display: flex; align-items: center; gap: 1rem;
+}
+.app-header h1 { font-size: 1.3rem; font-weight: 600; }
+.app-header .subtitle { font-size: 0.8rem; opacity: 0.6; }
+.app-header a { color: #90caf9; text-decoration: none; margin-left: auto; font-size: 0.85rem; }
+
+.main-layout { display: flex; height: calc(100vh - 50px); }
+
+/* Sidebar */
+.sidebar {
+  width: 240px; background: white; border-right: 1px solid #e0e0e0;
+  overflow-y: auto; padding: 0.8rem; flex-shrink: 0;
+}
+.sidebar h3 { font-size: 0.75rem; text-transform: uppercase; color: #888; margin: 0.8rem 0 0.3rem; }
+.example-list { list-style: none; }
+.example-list li {
+  padding: 0.35rem 0.6rem; border-radius: 5px; cursor: pointer; font-size: 0.82rem;
+}
+.example-list li:hover { background: #e3f2fd; }
+.example-list li.active { background: #2196f3; color: white; }
+
+/* Editor area */
+.editor-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.toolbar {
+  background: white; border-bottom: 1px solid #e0e0e0; padding: 0.4rem 1rem;
+  display: flex; gap: 0.5rem; align-items: center;
+}
+.toolbar button {
+  padding: 0.35rem 0.8rem; border: 1px solid #ddd; border-radius: 5px;
+  background: white; cursor: pointer; font-size: 0.82rem;
+}
+.toolbar button:hover { background: #f5f5f5; }
+.toolbar button.primary { background: #2196f3; color: white; border-color: #1976d2; }
+.toolbar button.primary:hover { background: #1976d2; }
+.toolbar .status { margin-left: auto; font-size: 0.78rem; color: #888; }
+
+.split-pane { flex: 1; display: flex; overflow: hidden; }
+
+.code-panel { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #e0e0e0; }
+.code-panel textarea {
+  flex: 1; border: none; padding: 0.8rem; font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 0.88rem; resize: none; outline: none; background: #fafafa; line-height: 1.6; tab-size: 2;
+}
+
+.output-panel { flex: 1; overflow-y: auto; padding: 1rem; background: white; font-size: 0.95rem; }
+
+/* ─── Output line styles ─── */
+.line { margin: 2px 0; padding: 2px 4px; }
+.line.assign { }
+.line.expr { color: #333; }
+.line.error { color: #c62828; }
+.line .err { color: #c62828; font-size: 0.8em; }
+.spacer { height: 8px; }
+.comment { color: #555; margin: 4px 0; }
+.fn-def { color: #1565c0; }
+var { font-style: italic; color: #1a237e; }
+.units { color: #666; font-size: 0.85em; }
+
+/* ─── Fractions ─── */
+.dvc {
+  display: inline-flex; flex-direction: column; align-items: center;
+  vertical-align: middle; margin: 0 2px;
+}
+.dvl {
+  border-bottom: solid 1pt black; min-width: 1em; text-align: center;
+  padding: 0 3px;
+}
+
+/* ─── N-ary operators (∫, ∑, ∏) with stacked limits ─── */
+.dvr {
+  display: inline-flex; flex-direction: column; align-items: center;
+  vertical-align: middle; margin: 0 1px; line-height: 1;
+}
+.nary {
+  font-size: 240%; color: #C080F0; font-family: 'Georgia Pro Light', Georgia, serif;
+  line-height: 0.8;
+}
+.nary em {
+  font-style: normal; display: inline-block;
+  transform: scaleX(0.7) rotate(7deg);
+}
+.dvr small { font-size: 0.65em; line-height: 1; }
+
+/* ─── Matrix table ─── */
+table.mat {
+  display: inline-table; border-collapse: collapse; vertical-align: middle;
+  border-left: 2px solid #333; border-right: 2px solid #333;
+  margin: 2px 4px;
+}
+table.mat td { padding: 2px 6px; text-align: right; font-size: 0.9em; }
+
+/* ─── Equation block ─── */
+.eq-block { margin: 8px 0; }
+.eq-block .eq { margin: 4px 0; line-height: 2.2; }
+
+/* ─── Plot container ─── */
+.plot-container { margin: 8px 0; }
+.plot-container svg { border-radius: 4px; }

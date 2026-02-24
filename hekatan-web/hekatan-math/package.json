@@ -1,0 +1,13 @@
+{
+  "name": "hekatan-math",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cas": "./src/cas/index.ts"
+  },
+  "dependencies": {
+    "pyodide": "^0.27.5"
+  }
+}

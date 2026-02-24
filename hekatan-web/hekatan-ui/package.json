@@ -1,0 +1,16 @@
+{
+  "name": "hekatan-ui",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 4610",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "hekatan-math": "*"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5",
+    "typescript": "^5.8.3"
+  }
+}

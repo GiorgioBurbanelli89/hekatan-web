@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hekatan Calc - Editor</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-header">
+    <h1>Hekatan Calc</h1>
+    <span class="subtitle">Editor Web — Parser, Renderer, Plot, Ecuaciones, 3D</span>
+    <a href="/editor/index.html">CAS Simbolico</a>
+  </div>
+
+  <div class="main-layout">
+    <div class="sidebar">
+      <h3>Ejemplos</h3>
+      <ul class="example-list" id="exampleList"></ul>
+    </div>
+
+    <div class="editor-area">
+      <div class="toolbar">
+        <button class="primary" id="btnRun">&#9654; Ejecutar</button>
+        <span class="status" id="statusText">Listo</span>
+      </div>
+
+      <div class="split-pane">
+        <div class="code-panel">
+          <textarea id="codeInput" spellcheck="false" placeholder="Escribe codigo Hekatan aqui...
+' Comentarios con apostrofe
+' ## Markdown con '# titulo
+a = 3
+b = 4
+c = sqrt(a^2 + b^2)
+
+@{plot}
+x = -5 : 5
+y = sin(x)
+@{end plot}
+
+@{eq}
+∫_0^1 x^2 dx = 1/3
+@{end eq}
+"></textarea>
+        </div>
+        <div class="output-panel" id="output"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./getEditor.ts"></script>
+</body>
+</html>
