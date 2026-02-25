@@ -6,7 +6,7 @@ import * as S from "./MathStyles";
 import {
   MathElement, MathGroup, MathText, MathFraction, MathPower, MathRoot,
   MathSubscript, MathIntegral, MathDerivative, MathMatrix, MathVector,
-  MathComment, MathCode, MathColumns,
+  MathComment, MathCode, MathColumns, MathSvg, MathDraw,
 } from "./MathElement";
 import { parseExpression, type ASTNode } from "../evaluator.js";
 import { HekatanEvaluator } from "../mathEngine.js";
@@ -155,7 +155,42 @@ export class MathEditor {
         continue;
       }
 
-      // @{python/js/etc} blocks
+      // @{svg W H} ... @{end svg}  — SVG drawing DSL
+      const svgMatch = trimmed.match(/^@\{svg(?:\s+(\d+)(?:\s+(\d+))?)?\s*\}$/i);
+      if (svgMatch) {
+        const svgW = svgMatch[1] ? parseInt(svgMatch[1]) : 500;
+        const svgH = svgMatch[2] ? parseInt(svgMatch[2]) : (svgMatch[1] ? Math.round(parseInt(svgMatch[1]) * 0.75) : 400);
+        const codeLines: string[] = [];
+        i++;
+        while (i < rawLines.length) {
+          if (/^@\{end\s+svg\}/i.test(rawLines[i].trim())) break;
+          codeLines.push(rawLines[i]);
+          i++;
+        }
+        this.grid.push([[new MathSvg(codeLines.join("\n"), svgW, svgH)]]);
+        i++;
+        continue;
+      }
+
+      // @{draw W H [align]} ... @{end draw}  — CAD drawing block
+      const drawMatch = trimmed.match(/^@\{draw(?:\s+(\d+%?)(?:\s+(\d+%?))?(?:\s+(left|right|center))?)?\s*\}$/i);
+      if (drawMatch) {
+        const dW = drawMatch[1] ? parseInt(drawMatch[1]) : 600;
+        const dH = drawMatch[2] ? parseInt(drawMatch[2]) : (drawMatch[1] ? Math.round(parseInt(drawMatch[1]) * 0.67) : 400);
+        const align = (drawMatch[3] as "left" | "right" | "center") || "center";
+        const codeLines: string[] = [];
+        i++;
+        while (i < rawLines.length) {
+          if (/^@\{end\s+draw\}/i.test(rawLines[i].trim())) break;
+          codeLines.push(rawLines[i]);
+          i++;
+        }
+        this.grid.push([[new MathDraw(codeLines.join("\n"), dW, dH, align)]]);
+        i++;
+        continue;
+      }
+
+      // @{python/js/etc} blocks (generic code blocks)
       const blockMatch = trimmed.match(/^@\{(\w+)\}$/);
       if (blockMatch && !["column", "end"].some(k => trimmed.includes(k))) {
         const lang = blockMatch[1];
@@ -189,6 +224,7 @@ export class MathEditor {
     if (this.currentElement) this.currentElement.isCursorHere = true;
     this.needsEval = true;
     this.evaluateAll();
+    this._notifyDrawFocus();
     this.render();
   }
 
@@ -915,6 +951,7 @@ export class MathEditor {
       const cell = row[this.currentCol];
       this.currentElement = this._getFirstTextElement(cell);
       if (this.currentElement) this.currentElement.isCursorHere = true;
+      this._notifyDrawFocus();
     }
   }
 
@@ -927,6 +964,7 @@ export class MathEditor {
       const cell = row[this.currentCol];
       this.currentElement = this._getFirstTextElement(cell);
       if (this.currentElement) this.currentElement.isCursorHere = true;
+      this._notifyDrawFocus();
     }
   }
 
@@ -1157,6 +1195,7 @@ export class MathEditor {
 
     this.canvas.focus();
     this.cursorVisible = true;
+    this._notifyDrawFocus();
     this.render();
   }
 
@@ -1606,5 +1645,47 @@ export class MathEditor {
   /** Toggle autorun */
   setAutoRun(enabled: boolean) {
     this.autoRun = enabled;
+  }
+
+  // ==========================================================================
+  // CAD / Draw block support
+  // ==========================================================================
+
+  /** Returns true if any @{draw} block exists in the document */
+  hasDrawBlock(): boolean {
+    for (const row of this.grid) {
+      for (const cell of row) {
+        for (const el of cell) {
+          if (el instanceof MathDraw) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Returns the MathDraw element the cursor is currently in, or null */
+  getActiveDrawBlock(): MathDraw | null {
+    const cell = this.grid[this.currentRow]?.[this.currentCol];
+    if (!cell) return null;
+    for (const el of cell) {
+      if (el instanceof MathDraw) return el;
+    }
+    return null;
+  }
+
+  /** Public scroll offset for overlay positioning */
+  get scrollOffset(): number { return this.scrollY; }
+
+  /** Callback when cursor enters/leaves a draw block */
+  onDrawBlockFocus: ((draw: MathDraw | null) => void) | null = null;
+
+  /** Notify listeners about draw block focus changes */
+  private _lastDrawFocus: MathDraw | null = null;
+  private _notifyDrawFocus() {
+    const draw = this.getActiveDrawBlock();
+    if (draw !== this._lastDrawFocus) {
+      this._lastDrawFocus = draw;
+      this.onDrawBlockFocus?.(draw);
+    }
   }
 }

@@ -4,6 +4,7 @@
  * subíndice, integral, derivada, matriz, vector, columnas, comentario
  */
 import * as S from "./MathStyles";
+import { CadEngine } from "./CadEngine";
 
 // ============================================================================
 // Canvas helpers
@@ -1407,5 +1408,469 @@ export class MathColumns extends MathElement {
       return this;
     }
     return null;
+  }
+}
+
+// ============================================================================
+// MathSvg — @{svg W H} ... @{end svg} — SVG drawing DSL rendered on canvas
+// ============================================================================
+
+/** Parsed SVG command with options */
+interface SvgOpts {
+  pos: number[];                       // positional numeric params
+  kv: Record<string, string>;          // key:value options
+  flags: Set<string>;                  // flags like "bold", "italic"
+  text: string | null;                 // quoted text content
+}
+
+function parseSvgTokens(tokens: string[]): SvgOpts {
+  const pos: number[] = [];
+  const kv: Record<string, string> = {};
+  const flags = new Set<string>();
+  let text: string | null = null;
+
+  for (let i = 1; i < tokens.length; i++) {
+    const tok = tokens[i];
+    if (tok.includes(":")) {
+      const ci = tok.indexOf(":");
+      kv[tok.slice(0, ci).toLowerCase()] = tok.slice(ci + 1);
+    } else if (tok === "bold" || tok === "italic") {
+      flags.add(tok);
+    } else {
+      const n = parseFloat(tok);
+      if (!isNaN(n) || tok.includes(",")) {
+        pos.push(n);
+      } else if (text === null) {
+        text = tok;
+      } else {
+        pos.push(0);
+      }
+    }
+  }
+  return { pos, kv, flags, text };
+}
+
+/** Split an SVG DSL line respecting quoted strings */
+function splitSvgLine(line: string): string[] {
+  const tokens: string[] = [];
+  let i = 0;
+  while (i < line.length) {
+    if (line[i] === " " || line[i] === "\t") { i++; continue; }
+    if (line[i] === '"' || line[i] === "'") {
+      const q = line[i];
+      let j = i + 1;
+      while (j < line.length && line[j] !== q) j++;
+      tokens.push(line.slice(i + 1, j));
+      i = j + 1;
+    } else {
+      let j = i;
+      while (j < line.length && line[j] !== " " && line[j] !== "\t") j++;
+      tokens.push(line.slice(i, j));
+      i = j;
+    }
+  }
+  return tokens;
+}
+
+function parseColor(c: string | undefined): string {
+  if (!c) return "";
+  // Accept #hex, named colors, rgb()
+  return c;
+}
+
+export class MathSvg extends MathElement {
+  code = "";
+  svgW = 500;
+  svgH = 400;
+  cursorPosition = 0;
+
+  constructor(code = "", svgW = 500, svgH = 400) {
+    super();
+    this.code = code;
+    this.svgW = svgW;
+    this.svgH = svgH;
+  }
+
+  measure(ctx: CanvasRenderingContext2D, fontSize: number) {
+    // Fixed size from directive @{svg W H}
+    this.width = this.svgW + 4;   // +4 for border
+    this.height = this.svgH + 4;
+    this.baseline = textBaseline(fontSize);
+  }
+
+  render(ctx: CanvasRenderingContext2D, x: number, y: number, fontSize: number) {
+    this.x = x; this.y = y;
+
+    // Border + background
+    ctx.save();
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#ccc";
+    ctx.lineWidth = 1;
+    ctx.fillRect(x, y, this.width, this.height);
+    ctx.strokeRect(x, y, this.width, this.height);
+
+    // Clip to SVG area
+    ctx.beginPath();
+    ctx.rect(x + 2, y + 2, this.svgW, this.svgH);
+    ctx.clip();
+
+    // Origin offset: all SVG coords are relative to (x+2, y+2)
+    const ox = x + 2;
+    const oy = y + 2;
+
+    // Parse and render each line
+    const lines = this.code.split("\n");
+    let hasArrow = false;
+
+    // First pass: check for arrows (we'll draw arrowheads manually)
+    for (const line of lines) {
+      if (line.trim().startsWith("arrow")) { hasArrow = true; break; }
+    }
+
+    for (const rawLine of lines) {
+      const trimmed = rawLine.trim();
+      if (!trimmed || trimmed.startsWith("//") || trimmed.startsWith("#")) continue;
+
+      const tokens = splitSvgLine(trimmed);
+      if (tokens.length === 0) continue;
+      const cmd = tokens[0].toLowerCase();
+
+      if (cmd === "background") {
+        const color = tokens[1] || "#fff";
+        ctx.fillStyle = color;
+        ctx.fillRect(ox, oy, this.svgW, this.svgH);
+        continue;
+      }
+
+      const o = parseSvgTokens(tokens);
+      const P = (i: number) => i < o.pos.length ? o.pos[i] : 0;
+
+      const stroke = parseColor(o.kv["stroke"]);
+      const fill = parseColor(o.kv["fill"]);
+      const lw = o.kv["width"] ? parseFloat(o.kv["width"]) : undefined;
+      const opacity = o.kv["opacity"] ? parseFloat(o.kv["opacity"]) : undefined;
+      const dash = o.kv["dash"];
+
+      // Apply common style
+      const applyStyle = (defaultStroke?: string, defaultFill?: string) => {
+        ctx.strokeStyle = stroke || defaultStroke || "black";
+        ctx.fillStyle = fill || defaultFill || "none";
+        ctx.lineWidth = lw ?? 1;
+        if (opacity !== undefined) ctx.globalAlpha = opacity;
+        if (dash) {
+          ctx.setLineDash(dash.split(",").map(Number));
+        } else {
+          ctx.setLineDash([]);
+        }
+      };
+
+      const resetStyle = () => {
+        ctx.globalAlpha = 1;
+        ctx.setLineDash([]);
+      };
+
+      switch (cmd) {
+        case "line": {
+          applyStyle("black");
+          ctx.beginPath();
+          ctx.moveTo(ox + P(0), oy + P(1));
+          ctx.lineTo(ox + P(2), oy + P(3));
+          ctx.stroke();
+          resetStyle();
+          break;
+        }
+
+        case "rect": {
+          applyStyle(undefined, "#ccc");
+          const rx = o.kv["rx"] ? parseFloat(o.kv["rx"]) : 0;
+          const rw = P(2), rh = P(3);
+          if (rx > 0) {
+            // Rounded rect
+            const r = Math.min(rx, rw / 2, rh / 2);
+            ctx.beginPath();
+            ctx.moveTo(ox + P(0) + r, oy + P(1));
+            ctx.lineTo(ox + P(0) + rw - r, oy + P(1));
+            ctx.quadraticCurveTo(ox + P(0) + rw, oy + P(1), ox + P(0) + rw, oy + P(1) + r);
+            ctx.lineTo(ox + P(0) + rw, oy + P(1) + rh - r);
+            ctx.quadraticCurveTo(ox + P(0) + rw, oy + P(1) + rh, ox + P(0) + rw - r, oy + P(1) + rh);
+            ctx.lineTo(ox + P(0) + r, oy + P(1) + rh);
+            ctx.quadraticCurveTo(ox + P(0), oy + P(1) + rh, ox + P(0), oy + P(1) + rh - r);
+            ctx.lineTo(ox + P(0), oy + P(1) + r);
+            ctx.quadraticCurveTo(ox + P(0), oy + P(1), ox + P(0) + r, oy + P(1));
+            ctx.closePath();
+          } else {
+            ctx.beginPath();
+            ctx.rect(ox + P(0), oy + P(1), rw, rh);
+          }
+          if (fill || o.kv["fill"]) ctx.fill();
+          if (stroke || lw) ctx.stroke();
+          resetStyle();
+          break;
+        }
+
+        case "circle": {
+          applyStyle(undefined, "none");
+          ctx.beginPath();
+          ctx.arc(ox + P(0), oy + P(1), P(2), 0, Math.PI * 2);
+          if (fill || o.kv["fill"]) ctx.fill();
+          if (stroke || lw || !o.kv["fill"]) ctx.stroke();
+          resetStyle();
+          break;
+        }
+
+        case "ellipse": {
+          applyStyle(undefined, "none");
+          ctx.beginPath();
+          ctx.ellipse(ox + P(0), oy + P(1), P(2), P(3), 0, 0, Math.PI * 2);
+          if (fill || o.kv["fill"]) ctx.fill();
+          if (stroke || lw || !o.kv["fill"]) ctx.stroke();
+          resetStyle();
+          break;
+        }
+
+        case "polyline": {
+          applyStyle("black", "none");
+          // Positional params are "x,y" pairs
+          const pts: [number, number][] = [];
+          for (let i = 1; i < tokens.length; i++) {
+            if (tokens[i].includes(",") && !tokens[i].includes(":")) {
+              const [px, py] = tokens[i].split(",").map(Number);
+              if (!isNaN(px) && !isNaN(py)) pts.push([px, py]);
+            }
+          }
+          if (pts.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(ox + pts[0][0], oy + pts[0][1]);
+            for (let i = 1; i < pts.length; i++) ctx.lineTo(ox + pts[i][0], oy + pts[i][1]);
+            ctx.stroke();
+          }
+          resetStyle();
+          break;
+        }
+
+        case "polygon": {
+          applyStyle("black");
+          const pts: [number, number][] = [];
+          for (let i = 1; i < tokens.length; i++) {
+            if (tokens[i].includes(",") && !tokens[i].includes(":")) {
+              const [px, py] = tokens[i].split(",").map(Number);
+              if (!isNaN(px) && !isNaN(py)) pts.push([px, py]);
+            }
+          }
+          if (pts.length > 2) {
+            ctx.beginPath();
+            ctx.moveTo(ox + pts[0][0], oy + pts[0][1]);
+            for (let i = 1; i < pts.length; i++) ctx.lineTo(ox + pts[i][0], oy + pts[i][1]);
+            ctx.closePath();
+            if (fill || o.kv["fill"]) ctx.fill();
+            ctx.stroke();
+          }
+          resetStyle();
+          break;
+        }
+
+        case "text": {
+          const txt = o.text ?? "";
+          const size = o.kv["size"] ? parseFloat(o.kv["size"]) : 12;
+          const color = o.kv["color"] || stroke || "black";
+          const anchor = o.kv["anchor"] || "start";
+          const fontFamily = o.kv["font"] || "sans-serif";
+          const weight = o.flags.has("bold") ? "bold " : "";
+          const style = o.flags.has("italic") ? "italic " : "";
+          ctx.font = `${style}${weight}${size}px ${fontFamily}`;
+          ctx.fillStyle = color;
+          ctx.textAlign = anchor === "middle" ? "center" : anchor === "end" ? "right" : "left";
+          ctx.textBaseline = "alphabetic";
+          ctx.fillText(txt, ox + P(0), oy + P(1));
+          ctx.textAlign = "left"; // reset
+          resetStyle();
+          break;
+        }
+
+        case "arc": {
+          applyStyle("black", "none");
+          const cx = P(0), cy = P(1), r = P(2);
+          const startDeg = P(3), endDeg = P(4);
+          const startRad = startDeg * Math.PI / 180;
+          const endRad = endDeg * Math.PI / 180;
+          ctx.beginPath();
+          ctx.arc(ox + cx, oy + cy, r, -startRad, -endRad, true);
+          ctx.stroke();
+          resetStyle();
+          break;
+        }
+
+        case "arrow": {
+          applyStyle("black");
+          const x1 = P(0), y1 = P(1), x2 = P(2), y2 = P(3);
+          // Line
+          ctx.beginPath();
+          ctx.moveTo(ox + x1, oy + y1);
+          ctx.lineTo(ox + x2, oy + y2);
+          ctx.stroke();
+          // Arrowhead
+          const angle = Math.atan2(y2 - y1, x2 - x1);
+          const headLen = 10;
+          ctx.beginPath();
+          ctx.moveTo(ox + x2, oy + y2);
+          ctx.lineTo(ox + x2 - headLen * Math.cos(angle - 0.4), oy + y2 - headLen * Math.sin(angle - 0.4));
+          ctx.lineTo(ox + x2 - headLen * Math.cos(angle + 0.4), oy + y2 - headLen * Math.sin(angle + 0.4));
+          ctx.closePath();
+          ctx.fillStyle = stroke || "black";
+          ctx.fill();
+          resetStyle();
+          break;
+        }
+
+        case "grid": {
+          const gx = P(0), gy = P(1);
+          const gw = P(2) || this.svgW;
+          const gh = P(3) || this.svgH;
+          const step = o.kv["step"] ? parseFloat(o.kv["step"]) : 50;
+          const gStroke = stroke || "#ddd";
+          const gOp = opacity ?? 0.5;
+          const gLw = lw ?? 0.5;
+          ctx.strokeStyle = gStroke;
+          ctx.lineWidth = gLw;
+          ctx.globalAlpha = gOp;
+          for (let gxi = gx; gxi <= gx + gw; gxi += step) {
+            ctx.beginPath();
+            ctx.moveTo(ox + gxi, oy + gy);
+            ctx.lineTo(ox + gxi, oy + gy + gh);
+            ctx.stroke();
+          }
+          for (let gyi = gy; gyi <= gy + gh; gyi += step) {
+            ctx.beginPath();
+            ctx.moveTo(ox + gx, oy + gyi);
+            ctx.lineTo(ox + gx + gw, oy + gyi);
+            ctx.stroke();
+          }
+          resetStyle();
+          break;
+        }
+
+        case "path": {
+          applyStyle("black", "none");
+          const d = o.kv["d"] || o.text || "";
+          if (d) {
+            const p = new Path2D(d);
+            if (fill || o.kv["fill"]) ctx.fill(p);
+            ctx.stroke(p);
+          }
+          resetStyle();
+          break;
+        }
+
+        // group/endgroup: save/restore transforms
+        case "group": {
+          ctx.save();
+          if (o.kv["translate"]) {
+            const [tx, ty] = o.kv["translate"].split(",").map(Number);
+            ctx.translate(tx || 0, ty || 0);
+          }
+          if (o.kv["rotate"]) ctx.rotate(parseFloat(o.kv["rotate"]) * Math.PI / 180);
+          if (o.kv["scale"]) {
+            const s = parseFloat(o.kv["scale"]);
+            ctx.scale(s, s);
+          }
+          break;
+        }
+        case "endgroup": {
+          ctx.restore();
+          break;
+        }
+
+        default:
+          // Unknown command — skip silently
+          break;
+      }
+    }
+
+    ctx.restore();
+
+    // Label "@{svg}" small tag in top-right
+    ctx.font = `bold ${fontSize * 0.65}px ${S.UIFont}`;
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.textAlign = "right";
+    ctx.fillText(`@{svg ${this.svgW}×${this.svgH}}`, x + this.width - 4, y + fontSize * 0.7);
+    ctx.textAlign = "left";
+  }
+
+  toHekatan(): string {
+    return `@{svg ${this.svgW} ${this.svgH}}\n${this.code}\n@{end svg}`;
+  }
+}
+
+// ============================================================================
+// MathDraw — Bloque CAD interactivo @{draw W H [align]}
+// ============================================================================
+export class MathDraw extends MathElement {
+  code = "";
+  drawW = 600;
+  drawH = 400;
+  align: "left" | "center" | "right" = "center";
+  cadEngine: CadEngine;
+  cursorPosition = 0;
+
+  constructor(code = "", drawW = 600, drawH = 400, align: "left" | "center" | "right" = "center") {
+    super();
+    this.code = code;
+    this.drawW = drawW;
+    this.drawH = drawH;
+    this.align = align;
+    this.cadEngine = new CadEngine();
+    this.cadEngine.canvasW = drawW;
+    this.cadEngine.canvasH = drawH;
+    // Execute CLI commands from the code block
+    if (code.trim()) {
+      this.cadEngine.exec(code);
+      if (this.cadEngine.formas.length > 0) {
+        this.cadEngine.zoomFit();
+      }
+    }
+  }
+
+  measure(ctx: CanvasRenderingContext2D, fontSize: number) {
+    this.width = this.drawW + 4;   // +4 for border
+    this.height = this.drawH + 4;
+    this.baseline = textBaseline(fontSize);
+  }
+
+  render(ctx: CanvasRenderingContext2D, x: number, y: number, fontSize: number) {
+    this.x = x; this.y = y;
+
+    ctx.save();
+
+    // Background
+    ctx.fillStyle = S.DrawBackground;
+    ctx.strokeStyle = S.DrawBorderColor;
+    ctx.lineWidth = 1;
+    ctx.fillRect(x, y, this.width, this.height);
+    ctx.strokeRect(x, y, this.width, this.height);
+
+    // Clip to draw area
+    ctx.beginPath();
+    ctx.rect(x + 2, y + 2, this.drawW, this.drawH);
+    ctx.clip();
+
+    // Render CAD engine content
+    ctx.save();
+    ctx.translate(x + 2, y + 2);
+    this.cadEngine.renderToCtx(ctx, this.drawW, this.drawH);
+    ctx.restore();
+
+    ctx.restore();
+
+    // Label "@{draw}" small tag in top-right
+    ctx.font = `bold ${fontSize * 0.65}px ${S.UIFont}`;
+    ctx.fillStyle = S.DrawLabelColor;
+    ctx.textAlign = "right";
+    ctx.fillText(`@{draw ${this.drawW}×${this.drawH}}`, x + this.width - 4, y + fontSize * 0.7);
+    ctx.textAlign = "left";
+  }
+
+  toHekatan(): string {
+    const alignStr = this.align !== "center" ? ` ${this.align}` : "";
+    return `@{draw ${this.drawW} ${this.drawH}${alignStr}}\n${this.code}\n@{end draw}`;
   }
 }

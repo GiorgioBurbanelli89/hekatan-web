@@ -59,6 +59,15 @@ export const BracketThickness = 1.5;
 export const HeadingSizeRatios = [1, 2.0, 1.5, 1.17, 1.0, 0.83, 0.67];
 
 // ============================================================================
+// DRAW / CAD - Estilos para bloques @{draw}
+// ============================================================================
+export const DrawBackground = "#ffffff";
+export const DrawBorderColor = "#bbb";
+export const DrawGridColor = "rgba(0,0,0,0.06)";
+export const DrawOriginColor = "rgba(0,0,0,0.15)";
+export const DrawLabelColor = "rgba(0,0,0,0.3)";
+
+// ============================================================================
 // FUNCIONES HELPER
 // ============================================================================
 

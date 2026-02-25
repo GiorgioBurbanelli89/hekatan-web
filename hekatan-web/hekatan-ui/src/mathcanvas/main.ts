@@ -7,6 +7,8 @@
 import { HekatanEvaluator, math } from "hekatan-math/mathEngine.js";
 import type { LineResult, CellResult } from "hekatan-math/mathEngine.js";
 import { MathEditor } from "hekatan-math/matheditor/MathEditor.js";
+import { hitTest } from "hekatan-math/matheditor/CadInput.js";
+import type { SnapPoint } from "hekatan-math/matheditor/CadSnap.js";
 
 // ─── Ejemplos ───────────────────────────────────────────
 const EXAMPLES: Record<string, { name: string; code: string }> = {
@@ -23,6 +25,35 @@ d = (a + b) / (a - b)
 
 M = [[1, 2], [3, 4]]
 det(M)`,
+  },
+  svgdemo: {
+    name: "SVG Drawing Demo",
+    code: `# SVG Drawing DSL
+> Ejemplo del lenguaje de dibujo vectorial @{svg}
+
+## Viga simplemente apoyada
+@{svg 550 180}
+background #f0f8ff
+rect 10 10 530 160 fill:#e3f2fd stroke:#1565c0 width:2 rx:8
+line 80 110 470 110 stroke:#333 width:3
+circle 80 110 6 fill:#1565c0 stroke:#0d47a1 width:2
+circle 470 110 6 fill:#c62828 stroke:#b71c1c width:2
+arrow 275 50 275 105 stroke:#e65100 width:2
+text 275 40 "P = 10 kN" size:13 bold color:#e65100 anchor:middle
+text 80 135 "A" size:14 bold color:#1565c0 anchor:middle
+text 470 135 "B" size:14 bold color:#c62828 anchor:middle
+text 275 135 "L/2" size:12 italic color:#555 anchor:middle
+polygon 72,120 80,110 88,120 fill:#1565c0
+polygon 462,120 470,110 478,120 fill:#c62828
+line 462 120 478 120 stroke:#c62828 width:2
+@{end svg}
+
+## Datos
+L = 6
+P = 10
+R_A = P/2
+R_B = P/2
+M_max = P*L/4`,
   },
   gridframe: {
     name: "Ej 5.1 - Grid Frame (Paz)",
@@ -41,6 +72,166 @@ det(M)`,
 > (c) Reacciones en los apoyos
 > Ref: Mario Paz - Matrix Structural Analysis, 2 elementos, 3 nodos, 9 GDL
 > Unidades: kip, inch, rad
+
+@{draw 580 380}
+# Fig 5.4 - Diagrama Estructural (3D oblicuo)
+grid off
+bg #ffffff
+proj oblique 45 0.5
+# Ejes de referencia
+color #cc3333
+arrow3d -4 0 0 -1 0 0
+text3d -0.5 0 0 X
+color #33aa33
+arrow3d -4 0 0 -4 3 0
+text3d -4 3.5 0 Y
+color #3333cc
+arrow3d -4 0 0 -4 0 3
+text3d -4 0 3.5 Z
+# Elem 1: Node1(0,0,0) to Node2(20,0,0) along X
+color #333
+line3d 0 0 0 20 0 0
+# Elem 2: Node1(0,0,0) to Node3(0,20,0) along Y
+line3d 0 0 0 0 20 0
+# Nodos (circulos pequenos)
+circle3d 0 0 0 0.15 #333
+circle3d 20 0 0 0.15 #333
+circle3d 0 20 0 0.15 #333
+# Carga distribuida peine sobre Elem 2 (lineas cortas perpendiculares -Z)
+color #cc0000
+line3d 0 2 0 0 18 0
+line3d 0 2 0 0 2 -2.5
+line3d 0 4 0 0 4 -2.5
+line3d 0 6 0 0 6 -2.5
+line3d 0 8 0 0 8 -2.5
+line3d 0 10 0 0 10 -2.5
+line3d 0 12 0 0 12 -2.5
+line3d 0 14 0 0 14 -2.5
+line3d 0 16 0 0 16 -2.5
+line3d 0 18 0 0 18 -2.5
+line3d 0 2 -2.5 0 18 -2.5
+text3d 0 11 -4 w = 0.1 k/in
+# Fuerza puntual en Node 1 hacia -Z
+arrow3d 0 0 5 0 0 0.5
+text3d 1 0 5.5 10 k
+# Momento en L/2 del Elem 1
+color #9900cc
+carc3d 10 0 0 1.5 0.3 5.2
+text3d 10 0 2.5 200 k-in
+# Apoyo empotrado en Node 2 (muro + rayado)
+color #333
+line3d 20 0 -1.5 20 0 1.5
+line3d 20 0 1.5 21 0 1
+line3d 20 0 1 21 0 0.5
+line3d 20 0 0.5 21 0 0
+line3d 20 0 0 21 0 -0.5
+line3d 20 0 -0.5 21 0 -1
+line3d 20 0 -1 21 0 -1.5
+# Apoyo empotrado en Node 3 (muro + rayado)
+line3d 0 20 -1.5 0 20 1.5
+line3d 0 20 1.5 0 21 1
+line3d 0 20 1 0 21 0.5
+line3d 0 20 0.5 0 21 0
+line3d 0 20 0 0 21 -0.5
+line3d 0 20 -0.5 0 21 -1
+line3d 0 20 -1 0 21 -1.5
+# Labels nodos
+color #333
+text3d -1.5 0 -1 1
+text3d 20.5 0 -1 2
+text3d 0.5 21 0.5 3
+# Labels elementos
+color #0066cc
+text3d 10 0 1.5 Elem 1
+text3d 0 10 1.5 Elem 2
+# Propiedades
+color #666
+text3d 12 0 -6 I=100 in^4, J=50 in^4
+text3d 12 0 -7.5 E=30000, G=12000 ksi
+text3d 12 0 -9 L1=L2=20 ft
+fit
+@{end draw}
+> **Fig. 5.4** Grid frame - Ejemplo Ilustrativo 5.1
+
+@{draw 580 380}
+# Fig 5.5 - Grados de Libertad (DOF)
+grid off
+bg #ffffff
+proj oblique 45 0.5
+# Elementos (lineas finas)
+color #aaa
+line3d 0 0 0 20 0 0
+line3d 0 0 0 0 20 0
+# Nodos
+color #333
+circle3d 0 0 0 0.2
+circle3d 20 0 0 0.2
+circle3d 0 20 0 0.2
+text3d 0 0 -2 Node 1
+text3d 20 0 -2 Node 2
+text3d 0 20.5 -1.5 Node 3
+# Angulo 90
+color #999
+line3d 2.5 0 0 2.5 2.5 0
+line3d 0 2.5 0 2.5 2.5 0
+text3d 3.5 3 0 90
+# DOFs Node 1 (u1=theta_x, u2=theta_y, u3=w)
+color #cc0000
+arrow3d 0 0 0 0 0 5
+text3d 0.5 0 5.5 u3
+arrow3d 0 0 0 4 0 0
+text3d 4.5 0 0.5 u1
+arrow3d 0 0 0 0 4 0
+text3d 0.3 4.5 0 u2
+# DOFs Node 2 (u4=theta_x, u5=theta_y, u6=w)
+color #0066cc
+arrow3d 20 0 0 20 0 5
+text3d 20.5 0 5.5 u6
+arrow3d 20 0 0 24 0 0
+text3d 24.5 0 0.5 u4
+arrow3d 20 0 0 20 4 0
+text3d 20.3 4.5 0 u5
+# DOFs Node 3 (u7=theta_x, u8=theta_y, u9=w)
+color #33aa33
+arrow3d 0 20 0 0 20 5
+text3d 0.5 20 5.5 u9
+arrow3d 0 20 0 4 20 0
+text3d 4.5 20 0.5 u7
+arrow3d 0 20 0 0 24 0
+text3d 0.3 24.5 0 u8
+# Apoyo empotrado Node 2
+color #333
+line3d 20 0 -1.5 20 0 1.5
+line3d 20 0 1.5 21 0 1
+line3d 20 0 1 21 0 0.5
+line3d 20 0 0.5 21 0 0
+line3d 20 0 0 21 0 -0.5
+line3d 20 0 -0.5 21 0 -1
+line3d 20 0 -1 21 0 -1.5
+# Apoyo empotrado Node 3
+line3d 0 20 -1.5 0 20 1.5
+line3d 0 20 1.5 0 21 1
+line3d 0 20 1 0 21 0.5
+line3d 0 20 0.5 0 21 0
+line3d 0 20 0 0 21 -0.5
+line3d 0 20 -0.5 0 21 -1
+line3d 0 20 -1 0 21 -1.5
+# Ejes
+color #cc3333
+arrow3d -4 0 0 -1 0 0
+text3d -0.5 0 0 X
+color #33aa33
+arrow3d -4 0 0 -4 3 0
+text3d -4 3.5 0 Y
+color #3333cc
+arrow3d -4 0 0 -4 0 3
+text3d -4 0 3.5 Z
+# Titulo
+color #333
+text3d 10 0 -6 Fig 5.5 - DOFs del Grid Frame
+fit
+@{end draw}
+> **Fig. 5.5** Grid frame modelado con coordenadas nodales u_1 a u_9
 
 ## 1. Propiedades
 > W 14 x 82 - Todos los miembros
@@ -145,6 +336,44 @@ A_inv = inv(A)
 b_vec = [[7], [19]]
 x = lusolve(A, b_vec)`,
   },
+  drawdemo: {
+    name: "Draw / CAD",
+    code: `# CAD Drawing Demo
+> Bloques @{draw} para dibujo tecnico con comandos CLI
+
+## Seccion transversal de viga
+
+@{draw 500 350}
+rect 0 0 30 50
+rect 2.5 2.5 25 45
+circle 5 5 1.2
+circle 25 5 1.2
+circle 5 45 1.2
+circle 25 45 1.2
+circle 15 25 1.2
+hdim 0 0 30 0 -5
+vdim 30 0 30 50 5
+@{end draw}
+
+## Planta de columnas
+
+@{draw 500 300}
+rect 0 0 20 8
+rect 0 12 20 8
+rect 0 0 8 20
+rect 12 0 8 20
+circle 4 4 1
+circle 16 4 1
+circle 4 16 1
+circle 16 16 1
+hdim 0 0 20 0 -3
+vdim 20 0 20 20 3
+@{end draw}
+
+b = 30
+h = 50
+A_s = pi * 1.2^2 * 4`,
+  },
   calculo: {
     name: "Calculo",
     code: `# Calculo Basico
@@ -180,6 +409,7 @@ const chkAutoRun = document.getElementById("chkAutoRun") as HTMLInputElement;
 const tabCode = document.getElementById("tabCode") as HTMLButtonElement;
 const tabCanvas = document.getElementById("tabCanvas") as HTMLButtonElement;
 const btnRun = document.getElementById("btnRun") as HTMLButtonElement;
+const btnCad = document.getElementById("btnCad") as HTMLButtonElement;
 const themeSelect = document.getElementById("themeSelect") as HTMLSelectElement;
 const codeMode = document.getElementById("codeMode") as HTMLDivElement;
 const canvasMode = document.getElementById("canvasMode") as HTMLDivElement;
@@ -187,6 +417,667 @@ const mathCanvasEl = document.getElementById("mathCanvas") as HTMLCanvasElement;
 
 // ─── MathEditor (WYSIWYG canvas) ────────────────────────
 const editor = new MathEditor(mathCanvasEl);
+
+// ─── CAD Floating Toolbar + Interactive Drawing ──────────
+let activeDrawBlock: any = null;
+let cadToolbarVisible = false;
+
+// ── Drawing state machine ──
+type DrawTool = "line" | "rect" | "rrect" | "circle" | "ellipse" | "arc" | "pline" | "dim" | "hdim" | "vdim" | null;
+let drawTool: DrawTool = null;
+let drawPoints: { wx: number; wy: number }[] = [];
+let drawMouseWorld: { wx: number; wy: number } | null = null;
+let currentSnap: SnapPoint | null = null;  // snap activo bajo cursor
+
+// Interactive tools that use mouse clicks on canvas
+const INTERACTIVE_TOOLS = new Set<string>([
+  "line", "rect", "rrect", "circle", "ellipse", "arc", "pline",
+  "dim", "hdim", "vdim",
+]);
+// Commands that need CLI parameters (non-interactive)
+const CLI_PARAM_CMDS = new Set([
+  "move", "copy", "mirror", "rotate",
+  "color", "scale", "unit", "bg", "stirrup", "colsection",
+]);
+
+// Create floating toolbar DOM
+const cadToolbar = document.createElement("div");
+cadToolbar.className = "cad-toolbar hidden";
+cadToolbar.innerHTML = `
+  <span class="drag-handle" title="Arrastrar">⠿</span>
+  <button class="tool-draw" data-cmd="line" title="Linea (L)">Linea</button>
+  <button class="tool-draw" data-cmd="rect" title="Rectangulo (R)">Rect</button>
+  <button class="tool-draw" data-cmd="rrect" title="Rect redondeado">RRect</button>
+  <button class="tool-draw" data-cmd="circle" title="Circulo (C)">Circulo</button>
+  <button class="tool-draw" data-cmd="ellipse" title="Elipse (E)">Elipse</button>
+  <button class="tool-draw" data-cmd="arc" title="Arco (A)">Arco</button>
+  <button class="tool-draw" data-cmd="pline" title="Polilinea (PL)">PLine</button>
+  <span class="sep">|</span>
+  <button class="tool-dim" data-cmd="dim" title="Cota alineada">Cota</button>
+  <button class="tool-dim" data-cmd="hdim" title="Cota horizontal">H-Cota</button>
+  <button class="tool-dim" data-cmd="vdim" title="Cota vertical">V-Cota</button>
+  <span class="sep">|</span>
+  <button class="tool-edit" data-cmd="move" title="Mover (MV)">Mover</button>
+  <button class="tool-edit" data-cmd="copy" title="Copiar (CP)">Copiar</button>
+  <button class="tool-edit" data-cmd="mirror" title="Espejo (MI)">Espejo</button>
+  <button class="tool-edit" data-cmd="rotate" title="Rotar (RO)">Rotar</button>
+  <span class="sep">|</span>
+  <button class="tool-view" data-cmd="fit" title="Encuadrar (ZF)">Encuadrar</button>
+  <button class="tool-view" data-cmd="grid" title="Toggle grid">Grid</button>
+  <button class="tool-view" data-cmd="labels on" title="Mostrar cotas auto">Labels</button>
+  <span class="sep">|</span>
+  <button class="tool-danger" data-cmd="undo" title="Deshacer (U)">↺ Undo</button>
+  <button class="tool-danger" data-cmd="del" title="Eliminar ultimo">✕ Del</button>
+  <button class="tool-danger" data-cmd="clear" title="Borrar todo">Clear</button>
+  <span class="sep">|</span>
+  <button class="tool-toggle snap-on" data-toggle="snap" title="Snap (F3)">Snap</button>
+  <button class="tool-toggle" data-toggle="ortho" title="Ortho (F8)">Ortho</button>
+  <button class="tool-toggle" data-toggle="track" title="Tracking (F11)">Track</button>
+  <span class="sep">|</span>
+  <input type="text" class="cad-cli" placeholder="Comando CLI..." title="Escribir comando y Enter">
+  <span class="sep">|</span>
+  <span class="coord-display" id="coordDisplay">X: — Y: —</span>
+  <span class="sep">|</span>
+  <button class="tool-close" data-action="close" title="Cerrar toolbar">✕</button>
+`;
+const canvasContainer = canvasMode.querySelector(".canvas-container")!;
+canvasContainer.appendChild(cadToolbar);
+
+const coordDisplay = cadToolbar.querySelector("#coordDisplay") as HTMLSpanElement;
+
+// ── Overlay canvas for interactive drawing ──
+const cadOverlay = document.createElement("canvas");
+cadOverlay.className = "cad-overlay hidden";
+cadOverlay.tabIndex = -1;  // focusable for keyboard events
+canvasContainer.appendChild(cadOverlay);
+
+// ─── Prevent toolbar clicks from propagating to canvas/editor ──
+cadToolbar.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+cadToolbar.addEventListener("pointerdown", (e) => { e.stopPropagation(); });
+
+// ─── Drag logic ──────────────────────────────────────────
+{
+  const handle = cadToolbar.querySelector(".drag-handle") as HTMLElement;
+  let dragging = false, dragX = 0, dragY = 0;
+
+  handle.addEventListener("mousedown", (e) => {
+    dragging = true;
+    dragX = e.clientX - cadToolbar.offsetLeft;
+    dragY = e.clientY - cadToolbar.offsetTop;
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const parent = cadToolbar.parentElement!;
+    const maxX = parent.clientWidth - cadToolbar.offsetWidth;
+    const maxY = parent.clientHeight - cadToolbar.offsetHeight;
+    cadToolbar.style.left = Math.max(0, Math.min(maxX, e.clientX - dragX)) + "px";
+    cadToolbar.style.top = Math.max(0, Math.min(maxY, e.clientY - dragY)) + "px";
+  });
+
+  document.addEventListener("mouseup", () => { dragging = false; });
+}
+
+// ─── Activate a drawing tool ─────────────────────────────
+function activateDrawTool(tool: DrawTool) {
+  // Deactivate previous
+  cadToolbar.querySelectorAll("button.tool-active").forEach(b => b.classList.remove("tool-active"));
+
+  drawTool = tool;
+  drawPoints = [];
+  drawMouseWorld = null;
+
+  if (tool) {
+    // Highlight active button
+    const btn = cadToolbar.querySelector(`button[data-cmd="${tool}"]`);
+    if (btn) btn.classList.add("tool-active");
+    showOverlay();
+  } else {
+    hideOverlay();
+  }
+}
+
+// ─── Show/hide overlay positioned over active draw block ──
+function showOverlay() {
+  if (!activeDrawBlock) return;
+  const block = activeDrawBlock;
+  const scrollY = editor.scrollOffset;
+
+  cadOverlay.width = block.drawW;
+  cadOverlay.height = block.drawH;
+  cadOverlay.style.left = (block.x + 2) + "px";
+  cadOverlay.style.top = (block.y + 2 - scrollY) + "px";
+  cadOverlay.style.width = block.drawW + "px";
+  cadOverlay.style.height = block.drawH + "px";
+  cadOverlay.classList.remove("hidden");
+  cadOverlay.focus();
+}
+
+function hideOverlay() {
+  cadOverlay.classList.add("hidden");
+  drawTool = null;
+  drawPoints = [];
+  drawMouseWorld = null;
+  cadToolbar.querySelectorAll("button.tool-active").forEach(b => b.classList.remove("tool-active"));
+  clearOverlay();
+}
+
+function clearOverlay() {
+  const ctx = cadOverlay.getContext("2d");
+  if (ctx) ctx.clearRect(0, 0, cadOverlay.width, cadOverlay.height);
+}
+
+// ─── Check if shape has enough points to commit ──────────
+function isShapeComplete(tool: string, pts: { wx: number; wy: number }[]): boolean {
+  switch (tool) {
+    case "line": return pts.length >= 2;
+    case "rect": case "rrect": return pts.length >= 2;
+    case "circle": return pts.length >= 2;
+    case "ellipse": return pts.length >= 2;
+    case "arc": return pts.length >= 3;
+    case "dim": case "hdim": case "vdim": return pts.length >= 2;
+    // pline: never auto-complete, right-click to finish
+    default: return false;
+  }
+}
+
+// ─── Commit shape to CadEngine ───────────────────────────
+function commitShape(tool: string, pts: { wx: number; wy: number }[]) {
+  if (!activeDrawBlock) return;
+  const engine = activeDrawBlock.cadEngine;
+  const u = (v: number) => engine.toU(v);
+  let cmd = "";
+
+  switch (tool) {
+    case "line": {
+      cmd = `line ${u(pts[0].wx)} ${u(pts[0].wy)} ${u(pts[1].wx)} ${u(pts[1].wy)}`;
+      break;
+    }
+    case "rect": {
+      const x = Math.min(pts[0].wx, pts[1].wx);
+      const y = Math.min(pts[0].wy, pts[1].wy);
+      const w = Math.abs(pts[1].wx - pts[0].wx);
+      const h = Math.abs(pts[1].wy - pts[0].wy);
+      cmd = `rect ${u(x)} ${u(y)} ${u(w)} ${u(h)}`;
+      break;
+    }
+    case "rrect": {
+      const x = Math.min(pts[0].wx, pts[1].wx);
+      const y = Math.min(pts[0].wy, pts[1].wy);
+      const w = Math.abs(pts[1].wx - pts[0].wx);
+      const h = Math.abs(pts[1].wy - pts[0].wy);
+      const r = Math.min(w, h) * 0.15;
+      cmd = `rrect ${u(x)} ${u(y)} ${u(w)} ${u(h)} ${u(r)}`;
+      break;
+    }
+    case "circle": {
+      const r = engine.D(pts[0].wx, pts[0].wy, pts[1].wx, pts[1].wy);
+      cmd = `circle ${u(pts[0].wx)} ${u(pts[0].wy)} ${u(r)}`;
+      break;
+    }
+    case "ellipse": {
+      const rx = Math.abs(pts[1].wx - pts[0].wx);
+      const ry = Math.abs(pts[1].wy - pts[0].wy);
+      cmd = `ellipse ${u(pts[0].wx)} ${u(pts[0].wy)} ${u(rx)} ${u(ry)}`;
+      break;
+    }
+    case "arc": {
+      cmd = `arc ${u(pts[0].wx)} ${u(pts[0].wy)} ${u(pts[1].wx)} ${u(pts[1].wy)} ${u(pts[2].wx)} ${u(pts[2].wy)}`;
+      break;
+    }
+    case "pline": {
+      if (pts.length < 2) return;
+      const coords = pts.map(p => `${u(p.wx)} ${u(p.wy)}`).join(" ");
+      cmd = `pline ${coords}`;
+      break;
+    }
+    case "dim": {
+      cmd = `dim ${u(pts[0].wx)} ${u(pts[0].wy)} ${u(pts[1].wx)} ${u(pts[1].wy)}`;
+      break;
+    }
+    case "hdim": {
+      cmd = `hdim ${u(pts[0].wx)} ${u(pts[0].wy)} ${u(pts[1].wx)} ${u(pts[1].wy)}`;
+      break;
+    }
+    case "vdim": {
+      cmd = `vdim ${u(pts[0].wx)} ${u(pts[0].wy)} ${u(pts[1].wx)} ${u(pts[1].wy)}`;
+      break;
+    }
+  }
+
+  if (cmd) {
+    engine.exec(cmd);
+    activeDrawBlock.code += (activeDrawBlock.code ? "\n" : "") + cmd;
+    editor.render();
+    // Reposition overlay after re-render
+    showOverlay();
+  }
+}
+
+// ─── Render preview on overlay ───────────────────────────
+function renderOverlayPreview() {
+  const ctx = cadOverlay.getContext("2d");
+  if (!ctx || !activeDrawBlock) return;
+  ctx.clearRect(0, 0, cadOverlay.width, cadOverlay.height);
+
+  if (!drawTool || drawPoints.length === 0 || !drawMouseWorld) return;
+
+  const engine = activeDrawBlock.cadEngine;
+
+  ctx.save();
+  ctx.strokeStyle = "#0088ff";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+
+  const p = drawPoints;
+  const m = drawMouseWorld;
+
+  switch (drawTool) {
+    case "line": case "dim": case "hdim": case "vdim": {
+      if (p.length === 1) {
+        const s1 = engine.w2s(p[0].wx, p[0].wy);
+        const s2 = engine.w2s(m.wx, m.wy);
+        ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y); ctx.stroke();
+      }
+      break;
+    }
+    case "rect": case "rrect": {
+      if (p.length === 1) {
+        const s1 = engine.w2s(p[0].wx, p[0].wy);
+        const s2 = engine.w2s(m.wx, m.wy);
+        ctx.beginPath();
+        ctx.rect(s1.x, s1.y, s2.x - s1.x, s2.y - s1.y);
+        ctx.stroke();
+      }
+      break;
+    }
+    case "circle": {
+      if (p.length === 1) {
+        const sc = engine.w2s(p[0].wx, p[0].wy);
+        const se = engine.w2s(m.wx, m.wy);
+        const r = Math.sqrt((se.x - sc.x) ** 2 + (se.y - sc.y) ** 2);
+        ctx.beginPath(); ctx.arc(sc.x, sc.y, r, 0, Math.PI * 2); ctx.stroke();
+      }
+      break;
+    }
+    case "ellipse": {
+      if (p.length === 1) {
+        const sc = engine.w2s(p[0].wx, p[0].wy);
+        const se = engine.w2s(m.wx, m.wy);
+        const rx = Math.abs(se.x - sc.x);
+        const ry = Math.abs(se.y - sc.y);
+        ctx.beginPath(); ctx.ellipse(sc.x, sc.y, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      break;
+    }
+    case "arc": {
+      if (p.length === 1) {
+        const s1 = engine.w2s(p[0].wx, p[0].wy);
+        const s2 = engine.w2s(m.wx, m.wy);
+        ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y); ctx.stroke();
+      } else if (p.length === 2) {
+        const s1 = engine.w2s(p[0].wx, p[0].wy);
+        const sc = engine.w2s(p[1].wx, p[1].wy);
+        const s2 = engine.w2s(m.wx, m.wy);
+        ctx.beginPath(); ctx.moveTo(s1.x, s1.y);
+        ctx.quadraticCurveTo(sc.x, sc.y, s2.x, s2.y); ctx.stroke();
+      }
+      break;
+    }
+    case "pline": {
+      // Draw all segments so far + line to mouse
+      if (p.length >= 1) {
+        const s0 = engine.w2s(p[0].wx, p[0].wy);
+        ctx.beginPath(); ctx.moveTo(s0.x, s0.y);
+        for (let i = 1; i < p.length; i++) {
+          const si = engine.w2s(p[i].wx, p[i].wy);
+          ctx.lineTo(si.x, si.y);
+        }
+        const sm = engine.w2s(m.wx, m.wy);
+        ctx.lineTo(sm.x, sm.y);
+        ctx.stroke();
+      }
+      break;
+    }
+  }
+
+  // Draw collected points as markers
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#0088ff";
+  for (const pt of p) {
+    const s = engine.w2s(pt.wx, pt.wy);
+    ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Draw crosshair at mouse
+  const ms = engine.w2s(m.wx, m.wy);
+  ctx.strokeStyle = "rgba(0,136,255,0.3)";
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(ms.x, 0); ctx.lineTo(ms.x, cadOverlay.height);
+  ctx.moveTo(0, ms.y); ctx.lineTo(cadOverlay.width, ms.y);
+  ctx.stroke();
+
+  ctx.restore();
+
+  // Draw tracking lines (fuera del save/restore del preview)
+  const trackLines = engine.snap.getTrackingLines(engine, m.wx, m.wy);
+  if (trackLines.length > 0) {
+    engine.snap.drawTrackingLines(ctx, engine, trackLines);
+  }
+
+  // Draw snap marker
+  if (currentSnap) {
+    engine.snap.drawSnapMarker(ctx, engine, currentSnap.x, currentSnap.y, currentSnap.t, currentSnap.c);
+  }
+}
+
+// ─── Overlay mouse handlers ──────────────────────────────
+cadOverlay.addEventListener("mousemove", (e) => {
+  if (!activeDrawBlock) return;
+  const rect = cadOverlay.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
+  const engine = activeDrawBlock.cadEngine;
+  let w = engine.s2w(sx, sy);
+  let wx = w.x, wy = w.y;
+
+  // 1) Object snap (F3)
+  currentSnap = engine.snap.findSnap(engine, wx, wy);
+  if (currentSnap) { wx = currentSnap.x; wy = currentSnap.y; }
+
+  // 2) Grid snap (if no object snap)
+  if (!currentSnap && engine.gridOn) {
+    const gs = engine.snap.gridSnap(engine, wx, wy);
+    wx = gs.x; wy = gs.y;
+  }
+
+  // 3) Ortho constraint (F8) - only when drawing with at least 1 point
+  if (engine.snap.orthoOn && drawPoints.length > 0) {
+    const last = drawPoints[drawPoints.length - 1];
+    const ort = engine.snap.orthoSnap(last.wx, last.wy, wx, wy);
+    wx = ort.x; wy = ort.y;
+  }
+
+  drawMouseWorld = { wx, wy };
+
+  // Update coordinate display
+  const ux = engine.toU(wx), uy = engine.toU(wy);
+  coordDisplay.textContent = `X: ${engine.F(ux)}  Y: ${engine.F(uy)}`;
+
+  if (drawTool) renderOverlayPreview();
+});
+
+cadOverlay.addEventListener("mousedown", (e) => {
+  if (!activeDrawBlock || e.button !== 0) return;
+  const engine = activeDrawBlock.cadEngine;
+
+  // Si no hay herramienta activa: hit test para seleccion
+  if (!drawTool) {
+    const rect = cadOverlay.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const w = engine.s2w(sx, sy);
+    const idx = hitTest(engine, w.x, w.y);
+    if (idx >= 0) {
+      engine.formaSel = idx;
+      engine.selectedShapes = [idx];
+    } else {
+      engine.formaSel = -1;
+      engine.selectedShapes = [];
+    }
+    editor.render();
+    showOverlay();
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+
+  // Usa las coordenadas ya snapped del mousemove
+  const wx = drawMouseWorld ? drawMouseWorld.wx : 0;
+  const wy = drawMouseWorld ? drawMouseWorld.wy : 0;
+
+  drawPoints.push({ wx, wy });
+
+  // Actualizar pIni para perpendicular/tracking
+  if (drawPoints.length === 1) {
+    engine.snap.pIni = { x: wx, y: wy };
+  }
+
+  if (isShapeComplete(drawTool, drawPoints)) {
+    const savedTool = drawTool;
+    commitShape(drawTool, drawPoints);
+    drawPoints = [];
+    engine.snap.pIni = null;
+    engine.snap.invalidateCache();
+    // Stay in same tool for continuous drawing
+    drawTool = savedTool;
+  }
+
+  renderOverlayPreview();
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+// Right-click: finish pline or cancel current shape
+cadOverlay.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+  if (drawTool === "pline" && drawPoints.length >= 2) {
+    commitShape("pline", drawPoints);
+    drawPoints = [];
+    renderOverlayPreview();
+  } else if (drawPoints.length > 0) {
+    drawPoints = [];
+    renderOverlayPreview();
+  } else {
+    activateDrawTool(null);
+  }
+});
+
+// Keyboard on overlay: Escape to cancel, F3/F8/F11 toggles
+cadOverlay.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (drawPoints.length > 0) {
+      drawPoints = [];
+      renderOverlayPreview();
+    } else {
+      activateDrawTool(null);
+    }
+    e.preventDefault();
+    e.stopPropagation();
+  } else if (e.key === "F3" && activeDrawBlock) {
+    toggleSnapOrtho("snap");
+    e.preventDefault();
+  } else if (e.key === "F8" && activeDrawBlock) {
+    toggleSnapOrtho("ortho");
+    e.preventDefault();
+  } else if (e.key === "F11" && activeDrawBlock) {
+    toggleSnapOrtho("track");
+    e.preventDefault();
+  } else if (e.key === "Delete" && activeDrawBlock) {
+    const engine = activeDrawBlock.cadEngine;
+    if (engine.selectedShapes.length > 0) {
+      // Delete selected shapes (reverse order)
+      const sorted = [...engine.selectedShapes].sort((a, b) => b - a);
+      for (const idx of sorted) engine.formas.splice(idx, 1);
+      engine.selectedShapes = [];
+      engine.formaSel = -1;
+      engine.saveHist();
+      engine.snap.invalidateCache();
+      editor.render();
+      showOverlay();
+    }
+    e.preventDefault();
+  }
+});
+
+// Mouse wheel on overlay: zoom in/out
+cadOverlay.addEventListener("wheel", (e) => {
+  if (!activeDrawBlock) return;
+  e.preventDefault();
+  const engine = activeDrawBlock.cadEngine;
+  const rect = cadOverlay.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
+
+  // World position under cursor before zoom
+  const wBefore = engine.s2w(sx, sy);
+
+  // Zoom factor
+  const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  engine.cam.zoom = Math.max(engine.cam.minZoom, Math.min(engine.cam.maxZoom, engine.cam.zoom * factor));
+
+  // World position under cursor after zoom
+  const wAfter = engine.s2w(sx, sy);
+
+  // Pan to keep point under cursor
+  engine.cam.x += wBefore.x - wAfter.x;
+  engine.cam.y += wBefore.y - wAfter.y;
+
+  // Re-render
+  editor.render();
+  showOverlay();
+  if (drawTool) renderOverlayPreview();
+}, { passive: false });
+
+// Middle mouse button drag: pan
+{
+  let panning = false, panStartX = 0, panStartY = 0, panStartCamX = 0, panStartCamY = 0;
+
+  cadOverlay.addEventListener("mousedown", (e) => {
+    if (e.button === 1 && activeDrawBlock) {
+      panning = true;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panStartCamX = activeDrawBlock.cadEngine.cam.x;
+      panStartCamY = activeDrawBlock.cadEngine.cam.y;
+      cadOverlay.style.cursor = "grabbing";
+      e.preventDefault();
+    }
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!panning || !activeDrawBlock) return;
+    const engine = activeDrawBlock.cadEngine;
+    const dx = (e.clientX - panStartX) / engine.cam.zoom;
+    const dy = (e.clientY - panStartY) / engine.cam.zoom;
+    engine.cam.x = panStartCamX - dx;
+    engine.cam.y = panStartCamY + dy;  // Y inverted
+    editor.render();
+    showOverlay();
+    if (drawTool) renderOverlayPreview();
+  });
+
+  document.addEventListener("mouseup", (e) => {
+    if (panning) {
+      panning = false;
+      cadOverlay.style.cursor = "crosshair";
+    }
+  });
+}
+
+// ─── Toggle snap/ortho/track ─────────────────────────────
+function toggleSnapOrtho(which: "snap" | "ortho" | "track") {
+  if (!activeDrawBlock) return;
+  const snap = activeDrawBlock.cadEngine.snap;
+  if (which === "snap") snap.snapOn = !snap.snapOn;
+  else if (which === "ortho") snap.orthoOn = !snap.orthoOn;
+  else if (which === "track") snap.trackingOn = !snap.trackingOn;
+  updateToggleButtons();
+}
+
+function updateToggleButtons() {
+  if (!activeDrawBlock) return;
+  const snap = activeDrawBlock.cadEngine.snap;
+  cadToolbar.querySelectorAll("button[data-toggle]").forEach((btn) => {
+    const t = (btn as HTMLElement).dataset.toggle;
+    const on = t === "snap" ? snap.snapOn : t === "ortho" ? snap.orthoOn : snap.trackingOn;
+    btn.classList.toggle("snap-on", on);
+  });
+}
+
+// ─── Button click handler ────────────────────────────────
+cadToolbar.addEventListener("click", (e) => {
+  const btn = (e.target as HTMLElement).closest("button");
+  if (!btn) return;
+
+  const action = btn.dataset.action;
+  if (action === "close") {
+    toggleCadToolbar(false);
+    return;
+  }
+
+  // Toggle buttons (snap/ortho/track)
+  const toggle = btn.dataset.toggle;
+  if (toggle) {
+    toggleSnapOrtho(toggle as "snap" | "ortho" | "track");
+    return;
+  }
+
+  const cmd = btn.dataset.cmd;
+  if (!cmd || !activeDrawBlock) return;
+
+  if (INTERACTIVE_TOOLS.has(cmd)) {
+    // Interactive drawing tool → activate overlay
+    activateDrawTool(cmd as DrawTool);
+  } else if (CLI_PARAM_CMDS.has(cmd)) {
+    // Pre-fill CLI input with command and focus
+    cliInput.value = cmd + " ";
+    cliInput.focus();
+    cliInput.setSelectionRange(cliInput.value.length, cliInput.value.length);
+  } else {
+    // Immediate command (fit, grid, undo, del, clear, labels)
+    activeDrawBlock.cadEngine.exec(cmd);
+    editor.render();
+    if (drawTool) showOverlay();  // reposition if overlay active
+  }
+});
+
+// ─── CLI input ───────────────────────────────────────────
+const cliInput = cadToolbar.querySelector(".cad-cli") as HTMLInputElement;
+cliInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && activeDrawBlock) {
+    const cmd = cliInput.value.trim();
+    if (cmd) {
+      activeDrawBlock.cadEngine.exec(cmd);
+      activeDrawBlock.code += (activeDrawBlock.code ? "\n" : "") + cmd;
+      editor.render();
+      cliInput.value = "";
+      if (drawTool) showOverlay();
+    }
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  // Prevent canvas from capturing these keys
+  e.stopPropagation();
+});
+
+// ─── Toggle toolbar visibility ───────────────────────────
+function toggleCadToolbar(show: boolean) {
+  cadToolbarVisible = show;
+  cadToolbar.classList.toggle("hidden", !show);
+  btnCad.classList.toggle("active", show);
+  if (!show) {
+    activateDrawTool(null);
+  } else {
+    updateToggleButtons();
+  }
+}
+
+// ─── CAD button: enable when cursor is on a @{draw} block ──
+editor.onDrawBlockFocus = (draw) => {
+  activeDrawBlock = draw;
+  btnCad.disabled = !draw;
+  if (!draw && cadToolbarVisible) {
+    toggleCadToolbar(false);
+  }
+};
+
+btnCad.addEventListener("click", () => {
+  if (!activeDrawBlock) return;
+  toggleCadToolbar(!cadToolbarVisible);
+});
 
 // Populate examples dropdown
 for (const [key, ex] of Object.entries(EXAMPLES)) {
