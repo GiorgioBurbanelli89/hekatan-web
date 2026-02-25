@@ -23,12 +23,16 @@ export interface CellResult {
 export interface LineResult {
   lineIndex: number;
   input: string;
-  type: "assignment" | "expression" | "comment" | "heading" | "empty" | "directive" | "cells" | "error";
+  type: "assignment" | "expression" | "comment" | "heading" | "empty" | "directive" | "cells" | "draw" | "error";
   varName?: string;
   value?: any;
   display?: string;
   error?: string;
   cells?: CellResult[];
+  /** For type "draw": width, height, and CAD command lines */
+  drawWidth?: number;
+  drawHeight?: number;
+  drawCommands?: string[];
 }
 
 // ─── HekatanEvaluator ───────────────────────────────────
@@ -87,6 +91,25 @@ export class HekatanEvaluator {
       }
 
       // @{end columns} already handled above
+
+      // @{draw W H} - CAD block: collect lines until @{end draw}
+      const drawMatch = trimmed.match(/^@\{draw\s+(\d+)\s+(\d+)\}/i);
+      if (drawMatch) {
+        const drawWidth = parseInt(drawMatch[1]);
+        const drawHeight = parseInt(drawMatch[2]);
+        const drawCommands: string[] = [];
+        i++;
+        while (i < lines.length && !/^@\{end\s+draw\}/i.test(lines[i].trim())) {
+          drawCommands.push(lines[i]);
+          i++;
+        }
+        // i now points to @{end draw} line (or past end)
+        results.push({
+          lineIndex: i, input: raw, type: "draw",
+          drawWidth, drawHeight, drawCommands,
+        });
+        continue;
+      }
 
       // @{directive} - block directives that consume lines until @{end}
       if (/^@\{\w+/.test(trimmed)) {

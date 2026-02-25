@@ -40,6 +40,77 @@ namespace Hekatan.Wpf
         }
 
         /// <summary>
+        /// Busca la ruta del ejecutable de Python en ubicaciones conocidas
+        /// </summary>
+        private static string FindPythonPath()
+        {
+            // 1. Buscar en rutas conocidas de Windows (prioridad alta, evita Windows Store stub)
+            string[] knownPaths = [
+                @"C:\Program Files\Python312\python.exe",
+                @"C:\Program Files\Python313\python.exe",
+                @"C:\Program Files\Python311\python.exe",
+                @"C:\Program Files\Python310\python.exe",
+                @"C:\Python312\python.exe",
+                @"C:\Python313\python.exe",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\Python\Python313\python.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\Python\Python312\python.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\Python\Python311\python.exe"),
+            ];
+
+            foreach (var path in knownPaths)
+            {
+                if (File.Exists(path))
+                    return path;
+            }
+
+            // 2. Buscar con where.exe, filtrar Windows Store stubs
+            try
+            {
+                var p = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "where.exe",
+                    Arguments = "python",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                });
+                string output = p?.StandardOutput.ReadToEnd()?.Trim();
+                p?.WaitForExit(5000);
+                if (!string.IsNullOrEmpty(output))
+                {
+                    foreach (var line in output.Split('\n'))
+                    {
+                        string candidate = line.Trim();
+                        // Filtrar Windows Store stub (WindowsApps) y buscar .exe real
+                        if (File.Exists(candidate) && !candidate.Contains("WindowsApps"))
+                            return candidate;
+                    }
+                }
+            }
+            catch { }
+
+            // 3. Fallback: "python" en PATH (puede ser Windows Store stub)
+            try
+            {
+                var p = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "python",
+                    Arguments = "--version",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                });
+                p?.WaitForExit(5000);
+                if (p != null && p.ExitCode == 0)
+                    return "python";
+            }
+            catch { }
+
+            return null; // No encontrado
+        }
+
+        /// <summary>
         /// Encuentra un puerto TCP libre
         /// </summary>
         private static int FindFreePort()
@@ -137,14 +208,29 @@ namespace Hekatan.Wpf
 
             try
             {
-                progressWindow.UpdateMessage($"Verificando Jupyter... (0 ms)");
-                File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] Verificando Jupyter...\n");
+                progressWindow.UpdateMessage($"Buscando Python... (0 ms)");
+                File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] Buscando Python...\n");
 
-                if (!await CheckJupyterAvailable())
+                string pythonPath = FindPythonPath();
+                File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] Python encontrado: {pythonPath ?? "NULL"}\n");
+
+                if (pythonPath == null)
+                {
+                    File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] Python NO encontrado\n");
+                    progressWindow.Close();
+                    MessageBox.Show("Python no está instalado o no se encuentra en el PATH.\nRutas buscadas: Program Files\\Python3xx, LocalAppData\\Programs\\Python",
+                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
+                }
+
+                progressWindow.UpdateMessage($"Verificando Jupyter... ({stopwatch.ElapsedMilliseconds} ms)");
+                File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] Verificando Jupyter con {pythonPath}...\n");
+
+                if (!await CheckJupyterAvailable(pythonPath))
                 {
                     File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] Jupyter NO disponible\n");
                     progressWindow.Close();
-                    MessageBox.Show("Jupyter no está instalado. Por favor instala Python + Jupyter primero.",
+                    MessageBox.Show($"Jupyter no está instalado.\nPython encontrado: {pythonPath}\n\nEjecuta: {pythonPath} -m pip install jupyter",
                         "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return false;
                 }
@@ -165,13 +251,18 @@ namespace Hekatan.Wpf
 
                 progressWindow.UpdateMessage($"Iniciando servidor Jupyter... ({stopwatch.ElapsedMilliseconds} ms)");
 
+                // Asegurar runtime dir con permisos correctos
+                string runtimeDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Hekatan", "jupyter-runtime");
+                try { Directory.CreateDirectory(runtimeDir); } catch { }
+                File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] RuntimeDir: {runtimeDir}\n");
+
                 // Iniciar servidor Jupyter con token y puerto explícitos
                 _jupyterProcess = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = "python",
-                        Arguments = $"-m jupyter notebook --no-browser --port={_port} --ServerApp.token=\"{_token}\" --NotebookApp.token=\"{_token}\"",
+                        FileName = pythonPath,
+                        Arguments = $"-m jupyterlab --no-browser --port={_port} --ServerApp.token=\"{_token}\" --ServerApp.use_redirect_file=False --ServerApp.disable_check_xsrf=True",
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
@@ -179,6 +270,7 @@ namespace Hekatan.Wpf
                         WorkingDirectory = workDir
                     }
                 };
+                _jupyterProcess.StartInfo.EnvironmentVariables["JUPYTER_RUNTIME_DIR"] = runtimeDir;
 
                 File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] Iniciando proceso jupyter...\n");
                 _jupyterProcess.Start();
@@ -319,7 +411,7 @@ namespace Hekatan.Wpf
         /// <summary>
         /// Verifica si Jupyter está instalado
         /// </summary>
-        private async Task<bool> CheckJupyterAvailable()
+        private async Task<bool> CheckJupyterAvailable(string pythonPath = null)
         {
             try
             {
@@ -327,8 +419,8 @@ namespace Hekatan.Wpf
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = "python",
-                        Arguments = "-m jupyter --version",
+                        FileName = pythonPath ?? FindPythonPath() ?? "python",
+                        Arguments = "-m jupyterlab --version",
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
@@ -350,7 +442,7 @@ namespace Hekatan.Wpf
         /// <summary>
         /// Verifica si nbconvert está instalado
         /// </summary>
-        private async Task<bool> CheckNbconvertAvailable()
+        private async Task<bool> CheckNbconvertAvailable(string pythonPath = null)
         {
             try
             {
@@ -358,7 +450,7 @@ namespace Hekatan.Wpf
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = "python",
+                        FileName = pythonPath ?? FindPythonPath() ?? "python",
                         Arguments = "-m nbconvert --version",
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
@@ -428,7 +520,7 @@ namespace Hekatan.Wpf
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = "python",
+                        FileName = FindPythonPath() ?? "python",
                         Arguments = $"-m nbconvert --to html --stdout \"{ipynbPath}\"",
                         UseShellExecute = false,
                         RedirectStandardOutput = true,

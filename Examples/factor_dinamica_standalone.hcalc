@@ -1,0 +1,224 @@
+@{calcpad}
+"Factor de Magnificacion Dinamica - Standalone (sin macros)
+#noc
+'<h3 style="color:#2563eb">'D_f = 1/sqr((1 - r^2)^2 + (2*ξ*r)^2)'</h3>
+'<hr>
+D_f(r; ξ) = 1/sqr((1 - r^2)^2 + (2*ξ*r)^2)
+#equ
+#hide
+d1(r) = min(D_f(r; 0.125); 4.5)
+d2(r) = min(D_f(r; 0.2); 4.5)
+d3(r) = min(D_f(r; 0.25); 4.5)
+d4(r) = min(D_f(r; 0.5); 4.5)
+d5(r) = min(D_f(r; 0.707); 4.5)
+d6(r) = min(D_f(r; 1); 4.5)
+d7(r) = min(D_f(r; 2); 4.5)
+pW = 600
+pH = 400
+pml = 60
+pmr = 20
+pmt = 30
+pmb = 40
+ppw = pW - pml - pmr
+pph = pH - pmt - pmb
+pxmin = 0
+pxmax = 3
+pymin = 0
+pymax = 4.5
+pxr = pxmax - pxmin
+pyr = pymax - pymin
+pN = 200
+pcxmin = 0.01
+pcdx = (pxmax - pcxmin)/pN
+#val
+#show
+'<div style="display:inline-flex; align-items:center">
+'<div style="writing-mode:vertical-rl; transform:rotate(180deg); text-align:center; font-size:11px; color:#333; padding:0 4px"><var>D</var><sub>f</sub> = 1/&#8730;((1 &#8722; <var>r</var>&#178;)&#178; + (2&#183;&#958;&#183;<var>r</var>)&#178;)</div>
+'<div>
+'<svg viewBox="0 0 'pW' 'pH'" xmlns="http://www.w3.org/2000/svg" style="width:'pW'px; height:'pH'px; font-family:Arial; font-size:11px; background:white">
+'<rect x="'pml'" y="'pmt'" width="'ppw'" height="'pph'" fill="#f8f9fa" stroke="#bbb"/>
+'<text x="'pW/2'" y="20" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">Factor de Magnificacion Dinamica D(r)</text>
+#hide
+#round 1
+#for pg = 0 : 6
+  pgx = pml + pg*ppw/6
+  pxv = pxmin + pg*pxr/6
+  #show
+  '<line x1="'pgx'" y1="'pmt'" x2="'pgx'" y2="'pmt + pph'" stroke="#ddd" stroke-width="0.5"/>
+  '<text x="'pgx'" y="'pmt + pph + 15'" text-anchor="middle" font-size="9" fill="#666">'pxv'</text>
+  #hide
+#loop
+#for pg = 0 : 5
+  pgy = pmt + pg*pph/5
+  pyv = pymax - pg*pyr/5
+  #show
+  '<line x1="'pml'" y1="'pgy'" x2="'pml + ppw'" y2="'pgy'" stroke="#ddd" stroke-width="0.5"/>
+  '<text x="'pml - 5'" y="'pgy + 4'" text-anchor="end" font-size="9" fill="#666">'pyv'</text>
+  #hide
+#loop
+#round 6
+zry = pmt + pph - (1 - pymin)/pyr*pph
+#show
+'<line x1="'pml'" y1="'zry'" x2="'pml + ppw'" y2="'zry'" stroke="#aaa" stroke-width="0.5" stroke-dasharray="4,3"/>
+#hide
+r = pcxmin
+pxp = pml + (r - pxmin)/pxr*ppw
+pyp = pmt + pph - (d1(r) - pymin)/pyr*pph
+#for pi = 1 : pN
+  r = pcxmin + pi*pcdx
+  pxc = pml + (r - pxmin)/pxr*ppw
+  pyc = pmt + pph - (d1(r) - pymin)/pyr*pph
+  #show
+  '<line x1="'pxp'" y1="'pyp'" x2="'pxc'" y2="'pyc'" stroke="Tomato" stroke-width="2" stroke-linecap="round"/>
+  #hide
+  pxp = pxc
+  pyp = pyc
+#loop
+r = pcxmin
+pxp = pml + (r - pxmin)/pxr*ppw
+pyp = pmt + pph - (d2(r) - pymin)/pyr*pph
+#for pi = 1 : pN
+  r = pcxmin + pi*pcdx
+  pxc = pml + (r - pxmin)/pxr*ppw
+  pyc = pmt + pph - (d2(r) - pymin)/pyr*pph
+  #show
+  '<line x1="'pxp'" y1="'pyp'" x2="'pxc'" y2="'pyc'" stroke="YellowGreen" stroke-width="2" stroke-linecap="round"/>
+  #hide
+  pxp = pxc
+  pyp = pyc
+#loop
+r = pcxmin
+pxp = pml + (r - pxmin)/pxr*ppw
+pyp = pmt + pph - (d3(r) - pymin)/pyr*pph
+#for pi = 1 : pN
+  r = pcxmin + pi*pcdx
+  pxc = pml + (r - pxmin)/pxr*ppw
+  pyc = pmt + pph - (d3(r) - pymin)/pyr*pph
+  #show
+  '<line x1="'pxp'" y1="'pyp'" x2="'pxc'" y2="'pyc'" stroke="CornflowerBlue" stroke-width="2" stroke-linecap="round"/>
+  #hide
+  pxp = pxc
+  pyp = pyc
+#loop
+r = pcxmin
+pxp = pml + (r - pxmin)/pxr*ppw
+pyp = pmt + pph - (d4(r) - pymin)/pyr*pph
+#for pi = 1 : pN
+  r = pcxmin + pi*pcdx
+  pxc = pml + (r - pxmin)/pxr*ppw
+  pyc = pmt + pph - (d4(r) - pymin)/pyr*pph
+  #show
+  '<line x1="'pxp'" y1="'pyp'" x2="'pxc'" y2="'pyc'" stroke="Gold" stroke-width="2" stroke-linecap="round"/>
+  #hide
+  pxp = pxc
+  pyp = pyc
+#loop
+r = pcxmin
+pxp = pml + (r - pxmin)/pxr*ppw
+pyp = pmt + pph - (d5(r) - pymin)/pyr*pph
+#for pi = 1 : pN
+  r = pcxmin + pi*pcdx
+  pxc = pml + (r - pxmin)/pxr*ppw
+  pyc = pmt + pph - (d5(r) - pymin)/pyr*pph
+  #show
+  '<line x1="'pxp'" y1="'pyp'" x2="'pxc'" y2="'pyc'" stroke="MediumVioletRed" stroke-width="2" stroke-linecap="round"/>
+  #hide
+  pxp = pxc
+  pyp = pyc
+#loop
+r = pcxmin
+pxp = pml + (r - pxmin)/pxr*ppw
+pyp = pmt + pph - (d6(r) - pymin)/pyr*pph
+#for pi = 1 : pN
+  r = pcxmin + pi*pcdx
+  pxc = pml + (r - pxmin)/pxr*ppw
+  pyc = pmt + pph - (d6(r) - pymin)/pyr*pph
+  #show
+  '<line x1="'pxp'" y1="'pyp'" x2="'pxc'" y2="'pyc'" stroke="MediumSpringGreen" stroke-width="2" stroke-linecap="round"/>
+  #hide
+  pxp = pxc
+  pyp = pyc
+#loop
+r = pcxmin
+pxp = pml + (r - pxmin)/pxr*ppw
+pyp = pmt + pph - (d7(r) - pymin)/pyr*pph
+#for pi = 1 : pN
+  r = pcxmin + pi*pcdx
+  pxc = pml + (r - pxmin)/pxr*ppw
+  pyc = pmt + pph - (d7(r) - pymin)/pyr*pph
+  #show
+  '<line x1="'pxp'" y1="'pyp'" x2="'pxc'" y2="'pyc'" stroke="BlueViolet" stroke-width="2" stroke-linecap="round"/>
+  #hide
+  pxp = pxc
+  pyp = pyc
+#loop
+#show
+zlx = pml + (1.0 - pxmin)/pxr*ppw
+zly = pmt + pph - (4.3 - pymin)/pyr*pph
+'<text x="'zlx'" y="'zly'" font-size="9" fill="Tomato" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">&#958; = 0.125</text>
+#hide
+zlx = pml + (0.65 - pxmin)/pxr*ppw
+zly = pmt + pph - (2.65 - pymin)/pyr*pph
+#show
+'<text x="'zlx'" y="'zly'" font-size="9" fill="YellowGreen" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">&#958; = 0.2</text>
+#hide
+zlx = pml + (0.5 - pxmin)/pxr*ppw
+zly = pmt + pph - (2.15 - pymin)/pyr*pph
+#show
+'<text x="'zlx'" y="'zly'" font-size="9" fill="CornflowerBlue" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">&#958; = 0.25</text>
+#hide
+zlx = pml + (0.3 - pxmin)/pxr*ppw
+zly = pmt + pph - (1.35 - pymin)/pyr*pph
+#show
+'<text x="'zlx'" y="'zly'" font-size="9" fill="Gold" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">&#958; = 0.5</text>
+#hide
+zlx = pml + (1.8 - pxmin)/pxr*ppw
+zly = pmt + pph - (0.55 - pymin)/pyr*pph
+#show
+'<text x="'zlx'" y="'zly'" font-size="9" fill="MediumVioletRed" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">&#958; = 0.707</text>
+#hide
+zlx = pml + (2.3 - pxmin)/pxr*ppw
+zly = pmt + pph - (0.3 - pymin)/pyr*pph
+#show
+'<text x="'zlx'" y="'zly'" font-size="9" fill="MediumSpringGreen" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">&#958; = 1.0</text>
+#hide
+zlx = pml + (2.6 - pxmin)/pxr*ppw
+zly = pmt + pph - (0.12 - pymin)/pyr*pph
+#show
+'<text x="'zlx'" y="'zly'" font-size="9" fill="BlueViolet" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">&#958; = 2.0</text>
+'<rect x="'pml'" y="'pmt'" width="'ppw'" height="'pph'" fill="none" stroke="#999"/>
+'</svg>
+'</div>
+'</div>
+'<div style="text-align:center; font-size:12px; color:#333; margin-left:60px; width:520px">Frecuencia ratio r = &#969;/&#969;<sub>n</sub></div>
+#equ
+#round default
+'<hr>
+'<b>Leyenda (&#958;):</b>
+'<p>
+'<b style="color:Tomato">---</b> &#958; = 0.125 &ensp;
+'<b style="color:YellowGreen">---</b> &#958; = 0.2 &ensp;
+'<b style="color:CornflowerBlue">---</b> &#958; = 0.25 &ensp;
+'<b style="color:Gold">---</b> &#958; = 0.5 &ensp;
+'<b style="color:MediumVioletRed">---</b> &#958; = 0.707 &ensp;
+'<b style="color:MediumSpringGreen">---</b> &#958; = 1.0 &ensp;
+'<b style="color:BlueViolet">---</b> &#958; = 2.0 &ensp;
+'</p>
+'<hr>
+"Valores en resonancia
+#equ
+'En resonancia (r = 1):
+r_res = 1
+#post
+
+'Para &xi; = 0.125: D ='D_f(r_res; 0.125)';&nbsp;&nbsp;Para &xi; = 0.2: D ='D_f(r_res; 0.2)
+'Para &xi; = 0.25: D ='D_f(r_res; 0.25)';&nbsp;&nbsp;Para &xi; = 0.5: D ='D_f(r_res; 0.5)
+'Para &xi; = 0.707: D ='D_f(r_res; 0.707)';&nbsp;&nbsp;Para &xi; = 1.0: D ='D_f(r_res; 1)
+'Para &xi; = 2.0: D ='D_f(r_res; 2)
+'<hr>
+'<b>Observaciones:</b>
+#noc
+D_max = 1/(2*ξ)'cuando r &asymp; 1
+'Para 'ξ' &lt; '1/sqrt(2)'; 0.707: pico en'r = sqrt(1 - 2*ξ)' &lt; 1
+'Para 'ξ'&ge; 0.707: D &le; 1 (sin amplificacion)
+@{end calcpad}

@@ -1,0 +1,12 @@
+hf = figure('visible','off');
+plot([1 2 3],[1 4 9], '-r', 'LineWidth', 2);
+title('Test SVG');
+xlabel('X'); ylabel('Y');
+grid on;
+tmpf = [tempname() '.svg'];
+print(hf, tmpf, '-dsvg');
+fid = fopen(tmpf, 'r');
+svg = fread(fid, Inf, '*char')';
+fclose(fid);
+disp(svg);
+delete(tmpf);

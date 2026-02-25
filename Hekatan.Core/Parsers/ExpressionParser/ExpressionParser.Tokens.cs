@@ -76,6 +76,22 @@ namespace Hekatan.Core
             {
                 if (value.IsWhiteSpace())
                     return;
+
+                // Auto-detect HTML: line starting with <letter, </, or <!
+                // Math expressions like "x < 5" start with a variable/number, not '<'
+                if (tokens.Count == 0)
+                {
+                    var trimmed = tokenValue.AsSpan().TrimStart();
+                    if (trimmed.Length > 1 && trimmed[0] == '<')
+                    {
+                        var next = trimmed[1];
+                        if (char.IsLetter(next) || next == '/' || next == '!')
+                        {
+                            tokens.Add(new Token(tokenValue, TokenTypes.Html));
+                            return;
+                        }
+                    }
+                }
             }
             else if (_isVal < 1)
             {

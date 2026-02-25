@@ -1,0 +1,7 @@
+"Ejemplo: @{html-folder} — Proyecto Estático
+'
+"Este ejemplo abre una carpeta que solo tiene index.html
+"(sin package.json). Hekatan la sirve usando Virtual Host
+"de WebView2 sin necesidad de Vite ni npm.
+'
+@{html-folder} ./static-folder-demo

@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -182,15 +182,11 @@ namespace Hekatan.Common.MultLangCode
                             output = Process(innerContent, variables, returnHtml, enableCollapse, progressCallback, partialResultCallback);
                         }
                     }
-                    // Special handling for @{calcpad} - explicit Hekatan math blocks
-                    // Generates a marker that will be processed by ExpressionParser later
+                    // Special handling for @{calcpad} - route to ORIGINAL Calcpad parser
+                    // Uses Calcpad.Core (upstream Proektsoftbg/Calcpad) directly
                     else if (language.Equals("calcpad", StringComparison.OrdinalIgnoreCase))
                     {
-
-                        // Encode Hekatan code as base64 marker for later processing
-                        string calcpadCode = block.Code ?? "";
-                        string base64Code = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(calcpadCode));
-                        output = $"<!--CALCPAD_INLINE:{base64Code}-->";
+                        output = CalcpadParserHandler.Parse(block.Code ?? "", System.IO.Directory.GetCurrentDirectory());
                     }
                     // Special handling for mcdx - convert Mathcad Prime file to Hekatan
                     else if (language.Equals("mcdx", StringComparison.OrdinalIgnoreCase))
@@ -311,6 +307,14 @@ namespace Hekatan.Common.MultLangCode
                         if (svgDirective.EndsWith("}")) svgDirective = svgDirective.Substring(0, svgDirective.Length - 1);
                         output = ProcessSvgBlock(block.Code, svgDirective.Trim(), variables);
                     }
+                    // Special handling for @{animation} — synchronized Canvas+JS animation
+                    // Syntax: @{animation}
+                    //         key: value DSL parameters (xi1, xi2, label1, label2, title, wn)
+                    //         @{end animation}
+                    else if (language.Equals("animation", StringComparison.OrdinalIgnoreCase))
+                    {
+                        output = ProcessAnimationBlock(block.Code, "animation", variables);
+                    }
                     // Special handling for @{tree} - Tree/hierarchy diagrams
                     // Syntax: @{tree}
                     //         Proyecto
@@ -361,19 +365,23 @@ namespace Hekatan.Common.MultLangCode
                         output = ProcessMaximaBlock(block.Code, variables);
                     }
                     // Special handling for eq/equation - mathematical equation block
-                    // Syntax: @{eq} or @{equation}
+                    // Syntax: @{eq} or @{eq left} or @{eq right} or @{eq center}
                     //         S_a = η*Z*F_a
                     //         @{end eq}
                     // Renders equations with Hekatan-style formatting (fractions, subscripts, etc.)
+                    // Alignment: center (default), left, right
+                    // Note: DetectDirective returns just "eq" as language name (params stripped),
+                    //       so we extract alignment from block.StartDirective (e.g., "@{eq left}")
                     else if (language.Equals("eq", StringComparison.OrdinalIgnoreCase) ||
                              language.Equals("equation", StringComparison.OrdinalIgnoreCase) ||
                              language.Equals("ecuacion", StringComparison.OrdinalIgnoreCase) ||
                              language.Equals("formula", StringComparison.OrdinalIgnoreCase))
                     {
-                        output = ProcessEquationBlock(block.Code, variables);
+                        var eqAlign = ExtractEqAlignment(block.StartDirective);
+                        output = ProcessEquationBlock(block.Code, variables, eqAlign);
                     }
                     // Special handling for eqdef - equations with definitions in two columns
-                    // Syntax: @{eqdef}
+                    // Syntax: @{eqdef} or @{eqdef left} or @{eqdef right}
                     //         S_a = η*Z*F_a | Aceleración espectral de diseño
                     //         T_0 = 0.1*F_s*F_d/F_a | Periodo de inicio
                     //         @{end eqdef}
@@ -382,8 +390,9 @@ namespace Hekatan.Common.MultLangCode
                              language.Equals("ecuaciondef", StringComparison.OrdinalIgnoreCase) ||
                              language.Equals("eqdefinicion", StringComparison.OrdinalIgnoreCase))
                     {
+                        var eqAlign = ExtractEqAlignment(block.StartDirective);
                         // Redirect to unified @{eq} which auto-detects | separator
-                        output = ProcessEquationBlock(block.Code, variables);
+                        output = ProcessEquationBlock(block.Code, variables, eqAlign);
                     }
                     // Special handling for @{integral} - convenience block for integrals
                     // Syntax: @{integral}
@@ -604,7 +613,27 @@ namespace Hekatan.Common.MultLangCode
                     {
                         output = ProcessTitleBlock(block.Code ?? "", block.StartDirective);
                     }
-                    // C#, XAML, WPF, CSS, HTML, three, vite always execute (handled specially in LanguageExecutor)
+                    // @{css} - Apply styles AND show CSS code visually in output (no external file/browser)
+                    else if (language.Equals("css", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var cssCode = block.Code ?? "";
+                        var encoded = System.Web.HttpUtility.HtmlEncode(cssCode);
+                        output = $"<style>\n{cssCode}\n</style>\n" +
+                                 $"<div class='lang-output-text'>" +
+                                 $"<pre style='background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:6px;overflow-x:auto;font-size:9pt;font-family:Consolas,monospace;'>{encoded}</pre>" +
+                                 $"</div>";
+                    }
+                    // @{html} - Inject HTML directly into output (no external file/browser)
+                    else if (language.Equals("html", StringComparison.OrdinalIgnoreCase))
+                    {
+                        output = block.Code ?? "";
+                    }
+                    // @{inkscape} - Render SVG code via Inkscape CLI to PNG and show inline
+                    else if (language.Equals("inkscape", StringComparison.OrdinalIgnoreCase))
+                    {
+                        output = ProcessInkscapeBlock(block.Code ?? "", block.StartDirective);
+                    }
+                    // C#, XAML, WPF, three, vite always execute (handled specially in LanguageExecutor)
                     // Extract base language name for checking (e.g., "vite C:/path" -> "vite")
                     else
                     {
@@ -612,8 +641,6 @@ namespace Hekatan.Common.MultLangCode
                         if (baseLang.Equals("csharp", StringComparison.OrdinalIgnoreCase) ||
                             baseLang.Equals("xaml", StringComparison.OrdinalIgnoreCase) ||
                             baseLang.Equals("wpf", StringComparison.OrdinalIgnoreCase) ||
-                            baseLang.Equals("css", StringComparison.OrdinalIgnoreCase) ||
-                            baseLang.Equals("html", StringComparison.OrdinalIgnoreCase) ||
                             baseLang.Equals("html:embed", StringComparison.OrdinalIgnoreCase) ||
                             baseLang.Equals("three", StringComparison.OrdinalIgnoreCase) ||
                             baseLang.Equals("vite", StringComparison.OrdinalIgnoreCase) ||
@@ -1365,28 +1392,104 @@ namespace Hekatan.Common.MultLangCode
                 var elements = new StringBuilder();
                 var defs = new StringBuilder();
                 bool needsArrowDef = false;
+                bool needsDimDef = false;
+                bool needsDarrowDef = false;
+                bool needsMomentDef = false;
                 string bgColor = null;
+                bool yUp = false;
+                bool fitMode = false;
+                double fitMargin = 5; // % margin for fit
 
-                // First pass: check if we need arrow markers
+                // Persistent state variables
+                string svgStroke = null, svgFill = null, svgWidth2 = null;
+                string svgOpacity = null, svgDash = null, svgFont = null, svgFontSize = null;
+
+                // Bounding box tracking for fit mode
+                double bbMinX = double.MaxValue, bbMinY = double.MaxValue;
+                double bbMaxX = double.MinValue, bbMaxY = double.MinValue;
+                void TrackBB(double x, double y) { if (x < bbMinX) bbMinX = x; if (x > bbMaxX) bbMaxX = x; if (y < bbMinY) bbMinY = y; if (y > bbMaxY) bbMaxY = y; }
+
+                // First pass: check what markers/features we need
                 foreach (var rawLine in lines)
                 {
-                    var line = rawLine.Trim();
-                    if (line.StartsWith("arrow", StringComparison.OrdinalIgnoreCase))
-                        needsArrowDef = true;
-                    if (line.StartsWith("background", StringComparison.OrdinalIgnoreCase))
+                    var line = rawLine.Trim().ToLower();
+                    if (line.StartsWith("arrow")) needsArrowDef = true;
+                    if (line.StartsWith("dim") || line.StartsWith("hdim") || line.StartsWith("vdim")) needsDimDef = true;
+                    if (line.StartsWith("darrow")) needsDarrowDef = true;
+                    if (line.StartsWith("moment") || line.StartsWith("carc")) needsMomentDef = true;
+                    if (line.StartsWith("background"))
                     {
-                        var parts = SplitSvgLine(line);
+                        var parts = SplitSvgLine(rawLine.Trim());
                         if (parts.Count > 1) bgColor = parts[1];
+                    }
+                    if (line == "yup") yUp = true;
+                    if (line.StartsWith("fit"))
+                    {
+                        fitMode = true;
+                        var parts = SplitSvgLine(rawLine.Trim());
+                        if (parts.Count > 1 && double.TryParse(parts[1], System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out var fm)) fitMargin = fm;
+                    }
+                    // Track bounding box for fit mode
+                    if (fitMode)
+                    {
+                        var parts = SplitSvgLine(rawLine.Trim());
+                        if (parts.Count >= 3)
+                        {
+                            for (int pi = 1; pi < parts.Count; pi++)
+                            {
+                                if (double.TryParse(parts[pi], System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out var val))
+                                {
+                                    // Track alternating x,y values from positional params
+                                    if (pi % 2 == 1) TrackBB(val, 0);
+                                    else TrackBB(0, val);
+                                }
+                            }
+                        }
                     }
                 }
 
-                // Build defs
-                if (needsArrowDef)
+                // Build defs with all needed markers
+                bool anyDefs = needsArrowDef || needsDimDef || needsDarrowDef || needsMomentDef;
+                if (anyDefs)
                 {
                     defs.Append("<defs>");
-                    defs.Append("<marker id=\"svg-arrowhead\" markerWidth=\"10\" markerHeight=\"7\" refX=\"10\" refY=\"3.5\" orient=\"auto\">");
-                    defs.Append("<polygon points=\"0 0, 10 3.5, 0 7\" fill=\"context-stroke\"/>");
-                    defs.Append("</marker></defs>");
+                    // Standard arrowhead
+                    if (needsArrowDef || needsDimDef)
+                    {
+                        defs.Append("<marker id=\"svg-arrowhead\" markerWidth=\"10\" markerHeight=\"7\" refX=\"10\" refY=\"3.5\" orient=\"auto\">");
+                        defs.Append("<polygon points=\"0 0, 10 3.5, 0 7\" fill=\"context-stroke\"/>");
+                        defs.Append("</marker>");
+                    }
+                    // Dimension arrows (smaller, both ends)
+                    if (needsDimDef)
+                    {
+                        defs.Append("<marker id=\"svg-dim-start\" markerWidth=\"8\" markerHeight=\"6\" refX=\"0\" refY=\"3\" orient=\"auto\">");
+                        defs.Append("<polygon points=\"8 0, 0 3, 8 6\" fill=\"context-stroke\"/>");
+                        defs.Append("</marker>");
+                        defs.Append("<marker id=\"svg-dim-end\" markerWidth=\"8\" markerHeight=\"6\" refX=\"8\" refY=\"3\" orient=\"auto\">");
+                        defs.Append("<polygon points=\"0 0, 8 3, 0 6\" fill=\"context-stroke\"/>");
+                        defs.Append("</marker>");
+                    }
+                    // Double arrow (rotation DOF) - two arrowheads
+                    if (needsDarrowDef)
+                    {
+                        defs.Append("<marker id=\"svg-darrow-start\" markerWidth=\"8\" markerHeight=\"6\" refX=\"0\" refY=\"3\" orient=\"auto\">");
+                        defs.Append("<polygon points=\"8 0, 0 3, 8 6\" fill=\"context-stroke\"/>");
+                        defs.Append("</marker>");
+                        defs.Append("<marker id=\"svg-darrow-end\" markerWidth=\"8\" markerHeight=\"6\" refX=\"8\" refY=\"3\" orient=\"auto\">");
+                        defs.Append("<polygon points=\"0 0, 8 3, 0 6\" fill=\"context-stroke\"/>");
+                        defs.Append("</marker>");
+                    }
+                    // Moment arc arrow
+                    if (needsMomentDef)
+                    {
+                        defs.Append("<marker id=\"svg-moment-arrow\" markerWidth=\"8\" markerHeight=\"6\" refX=\"8\" refY=\"3\" orient=\"auto\">");
+                        defs.Append("<polygon points=\"0 0, 8 3, 0 6\" fill=\"context-stroke\"/>");
+                        defs.Append("</marker>");
+                    }
+                    defs.Append("</defs>");
                 }
 
                 // Background rect
@@ -1399,16 +1502,27 @@ namespace Hekatan.Common.MultLangCode
                 foreach (var rawLine in lines)
                 {
                     var line = rawLine.Trim();
-                    if (string.IsNullOrEmpty(line) || line.StartsWith("#"))
+                    if (string.IsNullOrEmpty(line) || line.StartsWith("#") || line.StartsWith("//"))
                         continue;
 
                     var tokens = SplitSvgLine(line);
                     if (tokens.Count == 0) continue;
 
                     var cmd = tokens[0].ToLower();
-                    if (cmd == "background") continue; // already handled
+                    if (cmd == "background" || cmd == "yup" || cmd == "fit") continue; // already handled
 
-                    var svgEl = ConvertSvgCommand(cmd, tokens, svgWidth, svgHeight);
+                    // State commands: modify persistent state, don't emit SVG
+                    if (cmd == "color" || cmd == "stroke") { svgStroke = tokens.Count > 1 ? tokens[1] : null; continue; }
+                    if (cmd == "fill") { svgFill = tokens.Count > 1 ? tokens[1] : null; continue; }
+                    if (cmd == "width") { svgWidth2 = tokens.Count > 1 ? tokens[1] : null; continue; }
+                    if (cmd == "opacity") { svgOpacity = tokens.Count > 1 ? tokens[1] : null; continue; }
+                    if (cmd == "dash") { svgDash = tokens.Count > 1 ? tokens[1] : null; continue; }
+                    if (cmd == "font") { svgFont = tokens.Count > 1 ? tokens[1] : null; continue; }
+                    if (cmd == "fontsize") { svgFontSize = tokens.Count > 1 ? tokens[1] : null; continue; }
+                    if (cmd == "reset") { svgStroke = svgFill = svgWidth2 = svgOpacity = svgDash = svgFont = svgFontSize = null; continue; }
+
+                    var svgEl = ConvertSvgCommand(cmd, tokens, svgWidth, svgHeight, yUp,
+                        svgStroke, svgFill, svgWidth2, svgOpacity, svgDash, svgFont, svgFontSize);
                     if (svgEl != null)
                         elements.Append(svgEl);
                 }
@@ -1416,10 +1530,34 @@ namespace Hekatan.Common.MultLangCode
                 // Build final SVG
                 var svg = new StringBuilder();
                 svg.Append($"<div class=\"svg-block\" style=\"text-align: center; margin: 10px 0;\">");
-                svg.Append($"<svg viewBox=\"0 0 {svgWidth} {svgHeight}\" xmlns=\"http://www.w3.org/2000/svg\" ");
+
+                // Compute viewBox
+                string viewBox;
+                if (fitMode && bbMinX < bbMaxX && bbMinY < bbMaxY)
+                {
+                    double rangeX = bbMaxX - bbMinX, rangeY = bbMaxY - bbMinY;
+                    if (rangeX < 1) rangeX = 1; if (rangeY < 1) rangeY = 1;
+                    double mx = rangeX * fitMargin / 100, my = rangeY * fitMargin / 100;
+                    var inv = System.Globalization.CultureInfo.InvariantCulture;
+                    viewBox = $"{(bbMinX - mx).ToString(inv)} {(bbMinY - my).ToString(inv)} {(rangeX + 2 * mx).ToString(inv)} {(rangeY + 2 * my).ToString(inv)}";
+                }
+                else
+                {
+                    viewBox = $"0 0 {svgWidth} {svgHeight}";
+                }
+
+                svg.Append($"<svg viewBox=\"{viewBox}\" xmlns=\"http://www.w3.org/2000/svg\" ");
                 svg.Append($"style=\"width:{svgWidth}pt; height:{svgHeight}pt; max-width:100%;\">");
                 svg.Append(defs);
+
+                if (yUp)
+                    svg.Append($"<g transform=\"translate(0,{svgHeight}) scale(1,-1)\">");
+
                 svg.Append(elements);
+
+                if (yUp)
+                    svg.Append("</g>");
+
                 svg.Append("</svg></div>");
 
                 return svg.ToString();
@@ -1435,6 +1573,212 @@ namespace Hekatan.Common.MultLangCode
         {
             return ProcessSvgBlock(content, directive, variables);
         }
+
+        /// <summary>
+        /// Process @{animation} blocks — generates synchronized Canvas+JS animation
+        /// (mass-spring-damper + phasor spiral + sinusoidal waveform).
+        /// DSL body supports key:value parameters per line.
+        /// </summary>
+        private string ProcessAnimationBlock(string content, string directive, Dictionary<string, object> variables)
+        {
+            try
+            {
+                int w = 880, h = 480;
+
+                // Parse DSL parameters from body
+                var parms = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    var processed = ProcessMarkdownVariables(content, variables);
+                    foreach (var rawLine in processed.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        var line = rawLine.Trim();
+                        if (string.IsNullOrEmpty(line) || line.StartsWith("#")) continue;
+                        var idx = line.IndexOf(':');
+                        if (idx > 0)
+                        {
+                            parms[line.Substring(0, idx).Trim()] = line.Substring(idx + 1).Trim();
+                        }
+                    }
+                }
+
+                return GenerateSpringAnimation(w, h, parms);
+            }
+            catch (Exception ex)
+            {
+                return $"<div style='color:red;'>Error in @{{animation}}: {ex.Message}</div>";
+            }
+        }
+
+        /// <summary>
+        /// Generates a synchronized Canvas animation with mass-spring-damper,
+        /// phasor spiral, and sinusoidal waveform — all driven by requestAnimationFrame.
+        /// Parameters: xi1, xi2 (damping ratios), label1, label2, title, wn
+        /// </summary>
+        private string GenerateSpringAnimation(int w, int h, Dictionary<string, string> p)
+        {
+            var title = p.GetValueOrDefault("title", "Animacion Sincronizada");
+            var xi1 = p.GetValueOrDefault("xi1", p.GetValueOrDefault("xi", "0.125"));
+            var xi2 = p.GetValueOrDefault("xi2", "0.5");
+            var label1 = p.GetValueOrDefault("label1", "poco amortiguamiento");
+            var label2 = p.GetValueOrDefault("label2", "buen amortiguamiento");
+            var wnVal = p.GetValueOrDefault("wn", "2");
+
+            var uid = "sa" + Guid.NewGuid().ToString("N").Substring(0, 8);
+            string JsEsc(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", " ").Replace("\r", "");
+
+            var sb = new StringBuilder();
+            sb.Append("<canvas id=\"").Append(uid)
+              .Append("\" width=\"880\" height=\"480\" style=\"border:2px solid #ddd;border-radius:8px;background:#fafafa;display:block;margin:10px auto\"></canvas>");
+            sb.Append("<div style=\"text-align:center;margin:6px auto;font-size:12px;color:#555;font-family:sans-serif\">");
+            sb.Append("<label>&#9654; Velocidad: <input type=\"range\" id=\"").Append(uid).Append("spd\" min=\"0.1\" max=\"3.0\" step=\"0.1\" value=\"0.6\" style=\"width:200px;vertical-align:middle\"> ");
+            sb.Append("<b><span id=\"").Append(uid).Append("sv\">0.6</span>x</b></label>");
+            sb.Append("&nbsp;&nbsp;<button id=\"").Append(uid).Append("rst\" style=\"font-size:11px;padding:2px 8px;cursor:pointer\">Reset</button></div>");
+
+            var js = "(function(){"
++ "var cv=document.getElementById(\"__UID__\");if(!cv)return;"
++ "var c=cv.getContext(\"2d\"),W=880,H=480;"
++ "var wn=__WN__,tMax=25,nP=500,prog=0,spd=0.6,pF=0;"
++ "var x1v=__XI1__,x2v=__XI2__,c1=\"#d32f2f\",c2=\"#1565c0\";"
++ "var sl=document.getElementById(\"__UID__spd\"),sv=document.getElementById(\"__UID__sv\"),rb=document.getElementById(\"__UID__rst\");"
++ "if(sl){sl.addEventListener(\"input\",function(){spd=parseFloat(this.value);sv.textContent=spd.toFixed(1);});}"
++ "if(rb){rb.addEventListener(\"click\",function(){spd=0.6;sl.value=0.6;sv.textContent=\"0.6\";prog=0;pF=0;});}"
++ "var msH=185,eq=115,amp=35,pcx=135,pcy=340,pR=120;"
++ "var wL=295,wR=865,wT=220,wB=460,wW=wR-wL,wH=wB-wT,wCY=wT+wH/2;"
++ "function rsp(t,xi){var w=wn*Math.sqrt(1-xi*xi);return Math.exp(-xi*wn*t)*Math.sin(w*t);}"
++ "function env(t,xi){return Math.exp(-xi*wn*t);}"
++ "function pXf(t,xi){var w=wn*Math.sqrt(1-xi*xi);return Math.exp(-xi*wn*t)*Math.cos(w*t);}"
++ "function tXf(t){return wL+(t/tMax)*wW;}"
++ "function vYf(v){return wCY-v*(wH/2);}"
++ "function zig(x,y1,y2,n){"
++ "var s=(y2-y1)/(2*n+2);c.beginPath();c.moveTo(x,y1);c.lineTo(x,y1+s);"
++ "for(var i=0;i<n;i++){c.lineTo(x-10,y1+s*(2*i+2));c.lineTo(x+10,y1+s*(2*i+3));}"
++ "c.lineTo(x,y2);c.strokeStyle=\"#777\";c.lineWidth=1.5;c.stroke();}"
++ "function pis(x,y1,y2){"
++ "var m=(y1+y2)/2,pw=7,ph=14;c.strokeStyle=\"#aaa\";c.lineWidth=1.5;"
++ "c.beginPath();c.moveTo(x,y1);c.lineTo(x,m-ph/2);c.stroke();"
++ "c.strokeRect(x-pw,m-ph/2,pw*2,ph);"
++ "c.beginPath();c.moveTo(x,m+ph/2);c.lineTo(x,y2);c.stroke();}"
++ "function bx(x,y,w,h,col,txt){"
++ "c.fillStyle=col;c.fillRect(x,y,w,h);c.fillStyle=\"#fff\";"
++ "c.font=\"bold 13px sans-serif\";c.textAlign=\"center\";c.fillText(txt,x+w/2,y+h/2+5);}"
++ "function drawMS(tCur){"
++ "var a1=amp*rsp(tCur,x1v),a2=amp*rsp(tCur,x2v);"
++ "c.fillStyle=\"#333\";c.font=\"bold 12px sans-serif\";c.textAlign=\"center\";"
++ "c.fillText(\"__TITLE__\",W/2,16);"
++ "var px1=290;"
++ "c.fillStyle=c1;c.font=\"bold 10px sans-serif\";"
++ "c.fillText(\"\\u03BE = \"+x1v+\" (__LAB1__)\",px1,33);"
++ "c.fillStyle=\"#666\";c.fillRect(px1-50,40,100,5);"
++ "for(var i=0;i<5;i++)c.fillRect(px1-45+i*20,35,2,5);"
++ "zig(px1-18,45,eq+a1,5);pis(px1+18,45,eq+a1);bx(px1-22,eq+a1,44,32,c1,\"m\");"
++ "var px2=590;"
++ "c.fillStyle=c2;c.font=\"bold 10px sans-serif\";"
++ "c.fillText(\"\\u03BE = \"+x2v+\" (__LAB2__)\",px2,33);"
++ "c.fillStyle=\"#666\";c.fillRect(px2-50,40,100,5);"
++ "for(var i=0;i<5;i++)c.fillRect(px2-45+i*20,35,2,5);"
++ "zig(px2-18,45,eq+a2,5);pis(px2+18,45,eq+a2);bx(px2-22,eq+a2,44,32,c2,\"m\");"
++ "c.setLineDash([3,3]);c.strokeStyle=\"#bbb\";c.lineWidth=0.5;"
++ "c.beginPath();c.moveTo(200,eq+16);c.lineTo(700,eq+16);c.stroke();c.setLineDash([]);"
++ "c.fillStyle=\"#aaa\";c.font=\"8px sans-serif\";c.textAlign=\"left\";c.fillText(\"equilibrio\",205,eq+14);"
++ "if(Math.abs(a1)>2){c.strokeStyle=c1;c.lineWidth=1;"
++ "c.beginPath();c.moveTo(px1+28,eq+16);c.lineTo(px1+28,eq+a1+16);c.stroke();"
++ "c.beginPath();c.moveTo(px1+25,eq+a1+16);c.lineTo(px1+28,eq+a1+10);c.stroke();"
++ "c.beginPath();c.moveTo(px1+31,eq+a1+16);c.lineTo(px1+28,eq+a1+10);c.stroke();}"
++ "if(Math.abs(a2)>2){c.strokeStyle=c2;c.lineWidth=1;"
++ "c.beginPath();c.moveTo(px2+28,eq+16);c.lineTo(px2+28,eq+a2+16);c.stroke();"
++ "c.beginPath();c.moveTo(px2+25,eq+a2+16);c.lineTo(px2+28,eq+a2+10);c.stroke();"
++ "c.beginPath();c.moveTo(px2+31,eq+a2+16);c.lineTo(px2+28,eq+a2+10);c.stroke();}"
++ "c.textAlign=\"center\";c.font=\"11px sans-serif\";"
++ "c.fillStyle=c1;c.fillText(\"\\u2195 Vibra MUCHO\",px1,msH-5);"
++ "c.fillStyle=c2;c.fillText(\"\\u2195 Vibra poco\",px2,msH-5);}"
++ "function drawPH(n){"
++ "c.fillStyle=\"#333\";c.font=\"bold 11px sans-serif\";c.textAlign=\"center\";"
++ "c.fillText(\"Diagrama Fasorial (espiral)\",pcx,205);"
++ "c.setLineDash([3,3]);c.strokeStyle=\"#ddd\";c.lineWidth=1;"
++ "c.beginPath();c.arc(pcx,pcy,pR,0,2*Math.PI);c.stroke();"
++ "c.beginPath();c.arc(pcx,pcy,pR*0.5,0,2*Math.PI);c.stroke();"
++ "c.setLineDash([]);c.strokeStyle=\"#ddd\";c.lineWidth=0.5;"
++ "c.beginPath();c.moveTo(pcx-pR-10,pcy);c.lineTo(pcx+pR+10,pcy);c.stroke();"
++ "c.beginPath();c.moveTo(pcx,pcy-pR-10);c.lineTo(pcx,pcy+pR+10);c.stroke();"
++ "drawSp(x1v,c1,n);drawSp(x2v,c2,n);"
++ "c.fillStyle=\"#999\";c.font=\"9px sans-serif\";c.textAlign=\"center\";"
++ "c.fillText(\"El vector gira y decrece\",pcx,H-8);}"
++ "function drawSp(xi,col,n){"
++ "c.strokeStyle=col;c.lineWidth=1.5;c.globalAlpha=0.5;c.beginPath();"
++ "for(var i=0;i<=n;i++){var t=i*tMax/nP,px=pcx+pXf(t,xi)*pR,py=pcy-rsp(t,xi)*pR;"
++ "if(i===0)c.moveTo(px,py);else c.lineTo(px,py);}"
++ "c.stroke();c.globalAlpha=1;"
++ "if(n>0){var t2=n*tMax/nP,px2=pcx+pXf(t2,xi)*pR,py2=pcy-rsp(t2,xi)*pR;"
++ "c.fillStyle=col;c.beginPath();c.arc(px2,py2,4,0,2*Math.PI);c.fill();"
++ "c.strokeStyle=col;c.globalAlpha=0.3;c.lineWidth=1;"
++ "c.beginPath();c.moveTo(pcx,pcy);c.lineTo(px2,py2);c.stroke();c.globalAlpha=1;}}"
++ "function drawWF(n){"
++ "c.fillStyle=\"#333\";c.font=\"bold 11px sans-serif\";c.textAlign=\"center\";"
++ "c.fillText(\"Forma Sinusoidal x(t)\",wL+wW/2,205);"
++ "c.strokeStyle=\"#eee\";c.lineWidth=0.5;var i;"
++ "for(i=0;i<=10;i++){var gx=wL+i*wW/10;c.beginPath();c.moveTo(gx,wT);c.lineTo(gx,wB);c.stroke();}"
++ "for(i=0;i<=8;i++){var gy=wT+i*wH/8;c.beginPath();c.moveTo(wL,gy);c.lineTo(wR,gy);c.stroke();}"
++ "c.strokeStyle=\"#bbb\";c.lineWidth=0.7;"
++ "c.beginPath();c.moveTo(wL,wCY);c.lineTo(wR,wCY);c.stroke();"
++ "c.strokeStyle=\"#999\";c.lineWidth=1;c.strokeRect(wL,wT,wW,wH);"
++ "c.fillStyle=\"#666\";c.font=\"9px sans-serif\";c.textAlign=\"right\";"
++ "c.fillText(\"1.0\",wL-3,wT+3);c.fillText(\"0\",wL-3,wCY+3);c.fillText(\"-1.0\",wL-3,wB+3);"
++ "c.textAlign=\"center\";"
++ "for(i=0;i<=5;i++)c.fillText((i*tMax/5).toFixed(0),tXf(i*tMax/5),wB+13);"
++ "c.fillText(\"t (s)\",wL+wW/2,H-5);"
++ "drawWv(x1v,c1,n);drawWv(x2v,c2,n);"
++ "if(n>0&&n<nP){var t=n*tMax/nP;"
++ "c.setLineDash([2,2]);c.strokeStyle=\"#666\";c.lineWidth=0.5;"
++ "c.beginPath();c.moveTo(tXf(t),wT);c.lineTo(tXf(t),wB);c.stroke();c.setLineDash([]);}}"
++ "function drawWv(xi,col,n){"
++ "c.setLineDash([3,3]);c.strokeStyle=col;c.globalAlpha=0.2;c.lineWidth=1;c.beginPath();"
++ "for(var i=0;i<=n;i++){var t=i*tMax/nP;if(i===0)c.moveTo(tXf(t),vYf(env(t,xi)));else c.lineTo(tXf(t),vYf(env(t,xi)));}"
++ "c.stroke();c.beginPath();"
++ "for(var i=0;i<=n;i++){var t=i*tMax/nP;if(i===0)c.moveTo(tXf(t),vYf(-env(t,xi)));else c.lineTo(tXf(t),vYf(-env(t,xi)));}"
++ "c.stroke();c.setLineDash([]);c.globalAlpha=1;"
++ "c.strokeStyle=col;c.lineWidth=2;c.beginPath();"
++ "for(var i=0;i<=n;i++){var t=i*tMax/nP;if(i===0)c.moveTo(tXf(t),vYf(rsp(t,xi)));else c.lineTo(tXf(t),vYf(rsp(t,xi)));}"
++ "c.stroke();"
++ "if(n>0&&n<nP){var t=n*tMax/nP;c.fillStyle=col;c.beginPath();c.arc(tXf(t),vYf(rsp(t,xi)),3,0,2*Math.PI);c.fill();}}"
++ "function conn(n){"
++ "if(n<1||n>=nP)return;var t=n*tMax/nP;"
++ "c.setLineDash([2,3]);c.lineWidth=1;"
++ "var v1=rsp(t,x1v),yC1=pcy-v1*pR;"
++ "c.strokeStyle=c1;c.globalAlpha=0.25;"
++ "c.beginPath();c.moveTo(pcx+pR+5,yC1);c.lineTo(wL,yC1);c.stroke();"
++ "var v2=rsp(t,x2v),yC2=pcy-v2*pR;"
++ "c.strokeStyle=c2;"
++ "c.beginPath();c.moveTo(pcx+pR+5,yC2);c.lineTo(wL,yC2);c.stroke();"
++ "c.setLineDash([]);c.globalAlpha=1;}"
++ "function leg(){"
++ "c.lineWidth=2;c.font=\"10px sans-serif\";c.textAlign=\"left\";"
++ "c.strokeStyle=c1;c.beginPath();c.moveTo(20,H-12);c.lineTo(40,H-12);c.stroke();"
++ "c.fillStyle=c1;c.fillText(\"\\u03BE=\"+x1v+\" (__LAB1__)\",44,H-8);"
++ "c.strokeStyle=c2;c.beginPath();c.moveTo(W/2-30,H-12);c.lineTo(W/2-10,H-12);c.stroke();"
++ "c.fillStyle=c2;c.fillText(\"\\u03BE=\"+x2v+\" (__LAB2__)\",W/2-6,H-8);}"
++ "function frame(){"
++ "c.clearRect(0,0,W,H);c.fillStyle=\"#fafafa\";c.fillRect(0,0,W,H);"
++ "var n=Math.min(Math.floor(prog),nP),tCur=n*tMax/nP;"
++ "c.strokeStyle=\"#ddd\";c.lineWidth=1;"
++ "c.beginPath();c.moveTo(10,msH+7);c.lineTo(W-10,msH+7);c.stroke();"
++ "drawMS(tCur);drawPH(n);drawWF(n);conn(n);leg();"
++ "if(n>=nP){pF++;if(pF>150){prog=0;pF=0;}}else{prog+=spd;}"
++ "requestAnimationFrame(frame);}"
++ "frame();})();";
+
+            js = js.Replace("__UID__", uid)
+                   .Replace("__XI1__", xi1)
+                   .Replace("__XI2__", xi2)
+                   .Replace("__WN__", wnVal)
+                   .Replace("__TITLE__", JsEsc(title))
+                   .Replace("__LAB1__", JsEsc(label1))
+                   .Replace("__LAB2__", JsEsc(label2));
+
+            sb.Append("<script>").Append(js).Append("</script>");
+            return sb.ToString();
+        }
+
 
         // =====================================================================
         // @{tree} - Tree/hierarchy diagram DSL
@@ -1735,6 +2079,15 @@ namespace Hekatan.Common.MultLangCode
                 bool hasAxes = false;
                 bool needsArrowDef = false;
                 int groupDepth = 0;
+                var animCode = new System.Text.StringBuilder();
+                int animIdx = 0;
+
+                // Persistent state for @{three} DSL
+                string currentThreeColor = "#4488ff";
+                string currentThreeOpacity = "1";
+                string currentThreeWireframe = "false";
+                string currentThreeMetalness = "0.1";
+                string currentThreeRoughness = "0.5";
 
                 foreach (var rawLine in lines)
                 {
@@ -1762,10 +2115,58 @@ namespace Hekatan.Common.MultLangCode
                     string GetOpt(string key, string def = null) => opts.ContainsKey(key) ? opts[key] : def;
                     string Pos(int idx, string def = "0") => idx < posParams.Count ? posParams[idx] : def;
                     string ColorHex(string c) => c != null ? (c.StartsWith("#") ? "0x" + c.Substring(1) : c.StartsWith("0x") ? c : "0x" + c) : "0x4488ff";
-                    string OptColor() => ColorHex(GetOpt("color", "#4488ff"));
+                    // Use persistent color state as default
+                    string OptColor() => ColorHex(GetOpt("color") ?? currentThreeColor);
+                    string OptOpacity() => GetOpt("opacity") ?? currentThreeOpacity;
+                    string OptWireframe() => GetOpt("wireframe") ?? currentThreeWireframe;
+                    string OptMetalness() => GetOpt("metalness") ?? currentThreeMetalness;
+                    string OptRoughness() => GetOpt("roughness") ?? currentThreeRoughness;
+
+                    // animate: support — returns JS snippet to inject inside mesh block scope
+                    string AnimSuffix(string px, string py, string pz) {
+                        var anim = GetOpt("animate");
+                        if (string.IsNullOrEmpty(anim)) return "";
+                        var aName = $"_a{animIdx++}";
+                        var parts = anim.Split(',');
+                        var tp = parts[0].ToLower();
+                        var p1 = parts.Length > 1 ? parts[1] : "1";
+                        var p2 = parts.Length > 2 ? parts[2] : "1";
+                        var sfx = $" mesh.name='{aName}';";
+                        if (tp.StartsWith("oscillate-")) {
+                            var ax = tp[tp.Length - 1].ToString();
+                            var ov = ax == "x" ? px : ax == "y" ? py : pz;
+                            sfx += $" mesh.userData._o={ov};";
+                            animCode.AppendLine($"    {{ var o=scene.getObjectByName('{aName}'); if(o) o.position.{ax}=o.userData._o+{p1}*Math.sin({p2}*t*2*Math.PI); }}");
+                        } else if (tp.StartsWith("rotate-")) {
+                            var ax = tp[tp.Length - 1].ToString();
+                            animCode.AppendLine($"    {{ var o=scene.getObjectByName('{aName}'); if(o) o.rotation.{ax}+={p1}*0.01; }}");
+                        }
+                        return sfx;
+                    }
 
                     switch (cmd)
                     {
+                        // === Persistent state commands ===
+                        case "color":
+                            currentThreeColor = Pos(0, "#4488ff");
+                            break;
+                        case "opacity":
+                            currentThreeOpacity = Pos(0, "1");
+                            break;
+                        case "wireframe":
+                            currentThreeWireframe = Pos(0, "false");
+                            break;
+                        case "metalness":
+                            currentThreeMetalness = Pos(0, "0.1");
+                            break;
+                        case "roughness":
+                            currentThreeRoughness = Pos(0, "0.5");
+                            break;
+                        case "reset":
+                            currentThreeColor = "#4488ff"; currentThreeOpacity = "1"; currentThreeWireframe = "false";
+                            currentThreeMetalness = "0.1"; currentThreeRoughness = "0.5";
+                            break;
+
                         case "background":
                         case "bg":
                             bgColor = ColorHex(Pos(0, "#1a1a2e"));
@@ -1807,11 +2208,11 @@ namespace Hekatan.Common.MultLangCode
                             var x = Pos(0); var y = Pos(1); var z = Pos(2);
                             var size = GetOpt("size", "1,1,1").Split(',');
                             var sx = size[0]; var sy = size.Length > 1 ? size[1] : size[0]; var sz = size.Length > 2 ? size[2] : size[0];
-                            var wf = GetOpt("wireframe", "false");
-                            var op = GetOpt("opacity", "1");
-                            var mt = GetOpt("metalness", "0.1");
-                            var rg = GetOpt("roughness", "0.5");
-                            objectsJs.AppendLine($"  {{ var g=new THREE.BoxGeometry({sx},{sy},{sz}); var m=new THREE.MeshStandardMaterial({{color:{OptColor()},wireframe:{wf},opacity:{op},transparent:{op}!=='1'?true:false,metalness:{mt},roughness:{rg}}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.castShadow=true; mesh.receiveShadow=true; {ApplyRotation(GetOpt("rotation"))} currentGroup.add(mesh); }}");
+                            var wf = OptWireframe();
+                            var op = OptOpacity();
+                            var mt = OptMetalness();
+                            var rg = OptRoughness();
+                            objectsJs.AppendLine($"  {{ var g=new THREE.BoxGeometry({sx},{sy},{sz}); var m=new THREE.MeshStandardMaterial({{color:{OptColor()},wireframe:{wf},opacity:{op},transparent:{op}!=='1'?true:false,metalness:{mt},roughness:{rg}}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.castShadow=true; mesh.receiveShadow=true; {ApplyRotation(GetOpt("rotation"))}{AnimSuffix(x,y,z)} currentGroup.add(mesh); }}");
                             break;
                         }
 
@@ -1820,9 +2221,9 @@ namespace Hekatan.Common.MultLangCode
                             var x = Pos(0); var y = Pos(1); var z = Pos(2);
                             var r = GetOpt("radius", GetOpt("r", "0.5"));
                             var seg = GetOpt("segments", "32");
-                            var wf = GetOpt("wireframe", "false");
-                            var op = GetOpt("opacity", "1");
-                            objectsJs.AppendLine($"  {{ var g=new THREE.SphereGeometry({r},{seg},{seg}); var m=new THREE.MeshStandardMaterial({{color:{OptColor()},wireframe:{wf},opacity:{op},transparent:{op}!=='1'?true:false}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.castShadow=true; {ApplyRotation(GetOpt("rotation"))} currentGroup.add(mesh); }}");
+                            var wf = OptWireframe();
+                            var op = OptOpacity();
+                            objectsJs.AppendLine($"  {{ var g=new THREE.SphereGeometry({r},{seg},{seg}); var m=new THREE.MeshStandardMaterial({{color:{OptColor()},wireframe:{wf},opacity:{op},transparent:{op}!=='1'?true:false}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.castShadow=true; {ApplyRotation(GetOpt("rotation"))}{AnimSuffix(x,y,z)} currentGroup.add(mesh); }}");
                             break;
                         }
 
@@ -1832,8 +2233,9 @@ namespace Hekatan.Common.MultLangCode
                             var r = GetOpt("radius", GetOpt("r", "0.5"));
                             var h = GetOpt("height", GetOpt("h", "1"));
                             var seg = GetOpt("segments", "32");
-                            var wf = GetOpt("wireframe", "false");
-                            objectsJs.AppendLine($"  {{ var g=new THREE.CylinderGeometry({r},{r},{h},{seg}); var m=new THREE.MeshStandardMaterial({{color:{OptColor()},wireframe:{wf}}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.castShadow=true; {ApplyRotation(GetOpt("rotation"))} currentGroup.add(mesh); }}");
+                            var wf = OptWireframe();
+                            var op = OptOpacity();
+                            objectsJs.AppendLine($"  {{ var g=new THREE.CylinderGeometry({r},{r},{h},{seg}); var m=new THREE.MeshStandardMaterial({{color:{OptColor()},wireframe:{wf},opacity:{op},transparent:{op}!=='1'?true:false}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.castShadow=true; {ApplyRotation(GetOpt("rotation"))}{AnimSuffix(x,y,z)} currentGroup.add(mesh); }}");
                             break;
                         }
 
@@ -1842,7 +2244,8 @@ namespace Hekatan.Common.MultLangCode
                             var x = Pos(0); var y = Pos(1); var z = Pos(2);
                             var r = GetOpt("radius", GetOpt("r", "0.5"));
                             var h = GetOpt("height", GetOpt("h", "1"));
-                            objectsJs.AppendLine($"  {{ var g=new THREE.ConeGeometry({r},{h},32); var m=new THREE.MeshStandardMaterial({{color:{OptColor()}}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.castShadow=true; {ApplyRotation(GetOpt("rotation"))} currentGroup.add(mesh); }}");
+                            var op = OptOpacity();
+                            objectsJs.AppendLine($"  {{ var g=new THREE.ConeGeometry({r},{h},32); var m=new THREE.MeshStandardMaterial({{color:{OptColor()},opacity:{op},transparent:{op}!=='1'?true:false}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.castShadow=true; {ApplyRotation(GetOpt("rotation"))}{AnimSuffix(x,y,z)} currentGroup.add(mesh); }}");
                             break;
                         }
 
@@ -1851,7 +2254,8 @@ namespace Hekatan.Common.MultLangCode
                             var x = Pos(0); var y = Pos(1); var z = Pos(2);
                             var r = GetOpt("radius", GetOpt("r", "1"));
                             var tube = GetOpt("tube", "0.3");
-                            objectsJs.AppendLine($"  {{ var g=new THREE.TorusGeometry({r},{tube},16,48); var m=new THREE.MeshStandardMaterial({{color:{OptColor()}}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.castShadow=true; {ApplyRotation(GetOpt("rotation"))} currentGroup.add(mesh); }}");
+                            var op = OptOpacity();
+                            objectsJs.AppendLine($"  {{ var g=new THREE.TorusGeometry({r},{tube},16,48); var m=new THREE.MeshStandardMaterial({{color:{OptColor()},opacity:{op},transparent:{op}!=='1'?true:false}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.castShadow=true; {ApplyRotation(GetOpt("rotation"))}{AnimSuffix(x,y,z)} currentGroup.add(mesh); }}");
                             break;
                         }
 
@@ -1860,7 +2264,7 @@ namespace Hekatan.Common.MultLangCode
                             var x = Pos(0); var y = Pos(1); var z = Pos(2);
                             var size = GetOpt("size", "10,10").Split(',');
                             var sw = size[0]; var sh = size.Length > 1 ? size[1] : size[0];
-                            var op = GetOpt("opacity", "1");
+                            var op = OptOpacity();
                             objectsJs.AppendLine($"  {{ var g=new THREE.PlaneGeometry({sw},{sh}); var m=new THREE.MeshStandardMaterial({{color:{OptColor()},side:THREE.DoubleSide,opacity:{op},transparent:{op}!=='1'?true:false}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.receiveShadow=true; {ApplyRotation(GetOpt("rotation", "-90,0,0"))} currentGroup.add(mesh); }}");
                             break;
                         }
@@ -2395,6 +2799,99 @@ namespace Hekatan.Common.MultLangCode
                             }
                             break;
                         }
+
+                        // === NEW: Circular arc 3D with arrow (moment indicator) ===
+                        case "carc3d":
+                        {
+                            // carc3d x y z r startAngle endAngle plane:XZ segments:32
+                            var x = Pos(0); var y = Pos(1); var z = Pos(2);
+                            var arcR = GetOpt("r", Pos(3, "0.5"));
+                            var arcStart = GetOpt("start", Pos(4, "0"));
+                            var arcEnd = GetOpt("end", Pos(5, "270"));
+                            var arcPlane = GetOpt("plane", "XZ").ToUpper();
+                            var arcSeg = GetOpt("segments", "32");
+                            var arcColor = ColorHex(GetOpt("color") ?? currentThreeColor);
+                            // Generate arc points in the specified plane + arrowhead cone at end
+                            objectsJs.AppendLine($"  {{ var pts=[]; var r=parseFloat({arcR}); var s=parseFloat({arcStart})*Math.PI/180; var e=parseFloat({arcEnd})*Math.PI/180; var n=parseInt({arcSeg}); for(var i=0;i<=n;i++){{ var a=s+(e-s)*i/n; var px,py,pz; if('{arcPlane}'==='XY'){{ px=r*Math.cos(a); py=r*Math.sin(a); pz=0; }} else if('{arcPlane}'==='YZ'){{ px=0; py=r*Math.cos(a); pz=r*Math.sin(a); }} else {{ px=r*Math.cos(a); py=0; pz=r*Math.sin(a); }} pts.push(new THREE.Vector3(parseFloat({x})+px,parseFloat({y})+py,parseFloat({z})+pz)); }} var g=new THREE.BufferGeometry().setFromPoints(pts); var m=new THREE.LineBasicMaterial({{color:{arcColor},linewidth:2}}); currentGroup.add(new THREE.Line(g,m)); var tip=pts[pts.length-1]; var prev=pts[pts.length-2]; var tDir=new THREE.Vector3().subVectors(tip,prev).normalize(); var ag=new THREE.ConeGeometry(0.06,0.18,8); var am=new THREE.MeshBasicMaterial({{color:{arcColor}}}); var aM=new THREE.Mesh(ag,am); aM.position.copy(tip); var up=new THREE.Vector3(0,1,0); var q=new THREE.Quaternion().setFromUnitVectors(up,tDir); aM.setRotationFromQuaternion(q); currentGroup.add(aM); }}");
+                            break;
+                        }
+
+                        // === NEW: 3D Dimension line ===
+                        case "dim3d":
+                        {
+                            // dim3d x1 y1 z1 x2 y2 z2 text:"5 m" offset:0.3
+                            var x1 = Pos(0); var y1 = Pos(1); var z1 = Pos(2);
+                            var x2 = Pos(3); var y2 = Pos(4); var z2 = Pos(5);
+                            var dimText = Pos(6, "");
+                            var dimOff = GetOpt("offset", "0.3");
+                            var dimColor = ColorHex(GetOpt("color") ?? currentThreeColor);
+                            // Line + two arrows pointing inward + text sprite
+                            objectsJs.AppendLine($"  {{ var p1=new THREE.Vector3({x1},{y1},{z1}); var p2=new THREE.Vector3({x2},{y2},{z2}); var dir=new THREE.Vector3().subVectors(p2,p1); var len=dir.length(); var mid=new THREE.Vector3().addVectors(p1,p2).multiplyScalar(0.5); var d=dir.clone().normalize(); var pts=[p1,p2]; var g=new THREE.BufferGeometry().setFromPoints(pts); var m=new THREE.LineBasicMaterial({{color:{dimColor},linewidth:1}}); currentGroup.add(new THREE.Line(g,m)); currentGroup.add(new THREE.ArrowHelper(d,p1,len*0.15,{dimColor},0.12,0.06)); currentGroup.add(new THREE.ArrowHelper(d.clone().negate(),p2,len*0.15,{dimColor},0.12,0.06)); if('{EscAttr(dimText)}'.length>0){{ var canvas=document.createElement('canvas'); var ctx=canvas.getContext('2d'); canvas.width=256; canvas.height=64; ctx.font='bold 28px Arial'; ctx.fillStyle='#{GetOpt("color", currentThreeColor).Replace("#","").Replace("0x","")}'; ctx.textAlign='center'; ctx.fillText('{EscAttr(dimText)}',128,40); var tex=new THREE.CanvasTexture(canvas); var sp=new THREE.Sprite(new THREE.SpriteMaterial({{map:tex}})); sp.position.copy(mid); sp.position.y+=parseFloat({dimOff}); sp.scale.set(len*0.5,len*0.125,1); currentGroup.add(sp); }} }}");
+                            break;
+                        }
+
+                        // === NEW: Labeled axes with ticks ===
+                        case "axes_labeled":
+                        case "axeslabeled":
+                        {
+                            // axes_labeled length:5 ticks:true labels:X,Y,Z
+                            var aLen = GetOpt("length", GetOpt("size", "5"));
+                            var labelsStr = GetOpt("labels", "X,Y,Z").Split(',');
+                            var xLbl = labelsStr.Length > 0 ? labelsStr[0] : "X";
+                            var yLbl = labelsStr.Length > 1 ? labelsStr[1] : "Y";
+                            var zLbl = labelsStr.Length > 2 ? labelsStr[2] : "Z";
+                            bool ticks = GetOpt("ticks", "true") != "false";
+                            var tickStep = GetOpt("step", "1");
+                            // 3 ArrowHelpers + text sprites for labels + optional tick marks
+                            objectsJs.AppendLine($"  {{ var aL=parseFloat({aLen}); var orig=new THREE.Vector3(0,0,0); currentGroup.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0),orig,aL,0xff3333,0.15,0.08)); currentGroup.add(new THREE.ArrowHelper(new THREE.Vector3(0,1,0),orig,aL,0x33ff33,0.15,0.08)); currentGroup.add(new THREE.ArrowHelper(new THREE.Vector3(0,0,1),orig,aL,0x3333ff,0.15,0.08)); function mkLbl(t,x,y,z,c){{ var cv=document.createElement('canvas'); cv.width=128;cv.height=48; var cx=cv.getContext('2d'); cx.font='bold 28px Arial'; cx.fillStyle=c; cx.textAlign='center'; cx.fillText(t,64,34); var tx=new THREE.CanvasTexture(cv); var sp=new THREE.Sprite(new THREE.SpriteMaterial({{map:tx}})); sp.position.set(x,y,z); sp.scale.set(0.6,0.2,1); return sp; }} currentGroup.add(mkLbl('{EscAttr(xLbl)}',aL+0.3,0,0,'#ff3333')); currentGroup.add(mkLbl('{EscAttr(yLbl)}',0,aL+0.3,0,'#33ff33')); currentGroup.add(mkLbl('{EscAttr(zLbl)}',0,0,aL+0.3,'#3333ff')); ");
+                            if (ticks)
+                            {
+                                objectsJs.AppendLine($"  var ts=parseFloat({tickStep}); for(var ti=ts;ti<=aL;ti+=ts){{ var tg=new THREE.SphereGeometry(0.02,4,4); var tmX=new THREE.Mesh(tg,new THREE.MeshBasicMaterial({{color:0xff3333}})); tmX.position.set(ti,0,0); currentGroup.add(tmX); var tmY=tmX.clone(); tmY.material=new THREE.MeshBasicMaterial({{color:0x33ff33}}); tmY.position.set(0,ti,0); currentGroup.add(tmY); var tmZ=tmX.clone(); tmZ.material=new THREE.MeshBasicMaterial({{color:0x3333ff}}); tmZ.position.set(0,0,ti); currentGroup.add(tmZ); currentGroup.add(mkLbl(ti.toFixed(0),ti,-0.2,0,'#666')); currentGroup.add(mkLbl(ti.toFixed(0),-0.2,ti,0,'#666')); currentGroup.add(mkLbl(ti.toFixed(0),0,-0.2,ti,'#666')); }}");
+                            }
+                            objectsJs.AppendLine("  }");
+                            hasAxes = true;
+                            break;
+                        }
+
+                        // === NEW: Plate/slab (flat box) ===
+                        case "plate":
+                        case "slab":
+                        {
+                            // plate x y z size:4,3 thickness:0.2
+                            var x = Pos(0); var y = Pos(1); var z = Pos(2);
+                            var pSize = GetOpt("size", "4,3").Split(',');
+                            var plW = pSize[0]; var plD = pSize.Length > 1 ? pSize[1] : pSize[0];
+                            var plT = GetOpt("thickness", GetOpt("t", "0.2"));
+                            var op = OptOpacity();
+                            objectsJs.AppendLine($"  {{ var g=new THREE.BoxGeometry({plW},{plT},{plD}); var m=new THREE.MeshStandardMaterial({{color:{OptColor()},opacity:{op},transparent:{op}!=='1'?true:false,side:THREE.DoubleSide}}); var mesh=new THREE.Mesh(g,m); mesh.position.set({x},{y},{z}); mesh.castShadow=true; mesh.receiveShadow=true; {ApplyRotation(GetOpt("rotation"))} currentGroup.add(mesh); }}");
+                            break;
+                        }
+
+                        // === NEW: Tube between two points ===
+                        case "tube":
+                        case "pipe":
+                        {
+                            // tube x1 y1 z1 x2 y2 z2 radius:0.05
+                            var x1 = Pos(0); var y1 = Pos(1); var z1 = Pos(2);
+                            var x2 = Pos(3); var y2 = Pos(4); var z2 = Pos(5);
+                            var tR = GetOpt("radius", GetOpt("r", "0.05"));
+                            var tSeg = GetOpt("segments", "12");
+                            objectsJs.AppendLine($"  {{ var p1=new THREE.Vector3({x1},{y1},{z1}); var p2=new THREE.Vector3({x2},{y2},{z2}); var dir=new THREE.Vector3().subVectors(p2,p1); var len=dir.length(); var mid=new THREE.Vector3().addVectors(p1,p2).multiplyScalar(0.5); var g=new THREE.CylinderGeometry({tR},{tR},len,{tSeg}); var m=new THREE.MeshStandardMaterial({{color:{OptColor()},metalness:0.3,roughness:0.6}}); var mesh=new THREE.Mesh(g,m); mesh.position.copy(mid); var ax=new THREE.Vector3(0,1,0); var d=dir.clone().normalize(); var q=new THREE.Quaternion().setFromUnitVectors(ax,d); mesh.setRotationFromQuaternion(q); mesh.castShadow=true; currentGroup.add(mesh); }}");
+                            break;
+                        }
+
+                        // === NEW: Double arrow (rotation DOF) ===
+                        case "darrow":
+                        {
+                            // darrow x y z dx dy dz length:1 — flecha doble para grados de libertad rotacionales
+                            var x = Pos(0); var y = Pos(1); var z = Pos(2);
+                            var dx = Pos(3, "0"); var dy = Pos(4, "1"); var dz = Pos(5, "0");
+                            var daLen = GetOpt("length", "1");
+                            var daColor = ColorHex(GetOpt("color") ?? currentThreeColor);
+                            // Two arrows pointing in opposite directions from center
+                            objectsJs.AppendLine($"  {{ var dir=new THREE.Vector3({dx},{dy},{dz}).normalize(); var orig=new THREE.Vector3({x},{y},{z}); var hLen=parseFloat({daLen})*0.5; var p1=orig.clone().sub(dir.clone().multiplyScalar(hLen)); currentGroup.add(new THREE.ArrowHelper(dir,p1,parseFloat({daLen}),{daColor},0.15,0.08)); currentGroup.add(new THREE.ArrowHelper(dir.clone().negate(),orig.clone().add(dir.clone().multiplyScalar(hLen)),parseFloat({daLen}),{daColor},0.15,0.08)); }}");
+                            break;
+                        }
                     }
                 }
 
@@ -2448,7 +2945,19 @@ namespace Hekatan.Common.MultLangCode
                 sb.AppendLine("  controls.update();");
 
                 // Animation loop
-                sb.AppendLine("  function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene,camera); }");
+                if (animCode.Length > 0)
+                {
+                    sb.AppendLine("  function animate(){");
+                    sb.AppendLine("    requestAnimationFrame(animate);");
+                    sb.AppendLine("    var t=performance.now()*0.001;");
+                    sb.Append(animCode);
+                    sb.AppendLine("    controls.update(); renderer.render(scene,camera);");
+                    sb.AppendLine("  }");
+                }
+                else
+                {
+                    sb.AppendLine("  function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene,camera); }");
+                }
                 sb.AppendLine("  animate();");
 
                 // Resize handler
@@ -3529,7 +4038,9 @@ animate();
         private string EscAttr(string val) => System.Net.WebUtility.HtmlEncode(val ?? "");
 
         /// <summary>Convert a DSL command line to an SVG element string</summary>
-        private string? ConvertSvgCommand(string cmd, List<string> tokens, int svgW, int svgH)
+        private string? ConvertSvgCommand(string cmd, List<string> tokens, int svgW, int svgH, bool yUp,
+            string defStroke, string defFill, string defWidth, string defOpacity, string defDash,
+            string defFont, string defFontSize)
         {
             // Extract options (key:value pairs) and flags (bold, italic)
             var opts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -3561,7 +4072,7 @@ animate();
                 }
             }
 
-            // Helper to get style attributes
+            // Helper to get style attributes (with persistent state fallbacks)
             string GetStroke() => opts.TryGetValue("stroke", out var s) ? s : null;
             string GetFill() => opts.TryGetValue("fill", out var f) ? f : null;
             string GetWidth() => opts.TryGetValue("width", out var w) ? w : null;
@@ -3571,11 +4082,12 @@ animate();
             string BuildStyle(string defaultStroke = null, string defaultFill = "none")
             {
                 var sb = new StringBuilder();
-                var stroke = GetStroke() ?? defaultStroke;
-                var fill = GetFill() ?? defaultFill;
-                var width = GetWidth();
-                var opacity = GetOpacity();
-                var dash = GetDash();
+                var stroke = GetStroke() ?? defaultStroke ?? defStroke;
+                var fill = GetFill() ?? (defaultFill != "none" ? defaultFill : null) ?? defFill;
+                if (fill == null) fill = "none"; // ensure fill is always set
+                var width = GetWidth() ?? defWidth;
+                var opacity = GetOpacity() ?? defOpacity;
+                var dash = GetDash() ?? defDash;
 
                 if (stroke != null) sb.Append($" stroke=\"{EscAttr(stroke)}\"");
                 if (fill != null) sb.Append($" fill=\"{EscAttr(fill)}\"");
@@ -3587,6 +4099,8 @@ animate();
 
             double P(int idx) => idx < posParams.Count && double.TryParse(posParams[idx],
                 System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0;
+
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
 
             switch (cmd)
             {
@@ -3608,7 +4122,6 @@ animate();
 
                 case "polyline":
                 {
-                    // All positional params are x,y pairs
                     var points = string.Join(" ", posParams);
                     return $"<polyline points=\"{EscAttr(points)}\"{BuildStyle("black", "none")}/>";
                 }
@@ -3621,19 +4134,30 @@ animate();
 
                 case "text":
                 {
-                    // text x y "content" [options]
-                    // textContent was captured from the quoted string
                     var txt = textContent ?? "";
-                    var size = opts.TryGetValue("size", out var sz) ? sz : "12";
-                    var color = opts.TryGetValue("color", out var cl) ? cl : (GetStroke() ?? "black");
+                    var size = opts.TryGetValue("size", out var sz) ? sz : (defFontSize ?? "12");
+                    var color = opts.TryGetValue("color", out var cl) ? cl : (GetStroke() ?? defStroke ?? "black");
                     var anchor = opts.TryGetValue("anchor", out var an) ? an : "start";
-                    var font = opts.TryGetValue("font", out var fn) ? fn : "sans-serif";
+                    var font = opts.TryGetValue("font", out var fn) ? fn : (defFont ?? "sans-serif");
                     var rotate = opts.TryGetValue("rotate", out var rt) ? rt : null;
                     var fontWeight = flags.Contains("bold") ? " font-weight=\"bold\"" : "";
                     var fontStyle = flags.Contains("italic") ? " font-style=\"italic\"" : "";
-                    var transform = rotate != null ? $" transform=\"rotate({EscAttr(rotate)},{P(0)},{P(1)})\"" : "";
-                    return $"<text x=\"{P(0)}\" y=\"{P(1)}\" font-size=\"{EscAttr(size)}\" fill=\"{EscAttr(color)}\" " +
-                           $"text-anchor=\"{EscAttr(anchor)}\" font-family=\"{EscAttr(font)}\"{fontWeight}{fontStyle}{transform}>{System.Net.WebUtility.HtmlEncode(txt)}</text>";
+                    var transform = "";
+                    if (yUp)
+                    {
+                        // Counter-scale text so it reads correctly when parent is flipped
+                        var baseTransform = $"translate({P(0).ToString(inv)},{P(1).ToString(inv)}) scale(1,-1)";
+                        if (rotate != null) baseTransform += $" rotate({EscAttr(rotate)})";
+                        transform = $" transform=\"{baseTransform}\"";
+                        return $"<text x=\"0\" y=\"0\" font-size=\"{EscAttr(size)}\" fill=\"{EscAttr(color)}\" " +
+                               $"text-anchor=\"{EscAttr(anchor)}\" font-family=\"{EscAttr(font)}\"{fontWeight}{fontStyle}{transform}>{System.Net.WebUtility.HtmlEncode(txt)}</text>";
+                    }
+                    else
+                    {
+                        transform = rotate != null ? $" transform=\"rotate({EscAttr(rotate)},{P(0)},{P(1)})\"" : "";
+                        return $"<text x=\"{P(0)}\" y=\"{P(1)}\" font-size=\"{EscAttr(size)}\" fill=\"{EscAttr(color)}\" " +
+                               $"text-anchor=\"{EscAttr(anchor)}\" font-family=\"{EscAttr(font)}\"{fontWeight}{fontStyle}{transform}>{System.Net.WebUtility.HtmlEncode(txt)}</text>";
+                    }
                 }
 
                 case "arc":
@@ -3648,26 +4172,285 @@ animate();
                     double x2 = cx + r * Math.Cos(endRad);
                     double y2 = cy - r * Math.Sin(endRad);
                     int largeArc = Math.Abs(endDeg - startDeg) > 180 ? 1 : 0;
-                    var inv = System.Globalization.CultureInfo.InvariantCulture;
                     return $"<path d=\"M {x1.ToString(inv)} {y1.ToString(inv)} A {r.ToString(inv)} {r.ToString(inv)} 0 {largeArc} 0 {x2.ToString(inv)} {y2.ToString(inv)}\"{BuildStyle("black", "none")}/>";
                 }
 
                 case "arrow":
                     return $"<line x1=\"{P(0)}\" y1=\"{P(1)}\" x2=\"{P(2)}\" y2=\"{P(3)}\"{BuildStyle("black")} marker-end=\"url(#svg-arrowhead)\"/>";
 
+                // === NEW: Double arrow (rotation DOF — flecha doble como en Fig 5.5) ===
+                case "darrow":
+                    return $"<line x1=\"{P(0)}\" y1=\"{P(1)}\" x2=\"{P(2)}\" y2=\"{P(3)}\"{BuildStyle("black")} marker-start=\"url(#svg-darrow-start)\" marker-end=\"url(#svg-darrow-end)\"/>";
+
+                // === NEW: Dimension line ===
+                case "dim":
+                {
+                    // dim x1 y1 x2 y2 offset:15 text:"2.5 m" size:10
+                    double x1 = P(0), y1 = P(1), x2 = P(2), y2 = P(3);
+                    double offset = opts.TryGetValue("offset", out var ov) && double.TryParse(ov, System.Globalization.NumberStyles.Float, inv, out var ov2) ? ov2 : 15;
+                    var dimText = textContent ?? "";
+                    var dimSize = opts.TryGetValue("size", out var dsz) ? dsz : "9";
+                    var dimColor = GetStroke() ?? defStroke ?? "black";
+
+                    // Direction vector and perpendicular
+                    double dx = x2 - x1, dy = y2 - y1;
+                    double len = Math.Sqrt(dx * dx + dy * dy);
+                    if (len < 0.01) return null;
+                    double nx = -dy / len, ny = dx / len; // perpendicular (offset direction)
+
+                    // Offset points for dimension line
+                    double ox1 = x1 + nx * offset, oy1 = y1 + ny * offset;
+                    double ox2 = x2 + nx * offset, oy2 = y2 + ny * offset;
+
+                    // Extension lines (from original points to offset points, extended a bit)
+                    double ext = offset > 0 ? 3 : -3;
+                    var sb = new StringBuilder();
+                    sb.Append($"<line x1=\"{x1.ToString(inv)}\" y1=\"{y1.ToString(inv)}\" x2=\"{(ox1 + nx * ext).ToString(inv)}\" y2=\"{(oy1 + ny * ext).ToString(inv)}\" stroke=\"{EscAttr(dimColor)}\" stroke-width=\"0.5\"/>");
+                    sb.Append($"<line x1=\"{x2.ToString(inv)}\" y1=\"{y2.ToString(inv)}\" x2=\"{(ox2 + nx * ext).ToString(inv)}\" y2=\"{(oy2 + ny * ext).ToString(inv)}\" stroke=\"{EscAttr(dimColor)}\" stroke-width=\"0.5\"/>");
+                    // Dimension line with arrows
+                    sb.Append($"<line x1=\"{ox1.ToString(inv)}\" y1=\"{oy1.ToString(inv)}\" x2=\"{ox2.ToString(inv)}\" y2=\"{oy2.ToString(inv)}\" stroke=\"{EscAttr(dimColor)}\" stroke-width=\"0.7\" marker-start=\"url(#svg-dim-start)\" marker-end=\"url(#svg-dim-end)\"/>");
+                    // Text at midpoint
+                    double mx = (ox1 + ox2) / 2, my = (oy1 + oy2) / 2;
+                    double angleDeg = Math.Atan2(dy, dx) * 180 / Math.PI;
+                    if (yUp) my -= 3; else my -= 3; // text offset above dimension line
+                    if (dimText.Length > 0)
+                    {
+                        if (yUp)
+                        {
+                            sb.Append($"<text transform=\"translate({mx.ToString(inv)},{my.ToString(inv)}) scale(1,-1)\" font-size=\"{EscAttr(dimSize)}\" fill=\"{EscAttr(dimColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(dimText)}</text>");
+                        }
+                        else
+                        {
+                            sb.Append($"<text x=\"{mx.ToString(inv)}\" y=\"{my.ToString(inv)}\" font-size=\"{EscAttr(dimSize)}\" fill=\"{EscAttr(dimColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(dimText)}</text>");
+                        }
+                    }
+                    return sb.ToString();
+                }
+
+                // === NEW: Horizontal dimension ===
+                case "hdim":
+                {
+                    // hdim x1 x2 y offset:15 text:"..." size:10
+                    double hx1 = P(0), hx2 = P(1), hy = P(2);
+                    double hoff = opts.TryGetValue("offset", out var hov) && double.TryParse(hov, System.Globalization.NumberStyles.Float, inv, out var hov2) ? hov2 : 15;
+                    var hText = textContent ?? $"{Math.Abs(hx2 - hx1).ToString(inv)}";
+                    var hSize = opts.TryGetValue("size", out var hsz) ? hsz : "9";
+                    var hColor = GetStroke() ?? defStroke ?? "black";
+                    double hy2 = hy + hoff;
+                    var sb = new StringBuilder();
+                    sb.Append($"<line x1=\"{hx1.ToString(inv)}\" y1=\"{hy.ToString(inv)}\" x2=\"{hx1.ToString(inv)}\" y2=\"{(hy2 + (hoff > 0 ? 3 : -3)).ToString(inv)}\" stroke=\"{EscAttr(hColor)}\" stroke-width=\"0.5\"/>");
+                    sb.Append($"<line x1=\"{hx2.ToString(inv)}\" y1=\"{hy.ToString(inv)}\" x2=\"{hx2.ToString(inv)}\" y2=\"{(hy2 + (hoff > 0 ? 3 : -3)).ToString(inv)}\" stroke=\"{EscAttr(hColor)}\" stroke-width=\"0.5\"/>");
+                    sb.Append($"<line x1=\"{hx1.ToString(inv)}\" y1=\"{hy2.ToString(inv)}\" x2=\"{hx2.ToString(inv)}\" y2=\"{hy2.ToString(inv)}\" stroke=\"{EscAttr(hColor)}\" stroke-width=\"0.7\" marker-start=\"url(#svg-dim-start)\" marker-end=\"url(#svg-dim-end)\"/>");
+                    double hmx = (hx1 + hx2) / 2;
+                    if (yUp)
+                        sb.Append($"<text transform=\"translate({hmx.ToString(inv)},{(hy2 - 3).ToString(inv)}) scale(1,-1)\" font-size=\"{EscAttr(hSize)}\" fill=\"{EscAttr(hColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(hText)}</text>");
+                    else
+                        sb.Append($"<text x=\"{hmx.ToString(inv)}\" y=\"{(hy2 - 3).ToString(inv)}\" font-size=\"{EscAttr(hSize)}\" fill=\"{EscAttr(hColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(hText)}</text>");
+                    return sb.ToString();
+                }
+
+                // === NEW: Vertical dimension ===
+                case "vdim":
+                {
+                    // vdim y1 y2 x offset:15 text:"..." size:10
+                    double vy1 = P(0), vy2 = P(1), vx = P(2);
+                    double voff = opts.TryGetValue("offset", out var vov) && double.TryParse(vov, System.Globalization.NumberStyles.Float, inv, out var vov2) ? vov2 : 15;
+                    var vText = textContent ?? $"{Math.Abs(vy2 - vy1).ToString(inv)}";
+                    var vSize = opts.TryGetValue("size", out var vsz) ? vsz : "9";
+                    var vColor = GetStroke() ?? defStroke ?? "black";
+                    double vx2 = vx + voff;
+                    var sb = new StringBuilder();
+                    sb.Append($"<line x1=\"{vx.ToString(inv)}\" y1=\"{vy1.ToString(inv)}\" x2=\"{(vx2 + (voff > 0 ? 3 : -3)).ToString(inv)}\" y2=\"{vy1.ToString(inv)}\" stroke=\"{EscAttr(vColor)}\" stroke-width=\"0.5\"/>");
+                    sb.Append($"<line x1=\"{vx.ToString(inv)}\" y1=\"{vy2.ToString(inv)}\" x2=\"{(vx2 + (voff > 0 ? 3 : -3)).ToString(inv)}\" y2=\"{vy2.ToString(inv)}\" stroke=\"{EscAttr(vColor)}\" stroke-width=\"0.5\"/>");
+                    sb.Append($"<line x1=\"{vx2.ToString(inv)}\" y1=\"{vy1.ToString(inv)}\" x2=\"{vx2.ToString(inv)}\" y2=\"{vy2.ToString(inv)}\" stroke=\"{EscAttr(vColor)}\" stroke-width=\"0.7\" marker-start=\"url(#svg-dim-start)\" marker-end=\"url(#svg-dim-end)\"/>");
+                    double vmy = (vy1 + vy2) / 2;
+                    if (yUp)
+                        sb.Append($"<text transform=\"translate({(vx2 - 3).ToString(inv)},{vmy.ToString(inv)}) scale(1,-1) rotate(-90)\" font-size=\"{EscAttr(vSize)}\" fill=\"{EscAttr(vColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(vText)}</text>");
+                    else
+                        sb.Append($"<text x=\"{(vx2 - 3).ToString(inv)}\" y=\"{vmy.ToString(inv)}\" font-size=\"{EscAttr(vSize)}\" fill=\"{EscAttr(vColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\" transform=\"rotate(-90,{(vx2 - 3).ToString(inv)},{vmy.ToString(inv)})\">{System.Net.WebUtility.HtmlEncode(vText)}</text>");
+                    return sb.ToString();
+                }
+
+                // === NEW: Structural support (pin, fixed, roller) ===
+                case "support":
+                {
+                    // support x y type:pin|fixed|roller size:15
+                    double sx = P(0), sy = P(1);
+                    var sType = opts.TryGetValue("type", out var stv) ? stv.ToLower() : "pin";
+                    double sSize = opts.TryGetValue("size", out var ssv) && double.TryParse(ssv, System.Globalization.NumberStyles.Float, inv, out var ss2) ? ss2 : 15;
+                    var sColor = GetStroke() ?? defStroke ?? "black";
+                    var sb = new StringBuilder();
+
+                    if (sType == "pin")
+                    {
+                        // Triangle pointing up
+                        double h = sSize, w = sSize * 0.8;
+                        sb.Append($"<polygon points=\"{sx.ToString(inv)},{sy.ToString(inv)} {(sx - w / 2).ToString(inv)},{(sy + h).ToString(inv)} {(sx + w / 2).ToString(inv)},{(sy + h).ToString(inv)}\" stroke=\"{EscAttr(sColor)}\" fill=\"none\" stroke-width=\"1.5\"/>");
+                        // Ground hatch line
+                        sb.Append($"<line x1=\"{(sx - w / 2 - 2).ToString(inv)}\" y1=\"{(sy + h).ToString(inv)}\" x2=\"{(sx + w / 2 + 2).ToString(inv)}\" y2=\"{(sy + h).ToString(inv)}\" stroke=\"{EscAttr(sColor)}\" stroke-width=\"1.5\"/>");
+                    }
+                    else if (sType == "fixed")
+                    {
+                        // Filled rectangle + hatch lines
+                        double w = sSize * 1.2, h = sSize * 0.4;
+                        sb.Append($"<rect x=\"{(sx - w / 2).ToString(inv)}\" y=\"{sy.ToString(inv)}\" width=\"{w.ToString(inv)}\" height=\"{h.ToString(inv)}\" stroke=\"{EscAttr(sColor)}\" fill=\"none\" stroke-width=\"1.5\"/>");
+                        // Hatch lines inside
+                        for (double hx = sx - w / 2 + 3; hx < sx + w / 2; hx += 4)
+                            sb.Append($"<line x1=\"{hx.ToString(inv)}\" y1=\"{sy.ToString(inv)}\" x2=\"{(hx - 3).ToString(inv)}\" y2=\"{(sy + h).ToString(inv)}\" stroke=\"{EscAttr(sColor)}\" stroke-width=\"0.7\"/>");
+                    }
+                    else if (sType == "roller")
+                    {
+                        // Triangle + circle underneath
+                        double h = sSize * 0.7, w = sSize * 0.8, cr = sSize * 0.15;
+                        sb.Append($"<polygon points=\"{sx.ToString(inv)},{sy.ToString(inv)} {(sx - w / 2).ToString(inv)},{(sy + h).ToString(inv)} {(sx + w / 2).ToString(inv)},{(sy + h).ToString(inv)}\" stroke=\"{EscAttr(sColor)}\" fill=\"none\" stroke-width=\"1.5\"/>");
+                        sb.Append($"<circle cx=\"{sx.ToString(inv)}\" cy=\"{(sy + h + cr + 1).ToString(inv)}\" r=\"{cr.ToString(inv)}\" stroke=\"{EscAttr(sColor)}\" fill=\"none\" stroke-width=\"1\"/>");
+                        sb.Append($"<line x1=\"{(sx - w / 2 - 2).ToString(inv)}\" y1=\"{(sy + h + 2 * cr + 2).ToString(inv)}\" x2=\"{(sx + w / 2 + 2).ToString(inv)}\" y2=\"{(sy + h + 2 * cr + 2).ToString(inv)}\" stroke=\"{EscAttr(sColor)}\" stroke-width=\"1.5\"/>");
+                    }
+                    return sb.ToString();
+                }
+
+                // === NEW: Distributed load ===
+                case "dload":
+                {
+                    // dload x1 y1 x2 y2 n:5 length:20
+                    double dx1 = P(0), dy1 = P(1), dx2 = P(2), dy2 = P(3);
+                    int nArrows = opts.TryGetValue("n", out var nv) && int.TryParse(nv, out var nn) ? nn : 5;
+                    double aLen = opts.TryGetValue("length", out var alv) && double.TryParse(alv, System.Globalization.NumberStyles.Float, inv, out var al2) ? al2 : 20;
+                    var dColor = GetStroke() ?? defStroke ?? "black";
+                    var sb = new StringBuilder();
+
+                    // Direction perpendicular to the load line (for arrow direction)
+                    double ddx = dx2 - dx1, ddy = dy2 - dy1;
+                    double dLen = Math.Sqrt(ddx * ddx + ddy * ddy);
+                    if (dLen < 0.01) return null;
+
+                    // Load arrows perpendicular to the load line
+                    // Default: arrows point in -Y direction (downward loads)
+                    double anx = 0, any = yUp ? -1 : 1; // arrow direction: downward
+                    if (opts.TryGetValue("dir", out var dirv))
+                    {
+                        var dirParts = dirv.Split(',');
+                        if (dirParts.Length == 2)
+                        {
+                            double.TryParse(dirParts[0], System.Globalization.NumberStyles.Float, inv, out anx);
+                            double.TryParse(dirParts[1], System.Globalization.NumberStyles.Float, inv, out any);
+                        }
+                    }
+
+                    // Top line (connection line at arrow bases)
+                    double tx1 = dx1 + anx * aLen, ty1 = dy1 + any * aLen;
+                    double tx2 = dx2 + anx * aLen, ty2 = dy2 + any * aLen;
+                    sb.Append($"<line x1=\"{tx1.ToString(inv)}\" y1=\"{ty1.ToString(inv)}\" x2=\"{tx2.ToString(inv)}\" y2=\"{ty2.ToString(inv)}\" stroke=\"{EscAttr(dColor)}\" stroke-width=\"0.7\"/>");
+
+                    // Individual arrows
+                    for (int ai = 0; ai <= nArrows; ai++)
+                    {
+                        double t = nArrows > 0 ? (double)ai / nArrows : 0;
+                        double ax = dx1 + t * (dx2 - dx1);
+                        double ay = dy1 + t * (dy2 - dy1);
+                        double bx = ax + anx * aLen, by = ay + any * aLen;
+                        sb.Append($"<line x1=\"{bx.ToString(inv)}\" y1=\"{by.ToString(inv)}\" x2=\"{ax.ToString(inv)}\" y2=\"{ay.ToString(inv)}\" stroke=\"{EscAttr(dColor)}\" stroke-width=\"0.7\" marker-end=\"url(#svg-arrowhead)\"/>");
+                    }
+                    return sb.ToString();
+                }
+
+                // === NEW: Moment (curved arrow) ===
+                case "moment":
+                case "carc":
+                {
+                    // moment cx cy r:20 start:0 end:270 text:"M" cw:false
+                    double mcx = P(0), mcy = P(1);
+                    double mr = opts.TryGetValue("r", out var mrv) && double.TryParse(mrv, System.Globalization.NumberStyles.Float, inv, out var mr2) ? mr2 : 20;
+                    double mStart = opts.TryGetValue("start", out var msv) && double.TryParse(msv, System.Globalization.NumberStyles.Float, inv, out var ms2) ? ms2 : 0;
+                    double mEnd = opts.TryGetValue("end", out var mev) && double.TryParse(mev, System.Globalization.NumberStyles.Float, inv, out var me2) ? me2 : 270;
+                    var mText = textContent;
+                    var mColor = GetStroke() ?? defStroke ?? "black";
+                    bool clockwise = opts.TryGetValue("cw", out var cwv) && cwv.ToLower() == "true";
+
+                    double startRad = mStart * Math.PI / 180;
+                    double endRad = mEnd * Math.PI / 180;
+                    double ax1 = mcx + mr * Math.Cos(startRad);
+                    double ay1 = mcy - mr * Math.Sin(startRad);
+                    double ax2 = mcx + mr * Math.Cos(endRad);
+                    double ay2 = mcy - mr * Math.Sin(endRad);
+                    int sweep = clockwise ? 1 : 0;
+                    int large = Math.Abs(mEnd - mStart) > 180 ? 1 : 0;
+
+                    var sb = new StringBuilder();
+                    sb.Append($"<path d=\"M {ax1.ToString(inv)} {ay1.ToString(inv)} A {mr.ToString(inv)} {mr.ToString(inv)} 0 {large} {sweep} {ax2.ToString(inv)} {ay2.ToString(inv)}\" stroke=\"{EscAttr(mColor)}\" fill=\"none\" stroke-width=\"1.2\" marker-end=\"url(#svg-moment-arrow)\"/>");
+                    if (mText != null)
+                    {
+                        if (yUp)
+                            sb.Append($"<text transform=\"translate({mcx.ToString(inv)},{(mcy - mr - 5).ToString(inv)}) scale(1,-1)\" font-size=\"10\" fill=\"{EscAttr(mColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(mText)}</text>");
+                        else
+                            sb.Append($"<text x=\"{mcx.ToString(inv)}\" y=\"{(mcy - mr - 5).ToString(inv)}\" font-size=\"10\" fill=\"{EscAttr(mColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(mText)}</text>");
+                    }
+                    return sb.ToString();
+                }
+
+                // === NEW: Axes (coordinate axes with labels) ===
+                case "axes":
+                {
+                    // axes x y length:100 labels:true xlabel:"X" ylabel:"Y"
+                    double ax = P(0), ay = P(1);
+                    double aLength = opts.TryGetValue("length", out var alv2) && double.TryParse(alv2, System.Globalization.NumberStyles.Float, inv, out var al3) ? al3 : 100;
+                    bool labels = !opts.TryGetValue("labels", out var labv) || labv.ToLower() != "false";
+                    var xLabel = opts.TryGetValue("xlabel", out var xlv) ? xlv : "X";
+                    var yLabel = opts.TryGetValue("ylabel", out var ylv) ? ylv : "Y";
+                    var aColor = GetStroke() ?? defStroke ?? "black";
+                    var sb = new StringBuilder();
+                    // X axis
+                    sb.Append($"<line x1=\"{ax.ToString(inv)}\" y1=\"{ay.ToString(inv)}\" x2=\"{(ax + aLength).ToString(inv)}\" y2=\"{ay.ToString(inv)}\" stroke=\"{EscAttr(aColor)}\" stroke-width=\"1.2\" marker-end=\"url(#svg-arrowhead)\"/>");
+                    // Y axis
+                    if (yUp)
+                        sb.Append($"<line x1=\"{ax.ToString(inv)}\" y1=\"{ay.ToString(inv)}\" x2=\"{ax.ToString(inv)}\" y2=\"{(ay + aLength).ToString(inv)}\" stroke=\"{EscAttr(aColor)}\" stroke-width=\"1.2\" marker-end=\"url(#svg-arrowhead)\"/>");
+                    else
+                        sb.Append($"<line x1=\"{ax.ToString(inv)}\" y1=\"{ay.ToString(inv)}\" x2=\"{ax.ToString(inv)}\" y2=\"{(ay - aLength).ToString(inv)}\" stroke=\"{EscAttr(aColor)}\" stroke-width=\"1.2\" marker-end=\"url(#svg-arrowhead)\"/>");
+                    if (labels)
+                    {
+                        double labelOff = 12;
+                        if (yUp)
+                        {
+                            sb.Append($"<text transform=\"translate({(ax + aLength + labelOff).ToString(inv)},{ay.ToString(inv)}) scale(1,-1)\" font-size=\"12\" fill=\"{EscAttr(aColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(xLabel)}</text>");
+                            sb.Append($"<text transform=\"translate({ax.ToString(inv)},{(ay + aLength + labelOff).ToString(inv)}) scale(1,-1)\" font-size=\"12\" fill=\"{EscAttr(aColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(yLabel)}</text>");
+                        }
+                        else
+                        {
+                            sb.Append($"<text x=\"{(ax + aLength + labelOff).ToString(inv)}\" y=\"{(ay + 4).ToString(inv)}\" font-size=\"12\" fill=\"{EscAttr(aColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(xLabel)}</text>");
+                            sb.Append($"<text x=\"{(ax - 4).ToString(inv)}\" y=\"{(ay - aLength - 4).ToString(inv)}\" font-size=\"12\" fill=\"{EscAttr(aColor)}\" text-anchor=\"middle\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(yLabel)}</text>");
+                        }
+                    }
+                    return sb.ToString();
+                }
+
+                // === NEW: Node label (circled number) ===
+                case "node":
+                {
+                    // node x y "1" r:10
+                    double nx = P(0), ny = P(1);
+                    var nText = textContent ?? "1";
+                    double nr = opts.TryGetValue("r", out var nrv) && double.TryParse(nrv, System.Globalization.NumberStyles.Float, inv, out var nr2) ? nr2 : 10;
+                    var nColor = GetStroke() ?? defStroke ?? "black";
+                    var sb = new StringBuilder();
+                    sb.Append($"<circle cx=\"{nx.ToString(inv)}\" cy=\"{ny.ToString(inv)}\" r=\"{nr.ToString(inv)}\" stroke=\"{EscAttr(nColor)}\" fill=\"white\" stroke-width=\"1\"/>");
+                    if (yUp)
+                        sb.Append($"<text transform=\"translate({nx.ToString(inv)},{ny.ToString(inv)}) scale(1,-1)\" font-size=\"{(nr * 1.2).ToString(inv)}\" fill=\"{EscAttr(nColor)}\" text-anchor=\"middle\" dominant-baseline=\"central\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(nText)}</text>");
+                    else
+                        sb.Append($"<text x=\"{nx.ToString(inv)}\" y=\"{ny.ToString(inv)}\" font-size=\"{(nr * 1.2).ToString(inv)}\" fill=\"{EscAttr(nColor)}\" text-anchor=\"middle\" dominant-baseline=\"central\" font-family=\"sans-serif\">{System.Net.WebUtility.HtmlEncode(nText)}</text>");
+                    return sb.ToString();
+                }
+
                 case "grid":
                 {
-                    // grid x y w h step:N [options]
                     double gx = P(0), gy = P(1), gw = P(2), gh = P(3);
                     if (gw == 0) gw = svgW;
                     if (gh == 0) gh = svgH;
                     double step = opts.TryGetValue("step", out var st) && double.TryParse(st,
-                        System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var sv) ? sv : 50;
+                        System.Globalization.NumberStyles.Float, inv, out var sv) ? sv : 50;
                     var gStroke = GetStroke() ?? "#ddd";
                     var gOpacity = GetOpacity() ?? "0.5";
                     var gWidth = GetWidth() ?? "0.5";
                     var sb = new StringBuilder();
-                    var inv = System.Globalization.CultureInfo.InvariantCulture;
                     for (double x = gx; x <= gx + gw; x += step)
                         sb.Append($"<line x1=\"{x.ToString(inv)}\" y1=\"{gy.ToString(inv)}\" x2=\"{x.ToString(inv)}\" y2=\"{(gy + gh).ToString(inv)}\" stroke=\"{EscAttr(gStroke)}\" stroke-width=\"{gWidth}\" opacity=\"{gOpacity}\"/>");
                     for (double y = gy; y <= gy + gh; y += step)
@@ -3694,7 +4477,6 @@ animate();
 
                 case "path":
                 {
-                    // path d:"M 0 0 L 100 100" [options]
                     var d = opts.TryGetValue("d", out var dv) ? dv : (textContent ?? "");
                     return $"<path d=\"{EscAttr(d)}\"{BuildStyle("black", "none")}/>";
                 }
@@ -7307,7 +8089,7 @@ animate();
             var sb = new StringBuilder();
 
             // SVG header with defs for arrow markers
-            sb.Append($"<svg class=\"plot\" width=\"{width}\" height=\"{height}\" xmlns=\"http://www.w3.org/2000/svg\">");
+            sb.Append($"<svg class=\"hk-plot\" width=\"{width}\" height=\"{height}\" xmlns=\"http://www.w3.org/2000/svg\">");
 
             // Define arrow markers (for axes and annotations)
             sb.Append("<defs>");
@@ -7480,7 +8262,7 @@ animate();
             var sb = new StringBuilder();
 
             // SVG header with defs for arrow markers
-            sb.Append($"<svg class=\"plot\" width=\"{width}\" height=\"{height}\" xmlns=\"http://www.w3.org/2000/svg\">");
+            sb.Append($"<svg class=\"hk-plot\" width=\"{width}\" height=\"{height}\" xmlns=\"http://www.w3.org/2000/svg\">");
 
             // Define arrow markers (for axes and annotations)
             sb.Append("<defs>");
@@ -9137,7 +9919,9 @@ animate();
         /// <summary>
         /// Process @{eq} block - renders mathematical equations with Hekatan-style formatting
         /// Syntax:
-        ///   @{eq}
+        ///   @{eq}           (centered, default)
+        ///   @{eq left}      (left-aligned)
+        ///   @{eq right}     (right-aligned)
         ///   S_a = η*Z*F_a
         ///   @{end eq}
         ///
@@ -9145,15 +9929,36 @@ animate();
         /// matrices [a,b;c,d], piecewise {cond: val; ...}, equation numbers (N),
         /// and definitions with | separator (absorbs @{eqdef}).
         /// </summary>
-        private string ProcessEquationBlock(string content, Dictionary<string, object> variables)
+        /// <summary>
+        /// Extract alignment parameter from start directive string.
+        /// E.g., "@{eq left}" → "left", "@{eqdef right}" → "right", "@{eq}" → "center"
+        /// Supports: left/izquierda, right/derecha, center (default)
+        /// </summary>
+        private string ExtractEqAlignment(string startDirective)
+        {
+            if (string.IsNullOrWhiteSpace(startDirective)) return "center";
+            // Remove @{ and } to get inner content: "eq left", "eqdef right", etc.
+            var inner = startDirective.Trim().TrimStart('@').TrimStart('{').TrimEnd('}').Trim();
+            var parts = inner.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 1)
+            {
+                var p = parts[1].ToLower();
+                if (p == "left" || p == "izquierda") return "left";
+                if (p == "right" || p == "derecha") return "right";
+            }
+            return "center";
+        }
+
+        private string ProcessEquationBlock(string content, Dictionary<string, object> variables, string align = "center")
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(content))
                     return "";
 
+                var alignClass = align == "left" ? " eq-align-left" : align == "right" ? " eq-align-right" : "";
                 var sb = new StringBuilder();
-                sb.Append("<div class=\"eq-block\">");
+                sb.Append($"<div class=\"eq-block{alignClass}\">");
 
                 var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (var line in lines)
@@ -10705,6 +11510,112 @@ h1, h2, h3, h4 {{ font-family: var(--paper-font); color: var(--paper-accent); }}
         ///   accepted: 2017.11.20
         /// Or just plain text for a simple title.
         /// </summary>
+        /// <summary>
+        /// Processes @{inkscape} block - Renders SVG via Inkscape CLI to PNG and embeds inline.
+        /// Also shows the SVG directly. If Inkscape is not installed, falls back to inline SVG only.
+        /// Syntax: @{inkscape} or @{inkscape 600 400} (width height) or @{inkscape pdf}
+        /// </summary>
+        private string ProcessInkscapeBlock(string code, string directive)
+        {
+            try
+            {
+                var svgCode = code.Trim();
+
+                // Parse directive options: @{inkscape [width] [height]} or @{inkscape pdf}
+                var parts = directive.Replace("@{", "").Replace("}", "").Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                int width = 600, height = 400;
+                string exportFormat = "png";
+
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    if (int.TryParse(parts[i], out var val))
+                    {
+                        if (i == 1) width = val;
+                        else if (i == 2) height = val;
+                    }
+                    else if (parts[i].Equals("pdf", StringComparison.OrdinalIgnoreCase))
+                        exportFormat = "pdf";
+                }
+
+                // Wrap in <svg> if not already a complete SVG
+                if (!svgCode.TrimStart().StartsWith("<svg", StringComparison.OrdinalIgnoreCase))
+                {
+                    svgCode = $"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\">\n{svgCode}\n</svg>";
+                }
+
+                // Save SVG to temp file
+                var tempDir = System.IO.Path.GetTempPath();
+                var svgPath = System.IO.Path.Combine(tempDir, $"hekatan_inkscape_{Guid.NewGuid():N}.svg");
+                var pngPath = System.IO.Path.ChangeExtension(svgPath, "." + exportFormat);
+                System.IO.File.WriteAllText(svgPath, svgCode, new System.Text.UTF8Encoding(false));
+
+                // Try Inkscape CLI conversion
+                var inkscapePath = "inkscape";
+                var defaultPaths = new[] {
+                    @"C:\Program Files\Inkscape\bin\inkscape.exe",
+                    @"C:\Program Files (x86)\Inkscape\bin\inkscape.exe"
+                };
+                foreach (var p in defaultPaths)
+                    if (System.IO.File.Exists(p)) { inkscapePath = p; break; }
+
+                var sb = new StringBuilder();
+
+                try
+                {
+                    var psi = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = inkscapePath,
+                        Arguments = exportFormat == "pdf"
+                            ? $"\"{svgPath}\" --export-type=pdf --export-filename=\"{pngPath}\""
+                            : $"\"{svgPath}\" --export-type=png --export-width={width} --export-filename=\"{pngPath}\"",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    };
+
+                    var process = System.Diagnostics.Process.Start(psi);
+                    process.WaitForExit(30000); // 30 second timeout
+
+                    if (System.IO.File.Exists(pngPath) && exportFormat == "png")
+                    {
+                        // Embed PNG as base64 image
+                        var bytes = System.IO.File.ReadAllBytes(pngPath);
+                        var base64 = Convert.ToBase64String(bytes);
+                        sb.AppendLine($"<div style='margin:8px 0;'>");
+                        sb.AppendLine($"<img src='data:image/png;base64,{base64}' style='max-width:100%;' />");
+                        sb.AppendLine($"</div>");
+
+                        // Cleanup
+                        try { System.IO.File.Delete(pngPath); } catch { }
+                    }
+                    else if (System.IO.File.Exists(pngPath) && exportFormat == "pdf")
+                    {
+                        sb.AppendLine($"<p style='color:#1565c0;'>PDF exportado: {pngPath}</p>");
+                    }
+                    else
+                    {
+                        // Fallback: show SVG inline
+                        sb.AppendLine(svgCode);
+                    }
+                }
+                catch
+                {
+                    // Inkscape not available, show SVG inline directly
+                    sb.AppendLine(svgCode);
+                }
+
+                // Cleanup SVG temp
+                try { System.IO.File.Delete(svgPath); } catch { }
+
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                return $"<p style='color:red;'>Error en @{{inkscape}}: {ex.Message}</p>";
+            }
+        }
+
         private string ProcessTitleBlock(string code, string directive)
         {
             var props = ParseKeyValueBlock(code);

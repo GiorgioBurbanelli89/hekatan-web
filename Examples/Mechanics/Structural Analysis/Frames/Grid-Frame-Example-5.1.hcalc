@@ -1,0 +1,160 @@
+"Ejemplo Ilustrativo 5.1 - Grid Frame|Mario Paz
+'<hr/>
+
+@{draw 580 380}
+# Fig 5.4 - Diagrama Estructural (3D oblicuo)
+grid off
+bg #ffffff
+proj oblique 45 0.5
+# Ejes de referencia
+color #cc3333
+arrow3d -4 0 0 -1 0 0
+text3d -0.5 0 0 X
+color #33aa33
+arrow3d -4 0 0 -4 3 0
+text3d -4 3.5 0 Y
+color #3333cc
+arrow3d -4 0 0 -4 0 3
+text3d -4 0 3.5 Z
+# Elem 1: Node1(0,0,0) to Node2(20,0,0) along X
+color #333
+line3d 0 0 0 20 0 0
+# Elem 2: Node1(0,0,0) to Node3(0,20,0) along Y
+line3d 0 0 0 0 20 0
+# Nodos (circulos pequenos)
+circle3d 0 0 0 0.15 #333
+circle3d 20 0 0 0.15 #333
+circle3d 0 20 0 0.15 #333
+# Carga distribuida peine sobre Elem 2 (lineas cortas perpendiculares -Z)
+color #cc0000
+line3d 0 2 0 0 18 0
+line3d 0 2 0 0 2 -2.5
+line3d 0 4 0 0 4 -2.5
+line3d 0 6 0 0 6 -2.5
+line3d 0 8 0 0 8 -2.5
+line3d 0 10 0 0 10 -2.5
+line3d 0 12 0 0 12 -2.5
+line3d 0 14 0 0 14 -2.5
+line3d 0 16 0 0 16 -2.5
+line3d 0 18 0 0 18 -2.5
+line3d 0 2 -2.5 0 18 -2.5
+text3d 0 11 -4 w = 0.1 k/in
+# Fuerza puntual en Node 1 hacia -Z
+arrow3d 0 0 5 0 0 0.5
+text3d 1 0 5.5 10 k
+# Momento en L/2 del Elem 1
+color #9900cc
+carc3d 10 0 0 0.8 0.2 4.0
+text3d 10 0 1.8 200 k-in
+# Apoyo empotrado en Node 2 (muro + rayado)
+color #333
+line3d 20 0 -1.5 20 0 1.5
+line3d 20 0 1.5 21 0 1
+line3d 20 0 1 21 0 0.5
+line3d 20 0 0.5 21 0 0
+line3d 20 0 0 21 0 -0.5
+line3d 20 0 -0.5 21 0 -1
+line3d 20 0 -1 21 0 -1.5
+# Apoyo empotrado en Node 3 (muro + rayado)
+line3d 0 20 -1.5 0 20 1.5
+line3d 0 20 1.5 0 21 1
+line3d 0 20 1 0 21 0.5
+line3d 0 20 0.5 0 21 0
+line3d 0 20 0 0 21 -0.5
+line3d 0 20 -0.5 0 21 -1
+line3d 0 20 -1 0 21 -1.5
+# Labels nodos
+color #333
+text3d -1.5 0 -1 1
+text3d 20.5 0 -1 2
+text3d 0.5 21 0.5 3
+# Labels elementos
+color #0066cc
+text3d 10 0 1.5 Elem 1
+text3d 0 10 1.5 Elem 2
+# Propiedades
+color #666
+text3d 12 0 -6 I=100 in^4, J=50 in^4
+text3d 12 0 -7.5 E=30000, G=12000 ksi
+text3d 12 0 -9 L1=L2=20 ft
+fit
+@{end draw}
+
+@{draw 580 380}
+# Fig 5.5 - Grados de Libertad (DOF)
+grid off
+bg #ffffff
+proj oblique 45 0.5
+# Elementos (lineas finas)
+color #aaa
+line3d 0 0 0 20 0 0
+line3d 0 0 0 0 20 0
+# Nodos
+color #333
+circle3d 0 0 0 0.2
+circle3d 20 0 0 0.2
+circle3d 0 20 0 0.2
+text3d 0 0 -2 Node 1
+text3d 20 0 -2 Node 2
+text3d 0 20.5 -1.5 Node 3
+# Angulo 90
+color #999
+line3d 2.5 0 0 2.5 2.5 0
+line3d 0 2.5 0 2.5 2.5 0
+text3d 3.5 3 0 90
+# DOFs Node 1 (u1=theta_x, u2=theta_y, u3=w)
+color #cc0000
+arrow3d 0 0 0 0 0 5
+text3d 0.5 0 5.5 u3
+arrow3d 0 0 0 4 0 0
+text3d 4.5 0 0.5 u1
+arrow3d 0 0 0 0 4 0
+text3d 0.3 4.5 0 u2
+# DOFs Node 2 (u4=theta_x, u5=theta_y, u6=w)
+color #0066cc
+arrow3d 20 0 0 20 0 5
+text3d 20.5 0 5.5 u6
+arrow3d 20 0 0 24 0 0
+text3d 24.5 0 0.5 u4
+arrow3d 20 0 0 20 4 0
+text3d 20.3 4.5 0 u5
+# DOFs Node 3 (u7=theta_x, u8=theta_y, u9=w)
+color #33aa33
+arrow3d 0 20 0 0 20 5
+text3d 0.5 20 5.5 u9
+arrow3d 0 20 0 4 20 0
+text3d 4.5 20 0.5 u7
+arrow3d 0 20 0 0 24 0
+text3d 0.3 24.5 0 u8
+# Apoyo empotrado Node 2
+color #333
+line3d 20 0 -1.5 20 0 1.5
+line3d 20 0 1.5 21 0 1
+line3d 20 0 1 21 0 0.5
+line3d 20 0 0.5 21 0 0
+line3d 20 0 0 21 0 -0.5
+line3d 20 0 -0.5 21 0 -1
+line3d 20 0 -1 21 0 -1.5
+# Apoyo empotrado Node 3
+line3d 0 20 -1.5 0 20 1.5
+line3d 0 20 1.5 0 21 1
+line3d 0 20 1 0 21 0.5
+line3d 0 20 0.5 0 21 0
+line3d 0 20 0 0 21 -0.5
+line3d 0 20 -0.5 0 21 -1
+line3d 0 20 -1 0 21 -1.5
+# Ejes
+color #cc3333
+arrow3d -4 0 0 -1 0 0
+text3d -0.5 0 0 X
+color #33aa33
+arrow3d -4 0 0 -4 3 0
+text3d -4 3.5 0 Y
+color #3333cc
+arrow3d -4 0 0 -4 0 3
+text3d -4 0 3.5 Z
+# Titulo
+color #333
+text3d 10 0 -6 Fig 5.5 - DOFs del Grid Frame
+fit
+@{end draw}

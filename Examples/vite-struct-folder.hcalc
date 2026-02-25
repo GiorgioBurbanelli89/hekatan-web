@@ -1,0 +1,15 @@
+"Ejemplo: @{html-folder} con Vite + TypeScript
+'
+"Este archivo demuestra la directiva @{html-folder} que abre un proyecto
+"web completo con Vite dev server y Three.js.
+'
+"Al presionar F5, Hekatan:
+"  1. Detecta package.json en la carpeta
+"  2. Ejecuta npm install (si no hay node_modules)
+"  3. Ejecuta npm run dev (Vite)
+"  4. Navega WebView2 a localhost:5170
+"  5. Muestra el árbol de archivos en el panel izquierdo
+'
+"Tecnologías: TypeScript, Three.js, Vite, OrbitControls
+'
+@{html-folder} ./vite-struct-demo

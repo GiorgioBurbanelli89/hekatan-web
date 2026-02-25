@@ -1,0 +1,40 @@
+"Demo @{inkscape} - Renderizado SVG con Inkscape
+
+"1. SVG simple renderizado por Inkscape
+@{inkscape 400 200}
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200">
+  <rect width="400" height="200" fill="#f0f4f8" rx="10"/>
+  <rect x="20" y="80" width="360" height="30" fill="#e3f2fd" stroke="#1565c0" stroke-width="2" rx="4"/>
+  <circle cx="40" cy="95" r="8" fill="#4caf50"/>
+  <circle cx="360" cy="95" r="8" fill="#f44336"/>
+  <line x1="48" y1="95" x2="352" y2="95" stroke="#1565c0" stroke-width="3"/>
+  <text x="200" y="45" text-anchor="middle" font-family="Segoe UI" font-size="16" fill="#333">Viga simplemente apoyada</text>
+  <text x="40" y="130" text-anchor="middle" font-family="Segoe UI" font-size="11" fill="#4caf50">A</text>
+  <text x="360" y="130" text-anchor="middle" font-family="Segoe UI" font-size="11" fill="#f44336">B</text>
+  <polygon points="200,80 190,65 210,65" fill="#e65100"/>
+  <text x="200" y="58" text-anchor="middle" font-family="Segoe UI" font-size="11" fill="#e65100">P</text>
+  <text x="200" y="170" text-anchor="middle" font-family="Segoe UI" font-size="12" fill="#666">L = 6.0 m</text>
+</svg>
+@{end inkscape}
+
+"2. Seccion transversal IPE
+@{inkscape 300 350}
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="350" viewBox="0 0 300 350">
+  <rect width="300" height="350" fill="#fafafa"/>
+  <rect x="100" y="30" width="100" height="15" fill="#78909c" stroke="#37474f" stroke-width="1.5" rx="1"/>
+  <rect x="141" y="45" width="18" height="250" fill="#78909c" stroke="#37474f" stroke-width="1.5"/>
+  <rect x="100" y="295" width="100" height="15" fill="#78909c" stroke="#37474f" stroke-width="1.5" rx="1"/>
+  <text x="150" y="20" text-anchor="middle" font-family="Segoe UI" font-size="14" font-weight="bold" fill="#333">IPE 300</text>
+  <line x1="220" y1="30" x2="220" y2="310" stroke="#1565c0" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="240" y="175" font-family="Segoe UI" font-size="11" fill="#1565c0">h=300</text>
+  <line x1="100" y1="325" x2="200" y2="325" stroke="#c62828" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="150" y="342" text-anchor="middle" font-family="Segoe UI" font-size="11" fill="#c62828">b=150</text>
+</svg>
+@{end inkscape}
+
+"3. Calculos
+b = 150
+h = 300
+A = 53.8
+I_y = 8356
+W_y = 2*I_y/h

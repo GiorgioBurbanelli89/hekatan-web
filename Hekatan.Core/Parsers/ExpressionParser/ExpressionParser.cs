@@ -69,6 +69,21 @@ namespace Hekatan.Core
 
         private void Parse(ReadOnlySpan<char> code, bool calculate, bool getXml)
         {
+            // Auto-detect complete HTML5 document - pass through without any processing
+            // This allows writing full HTML pages with <!DOCTYPE html>...<html>...</html>
+            // without the parser adding <p>, &nbsp; or any other wrapping
+            var trimmedCode = code.Trim();
+            if (trimmedCode.Length > 14)
+            {
+                if ((trimmedCode.StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase) ||
+                     trimmedCode.StartsWith("<html", StringComparison.OrdinalIgnoreCase)) &&
+                    trimmedCode.EndsWith("</html>", StringComparison.OrdinalIgnoreCase))
+                {
+                    HtmlResult = code.ToString();
+                    return;
+                }
+            }
+
             var codeString = code.ToString(); // Store for access in local functions
             var lines = new List<int> { 0 };
             var len = code.Length;

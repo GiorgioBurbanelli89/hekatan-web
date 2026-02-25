@@ -83,10 +83,18 @@ namespace Hekatan.Wpf
                 // Sync @{code}/@{ucode} with their closing tags
                 SyncAllCodeUcodeClosingTags();
 
-                // AutoRun support - same logic as RichTextBox_TextChanged
+                // AutoRun support
                 if (_isTextChangedEnabled && IsAutoRun)
                 {
-                    _autoRun = true;
+                    if (!string.IsNullOrEmpty(_htmlFolderPath))
+                    {
+                        // html-folder: auto-save al archivo + reload WebView2 (debounced 500ms)
+                        ScheduleHtmlFolderLiveReload();
+                    }
+                    else
+                    {
+                        _autoRun = true;
+                    }
                 }
             };
 
@@ -718,6 +726,10 @@ namespace Hekatan.Wpf
             string trimmedLine = lineText.Trim();
 
             // ===== DIRECTIVAS @{} =====
+            // ===== @{html-folder} =====
+            if (trimmedLine.StartsWith("@{html-folder}"))
+                return "📁 PROYECTO WEB\n\nAbre una carpeta como proyecto web.\n\nSi la carpeta tiene package.json con script \"dev\":\n→ Ejecuta npm install + npm run dev (Vite)\n→ WebView2 navega a localhost\n→ HMR actualiza en tiempo real\n\nSi solo tiene index.html:\n→ Abre como proyecto estático\n\nEjemplo:\n@{html-folder} ./mi-proyecto\n@{html-folder} C:\\ruta\\absoluta";
+
             if (trimmedLine.StartsWith("@{html-ifc}"))
                 return "📦 VISOR IFC 3D\n\nPermite mostrar modelos IFC en 3D.\nEl contenido puede ser:\n• HTML/JS directo\n• @{ucode}...@{end ucode} con directivas simplificadas\n• Ruta a un archivo .ifc\n\nEjecuta con F5 para ver el modelo.";
 

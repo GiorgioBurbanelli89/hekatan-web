@@ -74,10 +74,17 @@ namespace Hekatan.Common
                     }
                 }
                 // Also check old-style directives starting with #
+                // Exclude all Calcpad-specific directives that should NOT toggle language block state
                 else if (trimmedLine.StartsWith("#") && !trimmedLine.StartsWith("#hide") &&
                     !trimmedLine.StartsWith("#show") && !trimmedLine.StartsWith("#pre") &&
                     !trimmedLine.StartsWith("#post") && !trimmedLine.StartsWith("#val") &&
-                    !trimmedLine.StartsWith("#equ") && !trimmedLine.StartsWith("#noc"))
+                    !trimmedLine.StartsWith("#equ") && !trimmedLine.StartsWith("#noc") &&
+                    !trimmedLine.StartsWith("#def") && !trimmedLine.StartsWith("#end ") &&
+                    !trimmedLine.StartsWith("#include") && !trimmedLine.StartsWith("#local") &&
+                    !trimmedLine.StartsWith("#global") && !trimmedLine.StartsWith("#for") &&
+                    !trimmedLine.StartsWith("#loop") && !trimmedLine.StartsWith("#if") &&
+                    !trimmedLine.StartsWith("#else") && !trimmedLine.StartsWith("#round") &&
+                    !trimmedLine.StartsWith("#map"))
                 {
                     // Could be a language directive like #python, #csharp, etc.
                     if (trimmedLine.Contains("end"))
@@ -190,12 +197,17 @@ namespace Hekatan.Common
                 var trimmedLine = lineStr.Trim();
 
                 // Check if we're entering or exiting a language block
+                // Exclude all Calcpad-specific directives that should NOT toggle language block state
                 if (trimmedLine.StartsWith("#") && !trimmedLine.StartsWith("#hide") &&
                     !trimmedLine.StartsWith("#show") && !trimmedLine.StartsWith("#pre") &&
                     !trimmedLine.StartsWith("#post") && !trimmedLine.StartsWith("#val") &&
                     !trimmedLine.StartsWith("#equ") && !trimmedLine.StartsWith("#noc") &&
-                    !trimmedLine.StartsWith("#local") && !trimmedLine.StartsWith("#global") &&
-                    !trimmedLine.StartsWith("#include"))
+                    !trimmedLine.StartsWith("#def") && !trimmedLine.StartsWith("#end ") &&
+                    !trimmedLine.StartsWith("#include") && !trimmedLine.StartsWith("#local") &&
+                    !trimmedLine.StartsWith("#global") && !trimmedLine.StartsWith("#for") &&
+                    !trimmedLine.StartsWith("#loop") && !trimmedLine.StartsWith("#if") &&
+                    !trimmedLine.StartsWith("#else") && !trimmedLine.StartsWith("#round") &&
+                    !trimmedLine.StartsWith("#map"))
                 {
                     // Could be a language directive like #python, #csharp, #c, etc.
                     if (trimmedLine.Contains("end"))

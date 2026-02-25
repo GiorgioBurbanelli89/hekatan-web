@@ -1,0 +1,104 @@
+"Factor de Magnificacion Dinamica
+#noc
+'<h3 style="color:#2563eb">'D_f = 1/sqr((1 - r^2)^2 + (2*ξ*r)^2)'</h3>
+'<hr>
+
+"Ecuacion general
+#include Plot svg\plot_lib.cpd
+#include Plot svg\anim_lib.cpd
+#show
+#noc
+D_f(r; xi) = 1/sqr((1 - r^2)^2 + (2*xi*r)^2)
+'donde 'r = ω/ω_n' (razon de frecuencias),'ξ = c/c_r'(razon de amortiguamiento)
+'<hr>
+
+#equ
+#hide
+d1(r) = min(D_f(r; 0.125); 4.5)
+d2(r) = min(D_f(r; 0.2); 4.5)
+d3(r) = min(D_f(r; 0.25); 4.5)
+d4(r) = min(D_f(r; 0.5); 4.5)
+d5(r) = min(D_f(r; 0.707); 4.5)
+d6(r) = min(D_f(r; 1); 4.5)
+d7(r) = min(D_f(r; 2); 4.5)
+#show
+
+plot_begin$(0; 3; 0; 4.5; 6; 5; Factor de Magnificacion Dinamica D(r))
+plot_add$(d1; r; 0.01; 3; Tomato)
+plot_add$(d2; r; 0.01; 3; YellowGreen)
+plot_add$(d3; r; 0.01; 3; CornflowerBlue)
+plot_add$(d4; r; 0.01; 3; Gold)
+plot_add$(d5; r; 0.01; 3; MediumVioletRed)
+plot_add$(d6; r; 0.01; 3; MediumSpringGreen)
+plot_add$(d7; r; 0.01; 3; BlueViolet)
+zxilab$(1.0; 4.3; Tomato; 0.125)
+zxilab$(0.65; 2.65; YellowGreen; 0.2)
+zxilab$(0.5; 2.15; CornflowerBlue; 0.25)
+zxilab$(0.3; 1.35; Gold; 0.5)
+zxilab$(1.8; 0.55; MediumVioletRed; 0.707)
+zxilab$(2.3; 0.3; MediumSpringGreen; 1.0)
+zxilab$(2.6; 0.12; BlueViolet; 2.0)
+zrefh$(1)
+zaxis_x$(r)
+zaxis_y$(D)
+plot_end$
+
+zxileghead$
+zxileg$(Tomato; 0.125)
+zxileg$(YellowGreen; 0.2)
+zxileg$(CornflowerBlue; 0.25)
+zxileg$(Gold; 0.5)
+zxileg$(MediumVioletRed; 0.707)
+zxileg$(MediumSpringGreen; 1.0)
+zxileg$(BlueViolet; 2.0)
+zlegend$
+
+zhr$
+"Valores en resonancia
+#equ
+r_res = 1
+#noc
+'En resonancia (r = 1):
+'Para 'ξ' = 0.125: D = 'D_f(r_res; 0.125)';'ξ' = 0.2: D = 'D_f(r_res; 0.2)
+'Para &xi; = 0.25: D = 'D_f(r_res; 0.25)';'ξ' = 0.5: D = 'D_f(r_res; 0.5)
+'Para &xi; = 0.707: D = 'D_f(r_res; 0.707)';'ξ' = 1.0: D = 'D_f(r_res; 1)
+'Para &xi; = 2.0: D = 'D_f(r_res; 2)
+'<hr>
+'<b>Observaciones:</b>
+D_max = 1/2*ξ'; cuando r &asymp; 1
+'Para 'ξ'; &lt'1/sqrt(2)'&asymp; 0.707: pico en 'r = sqrt(1 - 2*ξ^2)'&lt; 1
+'Para 'ξ'; &ge; 0.707: D &le; 1 (sin amplificacion)
+'<hr>
+
+"Animacion Sincronizada
+'Las tres graficas comparten la misma funcion de respuesta libre amortiguada:
+'x(t) = e<sup>&minus;&xi;&omega;<sub>n</sub>t</sup> &middot; sin(&omega;<sub>d</sub>t), donde &omega;<sub>d</sub> = &omega;<sub>n</sub>&radic;(1&minus;&xi;&sup2;)
+'<b>Arriba:</b> masa-resorte-amortiguador. <b>Abajo izq:</b> espiral fasorial. <b>Abajo der:</b> sinusoidal.
+
+sync_anim$(0.125; 0.5; poco amortiguamiento; buen amortiguamiento)
+
+"Ciclos para amortiguamiento (criterio 2%)
+'Criterio: la amplitud cae a 2% del valor inicial, e<sup>&minus;&xi;&omega;<sub>n</sub>t<sub>s</sub></sup> = 0.02
+#equ
+'Tiempo de asentamiento:
+t_s(ξ; ω_n) = ln(50)/(ξ*ω_n)
+'Periodo amortiguado:
+T_d(ξ; ω_n) = 2*π/(ω_n*sqr(1 - ξ^2))
+'Numero de ciclos:
+N_c(ξ) = ln(50)*sqr(1 - ξ^2)/(2*π*ξ)
+#noc
+'<hr>
+'<b>Resultado para cada &xi;:</b>
+'Para 'ξ' = 0.125: 'N_c(0.125)' ciclos &asymp; 5 ciclos
+'Para 'ξ' = 0.5: 'N_c(0.5)' ciclos &asymp; 1 ciclo
+'<hr>
+
+"Resumen
+#noc
+'<b>1.</b> 'D(r)' muestra amplificacion. En resonancia 'D_max = 1/(2*ξ)'='D_f(1; 0.125)' para &xi;=0.125
+
+'<b>2.</b> Con &xi;=0.125 la masa oscila mucho ('N_c(0.125)' ciclos); con &xi;=0.5 se amortigua en 'N_c(0.5)' ciclo
+
+'<b>3.</b> El fasor gira con 'ω_d' y decrece como 'e^(ξ*w_n*t)
+
+'<b>4.</b> La sinusoidal es la proyeccion vertical del fasor. Envolvente: &plusmn'e^(ξ*w_n*t)'

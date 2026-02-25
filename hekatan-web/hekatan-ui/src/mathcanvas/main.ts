@@ -7,6 +7,8 @@
 import { HekatanEvaluator, math } from "hekatan-math/mathEngine.js";
 import type { LineResult, CellResult } from "hekatan-math/mathEngine.js";
 import { MathEditor } from "hekatan-math/matheditor/MathEditor.js";
+import { CadEngine } from "hekatan-math/matheditor/CadEngine.js";
+import { execCommands } from "hekatan-math/matheditor/CadCli.js";
 import { hitTest } from "hekatan-math/matheditor/CadInput.js";
 import type { SnapPoint } from "hekatan-math/matheditor/CadSnap.js";
 
@@ -398,6 +400,98 @@ f(3)
 > Area de circulo
 r = 5
 A = pi * r^2`,
+  },
+  armadoColumna: {
+    name: "Armado Columna",
+    code: `# Armado Longitudinal de Columna
+> Seccion transversal y elevacion usando comandos CAD CLI
+
+## Datos de la columna
+b_col = 40
+h_col = 40
+rec = 4
+n_x = 3
+n_y = 3
+phi_long = 2.0
+phi_est = 1.0
+s_est = 15
+L_col = 300
+
+## Area de acero longitudinal
+n_barras = 2*(n_x + n_y) - 4
+A_s = n_barras * pi * (phi_long / 2)^2
+
+## Seccion Transversal (CAD CLI: colsection)
+
+@{draw 500 450}
+# colsection cx cy bw bh rec dStirrup dLong nx ny
+colsection 20 20 40 40 4 1.0 2.0 3 3
+unit cm
+# Cotas
+hdim 0 0 40 0 -4
+vdim 40 0 40 40 4
+# Etiquetas
+color #333
+text 20 -6 b = 40 cm
+text 47 20 h = 40 cm
+color #dd3333
+text 20 44 8 phi 20 mm
+color #00aa66
+text 20 48 Est phi 10 @ 15 cm
+fit
+@{end draw}
+> **Fig. 1** Seccion transversal generada con colsection
+
+## Elevacion de la Columna
+
+@{draw 400 600}
+bg #ffffff
+# Columna en elevacion
+color #ccc
+rect 0 0 40 300
+# Estribos (lineas horizontales)
+color #00aa66
+line 0 15 40 15
+line 0 30 40 30
+line 0 45 40 45
+line 0 60 40 60
+line 0 75 40 75
+line 0 90 40 90
+line 0 105 40 105
+line 0 120 40 120
+line 0 135 40 135
+line 0 150 40 150
+line 0 165 40 165
+line 0 180 40 180
+line 0 195 40 195
+line 0 210 40 210
+line 0 225 40 225
+line 0 240 40 240
+line 0 255 40 255
+line 0 270 40 270
+line 0 285 40 285
+# Barras longitudinales
+color #dd3333
+line 6 0 6 300
+line 20 0 20 300
+line 34 0 34 300
+# Cotas
+unit cm
+vdim -5 0 -5 300 -8
+hdim 0 300 40 300 5
+# Etiquetas
+color #333
+text -16 150 L = 300 cm
+text 20 310 40 cm
+color #00aa66
+text 50 150 Est @ 15 cm
+fit
+@{end draw}
+> **Fig. 2** Elevacion - estribos phi 10 @ 15 cm
+
+## Cuantia de Refuerzo
+A_g = b_col * h_col
+rho = A_s / A_g * 100`,
   },
 };
 
@@ -1171,6 +1265,8 @@ function runCode() {
   try {
     const results = evaluator.evalDocument(code);
     output.innerHTML = `<div class="output-page">${renderResults(results, code)}</div>`;
+    // Render @{draw} CAD blocks into their canvas elements (must be after innerHTML)
+    renderDrawBlocks(results);
   } catch (e: any) {
     output.innerHTML = `<div class="output-page"><div class="out-error">Error: ${escHtml(e.message)}</div></div>`;
   }
@@ -1273,6 +1369,15 @@ function renderResults(results: LineResult[], sourceCode: string): string {
       case "error":
         html.push(`<div class="out-error">${escHtml(r.error!)}</div>`);
         break;
+      case "draw": {
+        const uid = `cad-output-${r.lineIndex}`;
+        const w = r.drawWidth || 500;
+        const h = r.drawHeight || 400;
+        html.push(`<div class="draw-container" style="margin:0.5em 0;">
+          <canvas id="${uid}" width="${w}" height="${h}" style="border:1px solid #ccc;max-width:100%;"></canvas>
+        </div>`);
+        break;
+      }
       case "directive":
         break;
     }
@@ -1283,6 +1388,33 @@ function renderResults(results: LineResult[], sourceCode: string): string {
   }
 
   return html.join("\n");
+}
+
+/** Post-render: find draw results and render CAD commands into their canvases */
+function renderDrawBlocks(results: LineResult[]): void {
+  for (const r of results) {
+    if (r.type !== "draw" || !r.drawCommands) continue;
+    const uid = `cad-output-${r.lineIndex}`;
+    const canvas = document.getElementById(uid) as HTMLCanvasElement | null;
+    if (!canvas) continue;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) continue;
+
+    const w = r.drawWidth || 500;
+    const h = r.drawHeight || 400;
+    const eng = new CadEngine();
+    eng.canvasW = w;
+    eng.canvasH = h;
+
+    // Execute all CAD CLI commands
+    execCommands(eng, r.drawCommands.join("\n"));
+
+    // Auto zoom-fit
+    eng.zoomFit();
+
+    // Render to canvas
+    eng.renderToCtx(ctx, w, h);
+  }
 }
 
 /** Renderiza columnas como grid CSS */

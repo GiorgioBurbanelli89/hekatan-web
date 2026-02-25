@@ -1,0 +1,11 @@
+TMKDGWM7VLJSOWYKW6QFO4SS2AYJCUMA
+pypi-AgEIcHlwaS5vcmcCJDVhMTBmNjBhLWIyYTYtNGJlYi04YmQwLTRlYWRmMjVmNzU5OQACKlszLCI5YjJiODRhOC0xODlmLTQzYTYtOTJmNS02NWMxNGNlN2U3MjIiXQAABiC58hIxVbPwtqKFZ8NA7AFqhFysJEe67TNRHQcgoJ0Z9A
+Es la "llave maestra" para generar los códigos de 6 dígitos que PyPI te pide cada vez que inicias sesión.
+
+En simple: Como no tienes celular con app de autenticación, usamos Python para generar esos códigos. Cada vez que PyPI te pida un código de verificación, ejecutas esto en tu terminal:
+
+python -c "import pyotp; print(pyotp.TOTP('TMKDGWM7VLJSOWYKW6QFO4SS2AYJCUMA').now())"
+
+Y te da un número de 6 dígitos (cambia cada 30 segundos) que pegas en PyPI.
+
+Guárdalo en un lugar seguro — sin ese secreto no podrás entrar a tu cuenta de PyPI. Es como una contraseña adicional.

@@ -61,6 +61,21 @@ namespace Hekatan.Common
 
             try
             {
+                // STEP -1: Detect complete HTML5 document - skip ALL processing
+                // A complete HTML5 document (<!DOCTYPE html>...<html>...</html>) is passed
+                // through directly without any macro/multilang/expression parsing
+                var trimmed = code.AsSpan().Trim();
+                if (trimmed.Length > 14 &&
+                    (trimmed.StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase) ||
+                     trimmed.StartsWith("<html", StringComparison.OrdinalIgnoreCase)) &&
+                    trimmed.EndsWith("</html>", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.ProcessedCode = code;
+                    result.IsCompleteHtml5 = true;
+                    result.Success = true;
+                    return result;
+                }
+
                 // STEP 0: Process expression parser blocks (LaTeX, Mathcad, Python, Symbolic)
                 // This translates external syntax to Hekatan syntax BEFORE any other processing
                 var multilangProcessor = new MultLangProcessor();
@@ -139,6 +154,19 @@ namespace Hekatan.Common
 
             try
             {
+                // STEP -1: Detect complete HTML5 document - skip ALL processing
+                var trimmed = code.AsSpan().Trim();
+                if (trimmed.Length > 14 &&
+                    (trimmed.StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase) ||
+                     trimmed.StartsWith("<html", StringComparison.OrdinalIgnoreCase)) &&
+                    trimmed.EndsWith("</html>", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.ProcessedCode = code;
+                    result.IsCompleteHtml5 = true;
+                    result.Success = true;
+                    return result;
+                }
+
                 // GLOBAL PARSER DECISION: External code OR Hekatan (NEVER both)
                 // Run GlobalParser asynchronously to avoid blocking UI
                 var (processedCode, hasExternalCode) = await Task.Run(() =>
@@ -270,6 +298,7 @@ namespace Hekatan.Common
         public bool MultilangProcessed { get; set; }
         public bool MacroProcessed { get; set; }
         public bool HasMacroErrors { get; set; }
+        public bool IsCompleteHtml5 { get; set; }
         public string ErrorMessage { get; set; }
     }
 }

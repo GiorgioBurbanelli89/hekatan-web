@@ -1,0 +1,124 @@
+# Factor de Magnificación Dinámica
+
+## Ecuación general
+
+@{calcpad}
+#noc
+D_f(r; ξ) = 1/sqr((1 - r^2)^2 + (2*ξ*r)^2)
+@{end calcpad}
+
+donde **r** = ω/ωₙ (razón de frecuencias), **ξ** = c/cᵣ (razón de amortiguamiento)
+
+---
+
+## Gráfica
+
+@{python}
+import sys, math
+sys.stdout.reconfigure(encoding='utf-8')
+
+W, H = 700, 450
+ml, mr, mt, mb = 60, 30, 35, 50
+pw, ph = W - ml - mr, H - mt - mb
+xmin, xmax = 0, 3
+ymin, ymax = 0, 4.5
+
+def sx(v): return ml + (v - xmin) / (xmax - xmin) * pw
+def sy(v): return mt + ph - (v - ymin) / (ymax - ymin) * ph
+
+xi_vals = [0.125, 0.2, 0.25, 0.5, 0.707, 1.0, 2.0]
+colors  = ['#E53935','#7CB342','#1E88E5','#FFB300','#C2185B','#00C853','#7B1FA2']
+labels  = ['0.125','0.2','0.25','0.5','0.707','1.0','2.0']
+
+def D(r, xi):
+    d = (1 - r**2)**2 + (2*xi*r)**2
+    return min(1/math.sqrt(d), 4.5) if d > 1e-12 else 4.5
+
+o = []
+o.append(f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" style="font-family:Segoe UI,sans-serif;background:white">')
+
+for i in range(int(xmax) + 1):
+    x = sx(i)
+    o.append(f'<line x1="{x:.1f}" y1="{mt}" x2="{x:.1f}" y2="{mt+ph}" stroke="#e8e8e8"/>')
+    o.append(f'<text x="{x:.1f}" y="{mt+ph+16}" text-anchor="middle" font-size="11" fill="#555">{i}</text>')
+for j in range(int(ymax) + 1):
+    y = sy(j)
+    o.append(f'<line x1="{ml}" y1="{y:.1f}" x2="{ml+pw}" y2="{y:.1f}" stroke="#e8e8e8"/>')
+    o.append(f'<text x="{ml-8}" y="{y+4:.1f}" text-anchor="end" font-size="11" fill="#555">{j}</text>')
+
+o.append(f'<rect x="{ml}" y="{mt}" width="{pw}" height="{ph}" fill="none" stroke="#999"/>')
+o.append(f'<text x="{W/2}" y="22" text-anchor="middle" font-size="14" font-weight="600" fill="#333">Factor de Magnificaci\u00f3n Din\u00e1mica D(r)</text>')
+o.append(f'<text x="{ml+pw/2}" y="{H-8}" text-anchor="middle" font-size="12" fill="#444">r = \u03c9/\u03c9\u2099</text>')
+o.append(f'<text x="16" y="{mt+ph/2}" text-anchor="middle" font-size="12" fill="#444" transform="rotate(-90,16,{mt+ph/2})">D</text>')
+o.append(f'<line x1="{ml}" y1="{sy(1):.1f}" x2="{ml+pw}" y2="{sy(1):.1f}" stroke="#ccc" stroke-dasharray="4,3"/>')
+
+r_vals = [0.01 + i * 2.99 / 399 for i in range(400)]
+for k, xi in enumerate(xi_vals):
+    pts = ' '.join(f'{sx(r):.1f},{sy(D(r,xi)):.1f}' for r in r_vals)
+    lw = '2' if k < 4 else '1.5'
+    dash = ' stroke-dasharray="8,4"' if k > 3 else ''
+    o.append(f'<polyline points="{pts}" fill="none" stroke="{colors[k]}" stroke-width="{lw}"{dash}/>')
+
+lx = ml + pw - 130
+ly = mt + 15
+h_leg = len(xi_vals) * 18 + 12
+o.append(f'<rect x="{lx-5}" y="{ly-8}" width="135" height="{h_leg}" rx="4" fill="white" fill-opacity="0.9" stroke="#ddd"/>')
+o.append(f'<text x="{lx+62}" y="{ly+6}" text-anchor="middle" font-size="10" font-weight="600" fill="#555">\u03be</text>')
+for k in range(len(xi_vals)):
+    yy = ly + 20 + k * 18
+    dash = ' stroke-dasharray="6,3"' if k > 3 else ''
+    o.append(f'<line x1="{lx}" y1="{yy}" x2="{lx+25}" y2="{yy}" stroke="{colors[k]}" stroke-width="2"{dash}/>')
+    o.append(f'<text x="{lx+30}" y="{yy+4}" font-size="11" fill="#333">{labels[k]}</text>')
+
+o.append('</svg>')
+print('\n'.join(o))
+@{end python}
+
+---
+
+## Valores en resonancia (r = 1)
+
+@{calcpad}
+#hide
+D_f(r; ξ) = 1/sqr((1 - r^2)^2 + (2*ξ*r)^2)
+#show
+#equ
+D_1 = D_f(1; 0.125)
+D_2 = D_f(1; 0.2)
+D_3 = D_f(1; 0.25)
+D_4 = D_f(1; 0.5)
+D_5 = D_f(1; 0.707)
+D_6 = D_f(1; 1)
+D_7 = D_f(1; 2)
+@{end calcpad}
+
+---
+
+## Observaciones
+
+- **D_max = 1/(2ξ)** cuando r ≈ 1
+- Para **ξ < 0.707**: el pico ocurre en r = √(1 − 2ξ²) < 1
+- Para **ξ ≥ 0.707**: D ≤ 1 (sin amplificación)
+
+---
+
+## Ciclos para amortiguamiento (criterio 2%)
+
+Criterio: la amplitud cae a 2% del valor inicial.
+
+@{calcpad}
+#equ
+t_s(ξ; ω_n) = ln(50)/(ξ*ω_n)
+T_d(ξ; ω_n) = 2*π/(ω_n*sqr(1 - ξ^2))
+N_c(ξ) = ln(50)*sqr(1 - ξ^2)/(2*π*ξ)
+N_1 = N_c(0.125)
+N_2 = N_c(0.5)
+@{end calcpad}
+
+---
+
+## Resumen
+
+1. **D(r)** muestra amplificación. En resonancia D_max = 1/(2ξ) = 4.0 para ξ=0.125
+2. Con ξ=0.125 la masa oscila ~5 ciclos; con ξ=0.5 se amortigua en ~1 ciclo
+3. Para ξ ≥ 0.707 no hay amplificación (D ≤ 1)

@@ -172,7 +172,9 @@ namespace Hekatan.Common.MultLangCode
                    output.Contains("<h6", StringComparison.OrdinalIgnoreCase) ||
                    output.Contains("<tr", StringComparison.OrdinalIgnoreCase) ||
                    output.Contains("<td", StringComparison.OrdinalIgnoreCase) ||
-                   output.Contains("<th", StringComparison.OrdinalIgnoreCase);
+                   output.Contains("<th", StringComparison.OrdinalIgnoreCase) ||
+                   // SVG support — allow code blocks to output raw SVG graphics
+                   output.Contains("<svg", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -249,7 +251,27 @@ namespace Hekatan.Common.MultLangCode
                    trimmed.StartsWith("<thead", StringComparison.OrdinalIgnoreCase) ||
                    trimmed.StartsWith("</thead>", StringComparison.OrdinalIgnoreCase) ||
                    trimmed.StartsWith("<tbody", StringComparison.OrdinalIgnoreCase) ||
-                   trimmed.StartsWith("</tbody>", StringComparison.OrdinalIgnoreCase);
+                   trimmed.StartsWith("</tbody>", StringComparison.OrdinalIgnoreCase) ||
+                   // SVG elements — allow raw SVG output from code blocks
+                   trimmed.StartsWith("<svg", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("</svg>", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<line", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<polyline", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<polygon", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<rect", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<circle", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<ellipse", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<path", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<text", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("</text>", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<g", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("</g>", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<defs", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("</defs>", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<marker", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("</marker>", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("<style", StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith("</style>", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

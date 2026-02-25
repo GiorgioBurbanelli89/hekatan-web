@@ -18,6 +18,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Hekatan.Core\Hekatan.Core.csproj" />
+    <!-- Original Calcpad parser for @{calcpad} blocks -->
+    <ProjectReference Include="..\Calcpad\Calcpad.Core\Calcpad.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

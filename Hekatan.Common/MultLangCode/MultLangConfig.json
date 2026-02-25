@@ -296,6 +296,18 @@
       "compileArgs": "",
       "runArgs": ""
     },
+    "inkscape": {
+      "command": "inkscape",
+      "extension": ".svg",
+      "directive": "@{inkscape}",
+      "endDirective": "@{end inkscape}",
+      "commentPrefix": "<!--",
+      "keywords": ["svg", "path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "text", "g", "defs", "use", "clipPath", "mask", "filter", "linearGradient", "radialGradient"],
+      "builtins": ["fill", "stroke", "transform", "viewBox", "width", "height", "style", "class", "id", "opacity", "stroke-width"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": ""
+    },
     "avalonia": {
       "command": "dotnet",
       "extension": ".csproj",
@@ -635,7 +647,7 @@
     },
     "calcpad": {
       "command": "",
-      "extension": ".cpd",
+      "extension": ".hcalc",
       "directive": "@{calcpad}",
       "endDirective": "@{end calcpad}",
       "commentPrefix": "'",
@@ -697,6 +709,19 @@
       "compileArgs": "",
       "runArgs": "",
       "description": "Tree diagram DSL - Genera diagramas de arbol/jerarquia con indentacion. Cada nivel de indentacion (2 espacios) es un hijo."
+    },
+    "animation": {
+      "command": "",
+      "extension": "",
+      "directive": "@{animation}",
+      "endDirective": "@{end animation}",
+      "commentPrefix": "#",
+      "keywords": ["spring", "sine", "circle"],
+      "builtins": ["title", "xi", "wn", "x0", "duration", "color", "color2", "color3", "spring_color", "damper_color", "petals"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Animation DSL - Genera animaciones SVG con CSS keyframes. Tipos: spring (masa-resorte), sine (ondas viajeras), circle (curvas polares). Sintaxis: @{animation spring} title: Mi titulo xi: 0.1 @{end animation}"
     },
     "function": {
       "command": "",

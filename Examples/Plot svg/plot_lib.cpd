@@ -1,0 +1,286 @@
+#hide
+#def zseg$(x1$; y1$; x2$; y2$; c$) = '<line x1="'x1$'" y1="'y1$'" x2="'x2$'" y2="'y2$'" stroke="c$" stroke-width="2" stroke-linecap="round"/>
+#def zgv$(x$; y1$; y2$) = '<line x1="'x$'" y1="'y1$'" x2="'x$'" y2="'y2$'" stroke="#ddd" stroke-width="0.5"/>
+#def zgh$(y$; x1$; x2$) = '<line x1="'x1$'" y1="'y$'" x2="'x2$'" y2="'y$'" stroke="#ddd" stroke-width="0.5"/>
+#def zax$(y$; x1$; x2$) = '<line x1="'x1$'" y1="'y$'" x2="'x2$'" y2="'y$'" stroke="#999" stroke-width="1" stroke-dasharray="4,3"/>
+#def ztxt$(x$; y$; a$; s$) = '<text x="'x$'" y="'y$'" text-anchor="a$" font-size="9" fill="#666">'s$'</text>
+#def zleg$(c$; s$) = '<b style="color:c$">---</b> s$ &ensp;
+
+#def plot$(func$; var$; xmin$; xmax$; title$; color$)
+#hide
+pW = 560
+pH = 360
+pml = 58
+pmr = 15
+pmt = 28
+pmb = 38
+ppw = pW - pml - pmr
+pph = pH - pmt - pmb
+pN = 200
+pdx = (xmax$ - xmin$)/pN
+var$ = xmin$
+pymin = func$(var$)
+pymax = pymin
+#for pi = 1 : pN
+  var$ = xmin$ + pi*pdx
+  pyv = func$(var$)
+  pymin = min(pymin; pyv)
+  pymax = max(pymax; pyv)
+#loop
+pyr = pymax - pymin
+#if pyr < 0.0000000001
+  pyr = 1
+  pymin = pymin - 0.5
+  pymax = pymin + 1
+#end if
+pymin = pymin - 0.06*pyr
+pymax = pymax + 0.06*pyr
+pyr = pymax - pymin
+#val
+#show
+'<svg viewBox="0 0 'pW' 'pH'" xmlns="http://www.w3.org/2000/svg" style="width:'pW'px; height:'pH'px; font-family:Arial; font-size:11px; background:white">
+'<defs><clipPath id="pc"><rect x="'pml'" y="'pmt'" width="'ppw'" height="'pph'"/></clipPath></defs>
+'<rect x="'pml'" y="'pmt'" width="'ppw'" height="'pph'" fill="#f8f9fa" stroke="#bbb"/>
+'<text x="'pW/2'" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">title$</text>
+#hide
+#round 3
+#for pg = 0 : 5
+  pgx = pml + pg*ppw/5
+  pgy = pmt + pg*pph/5
+  pxv = xmin$ + pg*(xmax$ - xmin$)/5
+  pyv = pymax - pg*pyr/5
+  #show
+  zgv$(pgx; pmt; pmt + pph)
+  zgh$(pgy; pml; pml + ppw)
+  ztxt$(pgx; pmt + pph + 15; middle; pxv)
+  ztxt$(pml - 5; pgy + 4; end; pyv)
+  #hide
+#loop
+#if pymin < 0
+  #if pymax > 0
+    py0 = pmt + pph - (0 - pymin)/pyr*pph
+    #show
+    zax$(py0; pml; pml + ppw)
+    #hide
+  #end if
+#end if
+#round 6
+var$ = xmin$
+pxp = pml
+pyp = pmt + pph - (func$(var$) - pymin)/pyr*pph
+#for pi = 1 : pN
+  var$ = xmin$ + pi*pdx
+  pxc = pml + pi/pN*ppw
+  pyc = pmt + pph - (func$(var$) - pymin)/pyr*pph
+  #show
+  zseg$(pxp; pyp; pxc; pyc; color$)
+  #hide
+  pxp = pxc
+  pyp = pyc
+#loop
+#show
+'<rect x="'pml'" y="'pmt'" width="'ppw'" height="'pph'" fill="none" stroke="#999"/>
+'</svg>
+#equ
+#round default
+#end def
+
+#def plot2$(f1$; f2$; var$; xmin$; xmax$; title$; c1$; c2$; leg1$; leg2$)
+#hide
+pW = 560
+pH = 360
+pml = 58
+pmr = 15
+pmt = 28
+pmb = 50
+ppw = pW - pml - pmr
+pph = pH - pmt - pmb
+pN = 200
+pdx = (xmax$ - xmin$)/pN
+var$ = xmin$
+pymin = f1$(var$)
+pymax = pymin
+pyv = f2$(var$)
+pymin = min(pymin; pyv)
+pymax = max(pymax; pyv)
+#for pi = 1 : pN
+  var$ = xmin$ + pi*pdx
+  pyv = f1$(var$)
+  pymin = min(pymin; pyv)
+  pymax = max(pymax; pyv)
+  pyv = f2$(var$)
+  pymin = min(pymin; pyv)
+  pymax = max(pymax; pyv)
+#loop
+pyr = pymax - pymin
+#if pyr < 0.0000000001
+  pyr = 1
+  pymin = pymin - 0.5
+  pymax = pymin + 1
+#end if
+pymin = pymin - 0.06*pyr
+pymax = pymax + 0.06*pyr
+pyr = pymax - pymin
+#val
+#show
+'<svg viewBox="0 0 'pW' 'pH'" xmlns="http://www.w3.org/2000/svg" style="width:'pW'px; height:'pH'px; font-family:Arial; font-size:11px; background:white">
+'<defs><clipPath id="pc"><rect x="'pml'" y="'pmt'" width="'ppw'" height="'pph'"/></clipPath></defs>
+'<rect x="'pml'" y="'pmt'" width="'ppw'" height="'pph'" fill="#f8f9fa" stroke="#bbb"/>
+'<text x="'pW/2'" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">title$</text>
+#hide
+#round 3
+#for pg = 0 : 5
+  pgx = pml + pg*ppw/5
+  pgy = pmt + pg*pph/5
+  pxv = xmin$ + pg*(xmax$ - xmin$)/5
+  pyv = pymax - pg*pyr/5
+  #show
+  zgv$(pgx; pmt; pmt + pph)
+  zgh$(pgy; pml; pml + ppw)
+  ztxt$(pgx; pmt + pph + 15; middle; pxv)
+  ztxt$(pml - 5; pgy + 4; end; pyv)
+  #hide
+#loop
+#if pymin < 0
+  #if pymax > 0
+    py0 = pmt + pph - (0 - pymin)/pyr*pph
+    #show
+    zax$(py0; pml; pml + ppw)
+    #hide
+  #end if
+#end if
+#round 6
+var$ = xmin$
+pxp = pml
+pyp = pmt + pph - (f1$(var$) - pymin)/pyr*pph
+pxq = pml
+pyq = pmt + pph - (f2$(var$) - pymin)/pyr*pph
+#for pi = 1 : pN
+  var$ = xmin$ + pi*pdx
+  pxc = pml + pi/pN*ppw
+  pyc = pmt + pph - (f1$(var$) - pymin)/pyr*pph
+  pyd = pmt + pph - (f2$(var$) - pymin)/pyr*pph
+  #show
+  zseg$(pxp; pyp; pxc; pyc; c1$)
+  zseg$(pxq; pyq; pxc; pyd; c2$)
+  #hide
+  pxp = pxc
+  pyp = pyc
+  pxq = pxc
+  pyq = pyd
+#loop
+#show
+'<rect x="'pml'" y="'pmt'" width="'ppw'" height="'pph'" fill="none" stroke="#999"/>
+'<text x="'pml + 10'" y="'pH - 10'" font-size="10"><tspan fill="c1$">--- </tspan>leg1$ <tspan fill="c2$"> --- </tspan>leg2$</text>
+'</svg>
+#equ
+#round default
+#end def
+
+#def plot_begin$(xmin$; xmax$; ymin$; ymax$; nx$; ny$; title$)
+#hide
+pW = 600
+pH = 400
+pml = 60
+pmr = 20
+pmt = 30
+pmb = 40
+ppw = pW - pml - pmr
+pph = pH - pmt - pmb
+pxmin = xmin$
+pxmax = xmax$
+pymin = ymin$
+pymax = ymax$
+pxr = pxmax - pxmin
+pyr = pymax - pymin
+#val
+#show
+'<svg viewBox="0 0 'pW' 'pH'" xmlns="http://www.w3.org/2000/svg" style="width:'pW'px; height:'pH'px; font-family:Arial; font-size:11px; background:white">
+'<rect x="'pml'" y="'pmt'" width="'ppw'" height="'pph'" fill="#f8f9fa" stroke="#bbb"/>
+'<text x="'pW/2'" y="20" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">title$</text>
+#hide
+#round 2
+#for pg = 0 : nx$
+  pgx = pml + pg*ppw/nx$
+  pxv = pxmin + pg*pxr/nx$
+  #show
+  '<line x1="'pgx'" y1="'pmt'" x2="'pgx'" y2="'pmt + pph'" stroke="#ddd" stroke-width="0.5"/>
+  '<text x="'pgx'" y="'pmt + pph + 15'" text-anchor="middle" font-size="9" fill="#666">'pxv'</text>
+  #hide
+#loop
+#for pg = 0 : ny$
+  pgy = pmt + pg*pph/ny$
+  pyv = pymax - pg*pyr/ny$
+  #show
+  '<line x1="'pml'" y1="'pgy'" x2="'pml + ppw'" y2="'pgy'" stroke="#ddd" stroke-width="0.5"/>
+  '<text x="'pml - 5'" y="'pgy + 4'" text-anchor="end" font-size="9" fill="#666">'pyv'</text>
+  #hide
+#loop
+#round 6
+#end def
+
+#def plot_add$(func$; var$; xmin$; xmax$; color$)
+#hide
+pn = 200
+padx = (xmax$ - xmin$)/pn
+var$ = xmin$
+paxp = pml + (xmin$ - pxmin)/pxr*ppw
+payp = pmt + pph - (func$(var$) - pymin)/pyr*pph
+#for pai = 1 : pn
+  var$ = xmin$ + pai*padx
+  paxc = pml + (var$ - pxmin)/pxr*ppw
+  payc = pmt + pph - (func$(var$) - pymin)/pyr*pph
+  #show
+  zseg$(paxp; payp; paxc; payc; color$)
+  #hide
+  paxp = paxc
+  payp = payc
+#loop
+#end def
+
+#def zlabel$(rx$; ry$; c$; s$)
+#hide
+zlx = pml + (rx$ - pxmin)/pxr*ppw
+zly = pmt + pph - (ry$ - pymin)/pyr*pph
+#show
+'<text x="'zlx'" y="'zly'" font-size="9" fill="c$" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">s$</text>
+#end def
+
+#def zxilab$(rx$; ry$; c$; v$)
+#hide
+zlx = pml + (rx$ - pxmin)/pxr*ppw
+zly = pmt + pph - (ry$ - pymin)/pyr*pph
+#show
+'<text x="'zlx'" y="'zly'" font-size="9" fill="c$" font-weight="bold" stroke="white" stroke-width="3" paint-order="stroke">&#958; = v$</text>
+#end def
+
+#def zrefh$(yval$)
+#hide
+zry = pmt + pph - (yval$ - pymin)/pyr*pph
+#show
+'<line x1="'pml'" y1="'zry'" x2="'pml + ppw'" y2="'zry'" stroke="#aaa" stroke-width="0.5" stroke-dasharray="4,3"/>
+#end def
+
+#def zaxis_x$(s$) = '<text x="'pml + ppw/2'" y="'pmt + pph + 35'" text-anchor="middle" font-size="12" fill="#333">s$</text>
+
+#def zaxis_y$(s$) = '<text x="'12'" y="'pmt + pph/2'" text-anchor="middle" font-size="12" fill="#333" transform="rotate(-90,'12','pmt + pph/2')">s$</text>
+
+#def zxileghead$
+#show
+'<b>Leyenda (&#958;):</b>
+'<p>
+#end def
+
+#def zxileg$(c$; v$) = '<b style="color:c$">---</b> &#958; = v$ &ensp;
+
+#def zlegend$ = '</p>
+
+#def zhr$ = '<hr>
+
+#def plot_end$
+#show
+'<rect x="'pml'" y="'pmt'" width="'ppw'" height="'pph'" fill="none" stroke="#999"/>
+'</svg>
+#equ
+#round default
+#end def

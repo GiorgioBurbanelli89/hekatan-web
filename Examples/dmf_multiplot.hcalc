@@ -1,0 +1,292 @@
+"Factor de Magnificación Dinámica — Múltiples Métodos
+'<h3 style="color:#2563eb">D = 1 / √[(1 − r²)² + (2ξr)²]</h3>
+'<hr>
+
+"<h2>① @{calcpad} — Calcpad Nativo con $Plot{}</h2>
+@{calcpad}
+#hide
+PlotWidth = 600
+PlotHeight = 400
+PlotSVG = 1
+#show
+D_1(r) = 1/sqr((1 - r^2)^2 + (2*0.125*r)^2)
+D_2(r) = 1/sqr((1 - r^2)^2 + (2*0.2*r)^2)
+D_3(r) = 1/sqr((1 - r^2)^2 + (2*0.25*r)^2)
+D_4(r) = 1/sqr((1 - r^2)^2 + (2*0.4*r)^2)
+D_5(r) = 1/sqr((1 - r^2)^2 + (2*0.7*r)^2)
+D_6(r) = 1/sqr((1 - r^2)^2 + (2*1.0*r)^2)
+D_7(r) = 1/sqr((1 - r^2)^2 + (2*2.0*r)^2)
+$Plot{D_1(r) & D_2(r) & D_3(r) & D_4(r) & D_5(r) & D_6(r) & D_7(r) @ r = 0.01 : 3}
+@{end calcpad}
+
+'<hr>
+"<h2>② @{plot} — MultLang SVG</h2>
+@{plot}
+title: "Factor de Magnificacion Dinamica D"
+xlabel: "r"
+ylabel: "D"
+width: 650
+height: 420
+grid: true
+background: white
+xlim: 0, 3.1
+ylim: 0, 4.5
+showlegend: true
+smooth: true
+smooth2: true
+smooth3: true
+smooth4: true
+smooth5: true
+smooth6: true
+smooth7: true
+
+x: [0.01; 0.07; 0.13; 0.19; 0.25; 0.31; 0.37; 0.43; 0.49; 0.55; 0.61; 0.67; 0.72; 0.76; 0.80; 0.84; 0.88; 0.91; 0.94; 0.97; 1.00; 1.03; 1.06; 1.09; 1.12; 1.15; 1.18; 1.21; 1.24; 1.30; 1.40; 1.55; 1.70; 1.90; 2.10; 2.30; 2.50; 2.70; 2.90; 3.00]
+
+y: [1.00; 1.00; 1.02; 1.04; 1.07; 1.11; 1.16; 1.23; 1.32; 1.44; 1.59; 1.81; 2.08; 2.37; 2.78; 3.37; 4.31; 4.50; 4.50; 4.50; 4.50; 4.50; 4.50; 4.50; 4.10; 3.41; 2.94; 2.57; 2.29; 1.85; 1.39; 0.96; 0.72; 0.52; 0.39; 0.31; 0.25; 0.21; 0.17; 0.16]
+color: #CC0000
+legend: "0.125"
+linewidth: 2.0
+
+y2: [1.00; 1.00; 1.01; 1.03; 1.05; 1.09; 1.13; 1.19; 1.27; 1.37; 1.50; 1.68; 1.90; 2.13; 2.44; 2.85; 3.38; 3.37; 3.28; 3.12; 2.94; 2.75; 2.57; 2.41; 2.26; 2.12; 1.99; 1.88; 1.77; 1.57; 1.24; 0.90; 0.69; 0.50; 0.38; 0.30; 0.24; 0.20; 0.17; 0.15]
+color2: #0066CC
+legend2: "0.2"
+linewidth2: 2.0
+
+y3: [1.00; 1.00; 1.01; 1.02; 1.04; 1.06; 1.10; 1.15; 1.21; 1.29; 1.39; 1.53; 1.69; 1.84; 2.02; 2.22; 2.38; 2.40; 2.37; 2.31; 2.22; 2.13; 2.04; 1.94; 1.85; 1.76; 1.68; 1.60; 1.53; 1.39; 1.14; 0.85; 0.66; 0.49; 0.38; 0.30; 0.24; 0.20; 0.17; 0.15]
+color3: #009933
+legend3: "0.25"
+linewidth3: 2.0
+
+y4: [1.00; 1.00; 1.01; 1.01; 1.02; 1.04; 1.06; 1.09; 1.12; 1.17; 1.22; 1.28; 1.34; 1.38; 1.40; 1.40; 1.38; 1.36; 1.33; 1.29; 1.25; 1.21; 1.18; 1.14; 1.10; 1.07; 1.03; 1.00; 0.97; 0.91; 0.79; 0.63; 0.51; 0.39; 0.31; 0.25; 0.21; 0.18; 0.15; 0.14]
+color4: #9900CC
+legend4: "0.4"
+linewidth4: 1.5
+
+y5: [1.00; 1.00; 1.00; 1.00; 1.00; 1.00; 0.99; 0.99; 0.97; 0.96; 0.94; 0.91; 0.88; 0.86; 0.83; 0.80; 0.77; 0.75; 0.73; 0.71; 0.69; 0.67; 0.65; 0.63; 0.62; 0.60; 0.58; 0.57; 0.55; 0.52; 0.46; 0.38; 0.32; 0.26; 0.21; 0.18; 0.15; 0.13; 0.11; 0.11]
+color5: #00AAAA
+legend5: "0.7"
+linewidth5: 1.5
+style5: dash
+
+y6: [1.00; 0.99; 0.98; 0.96; 0.93; 0.90; 0.87; 0.83; 0.78; 0.74; 0.69; 0.65; 0.62; 0.59; 0.56; 0.54; 0.51; 0.49; 0.48; 0.47; 0.45; 0.44; 0.43; 0.42; 0.41; 0.40; 0.39; 0.38; 0.37; 0.35; 0.31; 0.26; 0.22; 0.19; 0.16; 0.14; 0.12; 0.10; 0.09; 0.09]
+color6: #666666
+legend6: "1.0"
+linewidth6: 1.5
+style6: dash
+
+y7: [1.00; 0.97; 0.91; 0.82; 0.72; 0.63; 0.55; 0.48; 0.43; 0.38; 0.35; 0.32; 0.30; 0.28; 0.27; 0.26; 0.25; 0.24; 0.23; 0.23; 0.22; 0.22; 0.21; 0.21; 0.20; 0.20; 0.19; 0.19; 0.19; 0.18; 0.16; 0.14; 0.12; 0.10; 0.09; 0.08; 0.07; 0.06; 0.06; 0.05]
+color7: #AAAAAA
+legend7: "2.0"
+linewidth7: 1.0
+style7: dash
+@{end plot}
+
+'<hr>
+"<h2>③ @{python} — SVG Puro (sin matplotlib)</h2>
+@{python}
+import sys, math
+sys.stdout.reconfigure(encoding='utf-8')
+
+W, H = 650, 420
+ml, mr, mt, mb = 55, 20, 30, 45
+pw, ph = W - ml - mr, H - mt - mb
+xmin, xmax, ymin, ymax = 0, 3, 0, 4.5
+
+def sx(v): return ml + (v - xmin) / (xmax - xmin) * pw
+def sy(v): return mt + ph - (v - ymin) / (ymax - ymin) * ph
+
+xi_list = [0.125, 0.2, 0.25, 0.4, 0.7, 1.0, 2.0]
+colors  = ['#CC0000','#0066CC','#009933','#9900CC','#00AAAA','#666666','#AAAAAA']
+widths  = [2,2,2,1.5,1.5,1.5,1]
+dashes  = ['','','','','5,4','5,4','5,4']
+
+def D(r, xi):
+    d = (1-r**2)**2 + (2*xi*r)**2
+    return min(1/math.sqrt(d), 4.5) if d > 1e-12 else 4.5
+
+print(f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" style="background:#fff;font-family:sans-serif">')
+for i in range(4):
+    x = xmin + i
+    print(f'<line x1="{sx(x)}" y1="{mt}" x2="{sx(x)}" y2="{mt+ph}" stroke="#ddd"/>')
+for j in range(10):
+    y = j * 0.5
+    if y < ymax + 0.01:
+        print(f'<line x1="{ml}" y1="{sy(y)}" x2="{ml+pw}" y2="{sy(y)}" stroke="#eee"/>')
+print(f'<rect x="{ml}" y="{mt}" width="{pw}" height="{ph}" fill="none" stroke="#333"/>')
+for i in range(4):
+    print(f'<text x="{sx(i)}" y="{mt+ph+15}" text-anchor="middle" font-size="11">{i}</text>')
+print(f'<text x="{ml+pw/2}" y="{H-5}" text-anchor="middle" font-size="12">r</text>')
+for j in range(5):
+    print(f'<text x="{ml-8}" y="{sy(j)+4}" text-anchor="end" font-size="11">{j}</text>')
+print(f'<text x="14" y="{mt+ph/2}" text-anchor="middle" font-size="12" transform="rotate(-90,14,{mt+ph/2})">D</text>')
+print(f'<text x="{W/2}" y="18" text-anchor="middle" font-size="13" font-weight="bold">Python SVG - Factor D</text>')
+
+r_vals = [0.01 + i*2.99/249 for i in range(250)]
+for k, xi in enumerate(xi_list):
+    pts = ' '.join(f'{sx(r):.1f},{sy(D(r,xi)):.1f}' for r in r_vals)
+    dash = f' stroke-dasharray="{dashes[k]}"' if dashes[k] else ''
+    print(f'<polyline points="{pts}" fill="none" stroke="{colors[k]}" stroke-width="{widths[k]}"{dash}/>')
+
+for k, xi in enumerate(xi_list):
+    ly = mt + 12 + k*16
+    dash = f' stroke-dasharray="{dashes[k]}"' if dashes[k] else ''
+    print(f'<line x1="{ml+10}" y1="{ly}" x2="{ml+32}" y2="{ly}" stroke="{colors[k]}" stroke-width="{widths[k]}"{dash}/>')
+    print(f'<text x="{ml+36}" y="{ly+4}" font-size="10">{xi}</text>')
+print('</svg>')
+@{end python}
+
+'<hr>
+"<h2>④ @{octave} — GNU Octave</h2>
+@{octave}
+r = linspace(0.01, 3, 300);
+xi = [0.125, 0.2, 0.25, 0.4, 0.7, 1.0, 2.0];
+cols = {'r','b','g','m','c',[.4 .4 .4],[.7 .7 .7]};
+
+hf = figure('visible','off');
+hold on;
+for k = 1:length(xi)
+    D = 1 ./ sqrt((1 - r.^2).^2 + (2*xi(k)*r).^2);
+    D = min(D, 4.5);
+    if k < 5
+        plot(r, D, '-', 'Color', cols{k}, 'LineWidth', 2);
+    else
+        plot(r, D, '--', 'Color', cols{k}, 'LineWidth', 1.5);
+    end
+end
+hold off;
+axis([0 3 0 4.5]);
+xlabel('r'); ylabel('D');
+title('Octave - Factor D');
+leg = arrayfun(@(x) sprintf('xi=%.3f',x), xi, 'UniformOutput', false);
+legend(leg, 'Location','northeast');
+grid on;
+
+tmpf = [tempname() '.svg'];
+print(hf, tmpf, '-dsvg');
+fid = fopen(tmpf, 'r');
+svg = fread(fid, Inf, '*char')';
+fclose(fid);
+disp(svg);
+delete(tmpf);
+@{end octave}
+
+'<hr>
+"<h2>⑤ @{cpp} — C++ SVG</h2>
+@{cpp}
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <string>
+
+int main() {
+    const int W = 650, H = 420;
+    const int ml = 55, mr = 20, mt = 30, mb = 45;
+    const int pw = W - ml - mr, ph = H - mt - mb;
+    const double xmin = 0, xmax = 3, ymin = 0, ymax = 4.5;
+
+    auto sx = [&](double v) { return ml + (v - xmin) / (xmax - xmin) * pw; };
+    auto sy = [&](double v) { return mt + ph - (v - ymin) / (ymax - ymin) * ph; };
+
+    double xi[] = {0.125, 0.2, 0.25, 0.4, 0.7, 1.0, 2.0};
+    const char* colors[] = {"#CC0000","#0066CC","#009933","#9900CC","#00AAAA","#666666","#AAAAAA"};
+    double widths[] = {2,2,2,1.5,1.5,1.5,1};
+    const char* dashes[] = {"","","","","5,4","5,4","5,4"};
+    int N = 7;
+
+    printf("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\" style=\"background:#fff;font-family:sans-serif\">\n", W, H);
+
+    for (int i = 0; i < 4; i++)
+        printf("<line x1=\"%.0f\" y1=\"%d\" x2=\"%.0f\" y2=\"%d\" stroke=\"#ddd\"/>\n", sx(i), mt, sx(i), mt+ph);
+    for (int j = 0; j < 10; j++) {
+        double y = j * 0.5;
+        if (y < ymax + 0.01) printf("<line x1=\"%d\" y1=\"%.0f\" x2=\"%d\" y2=\"%.0f\" stroke=\"#eee\"/>\n", ml, sy(y), ml+pw, sy(y));
+    }
+    printf("<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" stroke=\"#333\"/>\n", ml, mt, pw, ph);
+
+    for (int i = 0; i < 4; i++)
+        printf("<text x=\"%.0f\" y=\"%d\" text-anchor=\"middle\" font-size=\"11\">%d</text>\n", sx(i), mt+ph+15, i);
+    printf("<text x=\"%.0f\" y=\"%d\" text-anchor=\"middle\" font-size=\"12\">r</text>\n", sx(1.5), H-5);
+    for (int j = 0; j < 5; j++)
+        printf("<text x=\"%d\" y=\"%.0f\" text-anchor=\"end\" font-size=\"11\">%d</text>\n", ml-8, sy(j)+4, j);
+    printf("<text x=\"%.0f\" y=\"18\" text-anchor=\"middle\" font-size=\"13\" font-weight=\"bold\">C++ SVG - Factor D</text>\n", (double)W/2);
+
+    for (int k = 0; k < N; k++) {
+        printf("<polyline points=\"");
+        for (int i = 0; i < 250; i++) {
+            double r = 0.01 + i * 2.99 / 249.0;
+            double denom = pow(1.0 - r*r, 2) + pow(2*xi[k]*r, 2);
+            double D = (denom > 1e-12) ? 1.0 / sqrt(denom) : 4.5;
+            if (D > 4.5) D = 4.5;
+            printf("%.1f,%.1f ", sx(r), sy(D));
+        }
+        printf("\" fill=\"none\" stroke=\"%s\" stroke-width=\"%.1f\"", colors[k], widths[k]);
+        if (strlen(dashes[k]) > 0) printf(" stroke-dasharray=\"%s\"", dashes[k]);
+        printf("/>\n");
+    }
+
+    for (int k = 0; k < N; k++) {
+        double ly = mt + 12 + k * 16;
+        printf("<line x1=\"%d\" y1=\"%.0f\" x2=\"%d\" y2=\"%.0f\" stroke=\"%s\" stroke-width=\"%.1f\"", ml+10, ly, ml+32, ly, colors[k], widths[k]);
+        if (strlen(dashes[k]) > 0) printf(" stroke-dasharray=\"%s\"", dashes[k]);
+        printf("/>\n");
+        printf("<text x=\"%d\" y=\"%.0f\" font-size=\"10\">%.3f</text>\n", ml+36, ly+4, xi[k]);
+    }
+    printf("</svg>\n");
+    return 0;
+}
+@{end cpp}
+
+'<hr>
+"<h2>⑥ @{powershell} — SVG</h2>
+@{powershell}
+$W = 650; $H = 420
+$ml = 55; $mr = 20; $mt = 30; $mb = 45
+$pw = $W - $ml - $mr; $ph = $H - $mt - $mb
+$xmin = 0; $xmax = 3; $ymin = 0; $ymax = 4.5
+
+function sx($v) { $script:ml + ($v - $script:xmin) / ($script:xmax - $script:xmin) * $script:pw }
+function sy($v) { $script:mt + $script:ph - ($v - $script:ymin) / ($script:ymax - $script:ymin) * $script:ph }
+
+$xi     = @(0.125, 0.2, 0.25, 0.4, 0.7, 1.0, 2.0)
+$colors = @('#CC0000','#0066CC','#009933','#9900CC','#00AAAA','#666666','#AAAAAA')
+$widths = @(2,2,2,1.5,1.5,1.5,1)
+$dashes = @('','','','','5,4','5,4','5,4')
+
+$svg = "<svg xmlns='http://www.w3.org/2000/svg' width='$W' height='$H' style='background:#fff;font-family:sans-serif'>`n"
+$svg += "<rect x='$ml' y='$mt' width='$pw' height='$ph' fill='none' stroke='#333'/>`n"
+$svg += "<text x='$($W/2)' y='18' text-anchor='middle' font-size='13' font-weight='bold'>PowerShell SVG - Factor D</text>`n"
+
+for ($k = 0; $k -lt $xi.Count; $k++) {
+    $pts = ""
+    for ($i = 0; $i -lt 250; $i++) {
+        $r = 0.01 + $i * 2.99 / 249
+        $d = [Math]::Pow(1 - $r*$r, 2) + [Math]::Pow(2*$xi[$k]*$r, 2)
+        $D = if ($d -gt 1e-12) { [Math]::Min(1/[Math]::Sqrt($d), 4.5) } else { 4.5 }
+        $pts += "$(([Math]::Round((sx $r),1))),$(([Math]::Round((sy $D),1))) "
+    }
+    $da = if ($dashes[$k]) { " stroke-dasharray='$($dashes[$k])'" } else { "" }
+    $svg += "<polyline points='$pts' fill='none' stroke='$($colors[$k])' stroke-width='$($widths[$k])'$da/>`n"
+}
+
+for ($k = 0; $k -lt $xi.Count; $k++) {
+    $ly = $mt + 12 + $k * 16
+    $da = if ($dashes[$k]) { " stroke-dasharray='$($dashes[$k])'" } else { "" }
+    $svg += "<line x1='$($ml+10)' y1='$ly' x2='$($ml+32)' y2='$ly' stroke='$($colors[$k])' stroke-width='$($widths[$k])'$da/>`n"
+    $svg += "<text x='$($ml+36)' y='$($ly+4)' font-size='10'>$($xi[$k])</text>`n"
+}
+$svg += "</svg>"
+Write-Output $svg
+@{end powershell}
+
+'<hr>
+"<b>Ecuación (3.23):</b> D = Y/y<sub>st</sub> = 1/√[(1−r²)²+(2ξr)²]
+"donde r = ω̄/ω (razón de frecuencias), ξ = c/c<sub>cr</sub> (razón de amortiguamiento)
+'<br>
+"<b>Diferencias entre métodos:</b>
+"• <b>@{calcpad}</b>: Motor Calcpad.Core — expresiones math + $Plot{} + #hide/#show → HTML+SVG nativo
+"• <b>@{plot}</b>: DSL de Hekatan — arrays de datos (x:, y:) + parámetros visuales → SVG interno
+"• <b>@{python}</b>: Código Python puro — calcula y genera SVG vía print()
+"• <b>@{octave}</b>: GNU Octave — plot() nativo + exporta SVG
+"• <b>@{cpp}</b>: Código C++ compilado — calcula y genera SVG vía printf()
+"• <b>@{powershell}</b>: Script PowerShell — calcula y genera SVG vía Write-Output

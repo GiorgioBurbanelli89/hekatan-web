@@ -216,8 +216,11 @@
             <MenuItem Header="{x:Static wpf:MainWindowResources.File}" Style="{StaticResource GoldMenuItem}">
                 <MenuItem Command="ApplicationCommands.New" 
                           Header="{x:Static wpf:MainWindowResources.New}"/>
-                <MenuItem Command="ApplicationCommands.Open" 
+                <MenuItem Command="ApplicationCommands.Open"
                           Header="{x:Static wpf:MainWindowResources.Open}"/>
+                <MenuItem Click="MenuOpenFolder_Click"
+                          Header="📁 Abrir Carpeta Web..."
+                          ToolTip="Abre una carpeta con proyecto Vite/HTML como @{html-folder}"/>
                 <MenuItem x:Name="MenuRecent" 
                           Header="{x:Static wpf:MainWindowResources.RecentFiles}"/>
                 <MenuItem x:Name="MenuSave" 
@@ -261,6 +264,74 @@
             </MenuItem>
             <MenuItem x:Name="MenuInsert" Style="{StaticResource GoldMenuItem}"
                       Header="{x:Static wpf:MainWindowResources.Insert}">
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  HEKATAN CALC — New Insert Items                        ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="📐 Hekatan Calc">
+                    <MenuItem Header="Variables &amp; Equations">
+                        <MenuItem Click="Button_Click" Tag="@{eq}&#10;&#10;@{end eq}" Header="@{eq} — Equation Block"/>
+                        <MenuItem Click="Button_Click" Tag="@{eqdef}&#10;&#10;@{end eqdef}" Header="@{eqdef} — Equation + Definitions"/>
+                        <MenuItem Click="Button_Click" Tag="@{function}&#10;&#10;@{end function}" Header="@{function} — Function Block"/>
+                        <MenuItem Click="Button_Click" Tag="@{table}&#10;&#10;@{end table}" Header="@{table} — Table Block"/>
+                    </MenuItem>
+                    <MenuItem Header="Calculus &amp; Numerical">
+                        <MenuItem Click="Button_Click" Tag="@{integral}&#10;&#10;@{end integral}" Header="@{integral} — Integral"/>
+                        <MenuItem Click="Button_Click" Tag="@{derivate}&#10;&#10;@{end derivate}" Header="@{derivate} — Derivative"/>
+                        <MenuItem Click="Button_Click" Tag="@{gauss}&#10;&#10;@{end gauss}" Header="@{gauss} — Gauss Elimination"/>
+                        <MenuItem Click="Button_Click" Tag="@{triangle}&#10;&#10;@{end triangle}" Header="@{triangle} — Triangle Solver"/>
+                    </MenuItem>
+                    <MenuItem Header="Layout &amp; Paper">
+                        <MenuItem Click="Button_Click" Tag="@{paper}&#10;size=A4&#10;margin=20mm 18mm 25mm 18mm&#10;@{end paper}" Header="@{paper} — Page Setup"/>
+                        <MenuItem Click="Button_Click" Tag="@{title}&#10;&#10;@{end title}" Header="@{title} — Title"/>
+                        <MenuItem Click="Button_Click" Tag="@{author}&#10;&#10;@{end author}" Header="@{author} — Author Block"/>
+                        <MenuItem Click="Button_Click" Tag="@{abstract}&#10;&#10;@{end abstract}" Header="@{abstract} — Abstract"/>
+                        <MenuItem Click="Button_Click" Tag="@{header}&#10;&#10;@{end header}" Header="@{header} — Header"/>
+                        <MenuItem Click="Button_Click" Tag="@{footer}&#10;&#10;@{end footer}" Header="@{footer} — Footer"/>
+                        <Separator/>
+                        <MenuItem Click="Button_Click" Tag="@{columns 2}&#10;&#10;@{end columns}" Header="@{columns 2} — Two Columns"/>
+                        <MenuItem Click="Button_Click" Tag="@{columns 3}&#10;&#10;@{end columns}" Header="@{columns 3} — Three Columns"/>
+                        <MenuItem Click="Button_Click" Tag="@{center}&#10;&#10;@{end center}" Header="@{center} — Center Block"/>
+                        <MenuItem Click="Button_Click" Tag="@{pagebreak}" Header="@{pagebreak} — Page Break"/>
+                    </MenuItem>
+                    <MenuItem Header="Formatting &amp; Rendering">
+                        <MenuItem Click="Button_Click" Tag="@{html}&#10;&#10;@{end html}" Header="@{html} — HTML Block"/>
+                        <MenuItem Click="Button_Click" Tag="@{css}&#10;&#10;@{end css}" Header="@{css} — CSS Block"/>
+                        <MenuItem Click="Button_Click" Tag="@{markdown}&#10;&#10;@{end markdown}" Header="@{markdown} — Markdown"/>
+                        <MenuItem Click="Button_Click" Tag="@{latex}&#10;&#10;@{end latex}" Header="@{latex} — LaTeX"/>
+                        <MenuItem Click="Button_Click" Tag="@{svg}&#10;&#10;@{end svg}" Header="@{svg} — SVG Graphics"/>
+                        <MenuItem Click="Button_Click" Tag="@{plot}&#10;&#10;@{end plot}" Header="@{plot} — Plot"/>
+                        <Separator/>
+                        <MenuItem Click="Button_Click" Tag="@{code}&#10;&#10;@{end code}" Header="@{code} — Code Block"/>
+                        <MenuItem Click="Button_Click" Tag="@{image}&#10;&#10;@{end image}" Header="@{image} — Image"/>
+                        <MenuItem Click="Button_Click" Tag="@{figure}&#10;&#10;@{end figure}" Header="@{figure} — Figure + Caption"/>
+                        <MenuItem Click="Button_Click" Tag="@{reference}&#10;&#10;@{end reference}" Header="@{reference} — Reference"/>
+                    </MenuItem>
+                    <MenuItem Header="3D &amp; Visualization">
+                        <MenuItem Click="Button_Click" Tag="@{three}&#10;&#10;@{end three}" Header="@{three} — Three.js 3D"/>
+                        <MenuItem Click="Button_Click" Tag="@{tree}&#10;&#10;@{end tree}" Header="@{tree} — Tree Diagram"/>
+                    </MenuItem>
+                    <MenuItem Header="Web Projects">
+                        <MenuItem Click="Button_Click" Tag="@{html-folder} ./mi-proyecto" Header="@{html-folder} — Carpeta Web (Vite/HTML)"/>
+                        <MenuItem Click="MenuOpenFolder_Click" Header="📁 Abrir Carpeta Web..."/>
+                    </MenuItem>
+                    <MenuItem Header="IFC / BIM">
+                        <MenuItem Click="Button_Click" Tag="@{ifc}&#10;&#10;@{end ifc}" Header="@{ifc} — IFC 3D Viewer"/>
+                        <MenuItem Click="Button_Click" Tag="@{ifc-fragment}&#10;&#10;@{end ifc-fragment}" Header="@{ifc-fragment} — IFC Fragment"/>
+                        <MenuItem Click="Button_Click" Tag="@{ifc-create}&#10;&#10;@{end ifc-create}" Header="@{ifc-create} — IFC Create"/>
+                    </MenuItem>
+                    <MenuItem Header="Explain &amp; AI">
+                        <MenuItem Click="Button_Click" Tag="@{explain}&#10;&#10;@{end explain}" Header="@{explain} — Explain Block"/>
+                        <MenuItem Click="Button_Click" Tag="@{cpp-explain}&#10;&#10;@{end cpp-explain}" Header="@{cpp-explain} — C++ Explain"/>
+                    </MenuItem>
+                </MenuItem>
+
+                <Separator/>
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  CALCPAD (Legacy) — Original Insert Items               ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="📋 Calcpad (Legacy)">
                 <MenuItem Header="{x:Static wpf:ConstantsResources.Constants_Header}">
                     <MenuItem Click="Button_Click" Tag="π" Icon="  π" 
                               Header="{x:Static wpf:MathResources.PiNumber}"/>
@@ -1694,8 +1765,9 @@
                               ToolTip="{x:Static wpf:MainWindowResources.SetAngleDegrees}"/>
                     <MenuItem Click="Button_Click" Tag="#rad"  Header="#rad"  
                               ToolTip="{x:Static wpf:MainWindowResources.SetAngleRadians}"/>
-                    <MenuItem Click="Button_Click" Tag="#gra"  Header="#gra" 
+                    <MenuItem Click="Button_Click" Tag="#gra"  Header="#gra"
                               ToolTip="{x:Static wpf:MainWindowResources.SetAngleGrades}"/>
+                </MenuItem>
                 </MenuItem>
             </MenuItem>
             <MenuItem x:Name="MenuOutput" Style="{StaticResource GoldMenuItem}"
@@ -1717,102 +1789,334 @@
                 <MenuItem Click="PdfButton_Click" 
                           Header="{x:Static wpf:MainWindowResources.SaveAsPDF}"/>
             </MenuItem>
-            <MenuItem Header="MultilangCode" Style="{StaticResource GoldMenuItem}">
-                <MenuItem Header="Python" x:Name="MenuPython">
-                    <MenuItem Header="Configure Path..." Click="ConfigurePythonPath_Click"/>
+            <MenuItem Header="Code" Style="{StaticResource GoldMenuItem}">
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  1) PROGRAMMING LANGUAGES &amp; COMPILERS                   ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="⌨ Programming Languages">
+                    <MenuItem Header="Python" x:Name="MenuPython">
+                        <MenuItem Header="Configure Path..." Click="ConfigurePythonPath_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Open PowerShell" Click="OpenPythonPowerShell_Click"/>
+                        <Separator/>
+                        <MenuItem Header="pip install Package..." Click="PipInstallPackage_Click"/>
+                        <MenuItem Header="pip install from requirements.txt" Click="PipInstallRequirements_Click"/>
+                        <MenuItem Header="pip list (Show Installed)" Click="PipListPackages_Click"/>
+                        <MenuItem Header="pip upgrade pip" Click="PipUpgradePip_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Insert @{python} block" Click="InsertPythonDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="C#" x:Name="MenuCSharp">
+                        <MenuItem Header="Insert @{csharp} block" Click="InsertCSharpDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="C++" x:Name="MenuCpp">
+                        <MenuItem Header="Insert @{cpp} block" Click="InsertCppDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="C" x:Name="MenuC">
+                        <MenuItem Header="Insert @{c} block" Click="InsertCDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Fortran" x:Name="MenuFortran">
+                        <MenuItem Header="Insert @{fortran} block" Click="InsertFortranDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Rust" x:Name="MenuRust">
+                        <MenuItem Header="Insert @{rust} block" Click="InsertRustDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Go" x:Name="MenuGo">
+                        <MenuItem Header="Insert @{go} block" Click="InsertGoDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="D" x:Name="MenuD">
+                        <MenuItem Header="Insert @{d} block" Click="InsertDDirective_Click"/>
+                    </MenuItem>
                     <Separator/>
-                    <MenuItem Header="Open PowerShell" Click="OpenPythonPowerShell_Click"/>
+                    <MenuItem Header="Julia" x:Name="MenuJulia">
+                        <MenuItem Header="Insert @{julia} block" Click="InsertJuliaDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="R" x:Name="MenuR">
+                        <MenuItem Header="Insert @{r} block" Click="InsertRDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Octave" x:Name="MenuOctave">
+                        <MenuItem Header="Configure Path..." Click="ConfigureOctavePath_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Open PowerShell" Click="OpenOctavePowerShell_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Insert @{octave} block" Click="InsertOctaveDirective_Click"/>
+                    </MenuItem>
                     <Separator/>
-                    <MenuItem Header="pip install Package..." Click="PipInstallPackage_Click"/>
-                    <MenuItem Header="pip install from requirements.txt" Click="PipInstallRequirements_Click"/>
-                    <MenuItem Header="pip list (Show Installed)" Click="PipListPackages_Click"/>
-                    <MenuItem Header="pip upgrade pip" Click="PipUpgradePip_Click"/>
+                    <MenuItem Header="TypeScript" x:Name="MenuTypeScript">
+                        <MenuItem Header="Insert @{typescript} block" Click="InsertTypeScriptDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="JavaScript" x:Name="MenuJavaScript">
+                        <MenuItem Header="Insert @{javascript} block" Click="InsertJavaScriptDirective_Click"/>
+                    </MenuItem>
                     <Separator/>
-                    <MenuItem Header="Insert @{python} directive" Click="InsertPythonDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="C#" x:Name="MenuCSharp">
-                    <MenuItem Header="Insert @{csharp} directive" Click="InsertCSharpDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="C++" x:Name="MenuCpp">
-                    <MenuItem Header="Insert @{cpp} directive" Click="InsertCppDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="C" x:Name="MenuC">
-                    <MenuItem Header="Insert @{c} directive" Click="InsertCDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="Fortran" x:Name="MenuFortran">
-                    <MenuItem Header="Insert @{fortran} directive" Click="InsertFortranDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="Julia" x:Name="MenuJulia">
-                    <MenuItem Header="Insert @{julia} directive" Click="InsertJuliaDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="R" x:Name="MenuR">
-                    <MenuItem Header="Insert @{r} directive" Click="InsertRDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="Octave" x:Name="MenuOctave">
-                    <MenuItem Header="Configure Path..." Click="ConfigureOctavePath_Click"/>
+                    <MenuItem Header="Haskell" x:Name="MenuHaskell">
+                        <MenuItem Header="Insert @{haskell} block" Click="InsertHaskellDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Lua" x:Name="MenuLua">
+                        <MenuItem Header="Insert @{lua} block" Click="InsertLuaDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Perl" x:Name="MenuPerl">
+                        <MenuItem Header="Insert @{perl} block" Click="InsertPerlDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Ruby" x:Name="MenuRuby">
+                        <MenuItem Header="Insert @{ruby} block" Click="InsertRubyDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="PHP" x:Name="MenuPhp">
+                        <MenuItem Header="Insert @{php} block" Click="InsertPhpDirective_Click"/>
+                    </MenuItem>
                     <Separator/>
-                    <MenuItem Header="Open PowerShell" Click="OpenOctavePowerShell_Click"/>
-                    <Separator/>
-                    <MenuItem Header="Insert @{octave} directive" Click="InsertOctaveDirective_Click"/>
+                    <MenuItem Header="OpenSees (Tcl)" x:Name="MenuOpenSees">
+                        <MenuItem Header="Insert @{opensees} block" Click="InsertOpenSeesDirective_Click"/>
+                    </MenuItem>
                 </MenuItem>
-                <MenuItem Header="OpenSees" x:Name="MenuOpenSees">
-                    <MenuItem Header="Insert @{opensees} directive" Click="InsertOpenSeesDirective_Click"/>
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  2) SHELLS &amp; TERMINALS                                  ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="⌘ Shells &amp; Terminals">
+                    <MenuItem Header="PowerShell" x:Name="MenuPowerShell">
+                        <MenuItem Header="Insert @{powershell} block" Click="InsertPowerShellDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Bash" x:Name="MenuBash">
+                        <MenuItem Header="Insert @{bash} block" Click="InsertBashDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="CMD" x:Name="MenuCmd">
+                        <MenuItem Header="Insert @{cmd} block" Click="InsertCmdDirective_Click"/>
+                    </MenuItem>
                 </MenuItem>
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  3) GUI FRAMEWORKS                                       ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="🖼 GUI Frameworks">
+                    <MenuItem Header="WPF" x:Name="MenuWpf">
+                        <MenuItem Header="Insert @{wpf} block" Click="InsertWpfDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="XAML" x:Name="MenuXaml">
+                        <MenuItem Header="Insert @{xaml} block" Click="InsertXamlDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Avalonia" x:Name="MenuAvalonia">
+                        <MenuItem Header="Insert @{avalonia} block" Click="InsertAvaloniaDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Qt" x:Name="MenuQt">
+                        <MenuItem Header="Insert @{qt} block" Click="InsertQtDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="GTK" x:Name="MenuGtk">
+                        <MenuItem Header="Insert @{gtk} block" Click="InsertGtkDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Vite" x:Name="MenuVite">
+                        <MenuItem Header="Insert @{vite} block" Click="InsertViteDirective_Click"/>
+                    </MenuItem>
+                </MenuItem>
+
                 <Separator/>
-                <MenuItem Header="PowerShell" x:Name="MenuPowerShell">
-                    <MenuItem Header="Insert @{powershell} directive" Click="InsertPowerShellDirective_Click"/>
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  4) MATH ENGINES &amp; CAS                                  ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="∑ Math Engines &amp; CAS">
+                    <MenuItem Header="Calcpad (Math Engine)" x:Name="MenuCalcpad">
+                        <MenuItem Header="Insert @{calcpad} block" Click="InsertCalcpadDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Symbolic Math (AngouriMath)" x:Name="MenuSymbolic">
+                        <MenuItem Header="Insert @{symbolic} block" Click="InsertSymbolicDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Maxima CAS" x:Name="MenuMaxima">
+                        <MenuItem Header="Insert @{maxima} block" Click="InsertMaximaDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="PyMath" x:Name="MenuPyMath">
+                        <MenuItem Header="Insert @{pymath} block" Click="InsertPyMathDirective_Click"/>
+                    </MenuItem>
                 </MenuItem>
-                <MenuItem Header="Bash" x:Name="MenuBash">
-                    <MenuItem Header="Insert @{bash} directive" Click="InsertBashDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="CMD" x:Name="MenuCmd">
-                    <MenuItem Header="Insert @{cmd} directive" Click="InsertCmdDirective_Click"/>
-                </MenuItem>
-                <Separator/>
-                <MenuItem Header="XAML" x:Name="MenuXaml">
-                    <MenuItem Header="Insert @{xaml} directive" Click="InsertXamlDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="WPF" x:Name="MenuWpf">
-                    <MenuItem Header="Insert @{wpf} directive" Click="InsertWpfDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="Avalonia" x:Name="MenuAvalonia">
-                    <MenuItem Header="Insert @{avalonia} directive" Click="InsertAvaloniaDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="Qt" x:Name="MenuQt">
-                    <MenuItem Header="Insert @{qt} directive" Click="InsertQtDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="GTK" x:Name="MenuGtk">
-                    <MenuItem Header="Insert @{gtk} directive" Click="InsertGtkDirective_Click"/>
-                </MenuItem>
-                <Separator/>
-                <MenuItem Header="HTML" x:Name="MenuHtml">
-                    <MenuItem Header="Insert @{html} directive" Click="InsertHtmlDirective_Click"/>
-                </MenuItem>
-                <MenuItem Header="Markdown" x:Name="MenuMarkdown">
-                    <MenuItem Header="Insert @{markdown} directive" Click="InsertMarkdownDirective_Click"/>
-                </MenuItem>
-                <Separator/>
-                <MenuItem Header="Jupyter Notebook" x:Name="MenuJupyter">
-                    <MenuItem x:Name="MenuJupyterOpen"
-                              Header="Open Jupyter Notebook (.ipynb)..."
-                              Click="MenuJupyterOpen_Click"
-                              ToolTip="Abre archivos .ipynb en Jupyter"/>
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  5) HEKATAN CALC FUNCTIONS &amp; FORMATS                    ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="📐 Hekatan Functions">
+                    <MenuItem Header="Equation @{eq}" x:Name="MenuEq">
+                        <MenuItem Header="Insert @{eq} block" Click="InsertEqDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Equation + Definitions @{eqdef}" x:Name="MenuEqDef">
+                        <MenuItem Header="Insert @{eqdef} block" Click="InsertEqDefDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Table @{table}" x:Name="MenuTable">
+                        <MenuItem Header="Insert @{table} block" Click="InsertTableDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Function @{function}" x:Name="MenuFunction">
+                        <MenuItem Header="Insert @{function} block" Click="InsertFunctionDirective_Click"/>
+                    </MenuItem>
                     <Separator/>
-                    <MenuItem x:Name="MenuJupyterStart"
-                              Header="Start Jupyter Server"
-                              Click="MenuJupyterStart_Click"
-                              ToolTip="Inicia el servidor Jupyter local"/>
-                    <MenuItem x:Name="MenuJupyterStop"
-                              Header="Stop Jupyter Server"
-                              Click="MenuJupyterStop_Click"
-                              ToolTip="Detiene el servidor Jupyter"/>
+                    <MenuItem Header="Integral @{integral}" x:Name="MenuIntegral">
+                        <MenuItem Header="Insert @{integral} block" Click="InsertIntegralDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Derivative @{derivate}" x:Name="MenuDerivate">
+                        <MenuItem Header="Insert @{derivate} block" Click="InsertDerivateDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Gauss Elimination @{gauss}" x:Name="MenuGauss">
+                        <MenuItem Header="Insert @{gauss} block" Click="InsertGaussDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Triangle Solver @{triangle}" x:Name="MenuTriangle">
+                        <MenuItem Header="Insert @{triangle} block" Click="InsertTriangleDirective_Click"/>
+                    </MenuItem>
                     <Separator/>
-                    <MenuItem x:Name="MenuJupyterStatus"
-                              Header="Jupyter Status..."
-                              Click="MenuJupyterStatus_Click"
-                              ToolTip="Muestra el estado de Jupyter"/>
+                    <MenuItem Header="Explain @{explain}" x:Name="MenuExplain">
+                        <MenuItem Header="Insert @{explain} block" Click="InsertExplainDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="C++ Explain @{cpp-explain}" x:Name="MenuCppExplain">
+                        <MenuItem Header="Insert @{cpp-explain} block" Click="InsertCppExplainDirective_Click"/>
+                    </MenuItem>
                 </MenuItem>
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  6) FORMATTING &amp; RENDERING                              ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="🎨 Formatting &amp; Rendering">
+                    <MenuItem Header="HTML @{html}" x:Name="MenuHtml">
+                        <MenuItem Header="Insert @{html} block" Click="InsertHtmlDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="CSS @{css}" x:Name="MenuCss">
+                        <MenuItem Header="Insert @{css} block" Click="InsertCssDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Markdown @{markdown}" x:Name="MenuMarkdown">
+                        <MenuItem Header="Insert @{markdown} block" Click="InsertMarkdownDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="LaTeX @{latex}" x:Name="MenuLatex">
+                        <MenuItem Header="Insert @{latex} block" Click="InsertLatexDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="SVG @{svg}" x:Name="MenuSvg">
+                        <MenuItem Header="Insert @{svg} block" Click="InsertSvgDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Plot @{plot}" x:Name="MenuPlot">
+                        <MenuItem Header="Insert @{plot} block" Click="InsertPlotDirective_Click"/>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="Code Block @{code}" x:Name="MenuCode">
+                        <MenuItem Header="Insert @{code} block" Click="InsertCodeDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Unicode Code @{ucode}" x:Name="MenuUcode">
+                        <MenuItem Header="Insert @{ucode} block" Click="InsertUcodeDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Theme @{theme}" x:Name="MenuThemeDirective">
+                        <MenuItem Header="Insert @{theme} block" Click="InsertThemeDirective_Click"/>
+                    </MenuItem>
+                </MenuItem>
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  7) LAYOUT &amp; PAPER                                      ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="📄 Layout &amp; Paper">
+                    <MenuItem Header="Columns @{columns}" x:Name="MenuColumns">
+                        <MenuItem Header="Insert @{columns 2} block" Click="InsertColumns2Directive_Click"/>
+                        <MenuItem Header="Insert @{columns 3} block" Click="InsertColumns3Directive_Click"/>
+                        <MenuItem Header="Insert @{columns 4} block" Click="InsertColumns4Directive_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Center @{center}" x:Name="MenuCenter">
+                        <MenuItem Header="Insert @{center} block" Click="InsertCenterDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Image @{image}" x:Name="MenuImage">
+                        <MenuItem Header="Insert @{image} block" Click="InsertImageDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Hide @{hide}" x:Name="MenuHide">
+                        <MenuItem Header="Insert @{hide} block" Click="InsertHideDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Show @{show}" x:Name="MenuShow">
+                        <MenuItem Header="Insert @{show} block" Click="InsertShowDirective_Click"/>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="Paper @{paper}" x:Name="MenuPaper">
+                        <MenuItem Header="Insert @{paper} block" Click="InsertPaperDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Title @{title}" x:Name="MenuTitleDirective">
+                        <MenuItem Header="Insert @{title} block" Click="InsertTitleDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Author @{author}" x:Name="MenuAuthor">
+                        <MenuItem Header="Insert @{author} block" Click="InsertAuthorDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Abstract @{abstract}" x:Name="MenuAbstract">
+                        <MenuItem Header="Insert @{abstract} block" Click="InsertAbstractDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Header @{header}" x:Name="MenuHeaderDirective">
+                        <MenuItem Header="Insert @{header} block" Click="InsertHeaderDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Footer @{footer}" x:Name="MenuFooter">
+                        <MenuItem Header="Insert @{footer} block" Click="InsertFooterDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Figure @{figure}" x:Name="MenuFigure">
+                        <MenuItem Header="Insert @{figure} block" Click="InsertFigureDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Reference @{reference}" x:Name="MenuReference">
+                        <MenuItem Header="Insert @{reference} block" Click="InsertReferenceDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Page Break @{pagebreak}" x:Name="MenuPagebreak">
+                        <MenuItem Header="Insert @{pagebreak} block" Click="InsertPagebreakDirective_Click"/>
+                    </MenuItem>
+                </MenuItem>
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  8) 3D &amp; VISUALIZATION                                  ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="🌐 3D &amp; Visualization">
+                    <MenuItem Header="Three.js 3D @{three}" x:Name="MenuThree">
+                        <MenuItem Header="Insert @{three} block" Click="InsertThreeDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="Tree Diagram @{tree}" x:Name="MenuTree">
+                        <MenuItem Header="Insert @{tree} block" Click="InsertTreeDirective_Click"/>
+                    </MenuItem>
+                </MenuItem>
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  9) IFC / BIM                                            ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="🏗 IFC / BIM">
+                    <MenuItem Header="IFC 3D Viewer @{ifc}" x:Name="MenuIfc">
+                        <MenuItem Header="Insert @{ifc} block" Click="InsertIfcDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="IFC Fragment @{ifc-fragment}" x:Name="MenuIfcFragment">
+                        <MenuItem Header="Insert @{ifc-fragment} block" Click="InsertIfcFragmentDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="IFC Create @{ifc-create}" x:Name="MenuIfcCreate">
+                        <MenuItem Header="Insert @{ifc-create} block" Click="InsertIfcCreateDirective_Click"/>
+                    </MenuItem>
+                </MenuItem>
+
                 <Separator/>
+
+                <!-- ╔══════════════════════════════════════════════════════════╗ -->
+                <!-- ║  10) IMPORT / EXTERNAL TOOLS                             ║ -->
+                <!-- ╚══════════════════════════════════════════════════════════╝ -->
+                <MenuItem Header="📥 Import / External">
+                    <MenuItem Header="MathCAD Prime @{mcdx}" x:Name="MenuMcdx">
+                        <MenuItem Header="Insert @{mcdx} block" Click="InsertMcdxDirective_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="MathCAD @{mathcad}" x:Name="MenuMathcad">
+                        <MenuItem Header="Insert @{mathcad} block" Click="InsertMathcadDirective_Click"/>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="Jupyter Notebook" x:Name="MenuJupyter">
+                        <MenuItem x:Name="MenuJupyterOpen"
+                                  Header="Open Jupyter Notebook (.ipynb)..."
+                                  Click="MenuJupyterOpen_Click"
+                                  ToolTip="Abre archivos .ipynb en Jupyter"/>
+                        <Separator/>
+                        <MenuItem x:Name="MenuJupyterStart"
+                                  Header="Start Jupyter Server"
+                                  Click="MenuJupyterStart_Click"
+                                  ToolTip="Inicia el servidor Jupyter local"/>
+                        <MenuItem x:Name="MenuJupyterStop"
+                                  Header="Stop Jupyter Server"
+                                  Click="MenuJupyterStop_Click"
+                                  ToolTip="Detiene el servidor Jupyter"/>
+                        <Separator/>
+                        <MenuItem x:Name="MenuJupyterStatus"
+                                  Header="Jupyter Status..."
+                                  Click="MenuJupyterStatus_Click"
+                                  ToolTip="Muestra el estado de Jupyter"/>
+                    </MenuItem>
+                </MenuItem>
+
+                <Separator/>
+                <!-- ═══════════════ Math Editor ═══════════════ -->
                 <MenuItem Header="MathCAD - Math Editor..." Click="OpenMathEditor_Click"/>
                 <MenuItem Header="Math Editor Test Window..." Click="OpenMathEditorTest_Click"/>
             </MenuItem>
@@ -2513,19 +2817,19 @@
                 <ColumnDefinition />
                 <ColumnDefinition Width="120*" />
             </Grid.ColumnDefinitions>
-            <GroupBox x:Name="InputFrame" Header="{x:Static wpf:MainWindowResources.Code}" 
+            <GroupBox x:Name="InputFrame" Header="{x:Static wpf:MainWindowResources.Code}"
                       FontSize="13" FontFamily="Segoe UI Semibold"
-                      Margin="6,1,4,1" MinWidth="580" BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}">
+                      Margin="1,1,4,1" Padding="0" MinWidth="580" BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}">
                 <GroupBox.Background>
                     <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-                        <GradientStop Color="White" Offset="0.543"/>
-                        <GradientStop Color="#FFF0F0F0" Offset="1"/>
+                        <GradientStop Color="#F5F5F5" Offset="0.543"/>
+                        <GradientStop Color="#EEEEEE" Offset="1"/>
                     </LinearGradientBrush>
                 </GroupBox.Background>
                 <Grid x:Name="InputGrid" Margin="0,0,0,1">
                     <Grid.RowDefinitions>
                         <RowDefinition/>
-                        <RowDefinition Height="142"/>
+                        <RowDefinition Height="168"/>
                     </Grid.RowDefinitions>
                     <Border BorderThickness="0,0,0,1" Height="36" Margin="-4,-8,-4,0" VerticalAlignment="Top" BorderBrush="#FFE3E3E3">
                         <Border.Background>
@@ -2728,7 +3032,7 @@
                                  Grid.Row="0"
                                  FontFamily="Consolas"
                                  FontSize="14"
-                                 Background="White"
+                                 Background="#F5F5F5"
                                  Foreground="Black"
                                  BorderThickness="0"
                                  BorderBrush="{x:Null}"
@@ -2750,14 +3054,14 @@
 
                     <!-- AvalonEdit TextEditor with Code Folding (visible by default) -->
                     <avalonEdit:TextEditor x:Name="TextEditor"
-                                          Margin="55,33,5,24"
+                                          Margin="-8,33,0,24"
                                           Grid.Row="0"
                                           FontFamily="Consolas"
                                           FontSize="14"
                                           ShowLineNumbers="True"
                                           LineNumbersForeground="Gray"
                                           WordWrap="False"
-                                          Background="White"
+                                          Background="#F5F5F5"
                                           Foreground="Black"
                                           BorderThickness="0"
                                           BorderBrush="{x:Null}"
@@ -2778,8 +3082,45 @@
                                                    Margin="5,33,5,24"
                                                    Visibility="Collapsed"
                                                    ContentChanged="MathEditorControl_ContentChanged"/>
-                    <Canvas Grid.Row="0" x:Name="LineNumbers" HorizontalAlignment="Left" Margin="6,33,0,24" Width="40"/>
-                    <Border Grid.Row="0" BorderThickness="0,0,1,0" HorizontalAlignment="Left" Margin="48,28,0,24" Width="2" BorderBrush="#FFE3E3E3"/>
+                    <Canvas Grid.Row="0" x:Name="LineNumbers" HorizontalAlignment="Left" Margin="6,33,0,24" Width="40" Visibility="Collapsed"/>
+                    <Border Grid.Row="0" x:Name="LineNumbersBorder" BorderThickness="0,0,1,0" HorizontalAlignment="Left" Margin="48,28,0,24" Width="2" BorderBrush="#FFE3E3E3" Visibility="Collapsed"/>
+
+                    <!-- ═══ Folder TreeView para @{html-folder} ═══ -->
+                    <Grid x:Name="FolderTreePanel" Grid.Row="0" Visibility="Collapsed"
+                          Margin="5,33,0,24" HorizontalAlignment="Left" Width="200">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="24"/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <Border Background="#F0F0F0" BorderBrush="#DDD" BorderThickness="0,0,0,1">
+                            <DockPanel Margin="4,2">
+                                <TextBlock x:Name="FolderTreeTitle" Text="📁 Proyecto"
+                                           FontSize="11" FontFamily="Segoe UI" Foreground="#555"
+                                           VerticalAlignment="Center"/>
+                                <Button x:Name="FolderTreeCloseBtn" DockPanel.Dock="Right"
+                                        Content="✕" FontSize="10" Width="18" Height="18"
+                                        HorizontalAlignment="Right" Background="Transparent"
+                                        BorderThickness="0" Cursor="Hand" Focusable="False"
+                                        Click="FolderTreeClose_Click"
+                                        ToolTip="Cerrar panel de archivos"/>
+                            </DockPanel>
+                        </Border>
+                        <TreeView x:Name="FolderTreeView" Grid.Row="1"
+                                  Background="#FAFAFA" BorderThickness="0"
+                                  FontFamily="Consolas" FontSize="12"
+                                  SelectedItemChanged="FolderTreeView_SelectedItemChanged">
+                            <TreeView.ItemContainerStyle>
+                                <Style TargetType="TreeViewItem">
+                                    <Setter Property="Padding" Value="2,1"/>
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                </Style>
+                            </TreeView.ItemContainerStyle>
+                        </TreeView>
+                        <GridSplitter Grid.Row="0" Grid.RowSpan="2"
+                                      HorizontalAlignment="Right" Width="3"
+                                      Background="#E0E0E0" Cursor="SizeWE"/>
+                    </Grid>
+
                     <ListBox Grid.Row="0" x:Name="AutoCompleteListBox" 
                              HorizontalAlignment="Left" 
                              VerticalAlignment="Top" 
@@ -2833,11 +3174,20 @@
                             VerticalAlignment="Center" HorizontalAlignment="Center" 
                             ToolTip="{x:Static wpf:MainWindowResources.ChangeCase}"/>
                     </WrapPanel>
-                    <Grid x:Name="KeyPadGrid" Grid.Row="1" HorizontalAlignment="Center" Width="575" VerticalAlignment="Top">
+                    <TabControl x:Name="KeypadTabControl" Grid.Row="1" Margin="0,0,0,0" FontSize="11" FontFamily="Segoe UI" FontWeight="Normal" Padding="0">
+                        <TabControl.Resources>
+                            <Style TargetType="TabItem">
+                                <Setter Property="Padding" Value="8,2,8,2"/>
+                                <Setter Property="FontSize" Value="11.5"/>
+                            </Style>
+                        </TabControl.Resources>
+                        <!-- ═══ TAB 1: Calcpad Math Engine ═══ -->
+                        <TabItem Header="📐 Calcpad">
+                    <Grid x:Name="KeyPadGrid" HorizontalAlignment="Center" Width="575" VerticalAlignment="Top">
                         <Label HorizontalAlignment="Left" VerticalAlignment="Top" Padding="1" Height="20"
-                               Width="404" BorderThickness="0,0,0,1" 
+                               Width="404" BorderThickness="0,0,0,1"
                                Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
-                               Content="{x:Static wpf:MainWindowResources.KeypadLabel}" 
+                               Content="{x:Static wpf:MainWindowResources.KeypadLabel}"
                                FontSize="12" Margin="2,4,0,0" FontFamily="Roboto"/>
                         <Button Click="Button_Click" x:Name="SqrButton" Tag="^2" Margin="197,29,0,0"
                                 Style="{StaticResource RoundButton}"
@@ -3075,12 +3425,144 @@
                                 Style="{StaticResource RoundButton}" Margin="523,57,0,0" FontSize="14" Width="48"
                                 ToolTip="{x:Static wpf:MainWindowResources.LocalMinimum}" VerticalAlignment="Top"/>
                     </Grid>
+                        </TabItem>
+                        <!-- ═══ TAB 2: Hekatan Calc Directives ═══ -->
+                        <TabItem Header="☥ Hekatan Calc" FontWeight="Bold">
+                            <Grid x:Name="HekatanPadGrid" HorizontalAlignment="Center" Width="575" VerticalAlignment="Top">
+                                <Label HorizontalAlignment="Left" VerticalAlignment="Top" Padding="1" Height="20"
+                                       Width="570" BorderThickness="0,0,0,1"
+                                       Foreground="#00D4AA" FontWeight="SemiBold"
+                                       Content="Hekatan Calc — Directives &amp; Code Blocks"
+                                       FontSize="12" Margin="2,4,0,0" FontFamily="Segoe UI"/>
+
+                                <!-- Row 1: Code Languages -->
+                                <Label Content="Code:" Foreground="Gray" FontSize="10" FontWeight="Normal" Margin="2,26,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0"/>
+                                <Button Click="Button_Click" Content="Python" Tag="@{python}§§@{end python}"
+                                        Style="{StaticResource RoundButton}" Margin="3,40,0,0" Width="52" FontSize="12" Foreground="#3572A5"
+                                        ToolTip="Insert Python code block"/>
+                                <Button Click="Button_Click" Content="C#" Tag="@{csharp}§§@{end csharp}"
+                                        Style="{StaticResource RoundButton}" Margin="57,40,0,0" Width="36" FontSize="12" Foreground="#178600"
+                                        ToolTip="Insert C# code block"/>
+                                <Button Click="Button_Click" Content="C++" Tag="@{cpp}§§@{end cpp}"
+                                        Style="{StaticResource RoundButton}" Margin="95,40,0,0" Width="36" FontSize="12" Foreground="#f34b7d"
+                                        ToolTip="Insert C++ code block"/>
+                                <Button Click="Button_Click" Content="Fortran" Tag="@{fortran}§§@{end fortran}"
+                                        Style="{StaticResource RoundButton}" Margin="133,40,0,0" Width="54" FontSize="12" Foreground="#4d41b1"
+                                        ToolTip="Insert Fortran code block"/>
+                                <Button Click="Button_Click" Content="Julia" Tag="@{julia}§§@{end julia}"
+                                        Style="{StaticResource RoundButton}" Margin="189,40,0,0" Width="42" FontSize="12" Foreground="#9558B2"
+                                        ToolTip="Insert Julia code block"/>
+                                <Button Click="Button_Click" Content="Rust" Tag="@{rust}§§@{end rust}"
+                                        Style="{StaticResource RoundButton}" Margin="233,40,0,0" Width="40" FontSize="12" Foreground="#dea584"
+                                        ToolTip="Insert Rust code block"/>
+                                <Button Click="Button_Click" Content="R" Tag="@{r}§§@{end r}"
+                                        Style="{StaticResource RoundButton}" Margin="275,40,0,0" Width="28" FontSize="12" Foreground="#198CE7"
+                                        ToolTip="Insert R code block"/>
+                                <Button Click="Button_Click" Content="Octave" Tag="@{octave}§§@{end octave}"
+                                        Style="{StaticResource RoundButton}" Margin="305,40,0,0" Width="50" FontSize="12" Foreground="#0790C0"
+                                        ToolTip="Insert GNU Octave code block"/>
+                                <Button Click="Button_Click" Content="Bash" Tag="@{bash}§§@{end bash}"
+                                        Style="{StaticResource RoundButton}" Margin="357,40,0,0" Width="40" FontSize="12" Foreground="#89e051"
+                                        ToolTip="Insert Bash script block"/>
+                                <Button Click="Button_Click" Content="PS" Tag="@{powershell}§§@{end powershell}"
+                                        Style="{StaticResource RoundButton}" Margin="399,40,0,0" Width="32" FontSize="12" Foreground="#012456"
+                                        ToolTip="Insert PowerShell script block"/>
+                                <Button Click="Button_Click" Content="Go" Tag="@{go}§§@{end go}"
+                                        Style="{StaticResource RoundButton}" Margin="433,40,0,0" Width="32" FontSize="12" Foreground="#00ADD8"
+                                        ToolTip="Insert Go code block"/>
+                                <Button Click="Button_Click" Content="Java" Tag="@{java}§§@{end java}"
+                                        Style="{StaticResource RoundButton}" Margin="467,40,0,0" Width="40" FontSize="12" Foreground="#b07219"
+                                        ToolTip="Insert Java code block"/>
+                                <Button Click="Button_Click" Content="JS" Tag="@{javascript}§§@{end javascript}"
+                                        Style="{StaticResource RoundButton}" Margin="509,40,0,0" Width="32" FontSize="12" Foreground="#f1e05a"
+                                        ToolTip="Insert JavaScript code block"/>
+                                <Button Click="Button_Click" Content="TS" Tag="@{typescript}§§@{end typescript}"
+                                        Style="{StaticResource RoundButton}" Margin="543,40,0,0" Width="32" FontSize="12" Foreground="#2b7489"
+                                        ToolTip="Insert TypeScript code block"/>
+
+                                <!-- Row 2: Document & Layout -->
+                                <Label Content="Layout:" Foreground="Gray" FontSize="10" FontWeight="Normal" Margin="2,60,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0"/>
+                                <Button Click="Button_Click" Content="@{paper}" Tag="@{paper}§§@{end paper}"
+                                        Style="{StaticResource RoundButton}" Margin="3,74,0,0" Width="62" FontSize="12" Foreground="#00D4AA" FontWeight="Bold"
+                                        ToolTip="Academic paper template (title, authors, abstract)"/>
+                                <Button Click="Button_Click" Content="@{col 2}" Tag="@{columns 2}§§@{end columns}"
+                                        Style="{StaticResource RoundButton}" Margin="67,74,0,0" Width="56" FontSize="12" Foreground="#00D4AA"
+                                        ToolTip="Two-column layout"/>
+                                <Button Click="Button_Click" Content="@{col 3}" Tag="@{columns 3}§§@{end columns}"
+                                        Style="{StaticResource RoundButton}" Margin="125,74,0,0" Width="56" FontSize="12" Foreground="#00D4AA"
+                                        ToolTip="Three-column layout"/>
+                                <Button Click="Button_Click" Content="@{eq}" Tag="@{eq}§§@{end eq}"
+                                        Style="{StaticResource RoundButton}" Margin="183,74,0,0" Width="42" FontSize="12" Foreground="#D4AF37" FontWeight="Bold"
+                                        ToolTip="Rich equation block (fractions, integrals, matrices)"/>
+                                <Button Click="Button_Click" Content="@{table}" Tag="@{table}§§@{end table}"
+                                        Style="{StaticResource RoundButton}" Margin="227,74,0,0" Width="58" FontSize="12" Foreground="#00D4AA"
+                                        ToolTip="Formatted table block"/>
+                                <Button Click="Button_Click" Content="@{md}" Tag="@{markdown}§§@{end markdown}"
+                                        Style="{StaticResource RoundButton}" Margin="287,74,0,0" Width="46" FontSize="12" Foreground="#083fa1"
+                                        ToolTip="Markdown section"/>
+
+                                <!-- Row 2 continued: Visualization -->
+                                <Label Content="Visual:" Foreground="Gray" FontSize="10" FontWeight="Normal" Margin="338,60,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0"/>
+                                <Button Click="Button_Click" Content="@{svg}" Tag="@{svg}§§@{end svg}"
+                                        Style="{StaticResource RoundButton}" Margin="337,74,0,0" Width="48" FontSize="12" Foreground="#ff9900"
+                                        ToolTip="SVG inline graphics"/>
+                                <Button Click="Button_Click" Content="@{plot}" Tag="@{plot}§§@{end plot}"
+                                        Style="{StaticResource RoundButton}" Margin="387,74,0,0" Width="48" FontSize="12" Foreground="#ff6600"
+                                        ToolTip="2D/3D function plot"/>
+                                <Button Click="Button_Click" Content="@{three}" Tag="@{three}§§@{end three}"
+                                        Style="{StaticResource RoundButton}" Margin="437,74,0,0" Width="56" FontSize="12" Foreground="#049EF4"
+                                        ToolTip="Three.js 3D scene"/>
+                                <Button Click="Button_Click" Content="@{html}" Tag="@{html}§§@{end html}"
+                                        Style="{StaticResource RoundButton}" Margin="495,74,0,0" Width="52" FontSize="12" Foreground="#e34c26"
+                                        ToolTip="Custom HTML content"/>
+
+                                <!-- Row 3: Math & Engineering -->
+                                <Label Content="Math:" Foreground="Gray" FontSize="10" FontWeight="Normal" Margin="2,94,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0"/>
+                                <Button Click="Button_Click" Content="Symbolic" Tag="@{symbolic}§§@{end symbolic}"
+                                        Style="{StaticResource RoundButton}" Margin="3,108,0,0" Width="62" FontSize="12" Foreground="#8B0000"
+                                        ToolTip="Symbolic math (AngouriMath) — simplify, solve, integrate"/>
+                                <Button Click="Button_Click" Content="LaTeX" Tag="@{latex}§§@{end latex}"
+                                        Style="{StaticResource RoundButton}" Margin="67,108,0,0" Width="46" FontSize="12" Foreground="#008080"
+                                        ToolTip="LaTeX equation import → Hekatan"/>
+                                <Button Click="Button_Click" Content="PyMath" Tag="@{pymath}§§@{end pymath}"
+                                        Style="{StaticResource RoundButton}" Margin="115,108,0,0" Width="54" FontSize="12" Foreground="#3572A5"
+                                        ToolTip="Python math expressions → Hekatan"/>
+                                <Button Click="Button_Click" Content="Mathcad" Tag="@{mathcad}§§@{end mathcad}"
+                                        Style="{StaticResource RoundButton}" Margin="171,108,0,0" Width="58" FontSize="12" Foreground="#4B0082"
+                                        ToolTip="Mathcad import → Hekatan"/>
+                                <Button Click="Button_Click" Content="@{css}" Tag="@{css}§§@{end css}"
+                                        Style="{StaticResource RoundButton}" Margin="231,108,0,0" Width="46" FontSize="12" Foreground="#563d7c"
+                                        ToolTip="Custom CSS styles"/>
+
+                                <!-- Row 3 continued: GUI & Web -->
+                                <Label Content="GUI:" Foreground="Gray" FontSize="10" FontWeight="Normal" Margin="284,94,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0"/>
+                                <Button Click="Button_Click" Content="XAML" Tag="@{xaml}§§@{end xaml}"
+                                        Style="{StaticResource RoundButton}" Margin="283,108,0,0" Width="42" FontSize="12" Foreground="#0C54C2"
+                                        ToolTip="XAML GUI definition"/>
+                                <Button Click="Button_Click" Content="WPF" Tag="@{wpf}§§@{end wpf}"
+                                        Style="{StaticResource RoundButton}" Margin="327,108,0,0" Width="38" FontSize="12" Foreground="#68217A"
+                                        ToolTip="WPF .NET Windows"/>
+                                <Button Click="Button_Click" Content="Avalonia" Tag="@{avalonia}§§@{end avalonia}"
+                                        Style="{StaticResource RoundButton}" Margin="367,108,0,0" Width="62" FontSize="12" Foreground="#8B52FF"
+                                        ToolTip="Avalonia cross-platform UI"/>
+                                <Button Click="Button_Click" Content="Qt" Tag="@{qt}§§@{end qt}"
+                                        Style="{StaticResource RoundButton}" Margin="431,108,0,0" Width="30" FontSize="12" Foreground="#41CD52"
+                                        ToolTip="Qt C++ GUI"/>
+                                <Button Click="Button_Click" Content="GTK" Tag="@{gtk}§§@{end gtk}"
+                                        Style="{StaticResource RoundButton}" Margin="463,108,0,0" Width="36" FontSize="12" Foreground="#4e9a06"
+                                        ToolTip="GTK Linux GUI"/>
+                                <Button Click="Button_Click" Content="Vite" Tag="@{vite}§§@{end vite}"
+                                        Style="{StaticResource RoundButton}" Margin="501,108,0,0" Width="38" FontSize="12" Foreground="#646CFF"
+                                        ToolTip="Vite web bundler"/>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
                 </Grid>
             </GroupBox>
             <GroupBox x:Name="OutputFrame" Grid.Column="2"
                       FontFamily="Segoe UI Semibold" FontWeight="Bold"  FontSize="13"
                       VerticalContentAlignment="Stretch" Margin="4,1,6,1" 
-                      BorderBrush="#AACCCCCC" Background="White" 
+                      BorderBrush="#AACCCCCC" Background="#F5F5F5"
                       Header="{x:Static wpf:MainWindowResources.Output}" >
                 <Wpf:WebView2 x:Name="WebViewer" Margin="5,5,5,5" KeyUp="WebViewer_KeyUp" PreviewKeyDown="WebViewer_PreviewKeyDown" NavigationCompleted="WebViewer_NavigationCompleted" WebMessageReceived="WebViewer_WebMessageReceived" GotFocus="WebViewer_GotFocus" />
             </GroupBox>

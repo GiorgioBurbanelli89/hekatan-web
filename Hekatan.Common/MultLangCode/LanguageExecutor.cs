@@ -286,12 +286,15 @@ namespace Hekatan.Common.MultLangCode
             }
 
             // Write code to temp file
-            var fileName = $"calcpad_{Guid.NewGuid():N}{langDef.Extension}";
+            var fileName = $"hekatan_{Guid.NewGuid():N}{langDef.Extension}";
             var filePath = Path.Combine(_tempDir, fileName);
 
             try
             {
-                File.WriteAllText(filePath, code);
+                // Normalize line endings to \n to avoid \r\r\n issues that break R, PHP, etc.
+                code = code.Replace("\r\n", "\n").Replace("\r", "\n");
+                // Use BOM-free UTF-8 to avoid breaking R, PowerShell and other interpreters
+                File.WriteAllText(filePath, code, new UTF8Encoding(false));
 
                 // Execute
                 return ExecuteFile(filePath, langDef, progressCallback);
@@ -482,24 +485,58 @@ namespace Hekatan.Common.MultLangCode
         /// </summary>
         private ExecutionResult ExecuteInterpretedLanguage(string filePath, LanguageDefinition langDef, Action<string>? progressCallback)
         {
-            var arguments = langDef.RunArgs.Replace("{file}", filePath);
+            var effectivePath = filePath;
+            var effectiveCommand = langDef.Command;
+
+            // On Windows, bash requires special path handling.
+            // Prefer Git Bash or MSYS2 over WSL bash because they handle /c/ paths
+            // and don't require a separate Linux distro to be installed.
+            if (OperatingSystem.IsWindows() &&
+                (langDef.Command.Equals("bash", StringComparison.OrdinalIgnoreCase) ||
+                 langDef.Command.Contains("/sh", StringComparison.OrdinalIgnoreCase)))
+            {
+                // Resolve bash: prefer Git Bash > MSYS2 > system (WSL)
+                var gitBash = @"C:\Program Files\Git\bin\bash.exe";
+                var msysBash = @"C:\msys64\usr\bin\bash.exe";
+                bool useWsl = false;
+
+                if (File.Exists(gitBash))
+                    effectiveCommand = gitBash;
+                else if (File.Exists(msysBash))
+                    effectiveCommand = msysBash;
+                else
+                    useWsl = true; // System bash is likely WSL
+
+                // Convert path to POSIX format
+                effectivePath = filePath.Replace("\\", "/");
+                if (effectivePath.Length >= 2 && effectivePath[1] == ':')
+                {
+                    var driveLetter = char.ToLower(effectivePath[0]);
+                    if (useWsl)
+                        effectivePath = $"/mnt/{driveLetter}{effectivePath.Substring(2)}";
+                    else
+                        effectivePath = $"/{driveLetter}{effectivePath.Substring(2)}";
+                }
+            }
+
+            var arguments = langDef.RunArgs.Replace("{file}", effectivePath);
 
             // If RunArgs is empty, use default
             if (string.IsNullOrEmpty(langDef.RunArgs))
             {
-                arguments = $"\"{filePath}\"";
+                arguments = $"\"{effectivePath}\"";
             }
 
             // Debug: Log the command being executed
             try
             {
-                var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "calcpad-debug.txt");
+                var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "hekatan-debug.txt");
                 System.IO.File.AppendAllText(debugPath,
-                    $"[{DateTime.Now:HH:mm:ss}] ExecuteInterpretedLanguage: {langDef.Command} {arguments}\n");
+                    $"[{DateTime.Now:HH:mm:ss}] ExecuteInterpretedLanguage: {effectiveCommand} {arguments}\n");
             }
             catch { }
 
-            return RunProcess(langDef.Command, arguments, "Ejecutando", progressCallback);
+            return RunProcess(effectiveCommand, arguments, "Ejecutando", progressCallback);
         }
 
         /// <summary>
@@ -510,7 +547,7 @@ namespace Hekatan.Common.MultLangCode
         {
             try
             {
-                var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "calcpad-debug.txt");
+                var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "hekatan-debug.txt");
                 System.IO.File.AppendAllText(debugPath,
                     $"[{DateTime.Now:HH:mm:ss}] RunGuiProcess START: {exePath}\n");
 
@@ -577,7 +614,7 @@ namespace Hekatan.Common.MultLangCode
             // Debug: Log the command being executed
             try
             {
-                var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "calcpad-debug.txt");
+                var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "hekatan-debug.txt");
                 System.IO.File.AppendAllText(debugPath,
                     $"[{DateTime.Now:HH:mm:ss}] RunProcess START: {command} {arguments}\n");
             }
@@ -650,7 +687,7 @@ namespace Hekatan.Common.MultLangCode
                     {
                         try
                         {
-                            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "calcpad-debug.txt");
+                            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "hekatan-debug.txt");
                             System.IO.File.AppendAllText(debugPath,
                                 $"[{DateTime.Now:HH:mm:ss}] Attempting to start process (attempt {retryCount + 1}/{maxRetries}): {startInfo.FileName} {startInfo.Arguments}\n");
                         }
@@ -661,7 +698,7 @@ namespace Hekatan.Common.MultLangCode
 
                         try
                         {
-                            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "calcpad-debug.txt");
+                            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "hekatan-debug.txt");
                             System.IO.File.AppendAllText(debugPath,
                                 $"[{DateTime.Now:HH:mm:ss}] Process started successfully!\n");
                         }
@@ -672,7 +709,7 @@ namespace Hekatan.Common.MultLangCode
                         retryCount++;
                         try
                         {
-                            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "calcpad-debug.txt");
+                            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "hekatan-debug.txt");
                             System.IO.File.AppendAllText(debugPath,
                                 $"[{DateTime.Now:HH:mm:ss}] Access denied! Retry {retryCount}/{maxRetries}. Waiting 1s...\n");
                         }
@@ -689,7 +726,7 @@ namespace Hekatan.Common.MultLangCode
                         // Fallback: retry with cmd.exe /c wrapping.
                         try
                         {
-                            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "calcpad-debug.txt");
+                            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "hekatan-debug.txt");
                             System.IO.File.AppendAllText(debugPath,
                                 $"[{DateTime.Now:HH:mm:ss}] Direct start failed ({ex.Message}), retrying with cmd.exe /c {command}\n");
                         }
@@ -703,7 +740,7 @@ namespace Hekatan.Common.MultLangCode
                     {
                         try
                         {
-                            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "calcpad-debug.txt");
+                            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "hekatan-debug.txt");
                             System.IO.File.AppendAllText(debugPath,
                                 $"[{DateTime.Now:HH:mm:ss}] Unexpected exception: {ex.GetType().Name}: {ex.Message}\n");
                         }
@@ -788,7 +825,7 @@ namespace Hekatan.Common.MultLangCode
                 // Debug: Log execution result
                 try
                 {
-                    var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "calcpad-debug.txt");
+                    var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "hekatan-debug.txt");
                     System.IO.File.AppendAllText(debugPath,
                         $"[{DateTime.Now:HH:mm:ss}] RunProcess RESULT: ExitCode={process.ExitCode}, Success={result.Success}\n");
                     System.IO.File.AppendAllText(debugPath,

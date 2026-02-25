@@ -1,0 +1,665 @@
+"Demo Awatif-Style en Hekatan Calc
+'Visor 3D + Panel de Parametros + Tabla de Resultados
+'Usa Three.js y Tweakpane via CDN (sin Vite, sin npm)
+@{html-ifc}
+@{code}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Demo Estructural - Hekatan + Three.js + Tweakpane</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* ====== LAYOUT GRID (estilo Awatif) ====== */
+  #app {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    grid-template-rows: 40px 1fr 200px;
+    grid-template-areas:
+      "toolbar toolbar"
+      "params  viewer"
+      "params  table";
+    height: 100vh;
+    gap: 1px;
+    background: #333;
+  }
+
+  /* ====== TOOLBAR ====== */
+  #toolbar {
+    grid-area: toolbar;
+    background: #16213e;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 10px;
+    font-size: 13px;
+  }
+  #toolbar .logo { color: #0ea5e9; font-weight: bold; font-size: 15px; }
+  #toolbar .sep { color: #444; }
+  #toolbar button {
+    background: #0f3460;
+    color: #ccc;
+    border: 1px solid #1a4a7a;
+    padding: 4px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  #toolbar button:hover { background: #1a5a9a; color: #fff; }
+  #toolbar .status { margin-left: auto; color: #4ade80; font-size: 11px; }
+
+  /* ====== PANEL PARAMETROS ====== */
+  #params {
+    grid-area: params;
+    background: #1a1a2e;
+    padding: 8px;
+    overflow-y: auto;
+  }
+  #params h3 {
+    color: #0ea5e9;
+    font-size: 12px;
+    margin: 12px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .param-row {
+    display: flex;
+    align-items: center;
+    margin: 4px 0;
+    font-size: 12px;
+  }
+  .param-row label { flex: 1; color: #aaa; }
+  .param-row input[type="range"] { width: 100px; }
+  .param-row .val {
+    width: 50px;
+    text-align: right;
+    color: #4ade80;
+    font-family: monospace;
+    font-size: 11px;
+  }
+
+  /* ====== VISOR 3D ====== */
+  #viewer {
+    grid-area: viewer;
+    background: #0f0f23;
+    position: relative;
+  }
+  #viewer canvas { width: 100% !important; height: 100% !important; }
+
+  /* ====== TABLA DE RESULTADOS ====== */
+  #table-panel {
+    grid-area: table;
+    background: #1a1a2e;
+    display: flex;
+    flex-direction: column;
+  }
+  .tabs {
+    display: flex;
+    background: #16213e;
+    border-bottom: 1px solid #333;
+  }
+  .tabs button {
+    background: transparent;
+    color: #888;
+    border: none;
+    padding: 6px 16px;
+    cursor: pointer;
+    font-size: 12px;
+    border-bottom: 2px solid transparent;
+  }
+  .tabs button.active { color: #0ea5e9; border-bottom-color: #0ea5e9; }
+  .tabs button:hover { color: #ccc; }
+
+  #table-content {
+    flex: 1;
+    overflow: auto;
+    padding: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    font-family: 'Consolas', monospace;
+  }
+  th {
+    background: #16213e;
+    color: #0ea5e9;
+    padding: 4px 8px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+  }
+  td { padding: 3px 8px; border-bottom: 1px solid #222; color: #ccc; }
+  tr:hover td { background: #1a2a4e; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- TOOLBAR -->
+  <div id="toolbar">
+    <span class="logo">&#9650; Hekatan Struct</span>
+    <span class="sep">|</span>
+    <button onclick="recalcular()">&#9654; Calcular</button>
+    <button onclick="resetParams()">&#8635; Reset</button>
+    <button onclick="toggleDeformed()">Deformada</button>
+    <span class="status" id="status">&#10003; Listo</span>
+  </div>
+
+  <!-- PANEL PARAMETROS -->
+  <div id="params">
+    <h3>Geometria</h3>
+    <div class="param-row">
+      <label>Luz (m)</label>
+      <input type="range" id="p-span" min="4" max="20" value="10" step="1" oninput="onParam()">
+      <span class="val" id="v-span">10</span>
+    </div>
+    <div class="param-row">
+      <label>Divisiones</label>
+      <input type="range" id="p-div" min="2" max="8" value="4" step="1" oninput="onParam()">
+      <span class="val" id="v-div">4</span>
+    </div>
+    <div class="param-row">
+      <label>Altura (m)</label>
+      <input type="range" id="p-height" min="1" max="6" value="3" step="0.5" oninput="onParam()">
+      <span class="val" id="v-height">3.0</span>
+    </div>
+
+    <h3>Material</h3>
+    <div class="param-row">
+      <label>E (GPa)</label>
+      <input type="range" id="p-E" min="10" max="210" value="200" step="10" oninput="onParam()">
+      <span class="val" id="v-E">200</span>
+    </div>
+    <div class="param-row">
+      <label>A (cm2)</label>
+      <input type="range" id="p-A" min="5" max="100" value="30" step="5" oninput="onParam()">
+      <span class="val" id="v-A">30</span>
+    </div>
+
+    <h3>Cargas</h3>
+    <div class="param-row">
+      <label>P (kN)</label>
+      <input type="range" id="p-load" min="10" max="500" value="100" step="10" oninput="onParam()">
+      <span class="val" id="v-load">100</span>
+    </div>
+
+    <h3>Visualizacion</h3>
+    <div class="param-row">
+      <label>Nodos</label>
+      <input type="checkbox" id="c-nodes" checked onchange="toggleVis()">
+    </div>
+    <div class="param-row">
+      <label>Indices</label>
+      <input type="checkbox" id="c-idx" onchange="toggleVis()">
+    </div>
+    <div class="param-row">
+      <label>Cargas</label>
+      <input type="checkbox" id="c-loads" checked onchange="toggleVis()">
+    </div>
+    <div class="param-row">
+      <label>Apoyos</label>
+      <input type="checkbox" id="c-supports" checked onchange="toggleVis()">
+    </div>
+    <div class="param-row">
+      <label>Deformada</label>
+      <input type="checkbox" id="c-deformed" onchange="toggleVis()">
+    </div>
+    <div class="param-row">
+      <label>Escala def.</label>
+      <input type="range" id="p-scale" min="1" max="200" value="50" step="1" oninput="onParam()">
+      <span class="val" id="v-scale">50</span>
+    </div>
+  </div>
+
+  <!-- VISOR 3D -->
+  <div id="viewer"></div>
+
+  <!-- TABLA DE RESULTADOS -->
+  <div id="table-panel">
+    <div class="tabs">
+      <button class="active" onclick="showTab('nodes',this)">Nodos</button>
+      <button onclick="showTab('elements',this)">Elementos</button>
+      <button onclick="showTab('reactions',this)">Reacciones</button>
+      <button onclick="showTab('forces',this)">Fuerzas</button>
+    </div>
+    <div id="table-content"></div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ============================================
+// ESTADO GLOBAL
+// ============================================
+const state = {
+  nodes: [],
+  elements: [],
+  forces: [],
+  reactions: [],
+  deformed: [],
+  showDeformed: false,
+  defScale: 50
+};
+
+// ============================================
+// THREE.JS SETUP
+// ============================================
+const container = document.getElementById('viewer');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f0f23);
+
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+camera.position.set(5, 4, 8);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(container.clientWidth, container.clientHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.target.set(5, 1.5, 0);
+
+// Grilla
+const gridHelper = new THREE.GridHelper(20, 20, 0x333355, 0x222244);
+scene.add(gridHelper);
+
+// Ejes
+const axesHelper = new THREE.AxesHelper(1.5);
+scene.add(axesHelper);
+
+// Luz
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(5, 10, 5);
+scene.add(dirLight);
+
+// Grupos para objetos
+const grpElements = new THREE.Group(); scene.add(grpElements);
+const grpNodes = new THREE.Group(); scene.add(grpNodes);
+const grpLoads = new THREE.Group(); scene.add(grpLoads);
+const grpSupports = new THREE.Group(); scene.add(grpSupports);
+const grpDeformed = new THREE.Group(); scene.add(grpDeformed);
+const grpLabels = new THREE.Group(); scene.add(grpLabels);
+
+// ============================================
+// GENERADOR DE CERCHA (TRUSS)
+// ============================================
+function generateTruss(span, divs, height) {
+  const nodes = [];
+  const elements = [];
+  const dx = span / divs;
+
+  // Nodos inferiores
+  for (let i = 0; i <= divs; i++) {
+    nodes.push([i * dx, 0, 0]);
+  }
+  // Nodos superiores
+  for (let i = 1; i < divs; i++) {
+    nodes.push([i * dx, height, 0]);
+  }
+
+  const topStart = divs + 1;
+
+  // Elementos inferiores (cordon inferior)
+  for (let i = 0; i < divs; i++) {
+    elements.push([i, i + 1]);
+  }
+  // Elementos superiores (cordon superior)
+  for (let i = 0; i < divs - 2; i++) {
+    elements.push([topStart + i, topStart + i + 1]);
+  }
+  // Diagonales y verticales
+  for (let i = 0; i < divs - 1; i++) {
+    elements.push([i + 1, topStart + i]); // vertical
+    if (i < divs - 2) {
+      elements.push([i + 1, topStart + i + 1]); // diagonal derecha
+    }
+  }
+  // Diagonales extremas
+  elements.push([0, topStart]);
+  elements.push([divs, topStart + divs - 2]);
+
+  return { nodes, elements };
+}
+
+// ============================================
+// SOLVER SIMPLIFICADO
+// ============================================
+function solveTruss(nodes, elements, E_GPa, A_cm2, loadKN) {
+  const n = nodes.length;
+  const forces = [];
+  const deformed = nodes.map(n => [...n]);
+  const reactions = [];
+
+  // Simulacion simplificada de fuerzas
+  for (let i = 0; i < elements.length; i++) {
+    const [a, b] = elements[i];
+    const dx = nodes[b][0] - nodes[a][0];
+    const dy = nodes[b][1] - nodes[a][1];
+    const L = Math.sqrt(dx * dx + dy * dy);
+
+    // Fuerza aproximada (no es FEM real, es para demo visual)
+    let f = 0;
+    if (nodes[a][1] === 0 && nodes[b][1] === 0) {
+      f = loadKN * 0.8; // cordon inferior: traccion
+    } else if (nodes[a][1] > 0 && nodes[b][1] > 0) {
+      f = -loadKN * 0.7; // cordon superior: compresion
+    } else {
+      f = loadKN * 0.4 * (Math.random() - 0.3); // diagonales
+    }
+    forces.push({ element: i, nodeA: a, nodeB: b, force: f, length: L });
+  }
+
+  // Deformacion aproximada
+  const EI = E_GPa * 1e6 * A_cm2 * 1e-4;
+  for (let i = 0; i < n; i++) {
+    const x = nodes[i][0];
+    const span = nodes[nodes.length > 5 ? 4 : n - 1][0] || 10;
+    const mid = span / 2;
+    const deflection = -loadKN / EI * 500 * x * (span - x);
+    deformed[i] = [nodes[i][0], nodes[i][1] + deflection, 0];
+  }
+
+  // Reacciones en apoyos (nodo 0 y ultimo nodo inferior)
+  const lastBottom = Math.round((n - 1) / 2);
+  reactions.push({ node: 0, Rx: 0, Ry: loadKN * lastBottom / 2, type: 'fijo' });
+  reactions.push({ node: lastBottom, Rx: 0, Ry: loadKN * lastBottom / 2, type: 'movil' });
+
+  return { forces, deformed, reactions };
+}
+
+// ============================================
+// RENDERIZADO 3D
+// ============================================
+function clearGroup(group) {
+  while (group.children.length > 0) {
+    const obj = group.children[0];
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) {
+      if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+      else obj.material.dispose();
+    }
+    group.remove(obj);
+  }
+}
+
+function drawTruss() {
+  clearGroup(grpElements);
+  clearGroup(grpNodes);
+  clearGroup(grpLoads);
+  clearGroup(grpSupports);
+  clearGroup(grpDeformed);
+  clearGroup(grpLabels);
+
+  const { nodes, elements, forces, deformed } = state;
+
+  // ELEMENTOS (lineas)
+  for (let i = 0; i < elements.length; i++) {
+    const [a, b] = elements[i];
+    const force = forces[i] ? forces[i].force : 0;
+
+    // Color segun fuerza: rojo=compresion, azul=traccion
+    let color;
+    if (force > 0) color = new THREE.Color(0x3b82f6);      // traccion azul
+    else if (force < 0) color = new THREE.Color(0xef4444);  // compresion rojo
+    else color = new THREE.Color(0x888888);
+
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(...nodes[a]),
+      new THREE.Vector3(...nodes[b])
+    ]);
+    const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+    grpElements.add(new THREE.Line(geo, mat));
+
+    // Cilindro para dar volumen
+    const midX = (nodes[a][0] + nodes[b][0]) / 2;
+    const midY = (nodes[a][1] + nodes[b][1]) / 2;
+    const midZ = (nodes[a][2] + nodes[b][2]) / 2;
+    const dx = nodes[b][0] - nodes[a][0];
+    const dy = nodes[b][1] - nodes[a][1];
+    const L = Math.sqrt(dx * dx + dy * dy);
+
+    const cylGeo = new THREE.CylinderGeometry(0.03, 0.03, L, 6);
+    const cylMat = new THREE.MeshPhongMaterial({ color });
+    const cyl = new THREE.Mesh(cylGeo, cylMat);
+    cyl.position.set(midX, midY, midZ);
+    cyl.rotation.z = Math.atan2(dy, dx) - Math.PI / 2;
+    grpElements.add(cyl);
+  }
+
+  // NODOS (esferas)
+  const sphereGeo = new THREE.SphereGeometry(0.08, 12, 12);
+  const sphereMat = new THREE.MeshPhongMaterial({ color: 0xfbbf24 });
+  for (let i = 0; i < nodes.length; i++) {
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+    sphere.position.set(...nodes[i]);
+    grpNodes.add(sphere);
+  }
+
+  // CARGAS (flechas hacia abajo en nodos superiores)
+  const loadKN = parseFloat(document.getElementById('p-load').value);
+  for (let i = 0; i < nodes.length; i++) {
+    if (nodes[i][1] > 0) {
+      const arrowDir = new THREE.Vector3(0, -1, 0);
+      const arrowLen = 0.8;
+      const arrow = new THREE.ArrowHelper(arrowDir,
+        new THREE.Vector3(nodes[i][0], nodes[i][1] + arrowLen + 0.1, nodes[i][2]),
+        arrowLen, 0x22c55e, 0.2, 0.12);
+      grpLoads.add(arrow);
+    }
+  }
+
+  // APOYOS (triangulos)
+  const triGeo = new THREE.ConeGeometry(0.15, 0.25, 3);
+  // Apoyo fijo (nodo 0)
+  const tri1 = new THREE.Mesh(triGeo, new THREE.MeshPhongMaterial({ color: 0xf97316 }));
+  tri1.position.set(nodes[0][0], -0.15, 0);
+  tri1.rotation.z = Math.PI;
+  grpSupports.add(tri1);
+  // Apoyo movil (ultimo nodo inferior)
+  const divs = parseInt(document.getElementById('p-div').value);
+  const tri2 = new THREE.Mesh(triGeo.clone(), new THREE.MeshPhongMaterial({ color: 0xf97316 }));
+  tri2.position.set(nodes[divs][0], -0.15, 0);
+  tri2.rotation.z = Math.PI;
+  grpSupports.add(tri2);
+  // Rueditas para apoyo movil
+  const wheelGeo = new THREE.SphereGeometry(0.06, 8, 8);
+  const wheelMat = new THREE.MeshPhongMaterial({ color: 0xfbbf24 });
+  [-0.1, 0.1].forEach(dx => {
+    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    w.position.set(nodes[divs][0] + dx, -0.32, 0);
+    grpSupports.add(w);
+  });
+
+  // DEFORMADA
+  if (state.showDeformed && deformed.length > 0) {
+    const scale = state.defScale;
+    for (let i = 0; i < elements.length; i++) {
+      const [a, b] = elements[i];
+      const pA = deformed[a];
+      const pB = deformed[b];
+      const geo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(pA[0], pA[1] * scale + nodes[a][1] * (1 - scale), pA[2]),
+        new THREE.Vector3(pB[0], pB[1] * scale + nodes[b][1] * (1 - scale), pB[2])
+      ]);
+      const mat = new THREE.LineBasicMaterial({ color: 0xa855f7, linewidth: 1, transparent: true, opacity: 0.7 });
+      grpDeformed.add(new THREE.Line(geo, mat));
+    }
+  }
+}
+
+// ============================================
+// TABLAS
+// ============================================
+window.showTab = function(tab, btn) {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable(tab);
+};
+
+function renderTable(tab) {
+  const el = document.getElementById('table-content');
+  const { nodes, elements, forces, reactions } = state;
+  let html = '<table>';
+
+  if (tab === 'nodes') {
+    html += '<tr><th>#</th><th>X (m)</th><th>Y (m)</th><th>Z (m)</th></tr>';
+    nodes.forEach((n, i) => {
+      html += `<tr><td>${i}</td><td>${n[0].toFixed(2)}</td><td>${n[1].toFixed(2)}</td><td>${n[2].toFixed(2)}</td></tr>`;
+    });
+  } else if (tab === 'elements') {
+    html += '<tr><th>#</th><th>Nodo A</th><th>Nodo B</th><th>L (m)</th></tr>';
+    elements.forEach((e, i) => {
+      const dx = nodes[e[1]][0] - nodes[e[0]][0];
+      const dy = nodes[e[1]][1] - nodes[e[0]][1];
+      const L = Math.sqrt(dx*dx + dy*dy);
+      html += `<tr><td>${i}</td><td>${e[0]}</td><td>${e[1]}</td><td>${L.toFixed(3)}</td></tr>`;
+    });
+  } else if (tab === 'reactions') {
+    html += '<tr><th>Nodo</th><th>Tipo</th><th>Rx (kN)</th><th>Ry (kN)</th></tr>';
+    reactions.forEach(r => {
+      html += `<tr><td>${r.node}</td><td>${r.type}</td><td>${r.Rx.toFixed(1)}</td><td>${r.Ry.toFixed(1)}</td></tr>`;
+    });
+  } else if (tab === 'forces') {
+    html += '<tr><th>#</th><th>A</th><th>B</th><th>F (kN)</th><th>L (m)</th></tr>';
+    forces.forEach((f, i) => {
+      const cls = f.force > 0 ? 'color:#3b82f6' : f.force < 0 ? 'color:#ef4444' : '';
+      html += `<tr><td>${i}</td><td>${f.nodeA}</td><td>${f.nodeB}</td><td style="${cls}">${f.force.toFixed(1)}</td><td>${f.length.toFixed(3)}</td></tr>`;
+    });
+  }
+
+  html += '</table>';
+  el.innerHTML = html;
+}
+
+// ============================================
+// CONTROLES
+// ============================================
+function readParams() {
+  return {
+    span: parseFloat(document.getElementById('p-span').value),
+    divs: parseInt(document.getElementById('p-div').value),
+    height: parseFloat(document.getElementById('p-height').value),
+    E: parseFloat(document.getElementById('p-E').value),
+    A: parseFloat(document.getElementById('p-A').value),
+    load: parseFloat(document.getElementById('p-load').value),
+    scale: parseFloat(document.getElementById('p-scale').value)
+  };
+}
+
+window.onParam = function() {
+  const p = readParams();
+  document.getElementById('v-span').textContent = p.span;
+  document.getElementById('v-div').textContent = p.divs;
+  document.getElementById('v-height').textContent = p.height.toFixed(1);
+  document.getElementById('v-E').textContent = p.E;
+  document.getElementById('v-A').textContent = p.A;
+  document.getElementById('v-load').textContent = p.load;
+  document.getElementById('v-scale').textContent = p.scale;
+  state.defScale = p.scale;
+  recalcular();
+};
+
+window.recalcular = function() {
+  document.getElementById('status').innerHTML = '&#9881; Calculando...';
+  document.getElementById('status').style.color = '#fbbf24';
+
+  const p = readParams();
+  const { nodes, elements } = generateTruss(p.span, p.divs, p.height);
+  const { forces, deformed, reactions } = solveTruss(nodes, elements, p.E, p.A, p.load);
+
+  state.nodes = nodes;
+  state.elements = elements;
+  state.forces = forces;
+  state.deformed = deformed;
+  state.reactions = reactions;
+
+  drawTruss();
+  renderTable('nodes');
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  document.querySelector('.tabs button').classList.add('active');
+
+  // Centrar camara
+  controls.target.set(p.span / 2, p.height / 2, 0);
+
+  setTimeout(() => {
+    document.getElementById('status').innerHTML = '&#10003; ' + nodes.length + ' nodos, ' + elements.length + ' elem';
+    document.getElementById('status').style.color = '#4ade80';
+  }, 100);
+};
+
+window.resetParams = function() {
+  document.getElementById('p-span').value = 10;
+  document.getElementById('p-div').value = 4;
+  document.getElementById('p-height').value = 3;
+  document.getElementById('p-E').value = 200;
+  document.getElementById('p-A').value = 30;
+  document.getElementById('p-load').value = 100;
+  document.getElementById('p-scale').value = 50;
+  onParam();
+};
+
+window.toggleDeformed = function() {
+  const cb = document.getElementById('c-deformed');
+  cb.checked = !cb.checked;
+  state.showDeformed = cb.checked;
+  drawTruss();
+};
+
+window.toggleVis = function() {
+  grpNodes.visible = document.getElementById('c-nodes').checked;
+  grpLabels.visible = document.getElementById('c-idx').checked;
+  grpLoads.visible = document.getElementById('c-loads').checked;
+  grpSupports.visible = document.getElementById('c-supports').checked;
+  state.showDeformed = document.getElementById('c-deformed').checked;
+  drawTruss();
+};
+
+// ============================================
+// ANIMATION LOOP
+// ============================================
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// Resize
+window.addEventListener('resize', () => {
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+
+// INICIAR
+recalcular();
+animate();
+</script>
+
+</body>
+</html>
+@{end code}
+@{end html-ifc}

@@ -1,0 +1,223 @@
+#rad
+"Comparison of different methods for analysis of simple undamped pendulum
+'<hr/><table><tr><td>
+'<h4>Input parameters</h4>
+'Gravitational acceleration (m/s²) - 'g = 9.80665m/s^2
+'Pendulum length -'l = 1m
+'Pendulum mass -'m = 1kg
+'Initial angle -'θ_0 = -60°|rad
+'Maximum simulation time -'t_max = 10s
+'<h4>Analytical solution for small rotations</h4>
+'<p class="eq"><var>θ</var> ≪ 1 or <b>sin</b>(<var>θ</var>) ≈ <var>θ</var></p>
+'</td><td>
+#hide
+Precision = 10^-6','ε = 10^-12rad
+PlotWidth = 300','PlotHeight = 150','PlotSVG = 1
+w = 1.2*l', 'h_ = 2/3*w
+W = 120', 'H = 120
+k = W/w
+L = l*k
+R = L/10
+x = L*sin(θ_0)
+y = L*cos(θ_0)
+δ = 16
+δ_x = 0.25*δ
+δ_y = -2*δ
+y_g = y - δ_y + R
+#def svg$ = '<svg viewbox="'-50 - W/2' '-20' 'W + 50' 'H + 20'" xmlns="http://www.w3.org/2000/svg" version="1.1" style="font-family: Georgia Pro; font-size:12px; width:'W + 30'pt; height:'H + 20'pt;">
+#def thin_style$ = style="stroke:goldenrod; stroke-width:1; fill:none"
+#def thick_style$ = style="stroke:steelblue; stroke-width:2; fill:none"
+#def ball_style$ = style="stroke:steelblue; stroke-width:0.5;  fill:url(#ball)"
+#def solid_style$ = style="stroke:black; stroke-width:1; fill:#eee"
+#def load_style$ = style="stroke:steelblue; stroke-width:1; fill:steelblue;"
+#include svg_drawing.hcalc
+#show
+#val
+svg$
+'<defs><radialGradient id="ball" cx="35%" cy="35%"><stop offset="0%" stop-color="lightcyan"/><stop offset="100%" stop-color="lightblue"/></radialGradient><pattern id="concrete" x="4" y="4" width="8" height="8" patternUnits="userSpaceOnUse"><rect x="0" y="0" width="8" height="8" fill="#eae9e8" /><circle cx="1" cy="1" r="1.2" fill="#ccb" /><circle cx="5" cy="2" r="1.6" fill="#dadad0" /><circle cx="4" cy="6" r="0.8" fill="#aa9" /><circle cx="3" cy="4" r="0.4" fill="#884" /><circle cx="7" cy="5" r="1.2" fill="#cacaba" /><circle cx="5" cy="3" r="0.9" fill="#fffded" /></pattern></defs>
+'<polygon points="0,0 '-δ','-δ' 'δ','-δ'" solid_style$/>
+line$(0; 0; 0; l*k; thin_style$)
+'<path d="M 0 '0.2*L' A '0.2*L' '0.2*L' 0 0 'θ_0 < 0°' '0.2*x' '0.2*y'" thin_style$/>
+texth$(-1.2*δ*sign(θ_0);0.25*L;'θ_0*180/π'°)
+line$(0; 0; x; y; thick_style$)
+text$(x/2-δ_x*y/L; y/2+δ_x*x/L;if(θ_0<0°;450°+θ_0;450°-θ_0);'l'm)
+circle$(0; 0; R/2; solid_style$)
+circle$(0; 0; R/8; solid_style$)
+circle$(x; y; R; ball_style$)
+'<polygon points="'x','y_g + δ_y' 'x','y_g' 'x - δ_x','y_g + δ_y/3' 'x + δ_x','y_g + δ_y/3' 'x','y_g'" load_style$/>
+texth$(x+3*δ_x; y_g-δ;g)
+'</svg>
+#equ
+'</td></tr></table> 
+#noc
+'Differential equation -'θ″ + g/l*θ = 0
+#equ
+'Angular frequency -'ω = sqrt(g/l)*rad|rad/s
+'Cyclic frequency -'f = ω/(2*π*rad)|Hz
+'Period -'T = 1/f
+'Equation of motion -'θ(t) = θ_0*cos(ω*t)
+'<h4>Analytical solution for large rotations (exact)</h4> 
+#noc
+'Differential equation -'θ″ + g/l*sin(θ) = 0
+#equ
+'Incomplete elliptic integral of the first kind
+F(φ; k) = $Integral{1/sqrt(1 - k^2*sin(θ)^2) @ θ = 0 : φ}
+'Jacobi elliptic functions
+'Modulus -'k = sin(θ_0/2)
+am(u; k) = $Root{F(φ; k) = u @ φ = 0 : 10*π}
+sn(u; k) = sin(am(u; k))','cn(u; k) = cos(am(u; k))
+dn(u; k) = sqrt(1 - k*sn(u; k)^2)','cd(u; k) = cn(u; k)/dn(u; k)
+'Period -'T_e = 4*sqrt(l/g)*F(π/2; k)
+'Error -'δ_T = abs(T - T_e)/T_e|%
+'Cyclic frequency -'f_e = 1/T_e|Hz
+'Angular frequency -'ω_e = 2*π*rad*f_e|rad/s
+'Equation of motion -'θ_e(t) = 2*asin(k*cd(sqrt(g/l)*t; k))
+'Energy -'E_0 = m*l*g*(1 - cos(θ_0))|J
+'Relative error <span class="eq"><var>δ</var><sub>T</sub></span> [%] of small displacements period versus initial angle <span class="eq"><var>θ</var><sub>0</sub></span> [°] plot
+#hide
+'Period -'T_e(θ_0) = 4/rad*sqrt(l/(2*g))*$Integral{1/sqrt(cos(θ) - cos(θ_0)) @ θ = 0rad : θ_0 - ε}
+'Error -'δ_T(θ_0) = abs(T - T_e(θ_0))/T_e(θ_0)|%
+#show
+$Plot{δ_T(θ_0) @ θ_0 = 0.01° : 90°}
+'<h4>Solution by forward Euler method (explicit)</h4>
+'For that purpose, the II order equation is reduced to thefollowing system of I order equations
+#noc
+θ′ = ω'and'ω′ = (g/l)*sin(-θ)
+#equ
+'The solution will be performed iteratively
+'Step size -'h = 0.05s
+'Number of steps -'n = t_max/h
+'For each time step'n'the values for the next step will be obtained by using the following equstions
+#noc
+'<p class="eq" style="border-left:solid 1pt black; margin-left:24pt; padding-left:3pt;"><var>θ</var><sub>n+1</sub> = <var>θ</var><sub>n</sub> + <var>h</var>·<var>ω</var><sub>n</sub><br/> <var>ω</var><sub>n+1</sub> = <var>ω</var><sub>n</sub> + 'h*(g/l)'· <b>sin</b><var>θ</var><sub>n</sub></p> 
+#equ
+'Allocate vectors
+θ_fwE = vector(n)'<br/>'ω_fwE = vector(n)'<br/>'E_fwE = vector(n)
+'Set initial conditions
+θ_fwE.1 = θ_0/1rad','ω_fwE.1 = 0/s
+'Perform Euler steps
+#for i = 1 : n - 1
+	'Rotation -'θ_fwE.(i + 1) = θ_fwE.i + h*ω_fwE.i
+	'Angular velocity -'ω_fwE.(i + 1) = ω_fwE.i + h*(g/l)*sin(-θ_fwE.i)
+	'Energy -'E_fwE.i = m*l^2*(1/2*ω_fwE.i^2 + (g/l)*(1 - cos(θ_fwE.i)))|J
+	#hide
+#loop
+E_fwE.n = m*l^2*(1/2*ω_fwE.n^2 + (g/l)*(1 - cos(θ_fwE.n)))|J
+#show
+'. . .
+'<h4>Solution by backward Euler method (implicit)</h4>
+'The following iterative procedure is applied:
+#noc
+'<p class="eq" style="border-left:solid 1pt black; margin-left:24pt; padding-left:3pt;"><var>θ</var><sub>n+1</sub> = <var>θ</var><sub>n</sub> + <var>h</var>·<var>ω</var><sub>n+1</sub><br/> <var>ω</var><sub>n+1</sub> = <var>ω</var><sub>n</sub> + 'h*(g/l)'· <b>sin</b><var>θ</var><sub>n+1</sub></p> 
+#equ
+'Allocate vectors
+θ_bwE = vector(n)'<br/>'ω_bwE = vector(n)'<br/>'E_bwE = vector(n)
+'Set initial conditions
+θ_bwE.1 = θ_0/1rad','ω_bwE.1 = 0/s
+'Perform Euler steps 
+#for i = 1 : n - 1
+	f(θ) = θ_bwE.i + h*(ω_bwE.i + h*(g/l)*sin(-θ)) - θ
+	'Rotation -'θ_bwE.(i + 1) = $Root{f(θ) @ θ = -2*π : 2*π}
+	'Angular velocity -'ω_bwE.(i + 1) = ω_bwE.i + h*(g/l)*sin(-θ_bwE.(i + 1))
+	'Energy -'E_bwE.i = m*l^2*(1/2*ω_bwE.i^2 + (g/l)*(1 - cos(θ_bwE.i)))|J
+	#hide
+#loop
+E_bwE.n = m*l^2*(1/2*ω_bwE.n^2 + (g/l)*(1 - cos(θ_bwE.n)))|J
+#show
+'. . .
+'<h4>Solution by Crank–Nicolson method (IMEX)</h4>
+'The following iterative procedure is applied:
+#noc
+'<p class="eq" style="border-left:solid 1pt black; margin-left:24pt; padding-left:3pt;"><var>θ</var><sub>n+1</sub> = <var>θ</var><sub>n</sub> +'h/2'(&thinsp;<var>ω</var><sub>n</sub> + <var>ω</var><sub>n+1</sub>&thinsp;)<br/> <var>ω</var><sub>n+1</sub> = <var>ω</var><sub>n</sub> + 'h*g/(2*l)'(&thinsp;<b>sin</b><var>θ</var><sub>n</sub> + <b>sin</b><var>θ</var><sub>n+1</sub>&thinsp;)</p> 
+#equ
+'Allocate vectors
+θ_CN = vector(n)'<br/>'ω_CN = vector(n)'<br/>'E_CN = vector(n)
+'Set initial conditions
+θ_CN.1 = θ_0/1rad','ω_CN.1 = 0/s
+'Perform Euler steps 
+#for i = 1 : n - 1
+	f(θ) = θ_CN.i + h/2*(2*ω_CN.i + h*g/(2*l)*(sin(-θ_CN.i) + sin(-θ))) - θ
+	'Rotation -'θ_CN.(i + 1) = $Root{f(θ) @ θ = -2*π : 2*π}
+	'Angular velocity -'ω_CN.(i + 1) = ω_CN.i + h*g/(2*l)*(sin(-θ_CN.i) + sin(-θ_CN.(i + 1)))
+	'Energy -'E_CN.i = m*l^2*(1/2*ω_CN.i^2 + (g/l)*(1 - cos(θ_CN.i)))|J
+	#hide
+#loop
+E_CN.n = m*l^2*(1/2*ω_CN.n^2 + (g/l)*(1 - cos(θ_CN.n)))|J
+#show
+'. . .
+'<h4>Solution by Runge-Kutta RK4 method (explicit)</h4>
+'The following iterative procedure is applied:
+#noc
+'<table class="eq" style="margin-left:24pt;">
+'<tr><td>First step (k₁) -</td><td>'k_1,θ = ω_i', </td><td>' _
+k_1,ω = (g/l)*sin(-θ_i)'</td></tr>
+'<tr><td>Second step (k₂) -</td><td>'k_2,θ = ω_i + 0.5*h*k_1,ω', </td><td>'k_2,ω = (g/l)*sin(-(θ_i + 0.5*h*k_1,θ))'</td></tr>
+'<tr><td>Third step (k₃) -</td><td>'k_3,θ = ω_i + 0.5*h*k_2,ω', </td><td>'k_3,ω = (g/l)*sin(-(θ_i + 0.5*h*k_2,θ))'</td></tr>
+'<tr><td>Fourth step (k₄) -</td><td>'k_4,θ = ω_i + h*k_3,ω', </td><td>'k_4,ω = (g/l)*sin(-(θ_i + h*k_3,θ))'</td></tr>
+'</table>
+'Update values using weighted averages
+'<p class="eq" style="border-left:solid 1pt black; margin-left:24pt; padding-left:3pt;"><var>θ</var><sub>n+1</sub> ='θ_i + (h/6)*(k_1,θ + 2*k_2,θ + 2*k_3,θ + k_4,θ)'<br/> <var>ω</var><sub>n+1</sub> = 'ω_i + (h/6)*(k_1,ω + 2*k_2,ω + 2*k_3,ω + k_4,ω)'</p>
+#equ
+'Allocate vectors
+θ_RK4 = vector(n)'<br/>'ω_RK4 = vector(n)'<br/>'E_RK4 = vector(n)
+'Set initial conditions
+θ_RK4.1 = θ_0/1rad','ω_RK4.1 = 0/s
+'Perform Runge-Kutta 4 steps 
+#for i = 1 : n - 1
+	'RK4 factors
+	k_1,θ = ω_RK4.i', ' _
+	k_1,ω = (g/l)*sin(-θ_RK4.i)
+	k_2,θ = ω_RK4.i + 0.5*h*k_1,ω
+	k_2,ω = (g/l)*sin(-(θ_RK4.i + 0.5*h*k_1,θ))
+	k_3,θ = ω_RK4.i + 0.5*h*k_2,ω
+	k_3,ω = (g/l)*sin(-(θ_RK4.i + 0.5*h*k_2,θ))
+	k_4,θ = ω_RK4.i + h*k_3,ω
+	k_4,ω = (g/l)*sin(-(θ_RK4.i + h*k_3,θ))
+	'Update values using weighted averages
+	'Rotation -'θ_RK4.(i + 1) = θ_RK4.i + (h/6)*(k_1,θ + 2*k_2,θ + 2*k_3,θ + k_4,θ)
+	'Angular velocity -'ω_RK4.(i + 1) = ω_RK4.i + (h/6)*(k_1,ω + 2*k_2,ω + 2*k_3,ω + k_4,ω)
+	'Energy -'E_RK4.i = m*l^2*(1/2*ω_RK4.i^2 + (g/l)*(1 - cos(θ_RK4.i)))|J
+	#hide
+#loop
+E_RK4.n = m*l^2*(1/2*ω_RK4.n^2 + (g/l)*(1 - cos(θ_RK4.n)))|J
+t(i) = i*h - h
+r2d = 180/π
+#show
+'. . .
+'<style>.Series3{stroke-dasharray: 10, 15;} .Series4{stroke-dasharray: 20, 10;} .Series5{stroke-dasharray: 10, 20, 40, 20;}</style>
+'<h4>Plot results</h4>
+ '<table><tr><td>
+'Rotation <var>θ</var> [deg] versus time <var>t</var> [s] plot
+$Plot{t(i)|θ(t(i))/deg & t(i)|θ_e(t(i))*r2d & t(i)|if(abs(θ_fwE.i*r2d) < 150; θ_fwE.i*r2d; 1/0) & t(i)|θ_bwE.i*r2d & t(i)|θ_CN.i*r2d @ i = 1 : n}
+'</td><td><br/><br/><br/>
+'<b style="color:Tomato">╺━━</b> Small rotations<br/>
+'<b style="color:YellowGreen">╺━━</b> Large rotations<br/>
+'<b style="color:CornflowerBlue">&nbsp;· · · ·</b> Forward Euler<br/>
+'<b style="color:Gold">╺╺╺</b> Backward Euler<br/>
+'<b style="color:MediumVioletRed">·╺&ensp;·╺</b> Crank–Nicolson
+'</td></tr></table>
+'Energy <var>E</var> [J] versus time <var>t</var> [s] plot
+$Plot{0s|0J & t(i)|E_0 & t(i)|E_fwE.i & t(i)|E_bwE.i & t(i)|E_CN.i @ i = 1 : n}
+'<h4>Comparision of Crank–Nicolson and Runge-Kutta 4 methods</h4>
+'<style>.Series2{stroke-dasharray: 30, 10;}</style>
+'<table><tr><td>
+'Rotation <var>θ</var> [deg] versus time <var>t</var> [s] plot
+$Plot{t(i)|θ_e(t(i))*r2d & t(i)|θ_CN.i*r2d & t(i)|θ_RK4.i*r2d @ i = 1 : n}
+'</td><td><br/><br/><br/>
+'<b style="color:Tomato">╺━━</b> Theoretical (large rot.)<br/>
+'<b style="color:YellowGreen">╺╺╺</b> Crank–Nicolson (IMEX)<br/>
+'<b style="color:CornflowerBlue">&nbsp;· · · ·</b> Runge-Kutta 4 (explicit)
+'</td></tr><tr><td>
+'Absolute error Δθ [°] versus time <var>t</var> [s] plot
+$Plot{t(i)|(θ_CN.i - θ_e(t(i)))*r2d & t(i)|(θ_RK4.i - θ_e(t(i)))*r2d @ i = 1 : n}
+'</td><td><br/><br/><br/>
+'<p><b style="color:Tomato">╺━━</b> Crank–Nicolson (IMEX)<br/>
+'<b style="color:YellowGreen">╺╺╺</b> Runge-Kutta 4 (explicit)
+'</td></tr><tr><td>
+'Energy <var>E</var> [J] versus time <var>t</var> [s] plot
+$Plot{t(i)|E_0 & t(i)|E_CN.i & t(i)|E_RK4.i & 0s|0.999*E_0 @ i = 1 : n}
+'</td><td><br/><br/><br/>
+'<b style="color:Tomato">╺━━</b> Theoretical (large rot.)<br/>
+'<b style="color:YellowGreen">╺╺╺</b> Crank–Nicolson (IMEX)<br/>
+'<b style="color:CornflowerBlue">&nbsp;· · · ·</b> Runge-Kutta 4 (explicit)
+'</td></tr></table>

@@ -56,6 +56,14 @@ namespace Hekatan.Common
 
             var processedCode = processingResult.ProcessedCode;
 
+            // PATH 0: Complete HTML5 document → pass through directly (no ExpressionParser)
+            if (processingResult.IsCompleteHtml5)
+            {
+                result.HtmlContent = processedCode;
+                result.OpenXmlExpressions = new List<string>();
+                return result;
+            }
+
             // PATH 1: Macro errors → show unwrapped code
             if (processingResult.HasMacroErrors)
             {

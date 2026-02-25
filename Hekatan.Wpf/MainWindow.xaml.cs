@@ -152,6 +152,13 @@ namespace Hekatan.Wpf
         private bool _isAvalonEditActive = true; // AvalonEdit is default
         private bool _isSyncingEditors = false;
 
+        // @{html-folder} — Vite dev server + folder tree
+        private ViteProcessManager _viteManager;
+        private string _htmlFolderPath;     // Ruta de la carpeta del proyecto
+        private string _htmlFolderOriginalContent; // Backup del contenido original al abrir archivo
+        private bool _htmlFolderFileCommitted;     // True si el usuario hizo Ctrl+S (guardar permanente)
+        private System.Windows.Threading.DispatcherTimer _htmlFolderReloadTimer; // Debounce live-reload
+
         //Private properites
         private bool IsComplex => _parser.Settings.Math.IsComplex;
         internal bool IsSaved
@@ -453,58 +460,67 @@ namespace Hekatan.Wpf
                     tag = tag[..(index - 1)];
             }
             RichTextBox.BeginChange();
-            if (tag.Contains('‖'))
+            try
             {
-                if (tag.StartsWith("‖#"))
-                    _insertManager.InsertMarkdownHeading(tag);
-                else if (tag.StartsWith("<p>", StringComparison.OrdinalIgnoreCase) ||
-                    tag.StartsWith("<h", StringComparison.OrdinalIgnoreCase) &&
-                    !tag.Equals("<hr/>‖", StringComparison.OrdinalIgnoreCase))
-                    _insertManager.InsertHtmlHeading(tag);
-                else if (!_insertManager.InsertInline(tag))
-                    Dispatcher.InvokeAsync(() =>
-                    MessageBox.Show(
-                        MainWindowResources.Inline_Html_elements_must_not_cross_text_lines,
-                        "Hekatan", MessageBoxButton.OK, MessageBoxImage.Stop));
-            }
-            else if (tag.Contains('§'))
-                InsertLines(tag, "§", false);
-            else switch (tag)
+                if (tag.Contains('‖'))
                 {
-                    case null or "": break;
-                    case "AC": RemoveLine(); break;
-                    case "C": _insertManager.RemoveChar(); break;
-                    case "Enter": _insertManager.InsertLine(); break;
-                    default:
-                        if (tag[0] == '#' ||
-                            tag[0] == '$' && (
-                                tag.StartsWith("$plot", StringComparison.OrdinalIgnoreCase) ||
-                                tag.StartsWith("$map", StringComparison.OrdinalIgnoreCase)
-                            ))
-                        {
-                            var p = RichTextBox.Selection.End.Paragraph;
-                            if (p is not null && p.ContentStart?.GetOffsetToPosition(p.ContentEnd) > 0)
+                    if (tag.StartsWith("‖#"))
+                        _insertManager.InsertMarkdownHeading(tag);
+                    else if (tag.StartsWith("<p>", StringComparison.OrdinalIgnoreCase) ||
+                        tag.StartsWith("<h", StringComparison.OrdinalIgnoreCase) &&
+                        !tag.Equals("<hr/>‖", StringComparison.OrdinalIgnoreCase))
+                        _insertManager.InsertHtmlHeading(tag);
+                    else if (!_insertManager.InsertInline(tag))
+                        Dispatcher.InvokeAsync(() =>
+                        MessageBox.Show(
+                            MainWindowResources.Inline_Html_elements_must_not_cross_text_lines,
+                            "Hekatan", MessageBoxButton.OK, MessageBoxImage.Stop));
+                }
+                else if (tag.Contains('§'))
+                    InsertLines(tag, "§", false);
+                else switch (tag)
+                    {
+                        case null or "": break;
+                        case "AC": RemoveLine(); break;
+                        case "C": _insertManager.RemoveChar(); break;
+                        case "Enter": _insertManager.InsertLine(); break;
+                        default:
+                            if (tag[0] == '#' ||
+                                tag[0] == '$' && (
+                                    tag.StartsWith("$plot", StringComparison.OrdinalIgnoreCase) ||
+                                    tag.StartsWith("$map", StringComparison.OrdinalIgnoreCase)
+                                ))
                             {
-                                var tp = p.ContentEnd.InsertParagraphBreak();
-                                tp.InsertTextInRun(tag);
-                                p = tp.Paragraph;
-                                var lineNumber = GetLineNumber(p);
-                                _highlighter.Parse(p, IsComplex, lineNumber, true);
-                                SetAutoIndent();
-                                tp = p.ContentEnd;
-                                RichTextBox.Selection.Select(tp, tp);
+                                var p = RichTextBox.Selection.End.Paragraph;
+                                if (p is not null && p.ContentStart?.GetOffsetToPosition(p.ContentEnd) > 0)
+                                {
+                                    var tp = p.ContentEnd.InsertParagraphBreak();
+                                    tp.InsertTextInRun(tag);
+                                    p = tp.Paragraph;
+                                    var lineNumber = GetLineNumber(p);
+                                    _highlighter.Parse(p, IsComplex, lineNumber, true);
+                                    SetAutoIndent();
+                                    tp = p.ContentEnd;
+                                    RichTextBox.Selection.Select(tp, tp);
+                                }
+                                else
+                                    _insertManager.InsertText(tag);
                             }
                             else
                                 _insertManager.InsertText(tag);
-                        }
-                        else
-                            _insertManager.InsertText(tag);
-                        break;
-                }
-            if (tag == "Enter")
-                CalculateAsync();
-
-            RichTextBox.EndChange();
+                            break;
+                    }
+                if (tag == "Enter")
+                    CalculateAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Button_Click error: {ex.Message}");
+            }
+            finally
+            {
+                RichTextBox.EndChange();
+            }
             RichTextBox.Focus();
             Keyboard.Focus(RichTextBox);
         }
@@ -825,8 +841,15 @@ namespace Hekatan.Wpf
                 FileOpen(dlg.FileName);
         }
 
-        private void Command_Save(object sender, ExecutedRoutedEventArgs e)
+        private async void Command_Save(object sender, ExecutedRoutedEventArgs e)
         {
+            // En modo html-folder: Ctrl+S confirma el cambio permanente
+            if (!string.IsNullOrEmpty(_htmlFolderPath))
+            {
+                await HtmlFolderCommitSaveAsync();
+                return;
+            }
+
             if ((string)SaveButton.Tag == "S" || string.IsNullOrWhiteSpace(CurrentFileName))
                 FileSaveAs();
             else
@@ -1498,6 +1521,10 @@ namespace Hekatan.Wpf
                 if (_isParsing)
                     _parser.Cancel();
 
+                // Detener Vite si estaba corriendo
+                if (_viteManager?.IsRunning == true)
+                    _ = StopHtmlFolderAsync();
+
                 // Clear previous output when opening new file
                 _wv2Warper.NavigateToBlank();
                 IsCalculated = false;
@@ -1749,6 +1776,25 @@ namespace Hekatan.Wpf
             string inputCode = InputText;
             HekatanTelemetry.LogEvent("CALCULATE", "Starting calculation", new { InputCodeLength = inputCode.Length });
 
+            // ═══ @{html-folder} — Interceptar antes del parser ═══
+            // Si estamos en modo html-folder y el editor tiene un archivo web abierto
+            // (CSS/JS/HTML del TreeView), no parsear — el WebView2 ya muestra la página.
+            if (!string.IsNullOrEmpty(_htmlFolderPath) && !Regex.IsMatch(inputCode, @"(?m)^@\{html-folder\}"))
+            {
+                HekatanTelemetry.EndOperation("CalculateAsync", sw, new { HtmlFolderSkipped = true });
+                return;
+            }
+
+            // Usar (?m)^ para detectar solo directivas reales, no dentro de comentarios ("...")
+            if (Regex.IsMatch(inputCode, @"(?m)^@\{html-folder\}"))
+            {
+                _isParsing = true;
+                await ProcessHtmlFolderAsync(inputCode);
+                // No hacer Release() aquí — el finally del método se encarga
+                HekatanTelemetry.EndOperation("CalculateAsync", sw, new { HtmlFolder = true });
+                return;
+            }
+
             // STEP 1: Pre-process and show text/headings (lines with ' and ") immediately with dynamic progress
             var initialContentBuilder = new System.Text.StringBuilder();
             var lines = inputCode.Split('\n');
@@ -1989,7 +2035,15 @@ namespace Hekatan.Wpf
 
             // Use centralized HekatanOutputProcessor for MultilangProcessed and macro error paths.
             // The normal Hekatan parsing path stays here because it needs WPF-specific async UI flow.
-            if (processingResult.MultilangProcessed || processingResult.HasMacroErrors)
+            if (processingResult.IsCompleteHtml5)
+            {
+                // Complete HTML5 document - pass through directly, no template wrapping
+                WebViewer.Tag = false;
+                htmlResult = processingResult.ProcessedCode;
+                SetOutputFrameHeader(IsWebForm);
+                IsCalculated = true;
+            }
+            else if (processingResult.MultilangProcessed || processingResult.HasMacroErrors)
             {
                 // Centralized decision tree (shared with CLI)
                 var outputResult = HekatanOutputProcessor.Process(
@@ -3929,17 +3983,19 @@ namespace Hekatan.Wpf
 
         private void KeyPadButton_Click(object sender, RoutedEventArgs e)
         {
-            if (KeyPadGrid.Visibility == Visibility.Hidden)
+            if (KeypadTabControl.Visibility == Visibility.Hidden)
             {
+                KeypadTabControl.Visibility = Visibility.Visible;
                 KeyPadGrid.Visibility = Visibility.Visible;
                 InputGrid.RowDefinitions[1].Height = new GridLength(_inputHeight);
             }
             else
             {
+                KeypadTabControl.Visibility = Visibility.Hidden;
                 KeyPadGrid.Visibility = Visibility.Hidden;
                 InputGrid.RowDefinitions[1].Height = new GridLength(0);
             }
-            SetButton(KeyPadButton, KeyPadGrid.Visibility == Visibility.Visible);
+            SetButton(KeyPadButton, KeypadTabControl.Visibility == Visibility.Visible);
         }
 
         private void GreekLetter_MouseUp(object sender, MouseButtonEventArgs e)
@@ -4057,6 +4113,9 @@ namespace Hekatan.Wpf
 
                 // Cleanup Jupyter
                 CleanupJupyterOnExit();
+
+                // Cleanup Vite process
+                _viteManager?.Dispose();
             }
 
             WriteSettings();
@@ -5845,6 +5904,11 @@ namespace Hekatan.Wpf
             Execute(AppInfo.Path + "Cli.exe");
         }
 
+        private void MenuOpenFolder_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFolderAsHtmlFolder();
+        }
+
         private void ZeroSmallMatrixElementsCheckBox_Click(object sender, RoutedEventArgs e) => ClearOutput();
 
         private void MaxOutputCountTextBox_KeyUp(object sender, KeyEventArgs e)
@@ -6527,6 +6591,293 @@ namespace Hekatan.Wpf
             InsertTextAtCursor("@{markdown}\n\n@{end markdown}\n");
         }
 
+        // ═══════════════ Math Engine ═══════════════
+        private void InsertCalcpadDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{calcpad}\n\n@{end calcpad}\n");
+        }
+
+        private void InsertSymbolicDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{symbolic}\n\n@{end symbolic}\n");
+        }
+
+        // ═══════════════ New Programming Languages ═══════════════
+        private void InsertRustDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{rust}\n\n@{end rust}\n");
+        }
+
+        private void InsertGoDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{go}\n\n@{end go}\n");
+        }
+
+        private void InsertTypeScriptDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{typescript}\n\n@{end typescript}\n");
+        }
+
+        private void InsertJavaScriptDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{javascript}\n\n@{end javascript}\n");
+        }
+
+        private void InsertHaskellDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{haskell}\n\n@{end haskell}\n");
+        }
+
+        private void InsertLuaDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{lua}\n\n@{end lua}\n");
+        }
+
+        private void InsertPerlDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{perl}\n\n@{end perl}\n");
+        }
+
+        private void InsertRubyDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{ruby}\n\n@{end ruby}\n");
+        }
+
+        private void InsertPhpDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{php}\n\n@{end php}\n");
+        }
+
+        private void InsertDDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{d}\n\n@{end d}\n");
+        }
+
+        // ═══════════════ Formatting & Rendering ═══════════════
+        private void InsertEqDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{eq}\n\n@{end eq}\n");
+        }
+
+        private void InsertEqDefDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{eqdef}\n\n@{end eqdef}\n");
+        }
+
+        private void InsertTableDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{table}\n\n@{end table}\n");
+        }
+
+        private void InsertPlotDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{plot}\n\n@{end plot}\n");
+        }
+
+        private void InsertSvgDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{svg}\n\n@{end svg}\n");
+        }
+
+        private void InsertCssDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{css}\n\n@{end css}\n");
+        }
+
+        private void InsertLatexDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{latex}\n\n@{end latex}\n");
+        }
+
+        // ═══════════════ Layout & Visualization ═══════════════
+        private void InsertColumns2Directive_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{columns 2}\n\n@{end columns}\n");
+        }
+
+        private void InsertColumns3Directive_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{columns 3}\n\n@{end columns}\n");
+        }
+
+        private void InsertColumns4Directive_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{columns 4}\n\n@{end columns}\n");
+        }
+
+        private void InsertThreeDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{three}\n\n@{end three}\n");
+        }
+
+        // ═══════════════ IFC / BIM ═══════════════
+        private void InsertIfcDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{ifc}\n\n@{end ifc}\n");
+        }
+
+        private void InsertIfcFragmentDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{ifc-fragment}\n\n@{end ifc-fragment}\n");
+        }
+
+        private void InsertIfcCreateDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{ifc-create}\n\n@{end ifc-create}\n");
+        }
+
+        // ═══════════════ Import / External ═══════════════
+        private void InsertMcdxDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{mcdx}\n\n@{end mcdx}\n");
+        }
+
+        private void InsertMathcadDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{mathcad}\n\n@{end mathcad}\n");
+        }
+
+        // ═══════════════ Math Engines & CAS (new) ═══════════════
+        private void InsertMaximaDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{maxima}\n\n@{end maxima}\n");
+        }
+
+        private void InsertPyMathDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{pymath}\n\n@{end pymath}\n");
+        }
+
+        // ═══════════════ GUI Frameworks (new) ═══════════════
+        private void InsertViteDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{vite}\n\n@{end vite}\n");
+        }
+
+        // ═══════════════ Hekatan Functions (new) ═══════════════
+        private void InsertFunctionDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{function}\n\n@{end function}\n");
+        }
+
+        private void InsertIntegralDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{integral}\n\n@{end integral}\n");
+        }
+
+        private void InsertDerivateDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{derivate}\n\n@{end derivate}\n");
+        }
+
+        private void InsertGaussDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{gauss}\n\n@{end gauss}\n");
+        }
+
+        private void InsertTriangleDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{triangle}\n\n@{end triangle}\n");
+        }
+
+        private void InsertExplainDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{explain}\n\n@{end explain}\n");
+        }
+
+        private void InsertCppExplainDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{cpp-explain}\n\n@{end cpp-explain}\n");
+        }
+
+        // ═══════════════ Formatting (new) ═══════════════
+        private void InsertCodeDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{code}\n\n@{end code}\n");
+        }
+
+        private void InsertUcodeDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{ucode}\n\n@{end ucode}\n");
+        }
+
+        private void InsertThemeDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{theme}\n\n@{end theme}\n");
+        }
+
+        // ═══════════════ Layout & Paper (new) ═══════════════
+        private void InsertCenterDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{center}\n\n@{end center}\n");
+        }
+
+        private void InsertImageDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{image}\n\n@{end image}\n");
+        }
+
+        private void InsertHideDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{hide}\n\n@{end hide}\n");
+        }
+
+        private void InsertShowDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{show}\n\n@{end show}\n");
+        }
+
+        private void InsertPaperDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{paper}\n\n@{end paper}\n");
+        }
+
+        private void InsertTitleDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{title}\n\n@{end title}\n");
+        }
+
+        private void InsertAuthorDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{author}\n\n@{end author}\n");
+        }
+
+        private void InsertAbstractDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{abstract}\n\n@{end abstract}\n");
+        }
+
+        private void InsertHeaderDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{header}\n\n@{end header}\n");
+        }
+
+        private void InsertFooterDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{footer}\n\n@{end footer}\n");
+        }
+
+        private void InsertFigureDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{figure}\n\n@{end figure}\n");
+        }
+
+        private void InsertReferenceDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{reference}\n\n@{end reference}\n");
+        }
+
+        private void InsertPagebreakDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{pagebreak}\n");
+        }
+
+        // ═══════════════ 3D & Visualization (new) ═══════════════
+        private void InsertTreeDirective_Click(object sender, RoutedEventArgs e)
+        {
+            InsertTextAtCursor("@{tree}\n\n@{end tree}\n");
+        }
+
         private void InsertTextAtCursor(string text)
         {
             try
@@ -6645,6 +6996,9 @@ namespace Hekatan.Wpf
                     _isAvalonEditActive = false;
                     _findReplace.IsAvalonEditActive = false;
                     EditorToggleButton.ToolTip = "Switch to AvalonEdit (Advanced Editor)";
+                    // Show external LineNumbers for RichTextBox
+                    LineNumbers.Visibility = Visibility.Visible;
+                    LineNumbersBorder.Visibility = Visibility.Visible;
                     RichTextBox.Focus();
                 }
                 else
@@ -6656,6 +7010,9 @@ namespace Hekatan.Wpf
                     _isAvalonEditActive = true;
                     _findReplace.IsAvalonEditActive = true;
                     EditorToggleButton.ToolTip = "Switch to RichTextBox (Classic Editor)";
+                    // Hide external LineNumbers — AvalonEdit has built-in line numbers
+                    LineNumbers.Visibility = Visibility.Collapsed;
+                    LineNumbersBorder.Visibility = Visibility.Collapsed;
                     TextEditor.Focus();
                 }
             }
@@ -6788,12 +7145,17 @@ namespace Hekatan.Wpf
                 if (_isAvalonEditActive && TextEditor != null)
                 {
                     TextEditor.Visibility = Visibility.Visible;
+                    // AvalonEdit has built-in line numbers — keep external ones hidden
+                    LineNumbers.Visibility = Visibility.Collapsed;
+                    LineNumbersBorder.Visibility = Visibility.Collapsed;
                 }
                 else
                 {
                     RichTextBox.Visibility = Visibility.Visible;
+                    // RichTextBox needs external LineNumbers canvas
+                    LineNumbers.Visibility = Visibility.Visible;
+                    LineNumbersBorder.Visibility = Visibility.Visible;
                 }
-                LineNumbers.Visibility = Visibility.Visible;
 
                 // 4. Update state
                 _currentEditorMode = EditorMode.Code;
@@ -7632,6 +7994,480 @@ namespace Hekatan.Wpf
         private static int ColorToInt(byte r, byte g, byte b)
         {
             return r | (g << 8) | (b << 16);
+        }
+
+        #endregion
+
+        #region ═══ @{html-folder} — Vite + Folder Tree ═══
+
+        /// <summary>
+        /// Detecta si el texto actual contiene @{html-folder} y abre la carpeta correspondiente.
+        /// Llamado desde CalculateAsync cuando el parser encuentra esta directiva.
+        /// </summary>
+        private async Task ProcessHtmlFolderAsync(string inputText)
+        {
+            try
+            {
+                // Buscar @{html-folder} al inicio de línea (no en comentarios "...")
+                var match = Regex.Match(inputText, @"(?m)^@\{html-folder\}\s*(.+?)$");
+                if (!match.Success) return;
+
+                var folderRef = match.Groups[1].Value.Trim();
+                string folderPath;
+
+                // Resolver ruta relativa al archivo actual
+                if (Path.IsPathRooted(folderRef))
+                {
+                    folderPath = folderRef;
+                }
+                else
+                {
+                    var basePath = string.IsNullOrEmpty(CurrentFileName)
+                        ? Environment.CurrentDirectory
+                        : Path.GetDirectoryName(CurrentFileName);
+                    folderPath = Path.GetFullPath(Path.Combine(basePath, folderRef));
+                }
+
+                if (!Directory.Exists(folderPath))
+                {
+                    await _wv2Warper.NavigateToStringAsync(
+                        $"<html><body style='font-family:Segoe UI;padding:40px;color:#e74c3c'>" +
+                        $"<h2>Error: Carpeta no encontrada</h2>" +
+                        $"<p><code>{folderPath}</code></p></body></html>");
+                    return;
+                }
+
+                // Asegurar que WebView2 esté inicializado
+                if (WebViewer.CoreWebView2 == null)
+                {
+                    await WebViewer.EnsureCoreWebView2Async();
+                }
+
+                _htmlFolderPath = folderPath;
+
+                // Mostrar TreeView
+                ShowFolderTree(folderPath);
+
+                // Decidir: Vite o estático
+                if (ViteProcessManager.HasViteProject(folderPath))
+                {
+                    await StartViteProjectAsync(folderPath);
+                }
+                else if (ViteProcessManager.HasStaticProject(folderPath))
+                {
+                    await StartStaticProjectAsync(folderPath);
+                }
+                else
+                {
+                    await _wv2Warper.NavigateToStringAsync(
+                        $"<html><body style='font-family:Segoe UI;padding:40px;color:#e67e22'>" +
+                        $"<h2>Carpeta sin proyecto</h2>" +
+                        $"<p>No se encontró <code>package.json</code> ni <code>index.html</code> en:</p>" +
+                        $"<p><code>{folderPath}</code></p>" +
+                        $"<h3>Para usar @{{html-folder}}:</h3>" +
+                        $"<ul><li>Agrega un <code>index.html</code> para proyecto estático</li>" +
+                        $"<li>O un <code>package.json</code> con script <code>dev</code> para Vite/TypeScript</li></ul>" +
+                        $"</body></html>");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[HtmlFolder] Error: {ex}");
+                try
+                {
+                    await _wv2Warper.NavigateToStringAsync(
+                        $"<html><body style='font-family:Segoe UI;padding:40px;color:#e74c3c'>" +
+                        $"<h2>Error en @{{html-folder}}</h2>" +
+                        $"<pre style='background:#1a1a2e;padding:16px;border-radius:8px;color:#ff6b6b;white-space:pre-wrap'>{System.Net.WebUtility.HtmlEncode(ex.ToString())}</pre>" +
+                        $"</body></html>");
+                }
+                catch { /* Si WebView2 no está listo, al menos no crashea */ }
+            }
+        }
+
+        /// <summary>
+        /// Inicia un proyecto Vite: npm install + npm run dev, luego navega WebView2 a localhost
+        /// </summary>
+        private async Task StartViteProjectAsync(string folderPath)
+        {
+            // Asegurar que WebView2 esté inicializado
+            if (WebViewer.CoreWebView2 == null)
+                await WebViewer.EnsureCoreWebView2Async();
+
+            // Mostrar estado "Iniciando..."
+            await _wv2Warper.NavigateToStringAsync(
+                "<html><body style='font-family:Segoe UI;display:flex;justify-content:center;align-items:center;height:100vh;background:#1a1a2e;color:#e0e0e0'>" +
+                "<div style='text-align:center'>" +
+                "<h2>⚡ Iniciando Vite...</h2>" +
+                "<p style='color:#888'>npm install + npm run dev</p>" +
+                "<div style='margin:20px;width:40px;height:40px;border:4px solid #333;border-top-color:#646cff;border-radius:50%;animation:spin 1s linear infinite'></div>" +
+                "<style>@keyframes spin{to{transform:rotate(360deg)}}</style>" +
+                "</div></body></html>");
+
+            _viteManager ??= new ViteProcessManager(msg =>
+                Debug.WriteLine($"[HtmlFolder] {msg}"));
+
+            var port = await _viteManager.StartAsync(folderPath);
+            if (port > 0)
+            {
+                // Navegar WebView2 a localhost:PORT
+                WebViewer.CoreWebView2.Navigate($"http://localhost:{port}");
+                Title = $"{AppInfo.Title} — ⚡ Vite (:{port}) — {Path.GetFileName(folderPath)}";
+            }
+            else
+            {
+                await _wv2Warper.NavigateToStringAsync(
+                    "<html><body style='font-family:Segoe UI;padding:40px;color:#e74c3c'>" +
+                    "<h2>Error al iniciar Vite</h2>" +
+                    "<p>Verifica que <code>npm</code> y <code>node</code> estén instalados y en el PATH.</p>" +
+                    "<p>También verifica que <code>package.json</code> tenga un script <code>\"dev\"</code>.</p>" +
+                    "</body></html>");
+            }
+        }
+
+        /// <summary>
+        /// Inicia un proyecto estático usando Virtual Host de WebView2.
+        /// Mapea directamente a la carpeta original (sin copiar).
+        /// Funciona como editor de código: editas in-place.
+        /// </summary>
+        private async Task StartStaticProjectAsync(string folderPath)
+        {
+            // Asegurar que WebView2 esté inicializado
+            if (WebViewer.CoreWebView2 == null)
+                await WebViewer.EnsureCoreWebView2Async();
+
+            // Mapear WebView2 directamente a la carpeta original
+            var hostName = "hekatan.folder";
+            WebViewer.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                hostName,
+                folderPath,
+                CoreWebView2HostResourceAccessKind.Allow);
+
+            WebViewer.CoreWebView2.Navigate($"https://{hostName}/index.html");
+            Title = $"{AppInfo.Title} — 📁 {Path.GetFileName(folderPath)}";
+            Debug.WriteLine($"[HtmlFolder] Mapped to: {folderPath}");
+        }
+
+        /// <summary>
+        /// Muestra el TreeView con la estructura de archivos de la carpeta
+        /// </summary>
+        private void ShowFolderTree(string folderPath)
+        {
+            FolderTreeView.Items.Clear();
+            FolderTreeTitle.Text = $"📁 {Path.GetFileName(folderPath)}";
+
+            PopulateTreeView(folderPath, FolderTreeView.Items);
+
+            FolderTreePanel.Visibility = Visibility.Visible;
+
+            // Ajustar márgenes del editor para hacer espacio al TreeView
+            // AvalonEdit: 5 + 200 = 205 (no necesita LineNumbers externo)
+            // RichTextBox: 55 + 200 = 255 (necesita espacio para LineNumbers)
+            if (TextEditor != null)
+                TextEditor.Margin = new Thickness(205, 33, 5, 24);
+            if (RichTextBox != null)
+                RichTextBox.Margin = new Thickness(255, 33, 5, 24);
+        }
+
+        /// <summary>
+        /// Puebla recursivamente el TreeView con archivos y carpetas
+        /// </summary>
+        private void PopulateTreeView(string dirPath, ItemCollection items)
+        {
+            // Carpetas que se ignoran
+            var ignoreDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "node_modules", ".git", "dist", ".vite", ".cache", "__pycache__", "bin", "obj" };
+
+            try
+            {
+                // Carpetas primero
+                foreach (var dir in Directory.GetDirectories(dirPath).OrderBy(d => Path.GetFileName(d)))
+                {
+                    var dirName = Path.GetFileName(dir);
+                    if (ignoreDirs.Contains(dirName)) continue;
+
+                    var dirItem = new TreeViewItem
+                    {
+                        Header = $"📁 {dirName}",
+                        Tag = dir,
+                        FontWeight = FontWeights.SemiBold,
+                        Foreground = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55))
+                    };
+                    PopulateTreeView(dir, dirItem.Items);
+                    items.Add(dirItem);
+                }
+
+                // Archivos
+                foreach (var file in Directory.GetFiles(dirPath).OrderBy(f => Path.GetFileName(f)))
+                {
+                    var fileName = Path.GetFileName(file);
+                    var ext = Path.GetExtension(file).ToLowerInvariant();
+                    var icon = GetFileIcon(ext);
+
+                    var fileItem = new TreeViewItem
+                    {
+                        Header = $"{icon} {fileName}",
+                        Tag = file,
+                        FontWeight = FontWeights.Normal,
+                        Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33))
+                    };
+                    items.Add(fileItem);
+                }
+            }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        /// <summary>
+        /// Obtiene un icono emoji basado en la extensión del archivo
+        /// </summary>
+        private static string GetFileIcon(string ext) => ext switch
+        {
+            ".ts" or ".tsx" => "🔷",
+            ".js" or ".jsx" => "🟡",
+            ".css" or ".scss" => "🎨",
+            ".html" or ".htm" => "🌐",
+            ".json" => "📋",
+            ".md" => "📝",
+            ".svg" => "🖼",
+            ".png" or ".jpg" or ".gif" => "🖼",
+            ".py" => "🐍",
+            ".cs" => "💜",
+            ".toml" or ".yaml" or ".yml" => "⚙",
+            _ => "📄"
+        };
+
+        /// <summary>
+        /// Cuando se selecciona un archivo en el TreeView, abrirlo en el editor.
+        /// Si el archivo anterior tenía cambios no guardados (sin Ctrl+S), se revierte.
+        /// </summary>
+        private async void FolderTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (e.NewValue is TreeViewItem item && item.Tag is string filePath && File.Exists(filePath))
+            {
+                try
+                {
+                    // --- Revertir archivo anterior si no fue guardado con Ctrl+S ---
+                    await HtmlFolderRevertIfNeededAsync();
+
+                    // --- Cargar el nuevo archivo ---
+                    var content = File.ReadAllText(filePath);
+
+                    // Deshabilitar auto-cálculo mientras se carga el archivo del TreeView.
+                    // Sin esto, TextChanged dispara CalculateAsync() y el parser intenta
+                    // evaluar CSS/JS/HTML como expresiones matemáticas.
+                    _isTextChangedEnabled = false;
+
+                    if (_isAvalonEditActive && TextEditor != null)
+                    {
+                        TextEditor.Text = content;
+                        TextEditor.Tag = filePath; // Recordar qué archivo está abierto
+                    }
+
+                    _isTextChangedEnabled = true;
+                    _autoRun = false; // Cancelar cualquier auto-run pendiente
+
+                    // Guardar backup del contenido original (para revertir si no hace Ctrl+S)
+                    _htmlFolderOriginalContent = content;
+                    _htmlFolderFileCommitted = false;
+
+                    // Actualizar título con el nombre del archivo
+                    var relPath = filePath;
+                    if (!string.IsNullOrEmpty(_htmlFolderPath))
+                        relPath = Path.GetRelativePath(_htmlFolderPath, filePath);
+
+                    var viteInfo = _viteManager?.IsRunning == true ? $"⚡:{_viteManager.Port}" : "📁";
+                    Title = $"{AppInfo.Title} — {viteInfo} {relPath}";
+                }
+                catch (Exception ex)
+                {
+                    _isTextChangedEnabled = true; // Asegurar re-habilitación en caso de error
+                    Debug.WriteLine($"[HtmlFolder] Error abriendo archivo: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Debounce: programa el auto-save al archivo original + reload WebView2.
+        /// Se llama desde TextChanged cuando estamos en modo html-folder.
+        /// </summary>
+        private void ScheduleHtmlFolderLiveReload()
+        {
+            if (_htmlFolderReloadTimer == null)
+            {
+                _htmlFolderReloadTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(500)
+                };
+                _htmlFolderReloadTimer.Tick += async (s, e) =>
+                {
+                    _htmlFolderReloadTimer.Stop();
+                    await HtmlFolderAutoSaveAsync();
+                };
+            }
+            _htmlFolderReloadTimer.Stop();
+            _htmlFolderReloadTimer.Start();
+        }
+
+        /// <summary>
+        /// Auto-guarda el archivo editado directamente al archivo original y recarga WebView2.
+        /// El cambio es "temporal": si el usuario no hace Ctrl+S y cambia de archivo,
+        /// el contenido original se restaura (ver HtmlFolderRevertIfNeededAsync).
+        /// </summary>
+        private async Task HtmlFolderAutoSaveAsync()
+        {
+            try
+            {
+                var filePath = TextEditor?.Tag as string;
+                if (string.IsNullOrEmpty(filePath) || string.IsNullOrEmpty(_htmlFolderPath))
+                    return;
+
+                // Guardar directamente al archivo original
+                await File.WriteAllTextAsync(filePath, TextEditor.Text);
+
+                var relPath = Path.GetRelativePath(_htmlFolderPath, filePath);
+                Debug.WriteLine($"[HtmlFolder LiveReload] Saved: {relPath}");
+
+                // Recargar WebView2 para reflejar los cambios
+                if (_viteManager?.IsRunning != true && WebViewer?.CoreWebView2 != null)
+                {
+                    WebViewer.CoreWebView2.Reload();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[HtmlFolder LiveReload] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Ctrl+S: Confirma el cambio como permanente.
+        /// El archivo ya está guardado por el auto-save, solo marcamos como "committed"
+        /// para que NO se revierta al cambiar de archivo.
+        /// </summary>
+        private async Task HtmlFolderCommitSaveAsync()
+        {
+            try
+            {
+                var filePath = TextEditor?.Tag as string;
+                if (string.IsNullOrEmpty(filePath))
+                    return;
+
+                // Asegurar que el archivo está guardado con el contenido actual
+                await File.WriteAllTextAsync(filePath, TextEditor.Text);
+
+                // Marcar como "committed" — ya no se revierte
+                _htmlFolderFileCommitted = true;
+                _htmlFolderOriginalContent = TextEditor.Text; // El nuevo "original" es el actual
+
+                var relPath = Path.GetRelativePath(_htmlFolderPath, filePath);
+                Debug.WriteLine($"[HtmlFolder Save] Committed: {relPath}");
+                Title = $"{AppInfo.Title} — 💾 {relPath} (guardado)";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[HtmlFolder Save] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Revierte el archivo anterior a su contenido original si no fue guardado con Ctrl+S.
+        /// Se llama al cambiar de archivo en el TreeView.
+        /// </summary>
+        private async Task HtmlFolderRevertIfNeededAsync()
+        {
+            try
+            {
+                var previousFile = TextEditor?.Tag as string;
+                if (string.IsNullOrEmpty(previousFile) || string.IsNullOrEmpty(_htmlFolderOriginalContent))
+                    return;
+
+                // Si no fue committed (Ctrl+S), restaurar el contenido original
+                if (!_htmlFolderFileCommitted)
+                {
+                    var currentContent = TextEditor.Text;
+                    if (currentContent != _htmlFolderOriginalContent)
+                    {
+                        await File.WriteAllTextAsync(previousFile, _htmlFolderOriginalContent);
+                        var relPath = Path.GetRelativePath(_htmlFolderPath, previousFile);
+                        Debug.WriteLine($"[HtmlFolder Revert] Restored: {relPath}");
+
+                        // Recargar WebView2 para reflejar la reversión
+                        if (_viteManager?.IsRunning != true && WebViewer?.CoreWebView2 != null)
+                            WebViewer.CoreWebView2.Reload();
+                    }
+                }
+
+                // Limpiar estado
+                _htmlFolderOriginalContent = null;
+                _htmlFolderFileCommitted = false;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[HtmlFolder Revert] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Cierra el panel del TreeView
+        /// </summary>
+        private void FolderTreeClose_Click(object sender, RoutedEventArgs e)
+        {
+            FolderTreePanel.Visibility = Visibility.Collapsed;
+
+            // Restaurar márgenes del editor (sin TreeView)
+            if (TextEditor != null)
+                TextEditor.Margin = new Thickness(5, 33, 5, 24);
+            if (RichTextBox != null)
+                RichTextBox.Margin = new Thickness(55, 33, 5, 24);
+        }
+
+        /// <summary>
+        /// Detiene Vite y limpia cuando se cierra la ventana o se abre otro archivo
+        /// </summary>
+        private async Task StopHtmlFolderAsync()
+        {
+            if (_viteManager != null)
+            {
+                await _viteManager.StopAsync();
+                _viteManager = null;
+            }
+            _htmlFolderPath = null;
+            FolderTreePanel.Visibility = Visibility.Collapsed;
+
+            // Restaurar márgenes (sin TreeView)
+            if (TextEditor != null)
+                TextEditor.Margin = new Thickness(5, 33, 5, 24);
+            if (RichTextBox != null)
+                RichTextBox.Margin = new Thickness(55, 33, 5, 24);
+        }
+
+        /// <summary>
+        /// Abre una carpeta como proyecto @{html-folder} directamente (sin archivo .cpd)
+        /// </summary>
+        private async void OpenFolderAsHtmlFolder()
+        {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog
+            {
+                Description = "Seleccionar carpeta del proyecto web",
+                UseDescriptionForTitle = true
+            };
+
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                var folderPath = dialog.SelectedPath;
+                _htmlFolderPath = folderPath;
+
+                // Limpiar Vite anterior
+                if (_viteManager?.IsRunning == true)
+                    await _viteManager.StopAsync();
+
+                ShowFolderTree(folderPath);
+
+                if (ViteProcessManager.HasViteProject(folderPath))
+                    await StartViteProjectAsync(folderPath);
+                else if (ViteProcessManager.HasStaticProject(folderPath))
+                    await StartStaticProjectAsync(folderPath);
+            }
         }
 
         #endregion
