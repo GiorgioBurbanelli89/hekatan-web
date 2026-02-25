@@ -613,15 +613,11 @@ namespace Hekatan.Common.MultLangCode
                     {
                         output = ProcessTitleBlock(block.Code ?? "", block.StartDirective);
                     }
-                    // @{css} - Apply styles AND show CSS code visually in output (no external file/browser)
+                    // @{css} - Apply styles silently (no visible output)
                     else if (language.Equals("css", StringComparison.OrdinalIgnoreCase))
                     {
                         var cssCode = block.Code ?? "";
-                        var encoded = System.Web.HttpUtility.HtmlEncode(cssCode);
-                        output = $"<style>\n{cssCode}\n</style>\n" +
-                                 $"<div class='lang-output-text'>" +
-                                 $"<pre style='background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:6px;overflow-x:auto;font-size:9pt;font-family:Consolas,monospace;'>{encoded}</pre>" +
-                                 $"</div>";
+                        output = $"<style>\n{cssCode}\n</style>";
                     }
                     // @{html} - Inject HTML directly into output (no external file/browser)
                     else if (language.Equals("html", StringComparison.OrdinalIgnoreCase))
