@@ -49,6 +49,15 @@ CAD.currentColor = "#ffffff";
 CAD.currentZ = 0;
 CAD.currentView = "2d-top";
 
+// 3D projection (oblique)
+CAD.projMode = "2d";        // "2d" | "oblique"
+CAD.projAngle = Math.PI/6;  // 30 degrees default
+CAD.projScale = 0.5;        // cabinet projection
+
+// Display
+CAD.showDimLabels = true;
+CAD.bgColor = "#1a1a2e";
+
 // Snap config
 CAD.snapCfg = {
     endpoint:true, midpoint:true, center:true, quadrant:true,

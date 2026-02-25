@@ -637,12 +637,144 @@ cad.columnSection = function(cx,cy,bw,bh,rec,dStirrup,dLong,nx,ny,bendR){
     return CAD.formas.length - 1;
 };
 
+// ── Text annotation ──
+cad.text = function(x,y,str,color){
+    var c = color || CAD.currentColor;
+    var t = (str||"").replace(/^["']|["']$/g, ""); // strip quotes
+    CAD.formas.push({
+        tipo:"texto",
+        x:px(x), y:px(y), text:t,
+        z:CAD.currentZ, color:c
+    });
+    refresh();
+    log("TEXT (" + x + "," + y + ") \"" + t + "\"");
+    return CAD.formas.length - 1;
+};
+
+// ── Arrow line ──
+cad.arrow = function(x1,y1,x2,y2,color){
+    var c = color || CAD.currentColor;
+    CAD.formas.push({
+        tipo:"flecha",
+        x1:px(x1), y1:px(y1), z1:CAD.currentZ,
+        x2:px(x2), y2:px(y2), z2:CAD.currentZ,
+        z:CAD.currentZ, color:c
+    });
+    refresh();
+    log("ARROW (" + x1 + "," + y1 + ") -> (" + x2 + "," + y2 + ")");
+    return CAD.formas.length - 1;
+};
+
+// ── 3D drawing commands ──
+cad.line3d = function(x1,y1,z1,x2,y2,z2,color){
+    var c = color || CAD.currentColor;
+    CAD.formas.push({
+        tipo:"linea", is3d:true,
+        x1:px(x1), y1:px(y1), z1:px(z1),
+        x2:px(x2), y2:px(y2), z2:px(z2),
+        z:px(z1), color:c
+    });
+    refresh();
+    log("LINE3D (" + x1 + "," + y1 + "," + z1 + ") -> (" + x2 + "," + y2 + "," + z2 + ")");
+    return CAD.formas.length - 1;
+};
+
+cad.arrow3d = function(x1,y1,z1,x2,y2,z2,color){
+    var c = color || CAD.currentColor;
+    CAD.formas.push({
+        tipo:"flecha", is3d:true,
+        x1:px(x1), y1:px(y1), z1:px(z1),
+        x2:px(x2), y2:px(y2), z2:px(z2),
+        z:px(z1), color:c
+    });
+    refresh();
+    log("ARROW3D (" + x1 + "," + y1 + "," + z1 + ") -> (" + x2 + "," + y2 + "," + z2 + ")");
+    return CAD.formas.length - 1;
+};
+
+cad.text3d = function(x,y,z,str,color){
+    var c = color || CAD.currentColor;
+    var t = (str||"").replace(/^["']|["']$/g, "");
+    CAD.formas.push({
+        tipo:"texto", is3d:true,
+        x:px(x), y:px(y), text:t,
+        z:px(z), color:c
+    });
+    refresh();
+    log("TEXT3D (" + x + "," + y + "," + z + ") \"" + t + "\"");
+    return CAD.formas.length - 1;
+};
+
+cad.pline3d = function(coords,color){
+    var c = color || CAD.currentColor;
+    var pts = [];
+    for(var i = 0; i < coords.length - 2; i += 3){
+        pts.push({x:px(coords[i]), y:px(coords[i+1]), z:px(coords[i+2])});
+    }
+    if(pts.length < 2){ log("PLINE3D: need at least 6 values (2 points x3)"); return -1; }
+    CAD.formas.push({
+        tipo:"polilinea", is3d:true,
+        pts:pts, z:pts[0].z, color:c
+    });
+    refresh();
+    log("PLINE3D " + pts.length + " points");
+    return CAD.formas.length - 1;
+};
+
+cad.circle3d = function(cx,cy,cz,r,color){
+    var c = color || CAD.currentColor;
+    CAD.formas.push({
+        tipo:"circulo", is3d:true,
+        cx:px(cx), cy:px(cy), r:px(r),
+        z:px(cz), color:c
+    });
+    refresh();
+    log("CIRCLE3D (" + cx + "," + cy + "," + cz + ") r=" + r);
+    return CAD.formas.length - 1;
+};
+
+cad.carc3d = function(cx,cy,cz,r,startAngle,endAngle,color){
+    var c = color || CAD.currentColor;
+    var sa = (startAngle||0)*Math.PI/180;
+    var ea = (endAngle||360)*Math.PI/180;
+    CAD.formas.push({
+        tipo:"arco_circular", is3d:true,
+        cx:px(cx), cy:px(cy), r:px(r),
+        startAngle:sa, endAngle:ea,
+        z:px(cz), color:c
+    });
+    refresh();
+    log("CARC3D (" + cx + "," + cy + "," + cz + ") r=" + r + " " + startAngle + "°-" + endAngle + "°");
+    return CAD.formas.length - 1;
+};
+
+// ── Projection mode ──
+cad.proj = function(mode, angle, scale){
+    if(mode === "oblique" || mode === "oblicua"){
+        CAD.projMode = "oblique";
+        if(!isNaN(angle)) CAD.projAngle = angle * Math.PI / 180;
+        if(!isNaN(scale)) CAD.projScale = scale;
+        log("PROJ oblique angle=" + (CAD.projAngle*180/Math.PI).toFixed(1) + "° scale=" + CAD.projScale);
+    } else {
+        CAD.projMode = "2d";
+        log("PROJ 2d");
+    }
+    refresh();
+};
+
+// ── Grid / Labels / Background ──
+cad.grid = function(on){ CAD.gridOn = (on !== "off" && on !== false); refresh(); log("GRID " + (CAD.gridOn?"on":"off")); };
+cad.labels = function(on){ CAD.showDimLabels = (on !== "off" && on !== false); refresh(); log("LABELS " + (CAD.showDimLabels?"on":"off")); };
+cad.bg = function(c){ CAD.bgColor = c || "#1a1a2e"; refresh(); log("BG " + CAD.bgColor); };
+
 cad.help = function(){
-    log("=== CALCPAD CAD CLI ===");
-    log("cad.line/rect/circle/ellipse/arc/carc/pline/dim");
+    log("=== HEKATAN CAD CLI ===");
+    log("cad.line/rect/circle/ellipse/arc/carc/pline/dim/text/arrow");
+    log("cad.line3d/arrow3d/text3d/pline3d/circle3d/carc3d");
     log("cad.clear/undo/zoomfit/list/del/move/copy/mirror/rotate");
     log("cad.scaleShape/array/polarArray/offset/group/ungroup");
     log("cad.rrect/stirrup/columnSection");
+    log("cad.proj/grid/labels/bg");
     log("Type 'help' for full list");
 };
 
@@ -694,6 +826,19 @@ cad.exec = function(cmdText){
             else if(cmd === "rrect") cad.rrect(n[1],n[2],n[3],n[4],n[5], tokens[6]);
             else if(cmd === "stirrup" || cmd === "estribo") cad.stirrup(n[1],n[2],n[3],n[4],n[5],n[6], tokens[7]);
             else if(cmd === "colsection" || cmd === "columna" || cmd === "columnsection") cad.columnSection(n[1],n[2],n[3],n[4],n[5],n[6],n[7],n[8],n[9],n[10]);
+            else if(cmd === "text" || cmd === "texto") cad.text(n[1],n[2], tokens.slice(3).join(" "));
+            else if(cmd === "arrow" || cmd === "flecha") cad.arrow(n[1],n[2],n[3],n[4], tokens[5]);
+            else if(cmd === "line3d" || cmd === "l3d" || cmd === "linea3d") cad.line3d(n[1],n[2],n[3],n[4],n[5],n[6], tokens[7]);
+            else if(cmd === "arrow3d" || cmd === "flecha3d") cad.arrow3d(n[1],n[2],n[3],n[4],n[5],n[6], tokens[7]);
+            else if(cmd === "text3d" || cmd === "texto3d") cad.text3d(n[1],n[2],n[3], tokens.slice(4).join(" "));
+            else if(cmd === "pline3d" || cmd === "pl3d" || cmd === "polilinea3d") cad.pline3d(n.slice(1));
+            else if(cmd === "circle3d" || cmd === "c3d" || cmd === "circulo3d") cad.circle3d(n[1],n[2],n[3],n[4], tokens[5]);
+            else if(cmd === "carc3d") cad.carc3d(n[1],n[2],n[3],n[4],n[5],n[6], tokens[7]);
+            else if(cmd === "proj" || cmd === "projection") cad.proj(tokens[1], n[2], n[3]);
+            else if(cmd === "grid") cad.grid(tokens[1]);
+            else if(cmd === "labels") cad.labels(tokens[1]);
+            else if(cmd === "bg" || cmd === "background") cad.bg(tokens[1]);
+            else if(cmd === "color") cad.color(tokens[1]);
             else if(cmd === "ifc"){
                 if(window._ifcExec){
                     var res = window._ifcExec(tokens.slice(1));

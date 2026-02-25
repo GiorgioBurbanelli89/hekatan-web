@@ -24,6 +24,14 @@ CAD.s2w = function(sx, sy) {
 
 // 3D projection: 3D world -> 2D canvas coords based on current view
 CAD.proj3to2 = function(x3,y3,z3){
+    if(CAD.projMode === "oblique" && z3 !== undefined && z3 !== 0){
+        // Cabinet/oblique projection: X stays, Y goes up, Z projects at angle
+        var zOff = (z3 || 0) * CAD.projScale;
+        return {
+            x: x3 + zOff * Math.cos(CAD.projAngle),
+            y: y3 + zOff * Math.sin(CAD.projAngle)
+        };
+    }
     if(CAD.currentView === "2d-top") return {x:x3, y:y3};
     if(CAD.currentView === "2d-front") return {x:x3, y:-z3};
     if(CAD.currentView === "2d-side") return {x:y3, y:-z3};

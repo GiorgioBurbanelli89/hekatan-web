@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Hekatan CAD Agent Preview</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;overflow:hidden;font-family:'Cascadia Code','Consolas',monospace;color:#d4d4d4}
+
+/* Toolbar */
+#toolbar{background:#2d2d2d;padding:3px 8px;display:flex;gap:4px;align-items:center;border-bottom:1px solid #444;font-size:11px;flex-shrink:0}
+#toolbar button{background:#0e639c;color:#fff;border:none;padding:2px 8px;cursor:pointer;border-radius:2px;font-size:10px}
+#toolbar button:hover{background:#1177bb}
+#toolbar button.active{background:#4ec9b0;color:#1a1a2e}
+#toolbar .sep{color:#444;margin:0 2px}
+#toolbar .label{color:#888;font-size:9px}
+
+/* Viewports */
+#viewport2d{position:absolute;top:28px;left:0;right:0;bottom:26px}
+#viewport3d{position:absolute;top:28px;left:0;right:0;bottom:26px;display:none}
+#lienzo{display:block;width:100%;height:100%;cursor:crosshair}
+#canvas3d{display:block;width:100%;height:100%}
+
+/* Status */
+#statusBar{position:fixed;bottom:0;left:0;right:0;background:rgba(30,30,30,0.95);padding:3px 10px;display:flex;gap:10px;font-size:10px;color:#888;border-top:1px solid #4ec9b0;z-index:10;align-items:center}
+#statusBar .val{color:#4ec9b0;font-weight:bold}
+#statusBar .sep{color:#444}
+
+/* Hint overlay */
+#hint{position:fixed;top:36px;left:50%;transform:translateX(-50%);background:rgba(78,201,176,0.15);color:#4ec9b0;padding:4px 16px;border:1px solid #4ec9b0;border-radius:4px;font-size:11px;z-index:20;display:none}
+</style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<div id="toolbar">
+  <span style="color:#4ec9b0;font-weight:bold;font-size:12px">CAD</span>
+  <span class="sep">|</span>
+  <button id="btn2d" class="active" onclick="switchView('2d')">2D Planta</button>
+  <button id="btn3d" onclick="switchView('3d')">3D</button>
+  <button id="btnFront" onclick="switchView('front')">Frente</button>
+  <button id="btnSide" onclick="switchView('side')">Lateral</button>
+  <span class="sep">|</span>
+  <button onclick="if(window.cad)cad.zoomfit()">Encuadrar</button>
+  <button onclick="if(window.cad)cad.clear();sync3D()">Limpiar</button>
+  <span class="sep">|</span>
+  <span class="label">Vista: <span id="lblView" style="color:#dcdcaa">2D Planta</span></span>
+</div>
+
+<!-- 2D Viewport -->
+<div id="viewport2d">
+  <canvas id="lienzo"></canvas>
+</div>
+
+<!-- 3D Viewport -->
+<div id="viewport3d">
+  <canvas id="canvas3d"></canvas>
+</div>
+
+<div id="statusBar">
+  <span>Formas: <span class="val" id="stCount">0</span></span>
+  <span class="sep">|</span>
+  <span>Zoom: <span class="val" id="zoomIndicator">100%</span></span>
+  <span class="sep">|</span>
+  <span>Vista: <span class="val" id="stView">2D</span></span>
+  <span class="sep">|</span>
+  <span>Unit: <span class="val" id="stUnit">cm</span></span>
+  <span class="sep">|</span>
+  <span id="stInfo" style="color:#6a9955">Hekatan CAD 3D Agent</span>
+</div>
+
+<div id="hint"></div>
+
+<!-- Three.js -->
+<script src="../Hekatan.Wpf/resources/ifc/three.min.js"></script>
+<script src="../Hekatan.Wpf/resources/ifc/OrbitControls.js"></script>
+
+<!-- CAD 2D modules -->
+<script src="js/cad/cad-state.js"></script>
+<script src="js/cad/cad-math.js"></script>
+<script src="js/cad/cad-dom.js"></script>
+<script src="js/cad/cad-projection.js"></script>
+<script src="js/cad/cad-history.js"></script>
+<script src="js/cad/cad-snap.js"></script>
+<script src="js/cad/cad-render.js"></script>
+<script src="js/cad/cad-input.js"></script>
+<script src="js/cad/cad-export.js"></script>
+<script src="js/cad/cad-cli.js"></script>
+
+<script>
+"use strict";
+
+// ═══════════════════════════════════════════════════════════
+// THREE.JS 3D RENDERER for CAD shapes
+// ═══════════════════════════════════════════════════════════
+var _3d = {scene:null, camera:null, renderer:null, controls:null, group:null};
+var _currentView = "2d";
+
+function init3D(){
+    if(!window.THREE) { console.warn("Three.js not loaded"); return; }
+
+    var container = document.getElementById("viewport3d");
+    var canvas3d = document.getElementById("canvas3d");
+
+    _3d.scene = new THREE.Scene();
+    _3d.scene.background = new THREE.Color(0x1a1a2e);
+
+    _3d.camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.1, 50000);
+    _3d.camera.position.set(300, 400, 500);
+    _3d.camera.lookAt(0, 0, 0);
+
+    _3d.renderer = new THREE.WebGLRenderer({canvas:canvas3d, antialias:true});
+    _3d.renderer.setSize(container.clientWidth, container.clientHeight);
+    _3d.renderer.setPixelRatio(window.devicePixelRatio);
+
+    _3d.controls = new THREE.OrbitControls(_3d.camera, canvas3d);
+    _3d.controls.enableDamping = true;
+    _3d.controls.dampingFactor = 0.08;
+
+    // Lights
+    _3d.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    var dl = new THREE.DirectionalLight(0xffffff, 0.5);
+    dl.position.set(500, 800, 300);
+    _3d.scene.add(dl);
+
+    // Grid
+    var grid = new THREE.GridHelper(1000, 20, 0x444466, 0x333355);
+    grid.rotation.x = Math.PI/2; // XY plane
+    _3d.scene.add(grid);
+
+    // Axes
+    _3d.scene.add(new THREE.AxesHelper(100));
+
+    // Group for CAD shapes
+    _3d.group = new THREE.Group();
+    _3d.scene.add(_3d.group);
+
+    // Animation loop
+    function animate(){
+        requestAnimationFrame(animate);
+        if(_currentView !== "2d"){
+            _3d.controls.update();
+            _3d.renderer.render(_3d.scene, _3d.camera);
+        }
+    }
+    animate();
+}
+
+// Build Three.js objects from CAD.formas
+function sync3D(){
+    if(!_3d.group) return;
+
+    // Clear existing
+    while(_3d.group.children.length > 0) _3d.group.remove(_3d.group.children[0]);
+
+    var esc = CAD.escala || 1;
+
+    for(var i = 0; i < CAD.formas.length; i++){
+        var f = CAD.formas[i];
+        if(f.hidden) continue;
+        var col = new THREE.Color(f.color || "#ffffff");
+        var mat = new THREE.LineBasicMaterial({color:col});
+        var fz = (f.z || 0) / esc;
+
+        if(f.tipo === "linea"){
+            var pts = [
+                new THREE.Vector3(f.x1/esc, f.y1/esc, (f.z1||f.z||0)/esc),
+                new THREE.Vector3(f.x2/esc, f.y2/esc, (f.z2||f.z||0)/esc)
+            ];
+            var geo = new THREE.BufferGeometry().setFromPoints(pts);
+            _3d.group.add(new THREE.Line(geo, mat));
+        }
+        else if(f.tipo === "rectangulo"){
+            var x=f.x/esc, y=f.y/esc, w=f.w/esc, h=f.h/esc;
+            var pts = [
+                new THREE.Vector3(x,y,fz), new THREE.Vector3(x+w,y,fz),
+                new THREE.Vector3(x+w,y+h,fz), new THREE.Vector3(x,y+h,fz),
+                new THREE.Vector3(x,y,fz)
+            ];
+            var geo = new THREE.BufferGeometry().setFromPoints(pts);
+            _3d.group.add(new THREE.Line(geo, mat));
+        }
+        else if(f.tipo === "circulo"){
+            var cx=f.cx/esc, cy=f.cy/esc, r=f.r/esc;
+            var segs = 48;
+            var pts = [];
+            for(var s=0; s<=segs; s++){
+                var ang = (s/segs) * Math.PI * 2;
+                pts.push(new THREE.Vector3(cx + r*Math.cos(ang), cy + r*Math.sin(ang), fz));
+            }
+            // If has fill, draw filled circle
+            if(f.fill){
+                var shape = new THREE.Shape();
+                shape.absarc(cx, cy, r, 0, Math.PI*2, false);
+                var fillGeo = new THREE.ShapeGeometry(shape);
+                var fillMat = new THREE.MeshBasicMaterial({color:new THREE.Color(f.fill), side:THREE.DoubleSide});
+                var mesh = new THREE.Mesh(fillGeo, fillMat);
+                mesh.position.z = fz;
+                _3d.group.add(mesh);
+            }
+            var geo = new THREE.BufferGeometry().setFromPoints(pts);
+            _3d.group.add(new THREE.Line(geo, mat));
+        }
+        else if(f.tipo === "elipse"){
+            var cx=f.cx/esc, cy=f.cy/esc, rx=f.rx/esc, ry=f.ry/esc;
+            var segs = 48;
+            var pts = [];
+            for(var s=0; s<=segs; s++){
+                var ang = (s/segs) * Math.PI * 2;
+                pts.push(new THREE.Vector3(cx + rx*Math.cos(ang), cy + ry*Math.sin(ang), fz));
+            }
+            var geo = new THREE.BufferGeometry().setFromPoints(pts);
+            _3d.group.add(new THREE.Line(geo, mat));
+        }
+        else if(f.tipo === "arco_circular"){
+            var cx=f.cx/esc, cy=f.cy/esc, r=f.r/esc;
+            var start = f.startAngle, end = f.endAngle;
+            var segs = 32;
+            var pts = [];
+            for(var s=0; s<=segs; s++){
+                var ang = start + (s/segs) * (end - start);
+                pts.push(new THREE.Vector3(cx + r*Math.cos(ang), cy + r*Math.sin(ang), fz));
+            }
+            var geo = new THREE.BufferGeometry().setFromPoints(pts);
+            _3d.group.add(new THREE.Line(geo, mat));
+        }
+        else if((f.tipo === "polilinea" || f.tipo === "mano") && f.pts){
+            var pts = [];
+            for(var j=0; j<f.pts.length; j++){
+                pts.push(new THREE.Vector3(f.pts[j].x/esc, f.pts[j].y/esc, (f.pts[j].z||fz*esc)/esc));
+            }
+            var geo = new THREE.BufferGeometry().setFromPoints(pts);
+            _3d.group.add(new THREE.Line(geo, mat));
+        }
+        else if(f.tipo === "cota"){
+            var x1=f.x1/esc, y1=f.y1/esc, x2=f.x2/esc, y2=f.y2/esc;
+            var off = (f.offset||0)/esc;
+            var dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+            if(len > 0){
+                var ux=dx/len, uy=dy/len, nx=-uy, ny=ux;
+                var dimMat = new THREE.LineBasicMaterial({color:new THREE.Color(f.color||"#ffdd00")});
+                // Extension lines
+                var ext1 = [new THREE.Vector3(x1+nx*2,y1+ny*2,fz), new THREE.Vector3(x1+nx*(off+4),y1+ny*(off+4),fz)];
+                var ext2 = [new THREE.Vector3(x2+nx*2,y2+ny*2,fz), new THREE.Vector3(x2+nx*(off+4),y2+ny*(off+4),fz)];
+                _3d.group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ext1), dimMat));
+                _3d.group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ext2), dimMat));
+                // Dimension line
+                var dl = [new THREE.Vector3(x1+nx*off,y1+ny*off,fz), new THREE.Vector3(x2+nx*off,y2+ny*off,fz)];
+                _3d.group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(dl), dimMat));
+            }
+        }
+        else if(f.tipo === "grupo" && f.children){
+            // Recursively draw children as if they were top-level shapes
+            for(var gi=0; gi<f.children.length; gi++){
+                CAD.formas.push(f.children[gi]);
+            }
+            // They'll be processed in subsequent iterations (formas.length increased)
+            // Clean up after loop
+        }
+    }
+
+    // Fit camera
+    if(_3d.group.children.length > 0){
+        var box = new THREE.Box3().setFromObject(_3d.group);
+        var center = box.getCenter(new THREE.Vector3());
+        var size = box.getSize(new THREE.Vector3());
+        var maxDim = Math.max(size.x, size.y, size.z);
+        if(maxDim > 0){
+            _3d.controls.target.copy(center);
+            var dist = maxDim * 1.8;
+            _3d.camera.position.set(center.x + dist*0.5, center.y + dist*0.6, center.z + dist*0.8);
+            _3d.camera.lookAt(center);
+            _3d.controls.update();
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW SWITCHING
+// ═══════════════════════════════════════════════════════════
+function switchView(view){
+    _currentView = view;
+    var v2d = document.getElementById("viewport2d");
+    var v3d = document.getElementById("viewport3d");
+    var btn2d = document.getElementById("btn2d");
+    var btn3d = document.getElementById("btn3d");
+    var btnFront = document.getElementById("btnFront");
+    var btnSide = document.getElementById("btnSide");
+
+    // Reset active
+    [btn2d, btn3d, btnFront, btnSide].forEach(function(b){ b.classList.remove("active"); });
+
+    if(view === "2d"){
+        v2d.style.display = "block"; v3d.style.display = "none";
+        btn2d.classList.add("active");
+        CAD.currentView = "2d-top";
+        document.getElementById("lblView").textContent = "2D Planta";
+        document.getElementById("stView").textContent = "2D";
+        CAD.redraw();
+    } else if(view === "front"){
+        v2d.style.display = "block"; v3d.style.display = "none";
+        btnFront.classList.add("active");
+        CAD.currentView = "2d-front";
+        document.getElementById("lblView").textContent = "Frente XZ";
+        document.getElementById("stView").textContent = "Frente";
+        CAD.redraw();
+    } else if(view === "side"){
+        v2d.style.display = "block"; v3d.style.display = "none";
+        btnSide.classList.add("active");
+        CAD.currentView = "2d-side";
+        document.getElementById("lblView").textContent = "Lateral YZ";
+        document.getElementById("stView").textContent = "Lateral";
+        CAD.redraw();
+    } else {
+        v2d.style.display = "none"; v3d.style.display = "block";
+        btn3d.classList.add("active");
+        CAD.currentView = "3d";
+        document.getElementById("lblView").textContent = "3D Perspectiva";
+        document.getElementById("stView").textContent = "3D";
+        sync3D();
+        // Resize 3D renderer
+        if(_3d.renderer){
+            var c = document.getElementById("viewport3d");
+            _3d.renderer.setSize(c.clientWidth, c.clientHeight);
+            _3d.camera.aspect = c.clientWidth / c.clientHeight;
+            _3d.camera.updateProjectionMatrix();
+        }
+    }
+}
+window.switchView = switchView;
+
+// ═══════════════════════════════════════════════════════════
+// INITIALIZE 2D CAD
+// ═══════════════════════════════════════════════════════════
+(function(){
+    var vp = document.getElementById("viewport2d");
+    var canvas = document.getElementById("lienzo");
+    canvas.width = vp.clientWidth;
+    canvas.height = vp.clientHeight;
+
+    CAD.canvas = canvas;
+    CAD.ctx = canvas.getContext("2d");
+    CAD.zoomIndicator = document.getElementById("zoomIndicator");
+
+    if(CAD.initDOM) CAD.initDOM();
+
+    // Callbacks
+    CAD.callbacks.updTree = function(){
+        var el = document.getElementById("stCount");
+        if(el) el.textContent = CAD.formas.length;
+        // Also sync 3D if in 3D view
+        if(_currentView !== "2d" && _currentView !== "front" && _currentView !== "side") sync3D();
+    };
+    CAD.callbacks.showProps = function(){};
+    CAD.callbacks.selectShape = function(){};
+    CAD.callbacks.setMode = function(){};
+    CAD.callbacks.flash = function(msg){
+        var h = document.getElementById("hint");
+        if(h){ h.textContent = msg; h.style.display = "block"; setTimeout(function(){ h.style.display="none"; }, 2000); }
+    };
+
+    // ZoomFit
+    CAD.zoomFit = function(){
+        if(CAD.formas.length === 0) return;
+        var minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+        function addBounds(f){
+            var fz=f.z||0;
+            if(f.tipo==="linea"){
+                var p1=CAD.proj3to2(f.x1,f.y1,f.z1||fz), p2=CAD.proj3to2(f.x2,f.y2,f.z2||fz);
+                minX=Math.min(minX,p1.x,p2.x);maxX=Math.max(maxX,p1.x,p2.x);
+                minY=Math.min(minY,p1.y,p2.y);maxY=Math.max(maxY,p1.y,p2.y);
+            }
+            else if(f.tipo==="rectangulo"){
+                var r1=CAD.proj3to2(f.x,f.y,fz), r2=CAD.proj3to2(f.x+f.w,f.y+f.h,fz);
+                minX=Math.min(minX,r1.x,r2.x);maxX=Math.max(maxX,r1.x,r2.x);
+                minY=Math.min(minY,r1.y,r2.y);maxY=Math.max(maxY,r1.y,r2.y);
+            }
+            else if(f.tipo==="circulo"){
+                var c=CAD.proj3to2(f.cx,f.cy,fz);
+                minX=Math.min(minX,c.x-f.r);maxX=Math.max(maxX,c.x+f.r);
+                minY=Math.min(minY,c.y-f.r);maxY=Math.max(maxY,c.y+f.r);
+            }
+            else if(f.tipo==="elipse"){
+                var e=CAD.proj3to2(f.cx,f.cy,fz);
+                minX=Math.min(minX,e.x-f.rx);maxX=Math.max(maxX,e.x+f.rx);
+                minY=Math.min(minY,e.y-f.ry);maxY=Math.max(maxY,e.y+f.ry);
+            }
+            else if(f.tipo==="polilinea"&&f.pts){
+                for(var j=0;j<f.pts.length;j++){
+                    var p=CAD.proj3to2(f.pts[j].x,f.pts[j].y,f.pts[j].z||fz);
+                    minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
+                    minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);
+                }
+            }
+            else if(f.tipo==="cota"){
+                var d1=CAD.proj3to2(f.x1,f.y1,fz),d2=CAD.proj3to2(f.x2,f.y2,fz);
+                var off=Math.abs(f.offset||0);
+                minX=Math.min(minX,d1.x-off,d2.x-off);maxX=Math.max(maxX,d1.x+off,d2.x+off);
+                minY=Math.min(minY,d1.y-off,d2.y-off);maxY=Math.max(maxY,d1.y+off,d2.y+off);
+            }
+            else if(f.tipo==="arco_circular"){
+                var ac=CAD.proj3to2(f.cx,f.cy,fz);
+                minX=Math.min(minX,ac.x-f.r);maxX=Math.max(maxX,ac.x+f.r);
+                minY=Math.min(minY,ac.y-f.r);maxY=Math.max(maxY,ac.y+f.r);
+            }
+            else if(f.tipo==="grupo"&&f.children){
+                for(var gi=0;gi<f.children.length;gi++) addBounds(f.children[gi]);
+            }
+        }
+        for(var i=0;i<CAD.formas.length;i++) addBounds(CAD.formas[i]);
+        if(minX>=1e9) return;
+        var cx=(minX+maxX)/2, cy=(minY+maxY)/2;
+        var w=maxX-minX, h=maxY-minY;
+        var margin=1.2;
+        var zx=CAD.canvas.width/(w*margin||1), zy=CAD.canvas.height/(h*margin||1);
+        CAD.cam.zoom=Math.min(zx,zy);
+        CAD.cam.x=cx;
+        CAD.cam.y=cy;
+        CAD.redraw();
+    };
+
+    // Resize
+    CAD.resizeCanvas = function(){
+        canvas.width = vp.clientWidth;
+        canvas.height = vp.clientHeight;
+        CAD.redraw();
+        if(_3d.renderer){
+            var c3 = document.getElementById("viewport3d");
+            _3d.renderer.setSize(c3.clientWidth, c3.clientHeight);
+            _3d.camera.aspect = c3.clientWidth / c3.clientHeight;
+            _3d.camera.updateProjectionMatrix();
+        }
+    };
+    window.addEventListener("resize", CAD.resizeCanvas);
+
+    // Mouse wheel zoom (2D)
+    canvas.addEventListener("wheel", function(e){
+        e.preventDefault();
+        var factor = e.deltaY < 0 ? 1.15 : 1/1.15;
+        var rect = canvas.getBoundingClientRect();
+        var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        var wBefore = CAD.s2w(mx, my);
+        CAD.cam.zoom *= factor;
+        CAD.cam.zoom = Math.max(CAD.cam.minZoom, Math.min(CAD.cam.maxZoom, CAD.cam.zoom));
+        var wAfter = CAD.s2w(mx, my);
+        CAD.cam.x += wBefore.x - wAfter.x;
+        CAD.cam.y += wBefore.y - wAfter.y;
+        CAD.redraw();
+    }, {passive:false});
+
+    // Pan (middle-click or Alt+click)
+    var panning=false, panSX=0, panSY=0, panCX=0, panCY=0;
+    canvas.addEventListener("mousedown", function(e){
+        if(e.button===1||(e.button===0&&e.altKey)){
+            panning=true; panSX=e.clientX; panSY=e.clientY;
+            panCX=CAD.cam.x; panCY=CAD.cam.y; e.preventDefault();
+        }
+    });
+    canvas.addEventListener("mousemove", function(e){
+        if(panning){
+            CAD.cam.x = panCX - (e.clientX-panSX)/CAD.cam.zoom;
+            CAD.cam.y = panCY + (e.clientY-panSY)/CAD.cam.zoom;
+            CAD.redraw();
+        }
+    });
+    canvas.addEventListener("mouseup", function(){ panning=false; });
+
+    // Init
+    if(CAD.saveHist) CAD.saveHist();
+    CAD.redraw();
+    if(CAD.initCLI) CAD.initCLI();
+
+    // Init Three.js
+    init3D();
+
+    // ═══════════════════════════════════════════════════════════
+    // API FOR WEBVIEW2
+    // ═══════════════════════════════════════════════════════════
+
+    window.runCommands = function(cmdText){
+        try {
+            cad.exec(cmdText);
+            cad.zoomfit();
+            sync3D();
+            return JSON.stringify({ok:true, shapes:CAD.formas.length});
+        } catch(err){
+            return JSON.stringify({ok:false, error:err.message});
+        }
+    };
+
+    window.runFresh = function(cmdText){
+        cad.clear();
+        return window.runCommands(cmdText);
+    };
+
+    window.getScreenshot = function(){
+        // If in 3D, capture 3D renderer
+        if(_currentView !== "2d" && _currentView !== "front" && _currentView !== "side" && _3d.renderer){
+            _3d.renderer.render(_3d.scene, _3d.camera);
+            return _3d.renderer.domElement.toDataURL("image/png");
+        }
+        return canvas.toDataURL("image/png");
+    };
+
+    window.getShapeCount = function(){ return CAD.formas.length; };
+
+    window.getShapesJSON = function(){ return JSON.stringify(cad.toJSON()); };
+
+    // Switch to 3D and get screenshot
+    window.get3DScreenshot = function(){
+        switchView("3d");
+        sync3D();
+        // Wait a frame for render
+        return new Promise(function(resolve){
+            requestAnimationFrame(function(){
+                requestAnimationFrame(function(){
+                    if(_3d.renderer){
+                        _3d.renderer.render(_3d.scene, _3d.camera);
+                        resolve(_3d.renderer.domElement.toDataURL("image/png"));
+                    } else {
+                        resolve(canvas.toDataURL("image/png"));
+                    }
+                });
+            });
+        });
+    };
+
+    console.log("[CAD Agent] Preview 3D+2D listo. Comandos: runCommands(), runFresh(), getScreenshot()");
+    document.getElementById("stInfo").textContent = "Listo - CAD 3D+2D | Esperando comandos";
+})();
+</script>
+
+</body>
+</html>

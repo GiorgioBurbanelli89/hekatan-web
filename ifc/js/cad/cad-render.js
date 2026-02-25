@@ -122,6 +122,37 @@ function drawShape(f,sel){
         CAD.ctx.stroke();
     }
 
+    // TEXTO (text annotation)
+    else if(f.tipo==="texto"){
+        var tp=CAD.w2s3(f.x,f.y,fz);
+        var fontSize = Math.max(10, (f.fontSize||14)/Math.max(CAD.cam.zoom,0.2));
+        CAD.ctx.font = (f.bold?"bold ":"") + fontSize + "px " + (f.fontFamily||"Consolas,monospace");
+        CAD.ctx.fillStyle = sel ? "#ffcc00" : (f.color||"#ffffff");
+        CAD.ctx.textAlign = f.align||"left";
+        CAD.ctx.textBaseline = "middle";
+        CAD.ctx.fillText(f.text||"", tp.x, tp.y);
+        if(sel) drawNode3(f.x,f.y,fz);
+    }
+
+    // FLECHA (arrow line)
+    else if(f.tipo==="flecha"){
+        var fa=CAD.w2s3(f.x1,f.y1,f.z1||fz), fb=CAD.w2s3(f.x2,f.y2,f.z2||fz);
+        CAD.ctx.beginPath(); CAD.ctx.moveTo(fa.x,fa.y); CAD.ctx.lineTo(fb.x,fb.y); CAD.ctx.stroke();
+        // Arrowhead at endpoint
+        var adx=fb.x-fa.x, ady=fb.y-fa.y, alen=Math.sqrt(adx*adx+ady*ady);
+        if(alen>2){
+            var aux=adx/alen, auy=ady/alen, anx=-auy, any=aux;
+            var aLen=10, aW=4;
+            CAD.ctx.fillStyle = sel ? "#ffcc00" : (f.color||"#ffffff");
+            CAD.ctx.beginPath();
+            CAD.ctx.moveTo(fb.x, fb.y);
+            CAD.ctx.lineTo(fb.x-aux*aLen+anx*aW, fb.y-auy*aLen+any*aW);
+            CAD.ctx.lineTo(fb.x-aux*aLen-anx*aW, fb.y-auy*aLen-any*aW);
+            CAD.ctx.closePath(); CAD.ctx.fill();
+        }
+        if(sel){drawNode3(f.x1,f.y1,f.z1||fz);drawNode3(f.x2,f.y2,f.z2||fz);}
+    }
+
     // GRUPO: draw all children recursively
     else if(f.tipo==="grupo" && f.children){
         for(var gi=0; gi<f.children.length; gi++){
@@ -134,11 +165,12 @@ function drawShape(f,sel){
         drawDimension(f, sel);
     }
 
-    if(f.tipo!=="cota") drawDimLabel(f);
+    if(f.tipo!=="cota" && f.tipo!=="texto") drawDimLabel(f);
     CAD.ctx.restore();
 }
 
 function drawDimLabel(f){
+    if(CAD.showDimLabels === false) return;
     CAD.ctx.save();
     CAD.ctx.fillStyle="rgba(100,200,255,0.85)";
     CAD.ctx.font=Math.max(9, 11/Math.max(CAD.cam.zoom,0.3))+"px Consolas,monospace";
