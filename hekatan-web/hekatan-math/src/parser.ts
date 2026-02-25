@@ -375,10 +375,305 @@ function handleSvgBlock(lines: string[]): string {
   return `<div class="svg-container">${lines.join("\n")}</div>`;
 }
 
-// ─── @{three} block ──────────────────────────────────────
+// ─── @{three} block — DSL-to-Three.js converter ─────────
+const THREE_DSL_CMDS = new Set([
+  "box","sphere","cylinder","cone","torus","plane","line","arrow","darrow",
+  "plate","slab","tube","pipe","node","carc3d","dim3d","axes","axeslabeled",
+  "axes_labeled","gridhelper","color","opacity","wireframe","metalness",
+  "roughness","reset","camera","background","light"
+]);
+
+function parseThreeOpts(tokens: string[]): { pos: number[], kv: Record<string,string>, text: string|null } {
+  const pos: number[] = [], kv: Record<string,string> = {};
+  let text: string|null = null;
+  for (let i = 1; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.includes(":")) { const ci = t.indexOf(":"); kv[t.slice(0,ci).toLowerCase()] = t.slice(ci+1); }
+    else { const n = parseFloat(t); if (!isNaN(n)) pos.push(n); else if (text === null) text = t; }
+  }
+  return { pos, kv, text };
+}
+
+function splitThreeLine(line: string): string[] {
+  const tokens: string[] = [];
+  let i = 0;
+  while (i < line.length) {
+    if (line[i] === " " || line[i] === "\t") { i++; continue; }
+    if (line[i] === '"' || line[i] === "'") {
+      const q = line[i]; let j = i+1;
+      while (j < line.length && line[j] !== q) j++;
+      tokens.push(line.slice(i+1, j)); i = j+1;
+    } else {
+      let j = i;
+      while (j < line.length && line[j] !== " " && line[j] !== "\t") j++;
+      tokens.push(line.slice(i, j)); i = j;
+    }
+  }
+  return tokens;
+}
+
+function threeColorHex(c: string): string {
+  if (!c) return "0x4488ff";
+  if (c.startsWith("#")) return "0x" + c.slice(1);
+  const named: Record<string,string> = {
+    red:"0xff0000",green:"0x00ff00",blue:"0x0000ff",white:"0xffffff",black:"0x000000",
+    yellow:"0xffff00",cyan:"0x00ffff",magenta:"0xff00ff",orange:"0xff8800",gray:"0x888888",
+    grey:"0x888888",brown:"0x8b4513",pink:"0xff69b4",purple:"0x800080"
+  };
+  return named[c.toLowerCase()] || "0x4488ff";
+}
+
+function processThreeDSL(lines: string[]): string {
+  const js: string[] = [];
+  // Persistent state
+  let curColor = "#4488ff", curOpacity = "1", curWireframe = "false";
+  let curMetalness = "0.1", curRoughness = "0.5";
+  let meshIdx = 0;
+
+  const optC = (kv: Record<string,string>) => threeColorHex(kv["color"] || curColor);
+  const optO = (kv: Record<string,string>) => kv["opacity"] || curOpacity;
+  const optW = (kv: Record<string,string>) => kv["wireframe"] || curWireframe;
+  const optM = (kv: Record<string,string>) => kv["metalness"] || curMetalness;
+  const optR = (kv: Record<string,string>) => kv["roughness"] || curRoughness;
+  const makeMat = (kv: Record<string,string>, def?: string) => {
+    const c = def || optC(kv), o = optO(kv), w = optW(kv);
+    const trans = parseFloat(o) < 1 ? ",transparent:true" : "";
+    return `new THREE.MeshStandardMaterial({color:${c},opacity:${o},wireframe:${w},metalness:${optM(kv)},roughness:${optR(kv)}${trans}})`;
+  };
+  const addMesh = (geo: string, kv: Record<string,string>, pos: number[], rotKv?: string) => {
+    const m = `_m${meshIdx++}`;
+    js.push(`{const ${m}=new THREE.Mesh(${geo},${makeMat(kv)});`);
+    if (pos.length >= 3) js.push(`${m}.position.set(${pos[0]},${pos[1]},${pos[2]});`);
+    if (rotKv) {
+      const [rx,ry,rz] = rotKv.split(",").map(Number);
+      js.push(`${m}.rotation.set(${(rx||0)*Math.PI/180},${(ry||0)*Math.PI/180},${(rz||0)*Math.PI/180});`);
+    }
+    js.push(`scene.add(${m});}`);
+  };
+
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
+    if (!trimmed || trimmed.startsWith("//")) continue;
+
+    const tokens = splitThreeLine(trimmed);
+    if (tokens.length === 0) continue;
+    const cmd = tokens[0].toLowerCase();
+
+    // If not a known DSL command, pass as raw JS
+    if (!THREE_DSL_CMDS.has(cmd)) { js.push(trimmed); continue; }
+
+    const { pos, kv, text } = parseThreeOpts(tokens);
+    const P = (i: number) => i < pos.length ? pos[i] : 0;
+
+    switch (cmd) {
+      // ── State ──
+      case "color": curColor = tokens[1] || "#4488ff"; break;
+      case "opacity": curOpacity = tokens[1] || "1"; break;
+      case "wireframe": curWireframe = tokens[1] || "true"; break;
+      case "metalness": curMetalness = tokens[1] || "0.1"; break;
+      case "roughness": curRoughness = tokens[1] || "0.5"; break;
+      case "reset":
+        curColor = "#4488ff"; curOpacity = "1"; curWireframe = "false";
+        curMetalness = "0.1"; curRoughness = "0.5";
+        break;
+
+      // ── Meta ──
+      case "camera": {
+        if (pos.length >= 3) js.push(`camera.position.set(${P(0)},${P(1)},${P(2)});`);
+        if (kv["lookat"]) { const [lx,ly,lz] = kv["lookat"].split(",").map(Number); js.push(`camera.lookAt(${lx||0},${ly||0},${lz||0});`); }
+        if (kv["fov"]) js.push(`camera.fov=${kv["fov"]};camera.updateProjectionMatrix();`);
+        break;
+      }
+      case "background":
+        js.push(`scene.background=new THREE.Color(${threeColorHex(tokens[1] || "#f5f5f5")});`);
+        break;
+      case "light": {
+        const lc = threeColorHex(kv["color"] || "#ffffff");
+        const li = kv["intensity"] || "0.8";
+        if (pos.length >= 3) js.push(`{const _l=new THREE.DirectionalLight(${lc},${li});_l.position.set(${P(0)},${P(1)},${P(2)});scene.add(_l);}`);
+        else js.push(`{const _l=new THREE.DirectionalLight(${lc},${li});_l.position.set(5,10,7);scene.add(_l);}`);
+        break;
+      }
+      case "gridhelper": {
+        const sz = kv["size"] || "10", div = kv["divisions"] || "10";
+        js.push(`scene.add(new THREE.GridHelper(${sz},${div}));`);
+        break;
+      }
+
+      // ── Shapes ──
+      case "box": {
+        const s = kv["size"] ? kv["size"].split(",").map(Number) : [1,1,1];
+        addMesh(`new THREE.BoxGeometry(${s[0]||1},${s[1]||1},${s[2]||1})`, kv, [P(0),P(1),P(2)], kv["rotation"]);
+        break;
+      }
+      case "sphere": {
+        const r = kv["r"] || kv["radius"] || "0.5";
+        const seg = kv["segments"] || "32";
+        addMesh(`new THREE.SphereGeometry(${r},${seg},${seg})`, kv, [P(0),P(1),P(2)]);
+        break;
+      }
+      case "cylinder": {
+        const rt = kv["rtop"] || kv["r"] || "0.5", rb = kv["rbottom"] || kv["r"] || "0.5";
+        const h = kv["h"] || kv["height"] || "1", seg = kv["segments"] || "32";
+        addMesh(`new THREE.CylinderGeometry(${rt},${rb},${h},${seg})`, kv, [P(0),P(1),P(2)], kv["rotation"]);
+        break;
+      }
+      case "cone": {
+        const r = kv["r"] || kv["radius"] || "0.5", h = kv["h"] || kv["height"] || "1";
+        addMesh(`new THREE.ConeGeometry(${r},${h},32)`, kv, [P(0),P(1),P(2)], kv["rotation"]);
+        break;
+      }
+      case "torus": {
+        const r = kv["r"] || "1", rt = kv["tube"] || "0.3";
+        addMesh(`new THREE.TorusGeometry(${r},${rt},16,48)`, kv, [P(0),P(1),P(2)], kv["rotation"]);
+        break;
+      }
+      case "plane": {
+        const w = kv["width"] || kv["w"] || "5", h = kv["height"] || kv["h"] || "5";
+        addMesh(`new THREE.PlaneGeometry(${w},${h})`, kv, [P(0),P(1),P(2)], kv["rotation"] || "-90,0,0");
+        break;
+      }
+      case "plate":
+      case "slab": {
+        const pw = kv["w"] || kv["width"] || "2", pd = kv["d"] || kv["depth"] || "2", pt = kv["t"] || kv["thickness"] || "0.2";
+        addMesh(`new THREE.BoxGeometry(${pw},${pt},${pd})`, kv, [P(0),P(1),P(2)], kv["rotation"]);
+        break;
+      }
+
+      // ── Lines & Arrows ──
+      case "line": {
+        const c = optC(kv), lw = kv["width"] || "2";
+        js.push(`{const _pts=[new THREE.Vector3(${P(0)},${P(1)},${P(2)}),new THREE.Vector3(${P(3)},${P(4)},${P(5)})];`);
+        js.push(`const _g=new THREE.BufferGeometry().setFromPoints(_pts);`);
+        js.push(`const _l=new THREE.Line(_g,new THREE.LineBasicMaterial({color:${c},linewidth:${lw}}));scene.add(_l);}`);
+        break;
+      }
+      case "arrow": {
+        const c = optC(kv), len = kv["length"];
+        const dx = P(3)-P(0), dy = P(4)-P(1), dz = P(5)-P(2);
+        const l = len || `Math.sqrt(${dx*dx+dy*dy+dz*dz})`;
+        js.push(`{const _dir=new THREE.Vector3(${dx},${dy},${dz}).normalize();`);
+        js.push(`const _a=new THREE.ArrowHelper(_dir,new THREE.Vector3(${P(0)},${P(1)},${P(2)}),${l},${c});scene.add(_a);}`);
+        break;
+      }
+      case "darrow": {
+        const c = optC(kv);
+        const dx = P(3)-P(0), dy = P(4)-P(1), dz = P(5)-P(2);
+        const l = `Math.sqrt(${dx}*${dx}+${dy}*${dy}+${dz}*${dz})`;
+        js.push(`{const _d=new THREE.Vector3(${dx},${dy},${dz}).normalize();`);
+        js.push(`const _a1=new THREE.ArrowHelper(_d,new THREE.Vector3(${P(0)},${P(1)},${P(2)}),${l},${c},${l}*0.12,${l}*0.06);scene.add(_a1);`);
+        js.push(`const _a2=new THREE.ArrowHelper(_d.clone().negate(),new THREE.Vector3(${P(3)},${P(4)},${P(5)}),${l},${c},${l}*0.12,${l}*0.06);scene.add(_a2);}`);
+        break;
+      }
+
+      // ── Engineering: tube/pipe ──
+      case "tube":
+      case "pipe": {
+        const r = kv["r"] || kv["radius"] || "0.05", seg = kv["segments"] || "8";
+        js.push(`{const _p=new THREE.LineCurve3(new THREE.Vector3(${P(0)},${P(1)},${P(2)}),new THREE.Vector3(${P(3)},${P(4)},${P(5)}));`);
+        js.push(`const _g=new THREE.TubeGeometry(_p,1,${r},${seg},false);`);
+        js.push(`const _m=new THREE.Mesh(_g,${makeMat(kv)});scene.add(_m);}`);
+        break;
+      }
+
+      // ── Engineering: node (sphere + sprite label) ──
+      case "node": {
+        const r = kv["r"] || "0.1", label = text || kv["label"] || "";
+        js.push(`{const _g=new THREE.SphereGeometry(${r},16,16);`);
+        js.push(`const _m=new THREE.Mesh(_g,${makeMat(kv, threeColorHex(kv["color"] || "white"))});`);
+        js.push(`_m.position.set(${P(0)},${P(1)},${P(2)});scene.add(_m);`);
+        if (label) {
+          const sz = kv["size"] || "48";
+          js.push(`const _c=document.createElement("canvas");_c.width=128;_c.height=64;`);
+          js.push(`const _cx=_c.getContext("2d");_cx.fillStyle="white";_cx.fillRect(0,0,128,64);`);
+          js.push(`_cx.strokeStyle="black";_cx.strokeRect(0,0,128,64);`);
+          js.push(`_cx.font="bold ${sz}px sans-serif";_cx.fillStyle="black";_cx.textAlign="center";_cx.textBaseline="middle";`);
+          js.push(`_cx.fillText("${label}",64,32);`);
+          js.push(`const _t=new THREE.CanvasTexture(_c);const _sm=new THREE.SpriteMaterial({map:_t});`);
+          js.push(`const _s=new THREE.Sprite(_sm);_s.position.set(${P(0)},${P(1)}+${parseFloat(r)*2},${P(2)});_s.scale.set(0.5,0.25,1);scene.add(_s);`);
+        }
+        js.push(`}`);
+        break;
+      }
+
+      // ── Engineering: axes / axes_labeled ──
+      case "axes":
+      case "axeslabeled":
+      case "axes_labeled": {
+        const len = kv["length"] || kv["l"] || "3";
+        js.push(`{const _ax=new THREE.AxesHelper(${len});`);
+        if (pos.length >= 3) js.push(`_ax.position.set(${P(0)},${P(1)},${P(2)});`);
+        js.push(`scene.add(_ax);`);
+        if (cmd !== "axes") {
+          // Labels as sprites
+          const mkLabel = (t: string, px: string, py: string, pz: string, col: string) => {
+            js.push(`{const _c=document.createElement("canvas");_c.width=64;_c.height=64;`);
+            js.push(`const _x=_c.getContext("2d");_x.font="bold 48px sans-serif";_x.fillStyle="${col}";_x.textAlign="center";_x.textBaseline="middle";_x.fillText("${t}",32,32);`);
+            js.push(`const _s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(_c)}));`);
+            js.push(`_s.position.set(${px},${py},${pz});_s.scale.set(0.4,0.4,1);scene.add(_s);}`);
+          };
+          mkLabel(kv["xlabel"] || "X", `${len}*1.1`, "0", "0", "red");
+          mkLabel(kv["ylabel"] || "Y", "0", `${len}*1.1`, "0", "green");
+          mkLabel(kv["zlabel"] || "Z", "0", "0", `${len}*1.1`, "blue");
+        }
+        js.push(`}`);
+        break;
+      }
+
+      // ── Engineering: carc3d (arc with arrowhead) ──
+      case "carc3d": {
+        const r = kv["r"] || "1";
+        const startDeg = parseFloat(kv["start"] || "0"), endDeg = parseFloat(kv["end"] || "270");
+        const c = optC(kv);
+        const startRad = startDeg * Math.PI / 180, endRad = endDeg * Math.PI / 180;
+        const segs = kv["segments"] || "64";
+        js.push(`{const _pts=[];`);
+        js.push(`for(let i=0;i<=${segs};i++){const a=${startRad}+(${endRad}-${startRad})*i/${segs};_pts.push(new THREE.Vector3(${r}*Math.cos(a)+${P(0)},${P(1)},${r}*Math.sin(a)+${P(2)}));}`);
+        js.push(`const _g=new THREE.BufferGeometry().setFromPoints(_pts);`);
+        js.push(`scene.add(new THREE.Line(_g,new THREE.LineBasicMaterial({color:${c}})));`);
+        // Arrowhead cone at end
+        const coneH = kv["headlength"] || "0.15", coneR = kv["headradius"] || "0.06";
+        js.push(`const _ea=${endRad};const _ex=${r}*Math.cos(_ea)+${P(0)},_ez=${r}*Math.sin(_ea)+${P(2)};`);
+        js.push(`const _cg=new THREE.ConeGeometry(${coneR},${coneH},12);`);
+        js.push(`const _cm=new THREE.Mesh(_cg,new THREE.MeshStandardMaterial({color:${c}}));`);
+        js.push(`_cm.position.set(_ex,${P(1)},_ez);`);
+        js.push(`_cm.rotation.z=Math.PI/2;_cm.rotation.y=-_ea-Math.PI/2;scene.add(_cm);}`);
+        break;
+      }
+
+      // ── Engineering: dim3d (3D dimension line with text sprite) ──
+      case "dim3d": {
+        const c = optC(kv);
+        const txt = text || kv["text"] || "";
+        js.push(`{const _p1=new THREE.Vector3(${P(0)},${P(1)},${P(2)}),_p2=new THREE.Vector3(${P(3)},${P(4)},${P(5)});`);
+        // Line
+        js.push(`const _g=new THREE.BufferGeometry().setFromPoints([_p1,_p2]);`);
+        js.push(`scene.add(new THREE.Line(_g,new THREE.LineBasicMaterial({color:${c}})));`);
+        // Arrows at ends
+        js.push(`const _d=_p2.clone().sub(_p1);const _l=_d.length();const _dn=_d.normalize();`);
+        js.push(`scene.add(new THREE.ArrowHelper(_dn,_p1,_l,${c},_l*0.08,_l*0.04));`);
+        if (txt) {
+          js.push(`const _mid=_p1.clone().add(_p2).multiplyScalar(0.5);`);
+          js.push(`const _c=document.createElement("canvas");_c.width=256;_c.height=64;`);
+          js.push(`const _x=_c.getContext("2d");_x.fillStyle="white";_x.fillRect(0,0,256,64);`);
+          js.push(`_x.font="bold 32px sans-serif";_x.fillStyle="black";_x.textAlign="center";_x.textBaseline="middle";`);
+          js.push(`_x.fillText("${txt}",128,32);`);
+          js.push(`const _s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(_c)}));`);
+          js.push(`_s.position.copy(_mid);_s.position.y+=0.2;_s.scale.set(1,0.25,1);scene.add(_s);`);
+        }
+        js.push(`}`);
+        break;
+      }
+
+      default: js.push(trimmed); break;
+    }
+  }
+  return js.join("\n");
+}
+
 function handleThreeBlock(lines: string[]): string {
   const id = `three_${Math.random().toString(36).slice(2, 8)}`;
-  const code = lines.join("\n");
+  const code = processThreeDSL(lines);
   return `<div id="${id}" style="width:100%;height:400px;border:1px solid #ddd;"></div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';

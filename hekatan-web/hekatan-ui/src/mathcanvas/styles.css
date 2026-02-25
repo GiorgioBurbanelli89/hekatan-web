@@ -15,6 +15,10 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
 .tab-btn.active { background: #2196f3; color: white; border-color: #1976d2; }
 .run-btn { background: #4caf50; color: white; border-color: #388e3c; font-size: 0.9rem; }
 .run-btn:hover { background: #43a047; }
+.cad-btn { background: #ff9800; color: white; border-color: #f57c00; font-weight: 600; }
+.cad-btn:hover:not(:disabled) { background: #fb8c00; }
+.cad-btn:disabled { background: #e0e0e0; color: #999; border-color: #bbb; cursor: default; }
+.cad-btn.active { background: #e65100; border-color: #bf360c; }
 .example-select {
   padding: 4px 8px; border: 1px solid #bbb; border-radius: 4px;
   font-size: 0.82rem; background: white; min-width: 200px;
@@ -605,3 +609,137 @@ sup.unit {
   padding: 1px 4px;
   font-size: 9pt;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   CAD FLOATING TOOLBAR - Estilo ifc-cli.html
+   ═══════════════════════════════════════════════════════════ */
+.cad-toolbar {
+  position: absolute;
+  top: 8px; left: 8px;
+  background: #2d2d2d;
+  padding: 4px 6px;
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  border: 1px solid #444;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  z-index: 100;
+  flex-wrap: wrap;
+  max-width: 680px;
+  user-select: none;
+}
+.cad-toolbar.hidden { display: none; }
+
+/* Drag handle */
+.cad-toolbar .drag-handle {
+  cursor: move;
+  color: #666;
+  padding: 0 4px;
+  font-size: 14px;
+  line-height: 1;
+}
+.cad-toolbar .drag-handle:hover { color: #aaa; }
+
+/* Buttons */
+.cad-toolbar button {
+  background: #0e639c;
+  color: #fff;
+  border: none;
+  padding: 3px 8px;
+  cursor: pointer;
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: 'Segoe UI', sans-serif;
+  white-space: nowrap;
+}
+.cad-toolbar button:hover { background: #1177bb; }
+.cad-toolbar button.active { background: #569cd6; }
+.cad-toolbar button:disabled { background: #555; color: #888; cursor: default; opacity: 0.6; }
+.cad-toolbar button.tool-draw { background: #0e639c; }
+.cad-toolbar button.tool-dim { background: #1a6b3f; }
+.cad-toolbar button.tool-dim:hover { background: #22854e; }
+.cad-toolbar button.tool-edit { background: #6b4e1a; }
+.cad-toolbar button.tool-edit:hover { background: #856328; }
+.cad-toolbar button.tool-view { background: #555; }
+.cad-toolbar button.tool-view:hover { background: #666; }
+.cad-toolbar button.tool-danger { background: #a33; }
+.cad-toolbar button.tool-danger:hover { background: #c44; }
+.cad-toolbar button.tool-close { background: #666; padding: 3px 6px; }
+.cad-toolbar button.tool-close:hover { background: #a33; }
+
+/* Separator */
+.cad-toolbar .sep {
+  color: #444;
+  margin: 0 1px;
+  font-size: 11px;
+}
+
+/* Select / inputs */
+.cad-toolbar select {
+  background: #333;
+  color: #d4d4d4;
+  border: 1px solid #555;
+  padding: 2px 4px;
+  font-size: 11px;
+  font-family: inherit;
+  border-radius: 2px;
+}
+.cad-toolbar input[type="text"] {
+  background: #333;
+  color: #d4d4d4;
+  border: 1px solid #555;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-family: 'Consolas', monospace;
+  border-radius: 2px;
+  width: 140px;
+}
+.cad-toolbar input[type="text"]:focus {
+  outline: none;
+  border-color: #0e639c;
+}
+
+/* Label */
+.cad-toolbar .cad-label {
+  color: #888;
+  font-size: 10px;
+}
+
+/* Active tool highlight */
+.cad-toolbar button.tool-active {
+  outline: 2px solid #ffeb3b;
+  outline-offset: -1px;
+}
+
+/* Toggle buttons (snap/ortho/track) */
+.cad-toolbar button.tool-toggle {
+  background: #555;
+  color: #999;
+  font-size: 9px;
+  padding: 2px 5px;
+}
+.cad-toolbar button.tool-toggle.snap-on {
+  background: #2e7d32;
+  color: #fff;
+}
+
+/* Coordinate display */
+.cad-toolbar .coord-display {
+  color: #8bd4f0;
+  font-size: 10px;
+  font-family: 'Consolas', monospace;
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CAD OVERLAY CANVAS - Interactive drawing surface
+   ═══════════════════════════════════════════════════════════ */
+.cad-overlay {
+  position: absolute;
+  z-index: 50;
+  cursor: crosshair;
+  pointer-events: auto;
+}
+.cad-overlay.hidden { display: none; }

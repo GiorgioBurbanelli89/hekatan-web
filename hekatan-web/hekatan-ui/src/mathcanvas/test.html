@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MathCanvas Tests</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 16px; }
+    h1 { color: #00d4ff; margin-bottom: 12px; }
+    .test-group { margin: 12px 0; border: 1px solid #333; border-radius: 8px; padding: 12px; background: #16213e; }
+    .test-group h2 { color: #e94560; margin-bottom: 8px; font-size: 1.1em; }
+    .test { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.95em; }
+    .test .icon { font-size: 1.2em; }
+    .pass { color: #4caf50; }
+    .fail { color: #f44336; }
+    .info { color: #aaa; font-style: italic; }
+    .canvas-preview { border: 1px solid #444; margin: 8px 0; background: #fff; }
+    #summary { margin-top: 16px; padding: 12px; border-radius: 8px; font-size: 1.1em; font-weight: bold; }
+    #summary.all-pass { background: #1b5e20; color: #81c784; }
+    #summary.has-fail { background: #b71c1c; color: #ef9a9a; }
+    .detail { color: #888; font-size: 0.85em; margin-left: 28px; }
+  </style>
+</head>
+<body>
+  <h1>MathCanvas Test Suite</h1>
+  <div id="results"></div>
+  <div id="summary"></div>
+  <canvas id="testCanvas" width="800" height="600" class="canvas-preview"></canvas>
+  <script type="module" src="./test.ts"></script>
+</body>
+</html>
