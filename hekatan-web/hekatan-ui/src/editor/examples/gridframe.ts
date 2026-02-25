@@ -42,17 +42,26 @@ k2R = kb2[1:3, 1:3]
 > [K]_R = k1R + k2R (eq d)
 K_R = k1R + k2R
 
-## 7. Fuerzas Nodales Equivalentes
-> Elem 1: M_0=200 kip*in a L/2 (eq e)
-Q_b1 = col(0, -50, -3, 0, -50, 3)
-> Elem 2: w=0.1 kip/in distribuida (eq f)
-Q_b2 = col(-83.33, 0, -5, 83.33, 0, -5)
+## 7. Fuerzas de Empotramiento
+> Elem 1: M_0=200 kip*in a L/2, Apendice I Caso (b) (eq e)
+@{cells} |L_1 = L/2|L_2 = L/2|M_0 = 200|
+> Q_1=6*M_0*L_1*L_2/L^3, Q_2=M_0*L_2*(2*L_1-L_2)/L^2, Q_3=-Q_1, Q_4=M_0*L_1*(2*L_2-L_1)/L^2
+@{cells} |Q_1 = 6*M_0*L_1*L_2/L^3|Q_2 = M_0*L_2*(2*L_1 - L_2)/L^2|
+@{cells} |Q_3 = -Q_1|Q_4 = M_0*L_1*(2*L_2 - L_1)/L^2|
+> DOF grid: [theta_x, theta_z, delta_y] => Q_f = [0, Q2, Q1, 0, Q4, Q3]
+Q_f1 = col(0, Q_2, Q_1, 0, Q_4, Q_3)
+> Elem 2: w=0.1 kip/in, Apendice I Caso (a) (eq f)
+@{cells} |w_0 = 0.1|
+> Q_f locales: M_i=wL^2/12, V_i=wL/2, M_j=-wL^2/12, V_j=wL/2
+Q_f2L = col(0, w_0*L^2/12, w_0*L/2, 0, -w_0*L^2/12, w_0*L/2)
+> Q_f en coordenadas globales via T_2'
+Q_f2 = transpose(T_2) * Q_f2L
 
 ## 8. Vector de Fuerzas Reducido
-> {F}_R = Q1(4:6) + Q2(1:3) + P_directa (eq g)
+> {F}_R = P - Q_f1(4:6) - Q_f2(1:3) (eq g)
 > Incluye P = -10 kip en delta_y (coord 3)
 P_d = col(0, 0, -10)
-F_R = Q_b1[4:6] + Q_b2[1:3] + P_d
+F_R = P_d - Q_f1[4:6] - Q_f2[1:3]
 
 ## 9. Solucion de Desplazamientos
 > [K]_R {u} = {F}_R (eq h)
@@ -60,19 +69,19 @@ u = lusolve(K_R, F_R)
 > u1=theta_x [rad], u2=theta_z [rad], u3=delta_y [in]
 
 ## 10. Desplazamientos Locales (eq i)
-> Elem 1 (T_1=I): {d}_1 = [u_nodo2; 0_nodo1]
-d_1 = col(u[1], u[2], u[3], 0, 0, 0)
-> Elem 2: {d}_2 = T_2 * [u_nodo2; 0_nodo3]
-d_b2 = col(u[1], u[2], u[3], 0, 0, 0)
-d_2 = T_2 * d_b2
+> Componentes: theta_x, theta_z, delta_y
+@{cells} |u_1 = u[1]|u_2 = u[2]|u_3 = u[3]|
+> Elem 1 (T_1=I): nodo 2 libre, nodo 1 empotrado
+d_1 = col(u_1, u_2, u_3, 0, 0, 0)
+> Elem 2: d_2 = T_2 * d_1 (T_1=I, mismo vector global)
+d_2 = T_2 * d_1
 
 ## 11. Fuerzas en Elementos (eq 4.20)
-> {P} = [k]{d} - {Q}
+> {P} = [k]{d} + {Q_f}
 > Elem 1:
-P_1 = k * d_1 - Q_b1
-> Elem 2 (Q en locales):
-Q_2L = col(0, 83.33, 5, 0, -83.33, 5)
-P_2 = k * d_2 - Q_2L
+P_1 = k * d_1 + Q_f1
+> Elem 2 (Q_f en locales):
+P_2 = k * d_2 + Q_f2L
 
 ## 12. Reacciones en Apoyos
 > Nodo 1 (empotrado): DOFs 4:6 de P_1

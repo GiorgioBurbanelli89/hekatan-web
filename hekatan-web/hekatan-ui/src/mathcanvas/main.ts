@@ -26,9 +26,20 @@ det(M)`,
   },
   gridframe: {
     name: "Ej 5.1 - Grid Frame (Paz)",
-    code: `# Ejemplo 5.1 - Analisis de Grid Frame
-> Mario Paz - Matrix Structural Analysis
-> 2 elementos, 3 nodos, 9 GDL
+    code: `# 5.5 Analisis de Grid Frames
+> El analisis estructural de grid frames es matematicamente identico al
+> analisis de vigas o porticos planos presentado en los capitulos 1 y 4.
+> Estos analisis difieren solamente en la seleccion de coordenadas nodales
+> y las expresiones correspondientes a la matriz de rigidez para los
+> elementos de cada estructura.
+
+## Ejemplo Ilustrativo 5.1
+> Para el grid frame mostrado en la Figura 5.4, realizar el analisis
+> estructural para determinar lo siguiente:
+> (a) Desplazamientos en las juntas entre elementos
+> (b) Fuerzas internas en los elementos
+> (c) Reacciones en los apoyos
+> Ref: Mario Paz - Matrix Structural Analysis, 2 elementos, 3 nodos, 9 GDL
 > Unidades: kip, inch, rad
 
 ## 1. Propiedades
@@ -58,31 +69,43 @@ k1R = k[4:6, 4:6]
 k2R = kb2[1:3, 1:3]
 K_R = k1R + k2R
 
-## 7. Fuerzas Nodales Equivalentes
-> Elem 1: M_0=200 kip*in a L/2
-Q_b1 = [[0], [-50], [-3], [0], [-50], [3]]
-> Elem 2: w=0.1 kip/in distribuida
-Q_b2 = [[-83.33], [0], [-5], [83.33], [0], [-5]]
+## 7. Fuerzas de Empotramiento
+> Elem 1: M_0=200 kip*in a L/2, Apendice I Caso (b) (eq e)
+@{cells} |L_1 = L/2|L_2 = L/2|M_0 = 200|
+> Q_1=6*M_0*L_1*L_2/L^3, Q_2=M_0*L_2*(2*L_1-L_2)/L^2, Q_3=-Q_1, Q_4=M_0*L_1*(2*L_2-L_1)/L^2
+@{cells} |Q_1 = 6*M_0*L_1*L_2/L^3|Q_2 = M_0*L_2*(2*L_1 - L_2)/L^2|
+@{cells} |Q_3 = -Q_1|Q_4 = M_0*L_1*(2*L_2 - L_1)/L^2|
+> DOF grid [theta_x, theta_z, delta_y]: Q_f = [0, Q2, Q1, 0, Q4, Q3]
+Q_f1 = [[0], [Q_2], [Q_1], [0], [Q_4], [Q_3]]
+> Elem 2: w=0.1 kip/in, Apendice I Caso (a) (eq f)
+@{cells} |w_0 = 0.1|
+> M_i=wL^2/12, V_i=wL/2, M_j=-wL^2/12, V_j=wL/2
+Q_f2L = [[0], [w_0*L^2/12], [w_0*L/2], [0], [-w_0*L^2/12], [w_0*L/2]]
+> Q_f global via T_2'
+Q_f2 = transpose(T_2) * Q_f2L
 
 ## 8. Vector de Fuerzas Reducido
-> Incluye P = -10 kip en delta_y (coord 3)
+> {F}_R = P - Q_f1(4:6) - Q_f2(1:3) (eq g)
 P_d = [[0], [0], [-10]]
-F_R = Q_b1[4:6, 1:1] + Q_b2[1:3, 1:1] + P_d
+F_R = P_d - Q_f1[4:6, 1:1] - Q_f2[1:3, 1:1]
 
 ## 9. Solucion de Desplazamientos
 > [K]_R {u} = {F}_R
 u = lusolve(K_R, F_R)
 
 ## 10. Desplazamientos Locales
-d_1 = [[u[1,1]], [u[2,1]], [u[3,1]], [0], [0], [0]]
-d_b2 = [[u[1,1]], [u[2,1]], [u[3,1]], [0], [0], [0]]
-d_2 = T_2 * d_b2
+> Componentes: theta_x, theta_z, delta_y
+@{cells} |u_1 = u[1,1]|u_2 = u[2,1]|u_3 = u[3,1]|
+> Elem 1 (T_1=I): nodo 2 libre, nodo 1 empotrado
+d_1 = [[u_1], [u_2], [u_3], [0], [0], [0]]
+> Elem 2: d_2 = T_2 * d_1 (T_1=I, mismo vector global)
+d_2 = T_2 * d_1
 
-## 11. Fuerzas en Elementos
-> {P} = [k]{d} - {Q}
-P_1 = k * d_1 - Q_b1
-Q_2L = [[0], [83.33], [5], [0], [-83.33], [5]]
-P_2 = k * d_2 - Q_2L
+## 11. Fuerzas en Elementos (eq 4.20)
+> {P} = [k]{d} + {Q_f}
+P_1 = k * d_1 + Q_f1
+> Elem 2 (Q_f en locales):
+P_2 = k * d_2 + Q_f2L
 
 ## 12. Reacciones en Apoyos
 > Nodo 1 (empotrado):
@@ -252,13 +275,13 @@ const evaluator = new HekatanEvaluator();
 
 function runCode() {
   const code = codeInput.value;
-  if (!code.trim()) { output.innerHTML = ""; return; }
+  if (!code.trim()) { output.innerHTML = `<div class="output-page"></div>`; return; }
 
   try {
     const results = evaluator.evalDocument(code);
-    output.innerHTML = renderResults(results, code);
+    output.innerHTML = `<div class="output-page">${renderResults(results, code)}</div>`;
   } catch (e: any) {
-    output.innerHTML = `<div class="out-error">Error: ${escHtml(e.message)}</div>`;
+    output.innerHTML = `<div class="output-page"><div class="out-error">Error: ${escHtml(e.message)}</div></div>`;
   }
 }
 
@@ -342,7 +365,7 @@ function renderResults(results: LineResult[], sourceCode: string): string {
         break;
       }
       case "comment":
-        html.push(`<p class="out-comment">${escHtml(r.display!)}</p>`);
+        html.push(`<p class="out-comment">${renderCommentMath(r.display!)}</p>`);
         break;
       case "empty":
         html.push(`<div class="out-empty"></div>`);
@@ -402,8 +425,17 @@ function renderLineEq(r: LineResult, srcLine: string): string {
     return nameHTML;
   }
 
-  // Si es una matriz, solo mostrar nombre = matriz
+  const scope = evaluator.getScope();
+
+  // Si es una matriz, mostrar nombre = expr simbolica = matriz numerica
   if (evaluator.isMatrix(value)) {
+    if (exprText && /[a-zA-Z]/.test(exprText)) {
+      const substituted = substituteValues(exprText, scope);
+      if (substituted) {
+        return `${nameHTML} = ${renderMathExpr(exprText)} = ${renderMathExpr(substituted)} = ${renderMatrixHTML(value)}`;
+      }
+      return `${nameHTML} = ${renderMathExpr(exprText)} = ${renderMatrixHTML(value)}`;
+    }
     return `${nameHTML} = ${renderMatrixHTML(value)}`;
   }
 
@@ -415,7 +447,11 @@ function renderLineEq(r: LineResult, srcLine: string): string {
     return `${nameHTML} = ${valueHTML}`;
   }
 
-  // Mostrar: nombre = expr = valor
+  // Procedimiento: nombre = expr simbolica = expr con valores = resultado
+  const substituted = substituteValues(exprText, scope);
+  if (substituted && substituted !== fmtNum(value)) {
+    return `${nameHTML} = ${renderMathExpr(exprText)} = ${renderMathExpr(substituted)} = ${valueHTML}`;
+  }
   return `${nameHTML} = ${renderMathExpr(exprText)} = ${valueHTML}`;
 }
 
@@ -427,6 +463,7 @@ function renderExprResult(r: LineResult): string {
 /** Renderiza celdas @{cells} */
 function renderCells(r: LineResult): string {
   if (!r.cells || r.cells.length === 0) return "";
+  const scope = evaluator.getScope();
   const cellsHTML = r.cells.map(c => {
     const nameHTML = c.varName ? renderVarName(c.varName) : "";
     const valueHTML = renderValueSpan(c.value);
@@ -436,11 +473,60 @@ function renderCells(r: LineResult): string {
       if (!c.expr || c.expr === String(c.value) || /^[\d.]+$/.test(c.expr)) {
         return `<span class="eq">${nameHTML} = ${valueHTML}</span>`;
       }
+      // Procedimiento: nombre = simbolico = con valores = resultado
+      const substituted = substituteValues(c.expr, scope);
+      if (substituted && substituted !== fmtNum(c.value)) {
+        return `<span class="eq">${nameHTML} = ${exprHTML} = ${renderMathExpr(substituted)} = ${valueHTML}</span>`;
+      }
       return `<span class="eq">${nameHTML} = ${exprHTML} = ${valueHTML}</span>`;
     }
     return `<span class="eq">${valueHTML}</span>`;
   });
   return `<div class="out-cells">${cellsHTML.join("")}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// SUBSTITUCION DE VALORES (procedimiento)
+// ═══════════════════════════════════════════════════════════
+
+/** Palabras reservadas de math.js que NO son variables */
+const MATH_KEYWORDS = new Set([
+  'sqrt', 'sin', 'cos', 'tan', 'cot', 'sec', 'csc',
+  'asin', 'acos', 'atan', 'atan2', 'log', 'ln', 'exp', 'abs',
+  'det', 'inv', 'norm', 'dot', 'cross', 'transpose',
+  'multiply', 'lusolve', 'add', 'subset', 'index', 'range',
+  'matrix', 'col', 'row', 'pi', 'e', 'inf', 'true', 'false',
+  'ceil', 'floor', 'round', 'sign', 'mod', 'min', 'max',
+  'sum', 'prod', 'mean', 'trace', 'diag', 'zeros', 'ones', 'eye',
+  'size', 'length', 'concat', 'flatten', 'reshape', 'sort',
+]);
+
+/**
+ * Sustituye nombres de variables por sus valores numericos en una expresion.
+ * Retorna null si no se sustituyo nada.
+ */
+function substituteValues(expr: string, scope: Record<string, any>): string | null {
+  // Obtener variables escalares del scope, ordenadas por longitud (mas larga primero)
+  const varNames = Object.keys(scope)
+    .filter(v => !MATH_KEYWORDS.has(v) && typeof scope[v] === 'number')
+    .sort((a, b) => b.length - a.length);
+
+  let result = expr;
+  let anyReplaced = false;
+
+  for (const varName of varNames) {
+    const value = scope[varName] as number;
+    const escaped = varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escaped}\\b`, 'g');
+    const before = result;
+    const numStr = fmtNum(value);
+    // Parentizar negativos para evitar ambiguedad: a*-3 -> a*(-3)
+    const replacement = value < 0 ? `(${numStr})` : numStr;
+    result = result.replace(regex, replacement);
+    if (result !== before) anyReplaced = true;
+  }
+
+  return anyReplaced ? result : null;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -487,8 +573,58 @@ function renderVarName(name: string): string {
 // MATH EXPRESSION RENDERING
 // ═══════════════════════════════════════════════════════════
 
+/** Renderiza una expresion de matriz simbolica [[a],[b],[c]] como tabla vertical */
+function renderSymbolicMatrix(expr: string): string | null {
+  const t = expr.trim();
+  if (!t.startsWith('[[') || !t.endsWith(']]')) return null;
+
+  // Parsear filas respetando profundidad de brackets
+  const inner = t.slice(1, -1); // quitar [ ] externo
+  const rows: string[] = [];
+  let depth = 0, current = '';
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (ch === '[') depth++;
+    else if (ch === ']') depth--;
+    current += ch;
+    if (depth === 0 && current.trim()) {
+      const row = current.trim();
+      if (row.startsWith('[') && row.endsWith(']')) {
+        rows.push(row.slice(1, -1).trim());
+      }
+      current = '';
+      // saltar coma despues de ]
+      if (i + 1 < inner.length && inner[i + 1] === ',') i++;
+    }
+  }
+  if (rows.length === 0) return null;
+
+  // Detectar si es vector columna (1 elemento por fila) o matriz
+  const isCol = rows.every(r => !r.includes(','));
+  const cols = isCol ? 1 : (rows[0].split(',').length);
+
+  let html = `<span class="matrix" style="--mat-cols:${cols}">`;
+  for (const row of rows) {
+    html += `<span class="tr"><span class="td"></span>`;
+    if (isCol) {
+      html += `<span class="td">${renderMathExpr(row)}</span>`;
+    } else {
+      for (const cell of row.split(',')) {
+        html += `<span class="td">${renderMathExpr(cell.trim())}</span>`;
+      }
+    }
+    html += `<span class="td"></span></span>`;
+  }
+  html += `</span>`;
+  return html;
+}
+
 /** Renderiza una expresion matematica con formato visual */
 function renderMathExpr(expr: string): string {
+  // Detectar matrices [[...],[...]] y renderizar como tabla vertical
+  const matHTML = renderSymbolicMatrix(expr);
+  if (matHTML) return matHTML;
+
   let result = expr;
 
   // 1. sqrt(expr) -> radical con clase .r0 + .o0 (SVG)
@@ -523,6 +659,29 @@ function renderMathExpr(expr: string): string {
   // 7. ^N -> <sup>N</sup>  (AFTER variables para que <var>a</var>^2 funcione)
   result = result.replace(/\^(\d+)/g, '<sup>$1</sup>');
   result = result.replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>');
+
+  return result;
+}
+
+/** Renderiza texto de comentario con formato math (subscripts, superscripts, griego) */
+function renderCommentMath(text: string): string {
+  let result = escHtml(text);
+
+  // Greek letter words -> Unicode
+  result = result.replace(/\b(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|omicron|rho|sigma|tau|upsilon|phi|chi|psi|omega|Alpha|Beta|Gamma|Delta|Epsilon|Zeta|Eta|Theta|Iota|Kappa|Lambda|Mu|Nu|Xi|Omicron|Rho|Sigma|Tau|Upsilon|Phi|Chi|Psi|Omega)\b/g,
+    (m) => greekify(m));
+
+  // Variables con subindice: X_abc -> X<sub>abc</sub>
+  result = result.replace(/([a-zA-Z\u0370-\u03FF])_(\w+)/g, (_, base, sub) => {
+    return `${base}<sub>${greekify(sub)}</sub>`;
+  });
+
+  // Superscripts: ^2, ^{n+1}
+  result = result.replace(/\^(\d+)/g, '<sup>$1</sup>');
+  result = result.replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>');
+
+  // * -> · (middle dot)
+  result = result.replace(/\*/g, '\u00B7');
 
   return result;
 }
@@ -586,6 +745,43 @@ function fmtNum(v: any): string {
   }
   return escHtml(String(v));
 }
+
+// ─── Pinch-to-zoom en output (trackpad Ctrl+wheel) ───────
+output.addEventListener("wheel", (e) => {
+  if (e.ctrlKey) {
+    e.preventDefault();
+    const delta = -e.deltaY * 0.002;
+    const currentSize = parseFloat(getComputedStyle(output).fontSize);
+    const newSize = Math.max(8, Math.min(24, currentSize + delta * currentSize));
+    output.style.fontSize = `${newSize}px`;
+  }
+}, { passive: false });
+
+// ─── Splitter drag to resize ─────────────────────────────
+const splitter = document.getElementById("splitter") as HTMLDivElement;
+const editorPanel = document.querySelector(".editor-panel") as HTMLDivElement;
+
+splitter.addEventListener("mousedown", (e) => {
+  e.preventDefault();
+  splitter.classList.add("dragging");
+  const parent = splitter.parentElement!;
+
+  const onMove = (ev: MouseEvent) => {
+    const rect = parent.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const pct = Math.max(15, Math.min(85, (x / rect.width) * 100));
+    editorPanel.style.flexBasis = `${pct}%`;
+  };
+
+  const onUp = () => {
+    splitter.classList.remove("dragging");
+    document.removeEventListener("mousemove", onMove);
+    document.removeEventListener("mouseup", onUp);
+  };
+
+  document.addEventListener("mousemove", onMove);
+  document.addEventListener("mouseup", onUp);
+});
 
 // ─── Init ───────────────────────────────────────────────
 exampleSelect.value = "basico";

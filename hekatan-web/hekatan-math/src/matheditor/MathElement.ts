@@ -890,9 +890,70 @@ export class MathVector extends MathElement {
 // ============================================================================
 // MathComment (Markdown headings/text - Hekatan uses markdown, NOT Calcpad '# )
 // ============================================================================
+// ─── Comment segment types for rich rendering ───────────────
+type CommentSegment =
+  | { type: "text"; text: string; italic?: boolean }
+  | { type: "subscript"; base: string; sub: string }
+  | { type: "superscript"; base: string; sup: string }
+  | { type: "vector"; name: string }    // {u} → bold u with arrow
+  | { type: "matrix"; name: string }    // [K] → bold K with brackets
+  ;
+
+/** Greek letter map for comment display */
+const COMMENT_GREEK: Record<string, string> = {
+  alpha: "α", beta: "β", gamma: "γ", delta: "δ", epsilon: "ε",
+  zeta: "ζ", eta: "η", theta: "θ", iota: "ι", kappa: "κ",
+  lambda: "λ", mu: "μ", nu: "ν", xi: "ξ", omicron: "ο",
+  rho: "ρ", sigma: "σ", tau: "τ", upsilon: "υ",
+  phi: "φ", chi: "χ", psi: "ψ", omega: "ω",
+  Alpha: "Α", Beta: "Β", Gamma: "Γ", Delta: "Δ", Epsilon: "Ε",
+  Zeta: "Ζ", Eta: "Η", Theta: "Θ", Iota: "Ι", Kappa: "Κ",
+  Lambda: "Λ", Mu: "Μ", Nu: "Ν", Xi: "Ξ", Omicron: "Ο",
+  Rho: "Ρ", Sigma: "Σ", Tau: "Τ", Upsilon: "Υ",
+  Phi: "Φ", Chi: "Χ", Psi: "Ψ", Omega: "Ω",
+};
+
+function greekifyWord(w: string): string { return COMMENT_GREEK[w] ?? w; }
+
+/** Replace Greek letter names with Unicode in a string */
+function greekifyAll(text: string): string {
+  return text.replace(/\b([A-Za-z]+)\b/g, (m) => greekifyWord(m));
+}
+
+/** Parse comment text into rich segments */
+function parseCommentSegments(text: string): CommentSegment[] {
+  const segments: CommentSegment[] = [];
+  // Regex tokens: {name} vector, [name] matrix, word_sub subscript, word^sup superscript, or plain text
+  // Order matters: try structured patterns first, then fall back to plain text
+  const re = /(\{(\w+)\})|(\[(\w+)\])|([a-zA-Z\u0370-\u03FF]+)_(\w+)|([a-zA-Z\u0370-\u03FF]+)\^(\w+)|([^{}\[\]_^]+|[{}\[\]_^])/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m[1]) {
+      // {name} → vector
+      segments.push({ type: "vector", name: greekifyAll(m[2]) });
+    } else if (m[3]) {
+      // [name] → matrix
+      segments.push({ type: "matrix", name: greekifyAll(m[4]) });
+    } else if (m[5] !== undefined && m[6] !== undefined) {
+      // word_sub → subscript
+      segments.push({ type: "subscript", base: greekifyAll(m[5]), sub: greekifyAll(m[6]) });
+    } else if (m[7] !== undefined && m[8] !== undefined) {
+      // word^sup → superscript
+      segments.push({ type: "superscript", base: greekifyAll(m[7]), sup: greekifyAll(m[8]) });
+    } else if (m[9] !== undefined) {
+      // plain text — apply Greek replacement
+      const plain = greekifyAll(m[9]);
+      // Replace * with ·
+      segments.push({ type: "text", text: plain.replace(/\*/g, "·") });
+    }
+  }
+  return segments;
+}
+
 export class MathComment extends MathElement {
   private _text = "";
   private _displayText = "";
+  private _segments: CommentSegment[] = [];
   private _isBold = false;
   private _isItalic = false;
   private _headingLevel = 0;
@@ -912,10 +973,11 @@ export class MathComment extends MathElement {
     this._parseMarkdown(text);
   }
 
-  /** Parse markdown syntax: # heading, **bold**, *italic* */
+  /** Parse markdown syntax: # heading, **bold**, *italic*, > blockquote, ' comment */
   private _parseMarkdown(input: string) {
     if (!input) {
       this._displayText = "";
+      this._segments = [];
       this._headingLevel = 0;
       this._isBold = false;
       this._isItalic = false;
@@ -934,6 +996,16 @@ export class MathComment extends MathElement {
       text = hm[2];
     }
 
+    // Strip blockquote prefix: > text
+    if (text.startsWith(">")) {
+      text = text.slice(1).trimStart();
+    }
+
+    // Strip comment prefix: ' text
+    if (text.startsWith("'")) {
+      text = text.slice(1).trimStart();
+    }
+
     // **bold**
     if (/\*\*(.+)\*\*/.test(text)) {
       this._isBold = true;
@@ -946,25 +1018,72 @@ export class MathComment extends MathElement {
     }
 
     this._displayText = text.trim();
+    this._segments = parseCommentSegments(this._displayText);
   }
 
   private _fontSizeMultiplier(): number {
     return S.HeadingSizeRatios[this._headingLevel] ?? 1.0;
   }
 
+  /** Measure a single segment and return its width */
+  private _measureSegment(ctx: CanvasRenderingContext2D, seg: CommentSegment, fs: number, baseStyle: string): number {
+    const eqFont = S.EquationFont;
+    const subFs = fs * S.SubscriptSizeRatio;
+    switch (seg.type) {
+      case "text": {
+        ctx.font = `${baseStyle}${fs}px ${S.UIFont}`;
+        return ctx.measureText(seg.text).width;
+      }
+      case "subscript": {
+        ctx.font = `italic ${fs}px ${eqFont}`;
+        const bw = ctx.measureText(seg.base).width;
+        ctx.font = `${subFs}px ${S.SubscriptFont}`;
+        const sw = ctx.measureText(seg.sub).width;
+        return bw + sw;
+      }
+      case "superscript": {
+        ctx.font = `italic ${fs}px ${eqFont}`;
+        const bw = ctx.measureText(seg.base).width;
+        ctx.font = `${fs * S.SuperscriptSizeRatio}px ${S.SubscriptFont}`;
+        const sw = ctx.measureText(seg.sup).width;
+        return bw + sw;
+      }
+      case "vector": {
+        // {u} → bold italic u with curly braces
+        ctx.font = `bold italic ${fs}px ${eqFont}`;
+        const nw = ctx.measureText(seg.name).width;
+        ctx.font = `${fs}px ${eqFont}`;
+        const lbw = ctx.measureText("{").width;
+        const rbw = ctx.measureText("}").width;
+        return lbw + nw + rbw;
+      }
+      case "matrix": {
+        // [K] → bold K with square brackets
+        ctx.font = `bold italic ${fs}px ${eqFont}`;
+        const nw = ctx.measureText(seg.name).width;
+        ctx.font = `${fs}px ${eqFont}`;
+        const lbw = ctx.measureText("[").width;
+        const rbw = ctx.measureText("]").width;
+        return lbw + nw + rbw;
+      }
+    }
+    return 0;
+  }
+
   measure(ctx: CanvasRenderingContext2D, fontSize: number) {
     const actual = fontSize * this._fontSizeMultiplier();
-    const dt = this._displayText;
-    if (!dt) {
+    if (!this._displayText) {
       this.width = actual * 0.5;
       this.height = textHeight(actual);
       this.baseline = textBaseline(actual);
       return;
     }
-    const style = (this._isBold ? "bold " : "") + (this._isItalic ? "italic " : "");
-    const font = this._headingLevel > 0 ? S.UIFont : S.UIFont;
-    ctx.font = `${style}${actual}px ${font}`;
-    this.width = ctx.measureText(dt).width;
+    const baseStyle = (this._isBold ? "bold " : "") + (this._isItalic ? "italic " : "");
+    let totalW = 0;
+    for (const seg of this._segments) {
+      totalW += this._measureSegment(ctx, seg, actual, baseStyle);
+    }
+    this.width = totalW;
     this.height = textHeight(actual);
     this.baseline = textBaseline(actual);
     if (this._headingLevel > 0) this.height += actual * 0.5;
@@ -973,17 +1092,87 @@ export class MathComment extends MathElement {
   render(ctx: CanvasRenderingContext2D, x: number, y: number, fontSize: number) {
     this.x = x; this.y = y;
     const actual = fontSize * this._fontSizeMultiplier();
-    const dt = this._displayText;
-    if (dt) {
-      const style = (this._isBold ? "bold " : "") + (this._isItalic ? "italic " : "");
-      const font = S.UIFont;
-      ctx.font = `${style}${actual}px ${font}`;
-      ctx.fillStyle = this._headingLevel > 0 && this._headingLevel <= 3 ? "#333" : "#000";
-      ctx.fillText(dt, x, y + textBaseline(actual));
+    const bl = textBaseline(actual);
+    const eqFont = S.EquationFont;
+    const baseStyle = (this._isBold ? "bold " : "") + (this._isItalic ? "italic " : "");
+    const baseColor = this._headingLevel > 0 && this._headingLevel <= 3 ? "#333" : "#000";
+    let cx = x;
+
+    for (const seg of this._segments) {
+      switch (seg.type) {
+        case "text": {
+          ctx.font = `${baseStyle}${actual}px ${S.UIFont}`;
+          ctx.fillStyle = baseColor;
+          ctx.fillText(seg.text, cx, y + bl);
+          cx += ctx.measureText(seg.text).width;
+          break;
+        }
+        case "subscript": {
+          // Base in italic equation font
+          ctx.font = `italic ${actual}px ${eqFont}`;
+          ctx.fillStyle = S.VariableColor;
+          ctx.fillText(seg.base, cx, y + bl);
+          cx += ctx.measureText(seg.base).width;
+          // Subscript in smaller Calibri
+          const subFs = actual * S.SubscriptSizeRatio;
+          ctx.font = `${subFs}px ${S.SubscriptFont}`;
+          ctx.fillStyle = S.NumberColor;
+          ctx.fillText(seg.sub, cx, y + actual * 0.4 + textBaseline(subFs));
+          cx += ctx.measureText(seg.sub).width;
+          break;
+        }
+        case "superscript": {
+          // Base in italic equation font
+          ctx.font = `italic ${actual}px ${eqFont}`;
+          ctx.fillStyle = S.VariableColor;
+          ctx.fillText(seg.base, cx, y + bl);
+          cx += ctx.measureText(seg.base).width;
+          // Superscript raised
+          const supFs = actual * S.SuperscriptSizeRatio;
+          ctx.font = `${supFs}px ${S.SubscriptFont}`;
+          ctx.fillStyle = S.NumberColor;
+          ctx.fillText(seg.sup, cx, y + textBaseline(supFs) * 0.4);
+          cx += ctx.measureText(seg.sup).width;
+          break;
+        }
+        case "vector": {
+          // {u} → curly braces + bold italic name
+          ctx.font = `${actual}px ${eqFont}`;
+          ctx.fillStyle = baseColor;
+          ctx.fillText("{", cx, y + bl);
+          cx += ctx.measureText("{").width;
+          ctx.font = `bold italic ${actual}px ${eqFont}`;
+          ctx.fillStyle = S.VariableColor;
+          ctx.fillText(seg.name, cx, y + bl);
+          cx += ctx.measureText(seg.name).width;
+          ctx.font = `${actual}px ${eqFont}`;
+          ctx.fillStyle = baseColor;
+          ctx.fillText("}", cx, y + bl);
+          cx += ctx.measureText("}").width;
+          break;
+        }
+        case "matrix": {
+          // [K] → square brackets + bold italic name
+          ctx.font = `${actual}px ${eqFont}`;
+          ctx.fillStyle = baseColor;
+          ctx.fillText("[", cx, y + bl);
+          cx += ctx.measureText("[").width;
+          ctx.font = `bold italic ${actual}px ${eqFont}`;
+          ctx.fillStyle = S.VariableColor;
+          ctx.fillText(seg.name, cx, y + bl);
+          cx += ctx.measureText(seg.name).width;
+          ctx.font = `${actual}px ${eqFont}`;
+          ctx.fillStyle = baseColor;
+          ctx.fillText("]", cx, y + bl);
+          cx += ctx.measureText("]").width;
+          break;
+        }
+      }
     }
+
+    // Cursor
     if (this.isCursorHere) {
-      const style = (this._isBold ? "bold " : "") + (this._isItalic ? "italic " : "");
-      ctx.font = `${style}${actual}px ${S.UIFont}`;
+      ctx.font = `${baseStyle}${actual}px ${S.UIFont}`;
       const coff = this.cursorPosition > 0 && this._text
         ? ctx.measureText(this._text.slice(0, Math.min(this.cursorPosition, this._text.length))).width
         : 0;

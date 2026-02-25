@@ -28,6 +28,10 @@ export class MathEditor {
   private cursorVisible = true;
   private cursorTimer: number | null = null;
   private scrollY = 0;
+  private contentHeight = 0;  // actual rendered content height
+  private scrollbarDragging = false;
+  private scrollbarDragStartY = 0;
+  private scrollbarDragStartScroll = 0;
   private autoRun = true;
   private autoRunTimer: number | null = null;
 
@@ -73,6 +77,9 @@ export class MathEditor {
     canvas.style.outline = "none";
     canvas.addEventListener("keydown", e => this._onKeyDown(e));
     canvas.addEventListener("mousedown", e => this._onMouseDown(e));
+    canvas.addEventListener("mousemove", e => this._onMouseMove(e));
+    canvas.addEventListener("mouseup", () => this._onMouseUp());
+    canvas.addEventListener("mouseleave", () => this._onMouseUp());
     canvas.addEventListener("wheel", e => this._onWheel(e), { passive: false });
     canvas.addEventListener("focus", () => this._startCursor());
     canvas.addEventListener("blur", () => this._stopCursor());
@@ -1079,11 +1086,39 @@ export class MathEditor {
   // Mouse
   // ==========================================================================
 
+  /** Scrollbar hit-test and drag constants */
+  private readonly scrollbarWidth = 10;
+  private readonly scrollbarMargin = 2;
+
+  private _getScrollbarGeometry(): { trackX: number, barH: number, barY: number, maxScroll: number } | null {
+    const w = this.canvas.width / (window.devicePixelRatio || 1);
+    const h = this.canvas.height / (window.devicePixelRatio || 1);
+    if (this.contentHeight <= h) return null;
+    const maxScroll = this.contentHeight - h + 20;
+    const barH = Math.max(30, (h / this.contentHeight) * h);
+    const barY = (this.scrollY / maxScroll) * (h - barH);
+    const trackX = w - this.scrollbarWidth - this.scrollbarMargin;
+    return { trackX, barH, barY, maxScroll };
+  }
+
   private _onMouseDown(e: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect();
     // Coordinates in CSS pixels (ctx is already scaled by DPR)
     const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top + this.scrollY;
+    const py = e.clientY - rect.top;
+
+    // Check if click is on scrollbar
+    const sb = this._getScrollbarGeometry();
+    if (sb && px >= sb.trackX) {
+      this.scrollbarDragging = true;
+      this.scrollbarDragStartY = py;
+      this.scrollbarDragStartScroll = this.scrollY;
+      this.canvas.style.cursor = "default";
+      return;
+    }
+
+    // Normal click — add scrollY for content coordinates
+    const py2 = py + this.scrollY;
 
     // Buscar fila, columna y elemento
     let foundRow = -1;
@@ -1094,7 +1129,7 @@ export class MathEditor {
       const row = this.grid[ri];
       for (let ci = 0; ci < row.length; ci++) {
         for (const el of row[ci]) {
-          const hit = el.hitTest(px, py);
+          const hit = el.hitTest(px, py2);
           if (hit) {
             foundRow = ri;
             foundCol = ci;
@@ -1145,15 +1180,38 @@ export class MathEditor {
   }
 
   // ==========================================================================
-  // Scroll / Zoom
+  // Scroll / Zoom + Scrollbar drag
   // ==========================================================================
+
+  private _onMouseMove(e: MouseEvent) {
+    if (!this.scrollbarDragging) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const h = this.canvas.height / (window.devicePixelRatio || 1);
+    const dy = (e.clientY - rect.top) - this.scrollbarDragStartY;
+    const sb = this._getScrollbarGeometry();
+    if (!sb) return;
+    const scrollRange = h - sb.barH;
+    if (scrollRange <= 0) return;
+    const scrollDelta = (dy / scrollRange) * sb.maxScroll;
+    this.scrollY = Math.max(0, Math.min(sb.maxScroll, this.scrollbarDragStartScroll + scrollDelta));
+    this.render();
+  }
+
+  private _onMouseUp() {
+    if (this.scrollbarDragging) {
+      this.scrollbarDragging = false;
+      this.canvas.style.cursor = "text";
+    }
+  }
 
   private _onWheel(e: WheelEvent) {
     if (e.ctrlKey) {
       e.preventDefault();
       this.setZoom(this.zoomLevel - e.deltaY * 0.001);
     } else {
-      this.scrollY = Math.max(0, this.scrollY + e.deltaY);
+      const h = this.canvas.height / (window.devicePixelRatio || 1);
+      const maxScroll = Math.max(0, this.contentHeight - h + 20);
+      this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollY + e.deltaY));
       this.render();
     }
   }
@@ -1172,21 +1230,72 @@ export class MathEditor {
       this.evaluateAll();
     }
 
-    // Clear
-    ctx.fillStyle = S.EditorBackground;
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = w / dpr;
+    const cssH = h / dpr;
+
+    // ── Page layout constants (Letter/A4-like margins in CSS px) ──
+    const lineNumWidth = 45;           // line numbers column width
+    const pageMarginLeft = 30;         // left margin inside "page" (after line nums)
+    const pageMarginRight = 30;        // right margin
+    const pageMarginTop = 24;          // top margin
+    const pageMarginBottom = 24;       // bottom margin (visual only)
+    const leftMargin = lineNumWidth + pageMarginLeft;  // total x offset for content
+    const topMargin = pageMarginTop;
+
+    // Clear with gray background (outside "page")
+    ctx.fillStyle = "#e0e0e0";
     ctx.fillRect(0, 0, w, h);
 
-    const leftMargin = 50;
-    const topMargin = 10;
+    // Draw the "page" area (white sheet with shadow)
+    const pageX = lineNumWidth;
+    const pageW = cssW - lineNumWidth - this.scrollbarWidth - this.scrollbarMargin - 2;
+    // Shadow
+    ctx.shadowColor = "rgba(0,0,0,0.18)";
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(pageX, 0, pageW, cssH);
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
 
-    // Números de línea
+    // Margin guide lines — visible dashed blue
+    ctx.save();
+    ctx.setLineDash([5, 3]);
+    ctx.strokeStyle = "rgba(70,130,200,0.45)";
+    ctx.lineWidth = 1;
+    // Left margin guide
+    ctx.beginPath();
+    ctx.moveTo(leftMargin - 2, 0);
+    ctx.lineTo(leftMargin - 2, cssH);
+    ctx.stroke();
+    // Right margin guide
+    const rightGuideX = pageX + pageW - pageMarginRight;
+    ctx.beginPath();
+    ctx.moveTo(rightGuideX, 0);
+    ctx.lineTo(rightGuideX, cssH);
+    ctx.stroke();
+    // Top margin guide
+    const topGuideY = topMargin - this.scrollY;
+    if (topGuideY > 0 && topGuideY < cssH) {
+      ctx.beginPath();
+      ctx.moveTo(pageX, topGuideY - 2);
+      ctx.lineTo(pageX + pageW, topGuideY - 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Números de línea column background
     ctx.fillStyle = S.LineNumberBackground;
-    ctx.fillRect(0, 0, leftMargin - 5, h);
+    ctx.fillRect(0, 0, lineNumWidth, cssH);
     ctx.strokeStyle = "#ddd";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(leftMargin - 5, 0);
-    ctx.lineTo(leftMargin - 5, h);
+    ctx.moveTo(lineNumWidth, 0);
+    ctx.lineTo(lineNumWidth, cssH);
     ctx.stroke();
 
     // Toggle cursor visibility on current element for blink effect
@@ -1225,14 +1334,14 @@ export class MathEditor {
       // Highlight fila actual
       if (ri === this.currentRow) {
         ctx.fillStyle = "rgba(0,102,221,0.04)";
-        ctx.fillRect(leftMargin - 5, y, w - leftMargin + 5, maxHeight + 4);
+        ctx.fillRect(lineNumWidth, y, pageW, maxHeight + 4);
       }
 
       // Número de línea
       ctx.font = `${this.fontSize * 0.8}px ${S.UIFont}`;
       ctx.fillStyle = "#999";
       ctx.textAlign = "right";
-      ctx.fillText(String(ri + 1), leftMargin - 12, y + maxBaseline);
+      ctx.fillText(String(ri + 1), lineNumWidth - 8, y + maxBaseline);
       ctx.textAlign = "left";
 
       // Renderizar celdas de la fila horizontalmente
@@ -1240,15 +1349,7 @@ export class MathEditor {
       for (let ci = 0; ci < row.length; ci++) {
         const cell = row[ci];
 
-        // Separador entre celdas (excepto antes de la primera)
-        if (ci > 0) {
-          ctx.strokeStyle = "#ccc";
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(x - this.cellGap / 2, y);
-          ctx.lineTo(x - this.cellGap / 2, y + maxHeight);
-          ctx.stroke();
-        }
+        // Espacio entre celdas (sin separador visible)
 
         // Highlight celda activa
         if (ri === this.currentRow && ci === this.currentCol) {
@@ -1300,18 +1401,41 @@ export class MathEditor {
       y += maxHeight + 4;
     }
 
+    // Track actual content height (y is relative, add scrollY back)
+    this.contentHeight = y + this.scrollY;
+
     // Restore cursor visibility flag after render
     if (this.currentElement && !this.cursorVisible) {
       this.currentElement.isCursorHere = true;
     }
 
-    // Scrollbar
-    const totalHeight = this.grid.length * (this.lineHeight + 4);
-    if (totalHeight > h) {
-      const barH = Math.max(20, (h / totalHeight) * h);
-      const barY = (this.scrollY / totalHeight) * h;
-      ctx.fillStyle = "rgba(0,0,0,0.15)";
-      ctx.fillRect(w - 8, barY, 6, barH);
+    // Scrollbar — visible and draggable
+    if (this.contentHeight > cssH) {
+      const maxScroll = this.contentHeight - cssH + 20;
+      const barH = Math.max(30, (cssH / this.contentHeight) * cssH);
+      const barY = (this.scrollY / maxScroll) * (cssH - barH);
+      const sbW = this.scrollbarWidth;
+      const sbX = cssW - sbW - this.scrollbarMargin;
+      // Track background
+      ctx.fillStyle = "rgba(0,0,0,0.05)";
+      ctx.fillRect(sbX, 0, sbW, cssH);
+      // Thumb
+      const isHover = this.scrollbarDragging;
+      ctx.fillStyle = isHover ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.2)";
+      ctx.beginPath();
+      const r = 3; // border radius
+      const bx = sbX + 1, by = barY, bw = sbW - 2, bh = barH;
+      ctx.moveTo(bx + r, by);
+      ctx.lineTo(bx + bw - r, by);
+      ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + r);
+      ctx.lineTo(bx + bw, by + bh - r);
+      ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - r, by + bh);
+      ctx.lineTo(bx + r, by + bh);
+      ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - r);
+      ctx.lineTo(bx, by + r);
+      ctx.quadraticCurveTo(bx, by, bx + r, by);
+      ctx.closePath();
+      ctx.fill();
     }
   }
 
