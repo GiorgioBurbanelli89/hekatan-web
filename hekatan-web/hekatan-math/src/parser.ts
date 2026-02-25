@@ -63,6 +63,35 @@ export function parse(source: string): { html: string; env: HekatanEnvironment }
       html += result.html; i = result.nextLine; continue;
     }
 
+    // Heading: # Title, ## Subtitle (NOT #for/#if/#while/#repeat)
+    if (/^#{1,6}\s+/.test(trimmed) && !/^#(?:for|if|else|end|while|loop|repeat|until|next)\b/i.test(trimmed)) {
+      const level = (trimmed.match(/^#+/) || [""])[0].length;
+      const hText = trimmed.slice(level).trim();
+      html += `<h${Math.min(level, 6)}>${renderInlineText(hText)}</h${Math.min(level, 6)}>`;
+      i++; continue;
+    }
+
+    // Text line: > description
+    if (trimmed.startsWith(">")) {
+      const text = trimmed.slice(1).trim();
+      html += `<p class="comment">${renderInlineText(text)}</p>`;
+      i++; continue;
+    }
+
+    // Inline cells: @{cells} |expr1|expr2|...| or @{cells} |expr1|expr2|expr3|
+    if (/^@\{cells\}\s*\|/.test(trimmed)) {
+      const cellPart = trimmed.replace(/^@\{cells\}\s*/, "");
+      // Split by | and filter empties
+      const cells = cellPart.split("|").map(s => s.trim()).filter(Boolean);
+      let row = '<div class="cells-row">';
+      for (const cell of cells) {
+        row += `<div class="cell">${parseLine(cell, env)}</div>`;
+      }
+      row += "</div>";
+      html += row;
+      i++; continue;
+    }
+
     // Comment line: starts with '
     if (trimmed.startsWith("'")) {
       const commentText = trimmed.slice(1).trim();

@@ -17,6 +17,7 @@ export default defineConfig({
         main: resolve(__dirname, "index.html"),
         editor: resolve(__dirname, "editor/index.html"),
         hekatanEditor: resolve(__dirname, "src/editor/index.html"),
+        mathcanvas: resolve(__dirname, "src/mathcanvas/index.html"),
       },
     },
   },

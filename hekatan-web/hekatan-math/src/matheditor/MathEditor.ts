@@ -4,10 +4,12 @@
  */
 import * as S from "./MathStyles";
 import {
-  MathElement, MathText, MathFraction, MathPower, MathRoot,
+  MathElement, MathGroup, MathText, MathFraction, MathPower, MathRoot,
   MathSubscript, MathIntegral, MathDerivative, MathMatrix, MathVector,
   MathComment, MathCode, MathColumns,
 } from "./MathElement";
+import { parseExpression, type ASTNode } from "../evaluator.js";
+import { HekatanEvaluator } from "../mathEngine.js";
 
 const BASE_FONT_SIZE = 14.67; // 11pt
 const BASE_LINE_HEIGHT = 22;
@@ -15,8 +17,10 @@ const BASE_LINE_HEIGHT = 22;
 export class MathEditor {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private lines: MathElement[][] = [];
-  private currentLineIndex = 0;
+  // Grid 2D: grid[row][col] = MathElement[] (elements in that cell)
+  private grid: MathElement[][][] = [];
+  private currentRow = 0;
+  private currentCol = 0;
   private currentElement: MathElement | null = null;
   private zoomLevel = 1.0;
   private fontSize = BASE_FONT_SIZE;
@@ -27,24 +31,41 @@ export class MathEditor {
   private autoRun = true;
   private autoRunTimer: number | null = null;
 
+  /** Minimum cell width in pixels */
+  private readonly minCellWidth = 40;
+  /** Padding between cells */
+  private readonly cellGap = 16;
+
+  /** Evaluation results per cell [row][col] */
+  private cellResults: string[][] = [];
+  /** Raw values per cell (for matrix/vector formatted rendering) */
+  private cellResultValues: (any | null)[][] = [];
+  /** Whether evaluation needs to rerun */
+  private needsEval = true;
+  /** Shared math.js evaluator (supports matrices, vectors, etc.) */
+  private evaluator = new HekatanEvaluator();
+  /** Tracks which grid rows are @{cells} rows (for serialization) */
+  private cellsRowFlags = new Set<number>();
+
   /** Callback para cuando el contenido cambia (AutoRun) */
   onContentChanged: ((code: string) => void) | null = null;
 
   /** Callback para cuando se ejecuta (F5 / Ctrl+Enter) */
   onExecute: ((code: string) => void) | null = null;
 
-  get currentLine(): MathElement[] {
-    return this.lines[this.currentLineIndex] ?? [];
+  /** Get current cell (array of elements) */
+  get currentCell(): MathElement[] {
+    return this.grid[this.currentRow]?.[this.currentCol] ?? [];
   }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
 
-    // Línea inicial vacía
+    // Grid inicial: una fila con una celda vacia
     const initial = new MathText();
     initial.isCursorHere = true;
-    this.lines.push([initial]);
+    this.grid.push([[initial]]);
     this.currentElement = initial;
 
     // Event listeners
@@ -70,18 +91,42 @@ export class MathEditor {
 
   /** Obtiene todo el contenido como texto Hekatan */
   toHekatan(): string {
-    return this.lines.map(line => {
-      return line.map(el => el.toHekatan()).join("");
+    return this.grid.map((row, ri) => {
+      if (this.cellsRowFlags.has(ri)) {
+        // Serialize as @{cells} |a=1|b=2|c=3|
+        const cellTexts = row.map(cell =>
+          cell.map(el => el.toHekatan()).join("")
+        );
+        return `@{cells} |${cellTexts.join("|")}|`;
+      }
+      return row.map(cell => {
+        return cell.map(el => el.toHekatan()).join("");
+      }).join("\t");
     }).join("\n");
   }
 
   /** Carga contenido desde texto Hekatan */
   loadFromText(text: string) {
-    this.lines = [];
+    this.grid = [];
+    this.cellsRowFlags = new Set<number>();
     const rawLines = text.split("\n");
     let i = 0;
     while (i < rawLines.length) {
       const trimmed = rawLines[i].trim();
+
+      // @{cells} |a=1|b=2|c=3|
+      if (/^@\{cells\}\s*\|/.test(trimmed)) {
+        const content = trimmed.replace(/^@\{cells\}\s*/, "");
+        const parts = content.split("|").filter(p => p.trim());
+        const row: MathElement[][] = parts.map(part => {
+          return this._parseLine(part.trim());
+        });
+        const rowIdx = this.grid.length;
+        this.grid.push(row);
+        this.cellsRowFlags.add(rowIdx);
+        i++;
+        continue;
+      }
 
       // @{columns N}
       const colMatch = trimmed.match(/^@\{columns\s+(\d+)\}/i);
@@ -93,10 +138,12 @@ export class MathEditor {
           const lt = rawLines[i].trim();
           if (/^@\{end\s+columns\}/i.test(lt)) break;
           if (/^@\{column\}/i.test(lt)) { colIdx++; i++; continue; }
-          cols.addElement(colIdx, this._parseLine(rawLines[i]));
+          for (const el of this._parseLine(rawLines[i])) {
+            cols.addElement(colIdx, el);
+          }
           i++;
         }
-        this.lines.push([cols]);
+        this.grid.push([[cols]]);
         i++;
         continue;
       }
@@ -112,22 +159,29 @@ export class MathEditor {
           codeLines.push(rawLines[i]);
           i++;
         }
-        this.lines.push([new MathCode(codeLines.join("\n"), lang)]);
+        this.grid.push([[new MathCode(codeLines.join("\n"), lang)]]);
         i++;
         continue;
       }
 
-      // Línea normal
-      this.lines.push([this._parseLine(rawLines[i])]);
+      // Linea normal: split por tab para obtener celdas
+      const cellTexts = rawLines[i].split("\t");
+      const row: MathElement[][] = cellTexts.map(cellText => {
+        return this._parseLine(cellText);
+      });
+      this.grid.push(row);
       i++;
     }
 
-    if (this.lines.length === 0) {
-      this.lines.push([new MathText()]);
+    if (this.grid.length === 0) {
+      this.grid.push([[new MathText()]]);
     }
-    this.currentLineIndex = 0;
-    this.currentElement = this._getFirstTextElement(this.lines[0]);
+    this.currentRow = 0;
+    this.currentCol = 0;
+    this.currentElement = this._getFirstTextElement(this.grid[0][0]);
     if (this.currentElement) this.currentElement.isCursorHere = true;
+    this.needsEval = true;
+    this.evaluateAll();
     this.render();
   }
 
@@ -140,34 +194,350 @@ export class MathEditor {
   }
 
   // ==========================================================================
+  // Evaluation (Mathcad-like: show results after each expression)
+  // ==========================================================================
+
+  /** Evaluate all cells and store results */
+  evaluateAll() {
+    this.evaluator.reset();
+    this.cellResults = [];
+    this.cellResultValues = [];
+
+    for (const row of this.grid) {
+      const rowResults: string[] = [];
+      const rowValues: (any | null)[] = [];
+      for (const cell of row) {
+        const text = cell.map(el => el.toHekatan()).join("").trim();
+
+        // Skip empty, comments, headings, directives
+        if (!text || text.startsWith("'") || text.startsWith("#") || text.startsWith("@{")) {
+          rowResults.push("");
+          rowValues.push(null);
+          continue;
+        }
+
+        // Skip markdown-like lines (> blockquote)
+        if (text.startsWith(">")) {
+          rowResults.push("");
+          rowValues.push(null);
+          continue;
+        }
+
+        // Function definition: f(x) = expr — math.js handles this directly
+        const fnMatch = text.match(/^([A-Za-z_]\w*)\(([^)]*)\)\s*=\s*(.+)$/);
+        if (fnMatch) {
+          try {
+            this.evaluator.eval(text);
+          } catch { /* skip */ }
+          rowResults.push("");
+          rowValues.push(null);
+          continue;
+        }
+
+        try {
+          const val = this.evaluator.eval(text);
+          const resultStr = this._formatValue(val);
+
+          // For assignments like "a = 3", check if RHS is already the result
+          const assignMatch = text.match(/^[A-Za-z_]\w*\s*=\s*(.+)$/);
+          if (assignMatch) {
+            const rhsText = assignMatch[1].trim();
+            // If RHS is a simple literal that equals the result, don't show redundant result
+            if (rhsText === resultStr || rhsText === String(val)) {
+              rowResults.push("");
+              rowValues.push(null);
+            } else {
+              rowResults.push(resultStr);
+              rowValues.push(val);
+            }
+          } else {
+            rowResults.push(resultStr);
+            rowValues.push(val);
+          }
+        } catch (e: any) {
+          rowResults.push("err");
+          rowValues.push(null);
+        }
+      }
+      this.cellResults.push(rowResults);
+      this.cellResultValues.push(rowValues);
+    }
+    this.needsEval = false;
+  }
+
+  private _formatValue(val: any): string {
+    if (val === undefined || val === null) return "";
+    if (typeof val === "function") return "";
+
+    // math.js Matrix
+    if (val && typeof val === "object" && typeof val.toArray === "function") {
+      const arr = val.toArray();
+      if (Array.isArray(arr[0])) {
+        // 2D matrix
+        return "[" + (arr as any[][]).map((r: any[]) =>
+          r.map((v: any) => this._fmtNum(v)).join(", ")
+        ).join("; ") + "]";
+      }
+      // 1D vector
+      return "[" + (arr as any[]).map((v: any) => this._fmtNum(v)).join(", ") + "]";
+    }
+
+    if (Array.isArray(val)) {
+      if (Array.isArray(val[0])) {
+        return "[" + (val as number[][]).map(r =>
+          r.map(v => this._fmtNum(v)).join(", ")
+        ).join("; ") + "]";
+      }
+      return "[" + (val as number[]).map(v => this._fmtNum(v)).join(", ") + "]";
+    }
+
+    return this._fmtNum(val);
+  }
+
+  /** Convert a variable name to MathElement, handling underscores → subscripts.
+   *  Greek names are handled in display via transformOperatorsForDisplay. */
+  private _varToElement(name: string): MathElement {
+    // Split on first underscore: E_s → base="E", sub="s"
+    const uIdx = name.indexOf("_");
+    if (uIdx >= 0 && uIdx < name.length - 1) {
+      const baseName = name.slice(0, uIdx);
+      const subName = name.slice(uIdx + 1);
+      const baseEl = new MathText(baseName);
+      const subEl = new MathText(subName);
+      return new MathSubscript(baseEl, subEl);
+    }
+    return new MathText(name);
+  }
+
+  private _fmtNum(n: number): string {
+    if (!isFinite(n)) return String(n);
+    if (Number.isInteger(n)) return String(n);
+    // Remove trailing zeros
+    return n.toFixed(4).replace(/\.?0+$/, "");
+  }
+
+  // ==========================================================================
   // Parser de línea
   // ==========================================================================
 
-  private _parseLine(raw: string): MathElement {
+  /** Parse a raw line into MathElement[] (one cell's worth) */
+  private _parseLine(raw: string): MathElement[] {
     const trimmed = raw.trim();
+
+    // Empty line
+    if (!trimmed) return [new MathText("")];
 
     // Markdown: # heading
     if (/^#{1,6}\s/.test(trimmed)) {
-      return new MathComment(trimmed);
+      return [new MathComment(trimmed)];
     }
 
-    // Si la línea es solo texto sin operadores, tratarla como comentario markdown
-    // (Hekatan usa markdown, no '# de Calcpad)
+    // Comment: starts with '
+    if (trimmed.startsWith("'")) {
+      return [new MathComment(trimmed)];
+    }
 
-    // Línea de ecuación: parsear tokens matemáticos
-    return this._parseExpression(raw);
+    // Blockquote: starts with >
+    if (trimmed.startsWith(">")) {
+      return [new MathComment(trimmed)];
+    }
+
+    // Function definition: f(x) = expr  or  f(x, y) = expr
+    const fnMatch = trimmed.match(/^([A-Za-z_]\w*)\(([^)]*)\)\s*=\s*(.+)$/);
+    if (fnMatch) {
+      const name = fnMatch[1];
+      const params = fnMatch[2];
+      const bodyElements = this._parseExpressionToElements(fnMatch[3]);
+      return [new MathText(`${name}(${params}) = `), ...bodyElements];
+    }
+
+    // Expression: parse AST and convert to MathElements
+    return this._parseExpressionToElements(trimmed);
   }
 
-  private _parseExpression(text: string): MathElement {
-    // Por ahora, crear un MathText simple con el texto
-    // TODO: Parsear fracciones (/), potencias (^), subíndices (_), sqrt(), etc.
-    // Para una primera versión funcional, el texto se muestra como MathText
-    const mt = new MathText(text);
-    return mt;
+  /** Parse expression text → AST → formatted MathElement[] */
+  private _parseExpressionToElements(text: string): MathElement[] {
+    try {
+      const ast = parseExpression(text);
+      return this._astToElements(ast);
+    } catch {
+      // Fallback: plain text
+      return [new MathText(text)];
+    }
   }
 
-  private _getFirstTextElement(line: MathElement[]): MathElement | null {
-    for (const el of line) {
+  /** Convert AST node to array of MathElements */
+  private _astToElements(node: ASTNode): MathElement[] {
+    switch (node.type) {
+      case "number":
+        return [new MathText(this._fmtNum(node.value))];
+
+      case "variable":
+        return [this._varToElement(node.name)];
+
+      case "assign": {
+        const lhs = [this._varToElement(node.name), new MathText(" = ")];
+        return [...lhs, ...this._astToElements(node.expr)];
+      }
+
+      case "binary": {
+        const bn = node as Extract<ASTNode, { type: "binary" }>;
+        // Division → MathFraction
+        if (bn.op === "/") {
+          const num = this._astToSingle(bn.left);
+          const den = this._astToSingle(bn.right);
+          return [new MathFraction(num, den)];
+        }
+        // Power → MathPower
+        if (bn.op === "^") {
+          const base = this._astToSingle(bn.left);
+          const exp = this._astToSingle(bn.right);
+          return [new MathPower(base, exp)];
+        }
+        // Other operators: store raw op, displayText handles visual transform
+        return [
+          ...this._astToElements(bn.left),
+          new MathText(` ${bn.op} `),
+          ...this._astToElements(bn.right),
+        ];
+      }
+
+      case "unary": {
+        const un = node as Extract<ASTNode, { type: "unary" }>;
+        return [new MathText(un.op), ...this._astToElements(un.operand)];
+      }
+
+      case "call": {
+        const cn = node as Extract<ASTNode, { type: "call" }>;
+        // sqrt → MathRoot
+        if (cn.name === "sqrt" && cn.args.length === 1) {
+          const content = this._astToSingle(cn.args[0]);
+          return [new MathRoot(content)];
+        }
+        // root(x, n) → MathRoot with index
+        if (cn.name === "root" && cn.args.length === 2) {
+          const content = this._astToSingle(cn.args[0]);
+          const index = this._astToSingle(cn.args[1]);
+          return [new MathRoot(content, index)];
+        }
+        // Generic function: name(args)
+        const argsElements: MathElement[] = [];
+        for (let i = 0; i < cn.args.length; i++) {
+          if (i > 0) argsElements.push(new MathText(", "));
+          argsElements.push(...this._astToElements(cn.args[i]));
+        }
+        return [
+          new MathText(cn.name + "("),
+          ...argsElements,
+          new MathText(")"),
+        ];
+      }
+
+      case "vector": {
+        const vn = node as Extract<ASTNode, { type: "vector" }>;
+        const vec = new MathVector(vn.elements.length, false);
+        for (let i = 0; i < vn.elements.length; i++) {
+          const el = this._astToSingle(vn.elements[i]);
+          vec.elements[i] = el;
+          el.parent = vec;
+        }
+        return [vec];
+      }
+
+      case "matrix": {
+        const mn = node as Extract<ASTNode, { type: "matrix" }>;
+        const nRows = mn.rows.length;
+        const nCols = mn.rows[0]?.length ?? 0;
+        const mat = new MathMatrix(nRows, nCols);
+        for (let i = 0; i < nRows; i++) {
+          for (let j = 0; j < mn.rows[i].length; j++) {
+            const cellEl = this._astToSingle(mn.rows[i][j]);
+            mat.cells[i][j] = cellEl;
+            cellEl.parent = mat;
+          }
+        }
+        return [mat];
+      }
+
+      case "cellarray": {
+        const ca = node as Extract<ASTNode, { type: "cellarray" }>;
+        const elems: MathElement[] = [new MathText("{")];
+        for (let i = 0; i < ca.elements.length; i++) {
+          if (i > 0) elems.push(new MathText("; "));
+          elems.push(...this._astToElements(ca.elements[i]));
+        }
+        elems.push(new MathText("}"));
+        return elems;
+      }
+
+      case "index": {
+        const idx = node as Extract<ASTNode, { type: "index" }>;
+        const baseElements = this._astToElements(idx.target);
+        const indexTexts = idx.indices.map(n => this._astToText(n));
+        return [...baseElements, new MathText(`[${indexTexts.join(", ")}]`)];
+      }
+
+      case "range": {
+        const rn = node as Extract<ASTNode, { type: "range" }>;
+        return [new MathText(`${this._astToText(rn.start)}:${this._astToText(rn.end)}`)];
+      }
+
+      default:
+        return [new MathText("?")];
+    }
+  }
+
+  /** Convert AST to a single MathElement (combine multiple into MathGroup) */
+  private _astToSingle(node: ASTNode): MathElement {
+    const elements = this._astToElements(node);
+    if (elements.length === 1) return elements[0];
+    // Wrap multiple elements in a MathGroup container
+    return new MathGroup(elements);
+  }
+
+  /** Convert AST to plain text representation */
+  private _astToText(node: ASTNode): string {
+    switch (node.type) {
+      case "number": return this._fmtNum(node.value);
+      case "variable": return node.name;
+      case "assign": return `${node.name} = ${this._astToText(node.expr)}`;
+      case "binary": {
+        const bn = node as Extract<ASTNode, { type: "binary" }>;
+        const l = this._astToText(bn.left);
+        const r = this._astToText(bn.right);
+        return `${l} ${bn.op} ${r}`;
+      }
+      case "unary": {
+        const un = node as Extract<ASTNode, { type: "unary" }>;
+        return `${un.op}${this._astToText(un.operand)}`;
+      }
+      case "call": {
+        const cn = node as Extract<ASTNode, { type: "call" }>;
+        return `${cn.name}(${cn.args.map(a => this._astToText(a)).join(", ")})`;
+      }
+      case "index": {
+        const idx = node as Extract<ASTNode, { type: "index" }>;
+        return `${this._astToText(idx.target)}[${idx.indices.map(n => this._astToText(n)).join(",")}]`;
+      }
+      case "vector": {
+        const vn = node as Extract<ASTNode, { type: "vector" }>;
+        return `[${vn.elements.map(e => this._astToText(e)).join(", ")}]`;
+      }
+      case "matrix": {
+        const mn = node as Extract<ASTNode, { type: "matrix" }>;
+        const rows = mn.rows.map(r => "[" + r.map(e => this._astToText(e)).join(", ") + "]");
+        return "[" + rows.join(", ") + "]";
+      }
+      case "range": {
+        const rn = node as Extract<ASTNode, { type: "range" }>;
+        return `${this._astToText(rn.start)}:${this._astToText(rn.end)}`;
+      }
+      default: return "?";
+    }
+  }
+
+  private _getFirstTextElement(cell: MathElement[]): MathElement | null {
+    for (const el of cell) {
       if (el instanceof MathText || el instanceof MathComment) return el;
       // Recursivo para MathColumns
       if (el instanceof MathColumns) {
@@ -178,7 +548,7 @@ export class MathEditor {
         }
       }
     }
-    return line[0] ?? null;
+    return cell[0] ?? null;
   }
 
   // ==========================================================================
@@ -191,6 +561,8 @@ export class MathEditor {
     // F5 = Ejecutar
     if (e.key === "F5") {
       e.preventDefault();
+      this.evaluateAll();
+      this.render();
       this.onExecute?.(this.toHekatan());
       return;
     }
@@ -198,6 +570,8 @@ export class MathEditor {
     // Ctrl+Enter = Ejecutar
     if (e.key === "Enter" && e.ctrlKey) {
       e.preventDefault();
+      this.evaluateAll();
+      this.render();
       this.onExecute?.(this.toHekatan());
       return;
     }
@@ -224,7 +598,24 @@ export class MathEditor {
       return;
     }
 
-    // Enter = nueva línea
+    // Tab = siguiente celda (crea nueva si es la ultima)
+    if (e.key === "Tab" && !e.shiftKey) {
+      e.preventDefault();
+      this._nextCell();
+      this.render();
+      this._triggerAutoRun();
+      return;
+    }
+
+    // Shift+Tab = celda anterior
+    if (e.key === "Tab" && e.shiftKey) {
+      e.preventDefault();
+      this._prevCell();
+      this.render();
+      return;
+    }
+
+    // Enter = nueva fila
     if (e.key === "Enter" && !e.ctrlKey) {
       e.preventDefault();
       this._newLine();
@@ -240,8 +631,8 @@ export class MathEditor {
         const textEl = el as MathText | MathComment;
         if (textEl.cursorPosition > 0) {
           textEl.deleteChar();
-        } else if (this.currentLineIndex > 0) {
-          // Merge con línea anterior
+        } else if (this.currentRow > 0 || this.currentCol > 0) {
+          // Merge con celda anterior o fila anterior
           this._mergeLineUp();
         }
       }
@@ -363,7 +754,7 @@ export class MathEditor {
 
   private _insertFraction() {
     const frac = new MathFraction();
-    const line = this.lines[this.currentLineIndex];
+    const line = this.grid[this.currentRow]?.[this.currentCol] ?? [];
     const idx = line.indexOf(this.currentElement!);
     line.splice(idx + 1, 0, frac);
     this._setCursor(frac.numerator);
@@ -379,7 +770,7 @@ export class MathEditor {
     const den = new MathText();
     const frac = new MathFraction(num, den);
 
-    const line = this.lines[this.currentLineIndex];
+    const line = this.grid[this.currentRow]?.[this.currentCol] ?? [];
     const idx = line.indexOf(el);
 
     if (afterText) {
@@ -401,7 +792,7 @@ export class MathEditor {
     const exp = new MathText();
     const pow = new MathPower(base, exp);
 
-    const line = this.lines[this.currentLineIndex];
+    const line = this.grid[this.currentRow]?.[this.currentCol] ?? [];
     const idx = line.indexOf(el);
 
     if (afterText) {
@@ -423,7 +814,7 @@ export class MathEditor {
     const sub = new MathText();
     const subscr = new MathSubscript(base, sub);
 
-    const line = this.lines[this.currentLineIndex];
+    const line = this.grid[this.currentRow]?.[this.currentCol] ?? [];
     const idx = line.indexOf(el);
 
     if (afterText) {
@@ -459,15 +850,23 @@ export class MathEditor {
       el.cursorPosition--;
       return;
     }
-    // Ir al elemento anterior en la línea
-    const line = this.lines[this.currentLineIndex];
-    const idx = line.indexOf(el!);
+    // Ir al elemento anterior en la celda
+    const cell = this.grid[this.currentRow]?.[this.currentCol] ?? [];
+    const idx = cell.indexOf(el!);
     if (idx > 0) {
-      this._setCursorEnd(line[idx - 1]);
-    } else if (this.currentLineIndex > 0) {
-      this.currentLineIndex--;
-      const prevLine = this.lines[this.currentLineIndex];
-      if (prevLine.length > 0) this._setCursorEnd(prevLine[prevLine.length - 1]);
+      this._setCursorEnd(cell[idx - 1]);
+    } else if (this.currentCol > 0) {
+      // Ir a la celda anterior en la misma fila
+      this.currentCol--;
+      const prevCell = this.grid[this.currentRow][this.currentCol];
+      if (prevCell.length > 0) this._setCursorEnd(prevCell[prevCell.length - 1]);
+    } else if (this.currentRow > 0) {
+      // Ir a la ultima celda de la fila anterior
+      this.currentRow--;
+      const prevRow = this.grid[this.currentRow];
+      this.currentCol = prevRow.length - 1;
+      const prevCell = prevRow[this.currentCol];
+      if (prevCell.length > 0) this._setCursorEnd(prevCell[prevCell.length - 1]);
     }
   }
 
@@ -481,34 +880,45 @@ export class MathEditor {
       el.cursorPosition++;
       return;
     }
-    // Ir al elemento siguiente en la línea
-    const line = this.lines[this.currentLineIndex];
-    const idx = line.indexOf(el!);
-    if (idx < line.length - 1) {
-      this._setCursor(line[idx + 1]);
-    } else if (this.currentLineIndex < this.lines.length - 1) {
-      this.currentLineIndex++;
-      const nextLine = this.lines[this.currentLineIndex];
-      if (nextLine.length > 0) this._setCursor(nextLine[0]);
+    // Ir al elemento siguiente en la celda
+    const cell = this.grid[this.currentRow]?.[this.currentCol] ?? [];
+    const idx = cell.indexOf(el!);
+    if (idx < cell.length - 1) {
+      this._setCursor(cell[idx + 1]);
+    } else if (this.currentCol < (this.grid[this.currentRow]?.length ?? 1) - 1) {
+      // Ir a la primera celda siguiente en la misma fila
+      this.currentCol++;
+      const nextCell = this.grid[this.currentRow][this.currentCol];
+      if (nextCell.length > 0) this._setCursor(nextCell[0]);
+    } else if (this.currentRow < this.grid.length - 1) {
+      // Ir a la primera celda de la fila siguiente
+      this.currentRow++;
+      this.currentCol = 0;
+      const nextCell = this.grid[this.currentRow][0];
+      if (nextCell.length > 0) this._setCursor(nextCell[0]);
     }
   }
 
   private _moveCursorUp() {
-    if (this.currentLineIndex > 0) {
+    if (this.currentRow > 0) {
       if (this.currentElement) this.currentElement.isCursorHere = false;
-      this.currentLineIndex--;
-      const line = this.lines[this.currentLineIndex];
-      this.currentElement = this._getFirstTextElement(line);
+      this.currentRow--;
+      const row = this.grid[this.currentRow];
+      this.currentCol = Math.min(this.currentCol, row.length - 1);
+      const cell = row[this.currentCol];
+      this.currentElement = this._getFirstTextElement(cell);
       if (this.currentElement) this.currentElement.isCursorHere = true;
     }
   }
 
   private _moveCursorDown() {
-    if (this.currentLineIndex < this.lines.length - 1) {
+    if (this.currentRow < this.grid.length - 1) {
       if (this.currentElement) this.currentElement.isCursorHere = false;
-      this.currentLineIndex++;
-      const line = this.lines[this.currentLineIndex];
-      this.currentElement = this._getFirstTextElement(line);
+      this.currentRow++;
+      const row = this.grid[this.currentRow];
+      this.currentCol = Math.min(this.currentCol, row.length - 1);
+      const cell = row[this.currentCol];
+      this.currentElement = this._getFirstTextElement(cell);
       if (this.currentElement) this.currentElement.isCursorHere = true;
     }
   }
@@ -526,6 +936,60 @@ export class MathEditor {
   // Operaciones de línea
   // ==========================================================================
 
+  /** Tab: ir a la siguiente celda (o crear una nueva) */
+  private _nextCell() {
+    const row = this.grid[this.currentRow];
+    if (!row) return;
+
+    if (this.currentElement) this.currentElement.isCursorHere = false;
+
+    if (this.currentCol < row.length - 1) {
+      // Ir a la celda siguiente existente
+      this.currentCol++;
+    } else {
+      // Crear nueva celda a la derecha
+      const newEl = new MathText();
+      row.push([newEl]);
+      this.currentCol = row.length - 1;
+    }
+
+    const cell = this.grid[this.currentRow][this.currentCol];
+    this.currentElement = this._getFirstTextElement(cell);
+    if (this.currentElement) {
+      this.currentElement.isCursorHere = true;
+      if (this.currentElement instanceof MathText) {
+        this.currentElement.cursorPosition = 0;
+      }
+    }
+    this.cursorVisible = true;
+  }
+
+  /** Shift+Tab: ir a la celda anterior */
+  private _prevCell() {
+    if (this.currentCol <= 0 && this.currentRow <= 0) return;
+
+    if (this.currentElement) this.currentElement.isCursorHere = false;
+
+    if (this.currentCol > 0) {
+      this.currentCol--;
+    } else if (this.currentRow > 0) {
+      // Ir a la ultima celda de la fila anterior
+      this.currentRow--;
+      this.currentCol = this.grid[this.currentRow].length - 1;
+    }
+
+    const cell = this.grid[this.currentRow][this.currentCol];
+    this.currentElement = this._getFirstTextElement(cell);
+    if (this.currentElement) {
+      this.currentElement.isCursorHere = true;
+      if (this.currentElement instanceof MathText) {
+        this.currentElement.cursorPosition = this.currentElement.text.length;
+      }
+    }
+    this.cursorVisible = true;
+  }
+
+  /** Enter: nueva fila debajo */
   private _newLine() {
     const el = this.currentElement;
     if (el instanceof MathText) {
@@ -537,52 +1001,78 @@ export class MathEditor {
       newEl.isCursorHere = true;
       newEl.cursorPosition = 0;
 
-      // Detectar si la nueva línea empieza con # (markdown heading)
+      // Detectar si la nueva linea empieza con # (markdown heading)
       const trimmed = afterText.trim();
-      const newLine: MathElement[] = [];
+      const newCell: MathElement[] = [];
       if (/^#{1,6}\s/.test(trimmed)) {
         const comment = new MathComment(afterText);
         comment.isCursorHere = true;
-        newLine.push(comment);
+        newCell.push(comment);
         this.currentElement = comment;
       } else {
-        newLine.push(newEl);
+        newCell.push(newEl);
         this.currentElement = newEl;
       }
 
-      this.currentLineIndex++;
-      this.lines.splice(this.currentLineIndex, 0, newLine);
+      this.currentRow++;
+      this.currentCol = 0;
+      this.grid.splice(this.currentRow, 0, [newCell]);
     } else if (el instanceof MathComment) {
       el.isCursorHere = false;
       const newEl = new MathText();
       newEl.isCursorHere = true;
-      this.currentLineIndex++;
-      this.lines.splice(this.currentLineIndex, 0, [newEl]);
+      this.currentRow++;
+      this.currentCol = 0;
+      this.grid.splice(this.currentRow, 0, [[newEl]]);
       this.currentElement = newEl;
     } else {
       const newEl = new MathText();
       newEl.isCursorHere = true;
-      this.currentLineIndex++;
-      this.lines.splice(this.currentLineIndex, 0, [newEl]);
+      this.currentRow++;
+      this.currentCol = 0;
+      this.grid.splice(this.currentRow, 0, [[newEl]]);
       this.currentElement = newEl;
     }
   }
 
+  /** Backspace al inicio de celda: merge con celda anterior o fila anterior */
   private _mergeLineUp() {
-    if (this.currentLineIndex <= 0) return;
-    const prevLine = this.lines[this.currentLineIndex - 1];
-    const currLine = this.lines[this.currentLineIndex];
+    if (this.currentCol > 0) {
+      // Merge con celda anterior en la misma fila
+      const row = this.grid[this.currentRow];
+      const prevCell = row[this.currentCol - 1];
+      const currCell = row[this.currentCol];
 
-    // Mover cursor al final de la línea anterior
-    if (prevLine.length > 0) {
-      const lastEl = prevLine[prevLine.length - 1];
-      this._setCursorEnd(lastEl);
+      if (prevCell.length > 0) {
+        const lastEl = prevCell[prevCell.length - 1];
+        this._setCursorEnd(lastEl);
+      }
+      prevCell.push(...currCell);
+      row.splice(this.currentCol, 1);
+      this.currentCol--;
+    } else if (this.currentRow > 0) {
+      // Merge con la ultima celda de la fila anterior
+      const prevRow = this.grid[this.currentRow - 1];
+      const currCell = this.grid[this.currentRow][0];
+      const lastCol = prevRow.length - 1;
+      const prevCell = prevRow[lastCol];
+
+      if (prevCell.length > 0) {
+        const lastEl = prevCell[prevCell.length - 1];
+        this._setCursorEnd(lastEl);
+      }
+      prevCell.push(...currCell);
+
+      // Si la fila actual tiene mas celdas, moverlas a la fila anterior
+      const currRow = this.grid[this.currentRow];
+      for (let c = 1; c < currRow.length; c++) {
+        prevRow.push(currRow[c]);
+      }
+
+      this.grid.splice(this.currentRow, 1);
+      this.currentRow--;
+      this.currentCol = lastCol;
     }
-
-    // Merge elementos
-    prevLine.push(...currLine);
-    this.lines.splice(this.currentLineIndex, 1);
-    this.currentLineIndex--;
   }
 
   // ==========================================================================
@@ -591,28 +1081,36 @@ export class MathEditor {
 
   private _onMouseDown(e: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect();
-    const px = (e.clientX - rect.left) * (this.canvas.width / rect.width);
-    const py = (e.clientY - rect.top) * (this.canvas.height / rect.height) + this.scrollY;
+    // Coordinates in CSS pixels (ctx is already scaled by DPR)
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top + this.scrollY;
 
-    // Buscar línea y elemento
-    let foundLine = -1;
+    // Buscar fila, columna y elemento
+    let foundRow = -1;
+    let foundCol = -1;
     let foundElement: MathElement | null = null;
 
-    for (let li = 0; li < this.lines.length; li++) {
-      for (const el of this.lines[li]) {
-        const hit = el.hitTest(px, py);
-        if (hit) {
-          foundLine = li;
-          foundElement = hit;
-          break;
+    for (let ri = 0; ri < this.grid.length; ri++) {
+      const row = this.grid[ri];
+      for (let ci = 0; ci < row.length; ci++) {
+        for (const el of row[ci]) {
+          const hit = el.hitTest(px, py);
+          if (hit) {
+            foundRow = ri;
+            foundCol = ci;
+            foundElement = hit;
+            break;
+          }
         }
+        if (foundElement) break;
       }
       if (foundElement) break;
     }
 
-    if (foundElement && foundLine >= 0) {
+    if (foundElement && foundRow >= 0) {
       if (this.currentElement) this.currentElement.isCursorHere = false;
-      this.currentLineIndex = foundLine;
+      this.currentRow = foundRow;
+      this.currentCol = foundCol;
       this.currentElement = foundElement;
       foundElement.isCursorHere = true;
 
@@ -669,6 +1167,11 @@ export class MathEditor {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
+    // Auto-evaluate if needed
+    if (this.needsEval && this.autoRun) {
+      this.evaluateAll();
+    }
+
     // Clear
     ctx.fillStyle = S.EditorBackground;
     ctx.fillRect(0, 0, w, h);
@@ -686,27 +1189,41 @@ export class MathEditor {
     ctx.lineTo(leftMargin - 5, h);
     ctx.stroke();
 
+    // Toggle cursor visibility on current element for blink effect
+    if (this.currentElement && !this.cursorVisible) {
+      this.currentElement.isCursorHere = false;
+    }
+
     // Medir y renderizar líneas
     let y = topMargin - this.scrollY;
 
-    for (let li = 0; li < this.lines.length; li++) {
-      const line = this.lines[li];
+    for (let ri = 0; ri < this.grid.length; ri++) {
+      const row = this.grid[ri];
 
-      // Medir todos los elementos de la línea
+      // Medir todos los elementos de todas las celdas de la fila
       let maxHeight = this.lineHeight;
       let maxBaseline = this.fontSize * 0.85;
-      for (const el of line) {
-        el.measure(ctx, this.fontSize);
-        maxHeight = Math.max(maxHeight, el.height);
-        maxBaseline = Math.max(maxBaseline, el.baseline);
+      for (let ci = 0; ci < row.length; ci++) {
+        for (const el of row[ci]) {
+          el.measure(ctx, this.fontSize);
+          maxHeight = Math.max(maxHeight, el.height);
+          maxBaseline = Math.max(maxBaseline, el.baseline);
+        }
+        // Also measure result matrix height if present
+        const resultVal = this.cellResultValues[ri]?.[ci];
+        if (resultVal && typeof resultVal === "object" && typeof resultVal.toArray === "function") {
+          const mh = this._measureResultMatrix(resultVal, ctx, this.fontSize);
+          maxHeight = Math.max(maxHeight, mh.height);
+          maxBaseline = Math.max(maxBaseline, mh.baseline);
+        }
       }
 
       // Skip si está fuera de la vista
       if (y + maxHeight < 0) { y += maxHeight + 4; continue; }
       if (y > h) break;
 
-      // Highlight línea actual
-      if (li === this.currentLineIndex) {
+      // Highlight fila actual
+      if (ri === this.currentRow) {
         ctx.fillStyle = "rgba(0,102,221,0.04)";
         ctx.fillRect(leftMargin - 5, y, w - leftMargin + 5, maxHeight + 4);
       }
@@ -715,29 +1232,203 @@ export class MathEditor {
       ctx.font = `${this.fontSize * 0.8}px ${S.UIFont}`;
       ctx.fillStyle = "#999";
       ctx.textAlign = "right";
-      ctx.fillText(String(li + 1), leftMargin - 12, y + maxBaseline);
+      ctx.fillText(String(ri + 1), leftMargin - 12, y + maxBaseline);
       ctx.textAlign = "left";
 
-      // Renderizar elementos inline
+      // Renderizar celdas de la fila horizontalmente
       let x = leftMargin;
-      for (const el of line) {
-        // Alinear baselines
-        const elY = y + (maxBaseline - el.baseline);
-        el.render(ctx, x, elY, this.fontSize);
-        x += el.width + S.ElementSpacing;
+      for (let ci = 0; ci < row.length; ci++) {
+        const cell = row[ci];
+
+        // Separador entre celdas (excepto antes de la primera)
+        if (ci > 0) {
+          ctx.strokeStyle = "#ccc";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x - this.cellGap / 2, y);
+          ctx.lineTo(x - this.cellGap / 2, y + maxHeight);
+          ctx.stroke();
+        }
+
+        // Highlight celda activa
+        if (ri === this.currentRow && ci === this.currentCol) {
+          ctx.fillStyle = "rgba(0,102,221,0.06)";
+          const cellW = cell.reduce((sum, el) => sum + el.width + S.ElementSpacing, 0) || this.minCellWidth;
+          ctx.fillRect(x - 2, y, cellW + 4, maxHeight + 4);
+        }
+
+        // Renderizar elementos de la celda
+        for (const el of cell) {
+          const elY = y + (maxBaseline - el.baseline);
+          el.render(ctx, x, elY, this.fontSize);
+          x += el.width + S.ElementSpacing;
+        }
+
+        // Si la celda está vacía, dejar espacio mínimo
+        if (cell.length === 0) {
+          x += this.minCellWidth;
+        }
+
+        // Dibujar resultado de evaluación (= valor) en azul
+        const result = this.cellResults[ri]?.[ci];
+        const resultVal = this.cellResultValues[ri]?.[ci];
+        if (result) {
+          // Check if result is a matrix/vector (math.js object with toArray)
+          const isMatrixResult = resultVal && typeof resultVal === "object" && typeof resultVal.toArray === "function";
+          if (isMatrixResult) {
+            // Draw " = " prefix
+            const eqText = " = ";
+            ctx.font = `${this.fontSize}px ${S.EquationFont}`;
+            ctx.fillStyle = "#0066dd";
+            ctx.fillText(eqText, x, y + maxBaseline);
+            x += ctx.measureText(eqText).width;
+            // Draw matrix/vector with brackets
+            x += this._renderResultMatrix(ctx, resultVal, x, y, maxBaseline, this.fontSize);
+            x += S.ElementSpacing;
+          } else {
+            const resultText = ` = ${result}`;
+            ctx.font = `${this.fontSize}px ${S.EquationFont}`;
+            ctx.fillStyle = "#0066dd";
+            ctx.fillText(resultText, x, y + maxBaseline);
+            x += ctx.measureText(resultText).width + S.ElementSpacing;
+          }
+        }
+
+        x += this.cellGap;
       }
 
       y += maxHeight + 4;
     }
 
+    // Restore cursor visibility flag after render
+    if (this.currentElement && !this.cursorVisible) {
+      this.currentElement.isCursorHere = true;
+    }
+
     // Scrollbar
-    const totalHeight = this.lines.length * (this.lineHeight + 4);
+    const totalHeight = this.grid.length * (this.lineHeight + 4);
     if (totalHeight > h) {
       const barH = Math.max(20, (h / totalHeight) * h);
       const barY = (this.scrollY / totalHeight) * h;
       ctx.fillStyle = "rgba(0,0,0,0.15)";
       ctx.fillRect(w - 8, barY, 6, barH);
     }
+  }
+
+  // ==========================================================================
+  // Matrix/Vector result rendering helpers
+  // ==========================================================================
+
+  /** Measure a matrix/vector result for row height calculation */
+  private _measureResultMatrix(val: any, ctx: CanvasRenderingContext2D, fontSize: number): { width: number, height: number, baseline: number } {
+    const arr = val.toArray();
+    const inner = fontSize * 0.85;
+    const cellPad = 6;
+    const bracketW = 8;
+
+    if (Array.isArray(arr[0])) {
+      // 2D matrix
+      const rows = arr as any[][];
+      const rowHeight = inner * 1.2;
+      const totalH = rows.length * (rowHeight + cellPad) - cellPad + cellPad * 2;
+      ctx.font = `${inner}px ${S.EquationFont}`;
+      const colWidths: number[] = new Array(rows[0].length).fill(0);
+      for (const row of rows) {
+        for (let j = 0; j < row.length; j++) {
+          colWidths[j] = Math.max(colWidths[j], ctx.measureText(this._fmtNum(row[j])).width);
+        }
+      }
+      const totalW = colWidths.reduce((s, w) => s + w + cellPad, 0) - cellPad + bracketW * 2;
+      return { width: totalW, height: totalH, baseline: totalH / 2 };
+    } else {
+      // 1D vector - inline
+      ctx.font = `${inner}px ${S.EquationFont}`;
+      const texts = (arr as any[]).map((v: any) => this._fmtNum(v));
+      const str = "[" + texts.join(", ") + "]";
+      return { width: ctx.measureText(str).width, height: inner * 1.2, baseline: inner * 0.85 };
+    }
+  }
+
+  /** Render a matrix/vector result value with blue brackets and text */
+  private _renderResultMatrix(ctx: CanvasRenderingContext2D, val: any, x: number, y: number, baseline: number, fontSize: number): number {
+    const arr = val.toArray();
+    const inner = fontSize * 0.85;
+    const cellPad = 6;
+    const bracketW = 8;
+
+    ctx.fillStyle = "#0066dd";
+
+    if (Array.isArray(arr[0])) {
+      // 2D matrix
+      const rows = arr as any[][];
+      const numRows = rows.length;
+      const numCols = rows[0].length;
+
+      // Measure columns
+      ctx.font = `${inner}px ${S.EquationFont}`;
+      const colWidths = new Array(numCols).fill(0);
+      const rowHeight = inner * 1.2;
+      for (const row of rows) {
+        for (let j = 0; j < row.length; j++) {
+          colWidths[j] = Math.max(colWidths[j], ctx.measureText(this._fmtNum(row[j])).width);
+        }
+      }
+
+      const totalH = numRows * (rowHeight + cellPad) - cellPad + cellPad * 2;
+      const totalW = colWidths.reduce((s, w) => s + w + cellPad, 0) - cellPad + bracketW * 2;
+
+      const matY = y + baseline - totalH / 2;
+
+      // Left bracket
+      this._drawResultBracket(ctx, x, matY, totalH, true, bracketW);
+
+      // Cells
+      let cy = matY + cellPad;
+      for (let i = 0; i < numRows; i++) {
+        let cx = x + bracketW;
+        for (let j = 0; j < numCols; j++) {
+          const text = this._fmtNum(rows[i][j]);
+          ctx.font = `${inner}px ${S.EquationFont}`;
+          ctx.fillStyle = "#0066dd";
+          const tw = ctx.measureText(text).width;
+          ctx.fillText(text, cx + (colWidths[j] - tw) / 2, cy + inner * 0.85);
+          cx += colWidths[j] + cellPad;
+        }
+        cy += rowHeight + cellPad;
+      }
+
+      // Right bracket
+      this._drawResultBracket(ctx, x + totalW - bracketW, matY, totalH, false, bracketW);
+
+      return totalW;
+    } else {
+      // 1D vector - render inline as [a, b, c]
+      ctx.font = `${inner}px ${S.EquationFont}`;
+      ctx.fillStyle = "#0066dd";
+      const texts = (arr as any[]).map((v: any) => this._fmtNum(v));
+      const str = "[" + texts.join(", ") + "]";
+      ctx.fillText(str, x, y + baseline);
+      return ctx.measureText(str).width;
+    }
+  }
+
+  /** Draw a bracket (left or right) for matrix result rendering */
+  private _drawResultBracket(ctx: CanvasRenderingContext2D, x: number, y: number, h: number, isLeft: boolean, bw: number) {
+    ctx.strokeStyle = "#0066dd";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (isLeft) {
+      ctx.moveTo(x + bw - 2, y);
+      ctx.lineTo(x + 2, y);
+      ctx.lineTo(x + 2, y + h);
+      ctx.lineTo(x + bw - 2, y + h);
+    } else {
+      ctx.moveTo(x + 2, y);
+      ctx.lineTo(x + bw - 2, y);
+      ctx.lineTo(x + bw - 2, y + h);
+      ctx.lineTo(x + 2, y + h);
+    }
+    ctx.stroke();
   }
 
   private _resize() {
@@ -778,11 +1469,14 @@ export class MathEditor {
   // ==========================================================================
 
   private _triggerAutoRun() {
-    if (!this.autoRun || !this.onContentChanged) return;
+    this.needsEval = true;
+    if (!this.autoRun) return;
     if (this.autoRunTimer) clearTimeout(this.autoRunTimer);
     this.autoRunTimer = window.setTimeout(() => {
+      this.evaluateAll();
+      this.render();
       this.onContentChanged?.(this.toHekatan());
-    }, 500);
+    }, 300);
   }
 
   /** Toggle autorun */

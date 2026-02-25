@@ -4,6 +4,7 @@
 import { parse } from "hekatan-math/parser.js";
 import { casManager } from "hekatan-math/cas/index.js";
 import type { CASEngineName } from "hekatan-math/cas/index.js";
+import { GRID_FRAME_CODE } from "./examples/gridframe.js";
 
 // ─── Examples ────────────────────────────────────────────
 const CALCULO_CODE = `'# Calculo Basico
@@ -234,6 +235,7 @@ const EXAMPLES: Record<string, { name: string; code: string }> = {
   three:        { name: "@{three} 3D",                 code: THREE_CODE },
   svg:          { name: "@{svg} Dibujo",               code: SVG_CODE },
   cas:          { name: "CAS Simbolico (info)",        code: CAS_CODE },
+  grid_frame:   { name: "Grid Frame (Paz 5.1)",       code: GRID_FRAME_CODE },
 };
 
 // ─── DOM Setup ───────────────────────────────────────────

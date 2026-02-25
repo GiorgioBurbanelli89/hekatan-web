@@ -136,9 +136,31 @@ export function tokenize(text: string): HighlightToken[] {
   return tokens;
 }
 
+// ─── Greek letter display map ─────────────────────────────────
+const GREEK_MAP: Record<string, string> = {
+  alpha: "α", beta: "β", gamma: "γ", delta: "δ", epsilon: "ε",
+  zeta: "ζ", eta: "η", theta: "θ", iota: "ι", kappa: "κ",
+  lambda: "λ", mu: "μ", nu: "ν", xi: "ξ", omicron: "ο",
+  rho: "ρ", sigma: "σ", tau: "τ", upsilon: "υ",
+  phi: "φ", chi: "χ", psi: "ψ", omega: "ω",
+  Alpha: "Α", Beta: "Β", Gamma: "Γ", Delta: "Δ", Epsilon: "Ε",
+  Zeta: "Ζ", Eta: "Η", Theta: "Θ", Iota: "Ι", Kappa: "Κ",
+  Lambda: "Λ", Mu: "Μ", Nu: "Ν", Xi: "Ξ", Omicron: "Ο",
+  Rho: "Ρ", Sigma: "Σ", Tau: "Τ", Upsilon: "Υ",
+  Phi: "Φ", Chi: "Χ", Psi: "Ψ", Omega: "Ω",
+};
+
+/** Replace Greek letter names with Unicode symbols for display */
+function replaceGreekNames(text: string): string {
+  // Match whole words only (Greek names that are standalone identifiers)
+  return text.replace(/\b([A-Za-z]+)\b/g, (m) => GREEK_MAP[m] ?? m);
+}
+
 /** Transforma operadores para visualizacion mejorada (* → · , espacios alrededor de =) */
 export function transformOperatorsForDisplay(text: string): string {
   if (!text) return text;
+  // First replace Greek names → Unicode symbols
+  text = replaceGreekNames(text);
   let result = "";
   for (let i = 0; i < text.length; i++) {
     const c = text[i];

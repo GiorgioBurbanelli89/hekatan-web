@@ -17,12 +17,13 @@ export type ASTNode =
   | { type: "vector"; elements: ASTNode[] }
   | { type: "matrix"; rows: ASTNode[][] }
   | { type: "cellarray"; elements: ASTNode[] }
-  | { type: "conditional"; cond: ASTNode; ifTrue: ASTNode; ifFalse: ASTNode };
+  | { type: "conditional"; cond: ASTNode; ifTrue: ASTNode; ifFalse: ASTNode }
+  | { type: "range"; start: ASTNode; end: ASTNode };
 
 // ─── Token types ──────────────────────────────────────────
 interface Token {
   type: "number" | "ident" | "op" | "lparen" | "rparen" | "lbracket" | "rbracket"
-    | "lbrace" | "rbrace" | "comma" | "semicolon" | "assign" | "pipe" | "eof";
+    | "lbrace" | "rbrace" | "comma" | "semicolon" | "assign" | "pipe" | "colon" | "eof";
   value: string;
 }
 
@@ -86,6 +87,7 @@ function tokenize(expr: string): Token[] {
       case ";": tokens.push({ type: "semicolon", value: ch }); break;
       case "=": tokens.push({ type: "assign", value: ch }); break;
       case "|": tokens.push({ type: "pipe", value: ch }); break;
+      case ":": tokens.push({ type: "colon", value: ch }); break;
       case "+": case "-": case "*": case "/": case "^": case "%":
       case "<": case ">": case "!":
         tokens.push({ type: "op", value: ch }); break;
@@ -225,16 +227,27 @@ class Parser {
     return this.parsePostfix();
   }
 
+  /** Parse a single index slot — may be `expr`, `expr:expr`, or just `:` */
+  private parseIndexSlot(): ASTNode {
+    const start = this.parseExpr();
+    if (this.peek().type === "colon") {
+      this.advance();
+      const end = this.parseExpr();
+      return { type: "range", start, end };
+    }
+    return start;
+  }
+
   private parsePostfix(): ASTNode {
     let node = this.parsePrimary();
     // Function calls and indexing
     while (true) {
       if (this.peek().type === "lbracket") {
         this.advance();
-        const indices: ASTNode[] = [this.parseExpr()];
+        const indices: ASTNode[] = [this.parseIndexSlot()];
         while (this.peek().type === "semicolon" || this.peek().type === "comma") {
           this.advance();
-          indices.push(this.parseExpr());
+          indices.push(this.parseIndexSlot());
         }
         this.expect("rbracket");
         node = { type: "index", target: node, indices };
@@ -260,6 +273,51 @@ class Parser {
       const expr = this.parseExpr();
       this.expect("rparen");
       return expr;
+    }
+
+    // Bracket vector/matrix: [1, 2, 3] or [[1,2],[3,4]]
+    if (t.type === "lbracket") {
+      this.advance();
+      // Empty: []
+      if (this.peek().type === "rbracket") {
+        this.advance();
+        return { type: "vector", elements: [] };
+      }
+      // Check if first element starts with [ → matrix [[...],[...]]
+      if (this.peek().type === "lbracket") {
+        const rows: ASTNode[][] = [];
+        while (this.peek().type === "lbracket") {
+          this.advance(); // consume inner [
+          const row: ASTNode[] = [];
+          if (this.peek().type !== "rbracket") {
+            row.push(this.parseExpr());
+            while (this.peek().type === "comma") {
+              this.advance();
+              row.push(this.parseExpr());
+            }
+          }
+          this.expect("rbracket"); // consume inner ]
+          rows.push(row);
+          if (this.peek().type === "comma") {
+            this.advance(); // comma between rows
+          }
+        }
+        this.expect("rbracket"); // consume outer ]
+        return { type: "matrix", rows };
+      }
+      // Vector: [a, b, c] or [a; b; c]
+      const elements: ASTNode[] = [];
+      elements.push(this.parseExpr());
+      let useSemicolon = false;
+      while (this.peek().type === "comma" || this.peek().type === "semicolon") {
+        if (this.peek().type === "semicolon") useSemicolon = true;
+        this.advance();
+        elements.push(this.parseExpr());
+      }
+      this.expect("rbracket");
+      // If semicolons were used: [1; 2 | 3; 4] → matrix rows (Calcpad style)
+      // For now treat as vector
+      return { type: "vector", elements };
     }
 
     // Cell array: {a; b; c}
@@ -414,6 +472,33 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): number | numbe
     case "binary": {
       const l = evaluate(node.left, env);
       const r = evaluate(node.right, env);
+      const l2 = is2D(l), r2 = is2D(r);
+      const l1 = Array.isArray(l) && !l2, r1 = Array.isArray(r) && !r2;
+      const lScalar = typeof l === "number", rScalar = typeof r === "number";
+
+      // Matrix/vector arithmetic
+      if (node.op === "*") {
+        if (l2 && r2) return matMul(toMat(l), toMat(r));
+        if (l2 && r1) {
+          // Matrix * 1D vector → treat vector as Nx1 matrix, return 1D
+          const mv = (r as number[]).map(v => [v]);
+          const res = matMul(toMat(l), mv);
+          return res.map(row => row[0]);
+        }
+        if (l2 && rScalar) return matScale(toMat(l), r as number);
+        if (lScalar && r2) return matScale(toMat(r), l as number);
+        if (lScalar && r1) return (r as number[]).map(v => (l as number) * v);
+        if (l1 && rScalar) return (l as number[]).map(v => v * (r as number));
+      }
+      if (node.op === "+" || node.op === "-") {
+        const sign = node.op === "+" ? 1 : -1;
+        if (l2 && r2) return matAdd(toMat(l), toMat(r), sign);
+        if (l1 && r1) return (l as number[]).map((v, i) => v + sign * ((r as number[])[i] ?? 0));
+        if (l2 && rScalar) return toMat(l).map(row => row.map(v => v + sign * (r as number)));
+        if (lScalar && r2) return toMat(r).map(row => row.map(v => (l as number) + sign * v));
+      }
+
+      // Scalar fallback
       const lv = typeof l === "number" ? l : NaN;
       const rv = typeof r === "number" ? r : NaN;
       switch (node.op) {
@@ -523,7 +608,39 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): number | numbe
         if (Array.isArray(m) && Array.isArray(m[0])) {
           return matTranspose(m as number[][]);
         }
+        // transpose a 1D vector → row vector (1×N matrix)
+        if (Array.isArray(m)) return [(m as number[]).slice()];
         return m;
+      }
+      if (node.name === "col") {
+        // col(a,b,c) → column vector as Nx1 matrix [[a],[b],[c]]
+        return node.args.map(a => {
+          const v = evaluate(a, env);
+          return [typeof v === "number" ? v : NaN];
+        });
+      }
+      if (node.name === "row") {
+        return [node.args.map(a => {
+          const v = evaluate(a, env);
+          return typeof v === "number" ? v : NaN;
+        })];
+      }
+      if (node.name === "inv" || node.name === "inverse") {
+        const m = evaluate(node.args[0], env);
+        if (is2D(m)) return matInverse(toMat(m));
+        return NaN;
+      }
+      if (node.name === "lusolve" || node.name === "solve") {
+        const A = evaluate(node.args[0], env);
+        const b = evaluate(node.args[1], env);
+        if (is2D(A) && Array.isArray(b)) {
+          // b can be Nx1 matrix or 1D vector
+          const bVec = is2D(b) ? (b as number[][]).map(r => r[0]) : b as number[];
+          const x = gaussianSolve(toMat(A), bVec);
+          // Return as column vector (Nx1 matrix)
+          return x.map(v => [v]);
+        }
+        return NaN;
       }
 
       throw new Error(`Unknown function: ${node.name}`);
@@ -531,17 +648,62 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): number | numbe
 
     case "index": {
       const target = evaluate(node.target, env);
-      const idx = evaluate(node.indices[0], env) as number;
-      if (Array.isArray(target)) {
-        if (node.indices.length === 2) {
-          // Matrix indexing M[i;j]
-          const j = evaluate(node.indices[1], env) as number;
-          const row = (target as number[][])[Math.round(idx)];
-          return row ? row[Math.round(j)] : NaN;
+      if (!Array.isArray(target)) return NaN;
+
+      // Helper: resolve an index node to number or [start,end] range (1-based → 0-based)
+      const resolveIdx = (n: ASTNode): number | [number, number] => {
+        if (n.type === "range") {
+          const s = evaluate(n.start, env) as number;
+          const e = evaluate(n.end, env) as number;
+          return [Math.round(s) - 1, Math.round(e) - 1]; // 1-based → 0-based
         }
-        return (target as number[])[Math.round(idx)] ?? NaN;
+        return Math.round(evaluate(n, env) as number) - 1; // 1-based → 0-based
+      };
+
+      if (is2D(target)) {
+        const mat = target as number[][];
+        if (node.indices.length === 2) {
+          const rowIdx = resolveIdx(node.indices[0]);
+          const colIdx = resolveIdx(node.indices[1]);
+          // Range × Range → sub-matrix
+          if (Array.isArray(rowIdx) && Array.isArray(colIdx)) {
+            const [r0, r1] = rowIdx, [c0, c1] = colIdx;
+            const sub: number[][] = [];
+            for (let i = r0; i <= r1; i++) {
+              const row: number[] = [];
+              for (let j = c0; j <= c1; j++) row.push(mat[i]?.[j] ?? NaN);
+              sub.push(row);
+            }
+            return sub;
+          }
+          // Range × scalar → sub-rows, single col
+          if (Array.isArray(rowIdx) && typeof colIdx === "number") {
+            const [r0, r1] = rowIdx;
+            return mat.slice(r0, r1 + 1).map(row => row[colIdx] ?? NaN);
+          }
+          // Scalar × Range → single row, sub-cols
+          if (typeof rowIdx === "number" && Array.isArray(colIdx)) {
+            const [c0, c1] = colIdx;
+            return mat[rowIdx]?.slice(c0, c1 + 1) ?? [];
+          }
+          // Scalar × Scalar → single element
+          return mat[rowIdx as number]?.[colIdx as number] ?? NaN;
+        }
+        // Single index on matrix: row extraction
+        const idx = resolveIdx(node.indices[0]);
+        if (Array.isArray(idx)) {
+          return mat.slice(idx[0], idx[1] + 1);
+        }
+        return mat[idx as number] ?? [];
       }
-      return NaN;
+
+      // 1D vector indexing
+      const vec = target as number[];
+      const idx = resolveIdx(node.indices[0]);
+      if (Array.isArray(idx)) {
+        return vec.slice(idx[0], idx[1] + 1);
+      }
+      return vec[idx as number] ?? NaN;
     }
 
     case "cellarray":
@@ -552,6 +714,10 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): number | numbe
 
     case "matrix":
       return node.rows.map(row => row.map(e => evaluate(e, env) as number));
+
+    case "range":
+      // ranges are handled inside "index" — if evaluated standalone, return start
+      return evaluate(node.start, env);
 
     case "conditional": {
       const cond = evaluate(node.cond, env);
@@ -586,6 +752,82 @@ function matTranspose(m: number[][]): number[][] {
     }
   }
   return result;
+}
+
+function is2D(v: unknown): v is number[][] {
+  return Array.isArray(v) && v.length > 0 && Array.isArray(v[0]);
+}
+
+function toMat(v: unknown): number[][] {
+  if (is2D(v)) return v as number[][];
+  if (Array.isArray(v)) return (v as number[]).map(x => [x]); // column vector
+  return [[v as number]];
+}
+
+function matMul(a: number[][], b: number[][]): number[][] {
+  const m = a.length, n = b[0].length, p = b.length;
+  const result: number[][] = Array.from({ length: m }, () => new Array(n).fill(0));
+  for (let i = 0; i < m; i++)
+    for (let j = 0; j < n; j++)
+      for (let k = 0; k < p; k++)
+        result[i][j] += a[i][k] * b[k][j];
+  return result;
+}
+
+function matMulVec(a: number[][], v: number[]): number[] {
+  return a.map(row => row.reduce((s, val, j) => s + val * (v[j] ?? 0), 0));
+}
+
+function matAdd(a: number[][], b: number[][], sign = 1): number[][] {
+  return a.map((row, i) => row.map((v, j) => v + sign * (b[i]?.[j] ?? 0)));
+}
+
+function matScale(m: number[][], s: number): number[][] {
+  return m.map(row => row.map(v => v * s));
+}
+
+function matInverse(m: number[][]): number[][] {
+  const n = m.length;
+  // Augmented matrix [A | I]
+  const aug = m.map((row, i) => [...row, ...Array.from({ length: n }, (_, j) => i === j ? 1 : 0)]);
+  for (let col = 0; col < n; col++) {
+    // Partial pivot
+    let maxRow = col;
+    for (let row = col + 1; row < n; row++) {
+      if (Math.abs(aug[row][col]) > Math.abs(aug[maxRow][col])) maxRow = row;
+    }
+    [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+    const pivot = aug[col][col];
+    if (Math.abs(pivot) < 1e-14) throw new Error("Singular matrix");
+    for (let j = 0; j < 2 * n; j++) aug[col][j] /= pivot;
+    for (let row = 0; row < n; row++) {
+      if (row === col) continue;
+      const factor = aug[row][col];
+      for (let j = 0; j < 2 * n; j++) aug[row][j] -= factor * aug[col][j];
+    }
+  }
+  return aug.map(row => row.slice(n));
+}
+
+function gaussianSolve(A: number[][], b: number[]): number[] {
+  const n = A.length;
+  const aug = A.map((row, i) => [...row, b[i]]);
+  for (let col = 0; col < n; col++) {
+    let maxRow = col;
+    for (let row = col + 1; row < n; row++) {
+      if (Math.abs(aug[row][col]) > Math.abs(aug[maxRow][col])) maxRow = row;
+    }
+    [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+    const pivot = aug[col][col];
+    if (Math.abs(pivot) < 1e-14) throw new Error("Singular system");
+    for (let j = col; j <= n; j++) aug[col][j] /= pivot;
+    for (let row = 0; row < n; row++) {
+      if (row === col) continue;
+      const factor = aug[row][col];
+      for (let j = col; j <= n; j++) aug[row][j] -= factor * aug[col][j];
+    }
+  }
+  return aug.map(row => row[n]);
 }
 
 // ─── Convenience ──────────────────────────────────────────

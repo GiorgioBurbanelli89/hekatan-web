@@ -1,0 +1,576 @@
+/* ─── Hekatan Math Editor ─── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background: #fff; color: #1a1a2e; overflow: hidden; font-size: 11pt; }
+
+/* ─── Top Bar ─── */
+.top-bar {
+  height: 38px; background: #f0f0f0; border-bottom: 1px solid #ccc;
+  display: flex; align-items: center; padding: 0 8px; gap: 4px;
+}
+.tab-btn {
+  padding: 5px 14px; border: 1px solid #bbb; border-radius: 4px;
+  background: #e8e8e8; cursor: pointer; font-size: 0.82rem; font-weight: 500;
+}
+.tab-btn:hover { background: #ddd; }
+.tab-btn.active { background: #2196f3; color: white; border-color: #1976d2; }
+.run-btn { background: #4caf50; color: white; border-color: #388e3c; font-size: 0.9rem; }
+.run-btn:hover { background: #43a047; }
+.example-select {
+  padding: 4px 8px; border: 1px solid #bbb; border-radius: 4px;
+  font-size: 0.82rem; background: white; min-width: 200px;
+}
+.spacer { flex: 1; }
+.auto-toggle {
+  font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: #555;
+}
+.auto-toggle input { cursor: pointer; }
+.app-title { font-size: 0.78rem; color: #888; margin-left: 12px; }
+
+.theme-select {
+  padding: 4px 8px; border: 1px solid #bbb; border-radius: 4px;
+  font-size: 0.82rem; background: white;
+}
+
+/* ─── Split Layout (Code mode) ─── */
+.split-layout {
+  display: flex; height: calc(100vh - 38px);
+}
+
+/* ─── Canvas Layout (MathCanvas WYSIWYG mode) ─── */
+.canvas-layout {
+  display: flex; height: calc(100vh - 38px);
+}
+.canvas-container {
+  flex: 1; position: relative; overflow: hidden;
+}
+.canvas-container canvas {
+  display: block; width: 100%; height: 100%;
+  cursor: text;
+}
+
+/* ─── Editor Panel (left) ─── */
+.editor-panel {
+  flex: 1; display: flex; border-right: 1px solid #ddd; overflow: hidden;
+}
+.editor-panel textarea {
+  width: 100%; height: 100%; border: none; padding: 12px 14px;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px; line-height: 1.6; resize: none; outline: none;
+  background: #fafafa; color: #222; tab-size: 2;
+}
+
+/* ─── Output Panel (right) ─── */
+.output-panel {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; background: white;
+}
+.output-header {
+  padding: 6px 14px; background: #f8f8f8; border-bottom: 1px solid #e0e0e0;
+  font-size: 0.85rem; font-weight: 600; color: #555;
+}
+.output-content {
+  flex: 1; overflow-y: auto;
+  padding: 20px 24px 20px 20px;
+  max-width: 190mm;
+  font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif;
+  font-size: 10.5pt; line-height: 120%;
+}
+
+/* ─── Headings (from template.html) ─── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Arial Nova', Helvetica, sans-serif;
+  margin: 0.5em 0;
+  padding: 0;
+  line-height: 150%;
+}
+h1 { font-size: 2.1em; }
+h2 { font-size: 1.7em; }
+h3 { font-size: 1.4em; }
+h4 { font-size: 1.2em; }
+h5 { font-size: 1.1em; }
+h6 { font-size: 1.0em; }
+
+p, li {
+  margin: 0.05em 0;
+  padding: 0;
+  line-height: 120%;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EQUATION STYLES - From template.html (identical to WPF)
+   ═══════════════════════════════════════════════════════════ */
+
+.eq, .matrix {
+  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+}
+
+.eq var {
+  color: #06d;
+  font-size: 105%;
+}
+
+.eq i {
+  color: #086;
+  font-style: normal;
+  font-size: 90%;
+}
+
+i.unit {
+  color: #043 !important;
+  font-size: 90% !important;
+  vertical-align: -1pt;
+}
+
+sup.unit {
+  font-family: Calibri, Candara, Corbel, sans-serif;
+  font-size: 70% !important;
+}
+
+.eq b {
+  font-weight: 600;
+}
+
+.eq sub {
+  font-family: Calibri, Candara, Corbel, sans-serif;
+  font-size: 80%;
+  vertical-align: -18%;
+  margin-left: 1pt;
+}
+
+.eq sup {
+  display: inline-block;
+  margin-left: 1pt;
+  margin-top: -3pt;
+  font-size: 75%;
+}
+
+.eq small {
+  font-family: Calibri, Candara, Corbel, sans-serif;
+  font-size: 70%;
+}
+
+.eq small var {
+  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-size: 8.5pt;
+}
+
+.eq small i {
+  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-size: 6pt;
+}
+
+/* ─── Matrix (from template.html) ─── */
+.matrix {
+  display: inline-table;
+}
+
+.matrix .tr {
+  display: table-row;
+}
+
+.matrix .td {
+  white-space: nowrap;
+  padding: 0 2pt 0 2pt;
+  min-width: 10pt;
+  display: table-cell;
+  font-size: 10pt;
+  text-align: center;
+}
+
+.matrix .td:first-child,
+.matrix .td:last-child {
+  width: 0.75pt;
+  min-width: 0.75pt;
+  max-width: 0.75pt;
+  padding: 0 1pt 0 1pt;
+}
+
+.matrix .td:first-child {
+  border-left: solid 1pt black;
+}
+
+.matrix .td:last-child {
+  border-right: solid 1pt black;
+}
+
+.matrix .tr:first-child .td:first-child,
+.matrix .tr:first-child .td:last-child {
+  border-top: solid 1pt black;
+}
+
+.matrix .tr:last-child .td:first-child,
+.matrix .tr:last-child .td:last-child {
+  border-bottom: solid 1pt black;
+}
+
+/* ─── Fractions / Division (from template.html) ─── */
+.dvc, .dvr, .dvs {
+  display: inline-block;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.dvc {
+  padding-left: 2pt;
+  padding-right: 2pt;
+  text-align: center;
+  line-height: 110%;
+}
+
+.dvr {
+  text-align: center;
+  line-height: 110%;
+  margin-bottom: 4pt;
+}
+
+.dvs {
+  text-align: left;
+  line-height: 110%;
+}
+
+.dvl {
+  display: block;
+  border-bottom: solid 1pt black;
+  margin-top: 1pt;
+  margin-bottom: 1pt;
+}
+
+/* ─── N-ary Operators (from template.html) ─── */
+.nary {
+  color: #C080F0;
+  font-size: 240%;
+  font-family: Georgia Pro Light, serif;
+  font-weight: 200;
+  line-height: 80%;
+  display: block;
+  margin: -1pt 1pt 3pt 1pt;
+}
+
+.nary em {
+  display: block;
+  transform: scaleX(0.7) rotate(7deg);
+}
+
+/* ─── Radical Signs (from template.html) ─── */
+.r0, .r1, .r2, .r3,
+.o0, .o1, .o2, .o3,
+.b1, .b2, .b3,
+.c1, .c2, .c3, .c4,
+.c5, .c6, .c7, .c8 {
+  display: inline-block;
+}
+
+.r0, .r1, .r2, .r3 {
+  margin-top: -1.5pt;
+  margin-right: 1.5pt;
+  vertical-align: top;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: right top;
+}
+
+.o0, .o1, .o2, .o3 {
+  border-top: solid 0.75pt;
+  line-height: 130%;
+  vertical-align: middle;
+  margin-top: 0.75pt;
+  padding-top: 1.25pt;
+  padding-left: 1pt;
+  padding-right: 1pt;
+}
+
+/* Wrapper para radical: evita que el margin-left negativo oculte contenido previo */
+.radical-wrap {
+  display: inline-block;
+  vertical-align: middle;
+  padding-left: 10pt;
+  white-space: nowrap;
+}
+
+.r0 {
+  background-image: url("data: image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDEwIDIwIiBoZWlnaHQ9IjE1cHQiIHdpZHRoPSIxMHB4Ij4NCiAgPHBvbHlsaW5lIHBvaW50cz0iMCwxMyAyLDEyIDUsMTkgOSwwIiBzdHlsZT0ic3Ryb2tlOmJsYWNrOyBzdHJva2Utd2lkdGg6MC42cHQ7IHN0cm9rZS1saW5lam9pbjpyb3VuZDsgc3Ryb2tlLWxpbmVjYXA6cm91bmQ7IGZpbGw6bm9uZSIgLz4NCiAgPGxpbmUgeDE9IjIuMiIgeTE9IjEyLjMiIHgyPSI0LjYiIHkyPSIxOC43IiBzdHlsZT0ic3Ryb2tlOmJsYWNrOyBzdHJva2Utd2lkdGg6MC44cHQ7IHN0cm9rZS1saW5lY2FwOnJvdW5kOyIgLz4NCjwvc3ZnPg==");
+  width: 8pt;
+  height: 16pt;
+  margin-left: -8pt;
+}
+
+.r1 {
+  background-image: url("data: image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDE1IDQwIiBoZWlnaHQ9IjMwcHQiIHdpZHRoPSIxNXB4Ij4NCiAgPHBvbHlsaW5lIHBvaW50cz0iMSwyNiAzLDI0IDgsMzggMTQsMCIgc3R5bGU9InN0cm9rZTpibGFjazsgc3Ryb2tlLXdpZHRoOjAuNnB0OyBzdHJva2UtbGluZWpvaW46cm91bmQ7IHN0cm9rZS1saW5lY2FwOnJvdW5kOyBmaWxsOm5vbmUiIC8+DQogIDxsaW5lIHgxPSIzLjIiIHkxPSIyNC40IiB4Mj0iNy42IiB5Mj0iMzcuNiIgc3R5bGU9InN0cm9rZTpibGFjazsgc3Ryb2tlLXdpZHRoOjFwdDsgc3Ryb2tlLWxpbmVjYXA6cm91bmQ7IiAvPg0KPC9zdmc+");
+  width: 12pt;
+  height: 32pt;
+  margin-left: -12pt;
+}
+
+.r2 {
+  background-image: url("data: image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDIwIDYwIiBoZWlnaHQ9IjQ1cHQiIHdpZHRoPSIyMHB4Ij4NCiAgPHBvbHlsaW5lIHBvaW50cz0iMiwzNyA1LDM0IDExLDU1IDE5LDAiIHN0eWxlPSJzdHJva2U6YmxhY2s7IHN0cm9rZS13aWR0aDowLjZwdDsgc3Ryb2tlLWxpbmVqb2luOnJvdW5kOyBzdHJva2UtbGluZWNhcDpyb3VuZDsgZmlsbDpub25lIiAvPg0KICA8bGluZSB4MT0iNS4xIiB5MT0iMzQuNiIgeDI9IjEwLjYiIHkyPSI1NC40IiBzdHlsZT0ic3Ryb2tlOmJsYWNrOyBzdHJva2Utd2lkdGg6MS4ycHQ7IHN0cm9rZS1saW5lY2FwOnJvdW5kOyIgLz4NCjwvc3ZnPg==");
+  width: 16pt;
+  height: 48pt;
+  margin-left: -16pt;
+}
+
+.r3 {
+  background-image: url("data: image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDI1IDgwIiBoZWlnaHQ9IjYwcHQiIHdpZHRoPSIyNXB4Ij4NCiAgPHBvbHlsaW5lIHBvaW50cz0iMyw1MCA3LDQ2IDE1LDc0IDI0LDAiIHN0eWxlPSJzdHJva2U6YmxhY2s7IHN0cm9rZS13aWR0aDowLjZwdDsgc3Ryb2tlLWxpbmVqb2luOnJvdW5kOyBzdHJva2UtbGluZWNhcDpyb3VuZDsgZmlsbDpub25lIiAvPg0KICA8bGluZSB4MT0iNy4xIiB5MT0iNDYuOCIgeDI9IjE0LjUiIHkyPSI3My4yIiBzdHlsZT0ic3Ryb2tlOmJsYWNrOyBzdHJva2Utd2lkdGg6MS4ycHQ7IHN0cm9rZS1saW5lY2FwOnJvdW5kOyIgLz4NCjwvc3ZnPg==");
+  width: 19pt;
+  height: 62pt;
+  margin-left: -19pt;
+}
+
+/* ─── Bracket sizes (from template.html) ─── */
+.b1, .b2, .b3, .c1, .c2, .c3, .c4, .c5, .c6, .c7, .c8 {
+  vertical-align: middle;
+  font-weight: 100;
+  font-stretch: ultra-condensed;
+}
+
+.b0, .b1, .c1 {
+  font-family: 'Jost* Thin', sans-serif;
+}
+
+.b2, .b3, .c2, .c3, .c4, .c5, .c6, .c7, .c8 {
+  font-family: 'Jost* Hairline', sans-serif;
+}
+
+.b0 { font-size: 120%; font-weight: 600; padding: 0 1pt; }
+.b1 { font-size: 240%; margin-top: -3pt; margin-left: -1pt; margin-right: -1pt; }
+.b2 { font-size: 370%; margin-top: -5pt; margin-left: -3pt; margin-right: -3pt; }
+.b3 { font-size: 520%; margin-top: -8pt; margin-left: -5pt; margin-right: -5pt; }
+
+.c1 { font-size: 240%; margin-top: -4pt; }
+.c2 { font-size: 360%; margin-top: -6pt; margin-left: -2.5pt; margin-right: -0.5pt; }
+.c3 { font-size: 480%; margin-top: -8pt; margin-left: -3pt; margin-right: -1pt; }
+.c4 { font-size: 600%; margin-top: -10pt; margin-left: -4pt; margin-right: -2pt; transform: scaleX(0.9); }
+.c5 { font-size: 710%; margin-top: -11.5pt; margin-left: -6pt; margin-right: -4pt; transform: scaleX(0.8); }
+.c6 { font-size: 820%; margin-top: -13pt; margin-left: -7pt; margin-right: -5pt; transform: scaleX(0.7); }
+.c7 { font-size: 930%; margin-top: -14.5pt; margin-left: -8pt; margin-right: -6pt; transform: scaleX(0.6); }
+.c8 { font-size: 1040%; margin-top: -16pt; margin-left: -9pt; margin-right: -7pt; transform: scaleX(0.5); }
+
+/* ─── Conditional blocks (from template.html) ─── */
+.block {
+  display: inline-block;
+  vertical-align: middle;
+  padding-left: 4pt;
+  margin-left: -1pt;
+  border-left: solid 1pt #80b0e8;
+  background: linear-gradient(to right, rgba(0, 192, 255, 0.06), rgba(0, 192, 255, 0.03));
+}
+
+.cond { color: #E000D0; }
+
+/* ─── Design check (from template.html) ─── */
+.err { color: Crimson; background-color: #FEE; }
+.ok { color: Green; background-color: #F0FFF0; }
+.ref { float: right; margin-left: 18pt; color: Green; background-color: #F8FFF0; }
+
+/* ─── Value tooltip (from template.html) ─── */
+.value {
+  position: relative;
+  background-color: #f4fbff;
+  border-radius: 3pt;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EDITOR-SPECIFIC OUTPUT CLASSES
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Output line wrappers ─── */
+.out-line { margin: 0.05em 0; line-height: 120%; white-space: nowrap; }
+.out-empty { height: 0.3em; }
+.out-comment { color: #444; margin: 0.05em 0; line-height: 120%; }
+.out-error { color: Crimson; background-color: #FEE; font-size: 0.88em; margin: 2px 0; padding: 2px 4px; border-radius: 3px; }
+
+/* ─── Cells (inline row) ─── */
+.out-cells { display: flex; gap: 20px; flex-wrap: wrap; margin: 0.3em 0; }
+
+/* ─── Theme selector ─── */
+.theme-select {
+  padding: 4px 8px; border: 1px solid #bbb; border-radius: 4px;
+  font-size: 0.82rem; background: white; cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THEME: Hekatan (from pyhekatan display.py)
+   Fuentes tipo LaTeX: STIX Two Math, Cambria Math
+   Variables negras italicas, matrices con border grid
+   ═══════════════════════════════════════════════════════════ */
+
+/* --- Ecuaciones: fuente LaTeX --- */
+.theme-hekatan .eq,
+.theme-hekatan .matrix {
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
+  font-size: 12pt;
+  line-height: 1.4;
+  color: #000;
+}
+
+/* --- Variables: negro italic (estilo LaTeX puro) --- */
+.theme-hekatan .eq var {
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
+  color: #000;
+  font-size: 100%;
+  font-style: italic;
+}
+
+/* --- Funciones: negro upright --- */
+.theme-hekatan .eq i {
+  color: #000;
+  font-style: italic;
+  font-size: 100%;
+  font-weight: normal;
+}
+
+/* --- Funciones bold: upright normal --- */
+.theme-hekatan .eq b {
+  font-weight: normal;
+  font-style: normal;
+  color: #000;
+}
+
+/* --- Subindices: estilo LaTeX --- */
+.theme-hekatan .eq sub {
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
+  font-size: 70.7%;
+  vertical-align: -0.25em;
+  margin-left: 1pt;
+  line-height: 0;
+}
+
+/* --- Superindices: estilo LaTeX --- */
+.theme-hekatan .eq sup {
+  display: inline-block;
+  margin-left: 1pt;
+  font-size: 70.7%;
+  vertical-align: 0.584em;
+  line-height: 0;
+}
+
+/* --- Unidades --- */
+.theme-hekatan .unit {
+  font-size: 0.85em;
+  color: #666;
+  font-family: Calibri, Candara, Corbel, sans-serif;
+}
+
+/* --- Valores resaltados --- */
+.theme-hekatan .val {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+/* --- Matriz: grid con border-left/right (corchetes CSS) --- */
+.theme-hekatan .matrix {
+  display: inline-grid !important;
+  grid-template-columns: repeat(var(--mat-cols, 2), auto);
+  gap: 0;
+  margin: 4px 2px;
+  vertical-align: middle;
+  border-left: solid 1.5pt black;
+  border-right: solid 1.5pt black;
+  border-radius: 3px;
+  padding: 2pt 5pt;
+}
+
+.theme-hekatan .matrix .tr {
+  display: contents;
+}
+
+.theme-hekatan .matrix .td {
+  display: block;
+  white-space: nowrap;
+  padding: 1pt 5pt;
+  min-width: 10pt;
+  text-align: center;
+  font-size: 10pt;
+  border: none;
+  width: auto;
+  min-width: auto;
+  max-width: none;
+}
+
+/* Quitar brackets de celdas vacias (template.html usa .td:first/last-child) */
+.theme-hekatan .matrix .td:first-child,
+.theme-hekatan .matrix .td:last-child {
+  display: none;
+}
+
+/* --- Fracciones: misma estructura .dvc/.dvl, ajuste fino --- */
+.theme-hekatan .dvl {
+  padding: 1px 6px;
+}
+
+.theme-hekatan .dvl:last-child {
+  border-bottom: none;
+}
+
+/* --- Radical: ocultar SVG, usar Unicode √ --- */
+.theme-hekatan .radical-wrap {
+  display: inline-flex;
+  align-items: stretch;
+  vertical-align: middle;
+  padding-left: 0;
+  line-height: 1;
+}
+
+.theme-hekatan .r0 {
+  background-image: none;
+  width: auto;
+  height: auto;
+  margin-left: 0;
+  margin-top: 0;
+  margin-right: 0;
+  font-family: 'Bell MT', 'STIX Two Math', 'Cambria Math', 'Times New Roman', serif;
+  font-size: 120%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.theme-hekatan .r0::before {
+  content: '\221A';
+}
+
+.theme-hekatan .o0 {
+  display: inline-block;
+  border-top: 0.8px solid #000;
+  padding: 2px 3px 0 2px;
+  margin-top: 1px;
+  line-height: 1.2;
+  vertical-align: baseline;
+}
+
+/* --- N-ary: negro, flexbox vertical --- */
+.theme-hekatan .nary {
+  color: #000;
+  font-size: 140%;
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
+  font-weight: normal;
+  font-style: normal;
+  line-height: 0;
+  display: block;
+  margin: 0;
+  padding: 0.9em 0;
+  transform: scaleY(1.4);
+}
+
+/* --- Headings: Segoe UI, gold underline on h1 --- */
+.theme-hekatan h1 {
+  font-family: 'Segoe UI', sans-serif;
+  border-bottom: 2px solid #e0c060;
+  padding-bottom: 4px;
+}
+
+.theme-hekatan h2 {
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* --- Design check: colores pyhekatan --- */
+.theme-hekatan .ok {
+  color: green;
+  background-color: #F0FFF0;
+  padding: 1px 4px;
+  font-size: 9pt;
+}
+
+.theme-hekatan .err {
+  color: red;
+  background-color: #FFF0F0;
+  padding: 1px 4px;
+  font-size: 9pt;
+}

@@ -48,6 +48,58 @@ export abstract class MathElement {
 }
 
 // ============================================================================
+// MathGroup — container for multiple elements rendered horizontally
+// ============================================================================
+export class MathGroup extends MathElement {
+  children: MathElement[];
+
+  constructor(children: MathElement[] = []) {
+    super();
+    this.children = children;
+    for (const c of children) c.parent = this;
+  }
+
+  measure(ctx: CanvasRenderingContext2D, fontSize: number) {
+    let w = 0;
+    let maxH = 0;
+    let maxBl = 0;
+    const gap = 1; // minimal spacing between children
+    for (const c of this.children) {
+      c.measure(ctx, fontSize);
+      w += c.width + gap;
+      maxH = Math.max(maxH, c.height);
+      maxBl = Math.max(maxBl, c.baseline);
+    }
+    this.width = Math.max(w - gap, 0);
+    this.height = maxH || textHeight(fontSize);
+    this.baseline = maxBl || textBaseline(fontSize);
+  }
+
+  render(ctx: CanvasRenderingContext2D, x: number, y: number, fontSize: number) {
+    this.x = x; this.y = y;
+    const gap = 1;
+    let cx = x;
+    for (const c of this.children) {
+      const cy = y + (this.baseline - c.baseline);
+      c.render(ctx, cx, cy, fontSize);
+      cx += c.width + gap;
+    }
+  }
+
+  toHekatan(): string {
+    return this.children.map(c => c.toHekatan()).join("");
+  }
+
+  hitTest(px: number, py: number): MathElement | null {
+    for (const c of this.children) {
+      const hit = c.hitTest(px, py);
+      if (hit) return hit;
+    }
+    return super.hitTest(px, py);
+  }
+}
+
+// ============================================================================
 // MathText
 // ============================================================================
 export class MathText extends MathElement {
@@ -719,11 +771,11 @@ export class MathMatrix extends MathElement {
   }
 
   toHekatan(): string {
-    const parts: string[] = [];
-    for (const row of this.cells) {
-      parts.push(row.map(c => c.toHekatan()).join("; "));
-    }
-    return "[" + parts.join("|") + "]";
+    // math.js syntax: [[1, 2], [3, 4]]
+    const rows = this.cells.map(row =>
+      "[" + row.map(c => c.toHekatan()).join(", ") + "]"
+    );
+    return "[" + rows.join(", ") + "]";
   }
 
   hitTest(px: number, py: number) {
@@ -819,8 +871,11 @@ export class MathVector extends MathElement {
   }
 
   toHekatan(): string {
-    const sep = this.isColumn ? "|" : "; ";
-    return "[" + this.elements.map(e => e.toHekatan()).join(sep) + "]";
+    // math.js syntax: [1, 2, 3] for row, [[1], [2], [3]] for column
+    if (this.isColumn) {
+      return "[" + this.elements.map(e => "[" + e.toHekatan() + "]").join(", ") + "]";
+    }
+    return "[" + this.elements.map(e => e.toHekatan()).join(", ") + "]";
   }
 
   hitTest(px: number, py: number) {
