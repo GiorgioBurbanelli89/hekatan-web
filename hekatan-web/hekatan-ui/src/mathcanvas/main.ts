@@ -11,6 +11,12 @@ import { CadEngine } from "hekatan-math/matheditor/CadEngine.js";
 import { execCommands } from "hekatan-math/matheditor/CadCli.js";
 import { hitTest } from "hekatan-math/matheditor/CadInput.js";
 import type { SnapPoint } from "hekatan-math/matheditor/CadSnap.js";
+import { parseDraw3D } from "./Draw3DCli.js";
+import { createScene, type Draw3DScene } from "./Draw3DScene.js";
+import { addShapesToScene } from "./Draw3DRender.js";
+import { renderOrthoView, type OrthoView } from "./Draw3DOrtho.js";
+import { loadIfcToScene, fitCameraToBBox, filterIfcByPreset, getDetailCounts, setupIfcPicking, IFC_FILTER_PRESETS, type IfcDetailCategory } from "./Draw3DIfc.js";
+import { Color as THREEColor } from "three";
 
 // ─── Ejemplos ───────────────────────────────────────────
 const EXAMPLES: Record<string, { name: string; code: string }> = {
@@ -155,82 +161,100 @@ fit
 @{end draw}
 > **Fig. 5.4** Grid frame - Ejemplo Ilustrativo 5.1
 
-@{draw 580 380}
-# Fig 5.5 - Grados de Libertad (DOF)
+@{draw 900 700}
 grid off
 bg #ffffff
 proj oblique 45 0.5
-# Elementos (lineas finas)
-color #aaa
-line3d 0 0 0 20 0 0
-line3d 0 0 0 0 20 0
-# Nodos
+fontsize 14
+color #000
+lw 1.5
+
+# Ejes coordenados
+color #888
+arrow3d 0 0 0  0 0 10
+label3d 0 0 11 Z left
+arrow3d 0 0 0  25 0 0
+label3d 26 0 0 X left
+arrow3d 0 0 0  0 25 0
+label3d 0 26 0 Y left
+
+# Barras con espesor
+color #000
+lw 2
+beam3d 0 0 0  20 0 0  1.2
+beam3d 0 0 0  0 20 0  1.2
+
+# Grados de libertad
+lw 1
+
+# Nodo 1 (origen) - rotaciones + desplazamiento
+arrow3d 3.5 0 -0.6  5.5 0 -0.6
+arrow3d 1.5 0 -0.6  3.5 0 -0.6
+label3d 6 0 -0.6 u1 left
+arrow3d 0 3.5 -0.6  0 5.5 -0.6
+arrow3d 0 1.5 -0.6  0 3.5 -0.6
+label3d 0 6 -0.6 u2 left
+dof3d 0 0 0.5  0 0 5  u3
+
+# Nodo 2 (20, 0, 0)
+arrow3d 23 0 -0.6  25 0 -0.6
+arrow3d 21 0 -0.6  23 0 -0.6
+label3d 25.5 0 -0.6 u4 left
+arrow3d 20 3.2 -0.6  20 5.2 -0.6
+arrow3d 20 1.2 -0.6  20 3.2 -0.6
+label3d 20 5.7 -0.6 u5 left
+dof3d 20 0 0.5  0 0 5  u6
+
+# Nodo 3 (0, 20, 0)
+arrow3d 3.2 20 -0.6  5.2 20 -0.6
+arrow3d 1.2 20 -0.6  3.2 20 -0.6
+label3d 5.7 20 -0.6 u7 left
+arrow3d 0 23 -0.6  0 25 -0.6
+arrow3d 0 21 -0.6  0 23 -0.6
+label3d 0 25.5 -0.6 u8 left
+dof3d 0 20 0.5  0 0 5  u9
+
+# Nodos (circulos numerados)
+node3d 0 0 -0.6 1 0.8
+node3d 20 0 -0.6 2 0.8
+node3d 0 20 -0.6 3 0.8
+
+# Arco 90 en Nodo 1
+lw 1
 color #333
-circle3d 0 0 0 0.2
-circle3d 20 0 0 0.2
-circle3d 0 20 0 0.2
-text3d 0 0 -2 Node 1
-text3d 20 0 -2 Node 2
-text3d 0 20.5 -1.5 Node 3
-# Angulo 90
-color #999
-line3d 2.5 0 0 2.5 2.5 0
-line3d 0 2.5 0 2.5 2.5 0
-text3d 3.5 3 0 90
-# DOFs Node 1 (u1=theta_x, u2=theta_y, u3=w)
-color #cc0000
-arrow3d 0 0 0 0 0 5
-text3d 0.5 0 5.5 u3
-arrow3d 0 0 0 4 0 0
-text3d 4.5 0 0.5 u1
-arrow3d 0 0 0 0 4 0
-text3d 0.3 4.5 0 u2
-# DOFs Node 2 (u4=theta_x, u5=theta_y, u6=w)
-color #0066cc
-arrow3d 20 0 0 20 0 5
-text3d 20.5 0 5.5 u6
-arrow3d 20 0 0 24 0 0
-text3d 24.5 0 0.5 u4
-arrow3d 20 0 0 20 4 0
-text3d 20.3 4.5 0 u5
-# DOFs Node 3 (u7=theta_x, u8=theta_y, u9=w)
-color #33aa33
-arrow3d 0 20 0 0 20 5
-text3d 0.5 20 5.5 u9
-arrow3d 0 20 0 4 20 0
-text3d 4.5 20 0.5 u7
-arrow3d 0 20 0 0 24 0
-text3d 0.3 24.5 0 u8
-# Apoyo empotrado Node 2
+carc3d 0 0 0 4.5 0 1.5708
+label3d 3 3 -1.5 90° below
+
+# Triangulos de elementos
 color #333
-line3d 20 0 -1.5 20 0 1.5
-line3d 20 0 1.5 21 0 1
-line3d 20 0 1 21 0 0.5
-line3d 20 0 0.5 21 0 0
-line3d 20 0 0 21 0 -0.5
-line3d 20 0 -0.5 21 0 -1
-line3d 20 0 -1 21 0 -1.5
-# Apoyo empotrado Node 3
-line3d 0 20 -1.5 0 20 1.5
-line3d 0 20 1.5 0 21 1
-line3d 0 20 1 0 21 0.5
-line3d 0 20 0.5 0 21 0
-line3d 0 20 0 0 21 -0.5
-line3d 0 20 -0.5 0 21 -1
-line3d 0 20 -1 0 21 -1.5
-# Ejes
-color #cc3333
-arrow3d -4 0 0 -1 0 0
-text3d -0.5 0 0 X
-color #33aa33
-arrow3d -4 0 0 -4 3 0
-text3d -4 3.5 0 Y
-color #3333cc
-arrow3d -4 0 0 -4 0 3
-text3d -4 0 3.5 Z
-# Titulo
-color #333
-text3d 10 0 -6 Fig 5.5 - DOFs del Grid Frame
+lw 1
+line3d 8.5 0 -3.5  11.5 0 -3.5
+line3d 11.5 0 -3.5  10 0 -1.5
+line3d 10 0 -1.5  8.5 0 -3.5
+label3d 10 0 -3 1 center
+
+line3d 2 9 -1  2 11 -1
+line3d 2 11 -1  2 10 1
+line3d 2 10 1  2 9 -1
+label3d 2 10 -0.3 2 center
+
+# Apoyos empotrados (hatching)
+line3d 20 0 -1.8  20 0 1.8
+line3d 20 0 1.8  21 0 1.2
+line3d 20 0 1.2  21 0 0.6
+line3d 20 0 0.6  21 0 0
+line3d 20 0 0  21 0 -0.6
+line3d 20 0 -0.6  21 0 -1.2
+line3d 20 0 -1.2  21 0 -1.8
+
+line3d 0 20 -1.8  0 20 1.8
+line3d 0 20 1.8  0 21 1.2
+line3d 0 20 1.2  0 21 0.6
+line3d 0 20 0.6  0 21 0
+line3d 0 20 0  0 21 -0.6
+line3d 0 20 -0.6  0 21 -1.2
+line3d 0 20 -1.2  0 21 -1.8
+
 fit
 @{end draw}
 > **Fig. 5.5** Grid frame modelado con coordenadas nodales u_1 a u_9
@@ -240,6 +264,9 @@ fit
 @{cells} |L = 100|I_z = 882|J_t = 5.08|
 @{cells} |E_s = 29000|G_s = 11600|
 
+@{pagebreak}
+@{end pagebreak}
+
 ## 2. Coeficientes de Rigidez
 @{cells} |t_1 = G_s*J_t/L|a_4 = 4*E_s*I_z/L|a_2 = 2*E_s*I_z/L|
 @{cells} |b_6 = 6*E_s*I_z/L^2|c_12 = 12*E_s*I_z/L^3|
@@ -247,6 +274,9 @@ fit
 ## 3. Matriz de Rigidez Local [k] (eq 5.7)
 > DOF: [theta_x, theta_z, delta_y] por nodo
 k = [[t_1,0,0,-t_1,0,0],[0,a_4,b_6,0,a_2,-b_6],[0,b_6,c_12,0,b_6,-c_12],[-t_1,0,0,t_1,0,0],[0,a_2,b_6,0,a_4,-b_6],[0,-b_6,-c_12,0,-b_6,c_12]]
+
+@{pagebreak}
+@{end pagebreak}
 
 ## 4. Transformacion Elemento 2
 > Elem 2: theta=90 grados (eq 5.11)
@@ -261,6 +291,9 @@ kb2 = transpose(T_2) * k * T_2
 k1R = k[4:6, 4:6]
 k2R = kb2[1:3, 1:3]
 K_R = k1R + k2R
+
+@{pagebreak}
+@{end pagebreak}
 
 ## 7. Fuerzas de Empotramiento
 > Elem 1: M_0=200 kip*in a L/2, Apendice I Caso (b) (eq e)
@@ -277,6 +310,9 @@ Q_f2L = [[0], [w_0*L^2/12], [w_0*L/2], [0], [-w_0*L^2/12], [w_0*L/2]]
 > Q_f global via T_2'
 Q_f2 = transpose(T_2) * Q_f2L
 
+@{pagebreak}
+@{end pagebreak}
+
 ## 8. Vector de Fuerzas Reducido
 > {F}_R = P - Q_f1(4:6) - Q_f2(1:3) (eq g)
 P_d = [[0], [0], [-10]]
@@ -285,6 +321,9 @@ F_R = P_d - Q_f1[4:6, 1:1] - Q_f2[1:3, 1:1]
 ## 9. Solucion de Desplazamientos
 > [K]_R {u} = {F}_R
 u = lusolve(K_R, F_R)
+
+@{pagebreak}
+@{end pagebreak}
 
 ## 10. Desplazamientos Locales
 > Componentes: theta_x, theta_z, delta_y
@@ -299,6 +338,9 @@ d_2 = T_2 * d_1
 P_1 = k * d_1 + Q_f1
 > Elem 2 (Q_f en locales):
 P_2 = k * d_2 + Q_f2L
+
+@{pagebreak}
+@{end pagebreak}
 
 ## 12. Reacciones en Apoyos
 > Nodo 1 (empotrado):
@@ -424,6 +466,8 @@ A_s = n_barras * pi * (phi_long / 2)^2
 ## Seccion Transversal (CAD CLI: colsection)
 
 @{draw 500 450}
+grid off
+bg #ffffff
 # colsection cx cy bw bh rec dStirrup dLong nx ny
 colsection 20 20 40 40 4 1.0 2.0 3 3
 unit cm
@@ -444,54 +488,247 @@ fit
 
 ## Elevacion de la Columna
 
-@{draw 400 600}
+@{draw 400 650}
+grid off
 bg #ffffff
-# Columna en elevacion
+# Columna en elevacion - concreto
 color #ccc
 rect 0 0 40 300
-# Estribos (lineas horizontales)
+# Zona confinamiento inferior (lo=50cm, est@10cm)
 color #00aa66
-line 0 15 40 15
+line 0 10 40 10
+line 0 20 40 20
 line 0 30 40 30
-line 0 45 40 45
-line 0 60 40 60
-line 0 75 40 75
-line 0 90 40 90
-line 0 105 40 105
-line 0 120 40 120
-line 0 135 40 135
-line 0 150 40 150
-line 0 165 40 165
-line 0 180 40 180
-line 0 195 40 195
-line 0 210 40 210
-line 0 225 40 225
-line 0 240 40 240
-line 0 255 40 255
+line 0 40 40 40
+line 0 50 40 50
+# Zona central (est@15cm) desde 50 hasta 250
+line 0 65 40 65
+line 0 80 40 80
+line 0 95 40 95
+line 0 110 40 110
+line 0 125 40 125
+line 0 140 40 140
+line 0 155 40 155
+line 0 170 40 170
+line 0 185 40 185
+line 0 200 40 200
+line 0 215 40 215
+line 0 230 40 230
+line 0 245 40 245
+# Zona confinamiento superior (lo=50cm, est@10cm)
+line 0 250 40 250
+line 0 260 40 260
 line 0 270 40 270
-line 0 285 40 285
+line 0 280 40 280
+line 0 290 40 290
 # Barras longitudinales
 color #dd3333
 line 6 0 6 300
 line 20 0 20 300
 line 34 0 34 300
+# Lineas separacion zonas (punteado)
+color #0066cc
+line -3 50 43 50
+line -3 250 43 250
 # Cotas
 unit cm
-vdim -5 0 -5 300 -8
-hdim 0 300 40 300 5
+vdim -5 0 -5 300 -10
+vdim -5 0 -5 50 -4
+vdim -5 250 -5 300 -4
+hdim 0 300 40 300 6
 # Etiquetas
 color #333
-text -16 150 L = 300 cm
-text 20 310 40 cm
+text -20 150 L = 300 cm
+text 20 312 b = 40 cm
+color #0066cc
+text -12 25 lo = 50
+text -12 275 lo = 50
 color #00aa66
-text 50 150 Est @ 15 cm
+text 48 25 @ 10 cm
+text 48 150 @ 15 cm
+text 48 275 @ 10 cm
 fit
 @{end draw}
-> **Fig. 2** Elevacion - estribos phi 10 @ 15 cm
+> **Fig. 2** Elevacion con zonas de confinamiento (NEC)
+
+## Zona de confinamiento (NEC)
+l_o1 = max(h_col, L_col/6)
+l_o = max(l_o1, 45)
 
 ## Cuantia de Refuerzo
 A_g = b_col * h_col
 rho = A_s / A_g * 100`,
+  },
+  draw3d: {
+    name: "CAD 3D (Three.js)",
+    code: `# CAD 3D - Three.js WebGL
+> Mismo CLI que CAD 2D pero con coordenadas 3D
+
+## Portico 3D
+@{draw:3D 700 450}
+bg #1a1a2e
+camera 18 14 18
+views front side top
+
+# Columnas
+color #999999
+box 0 2.5 0 size:1,5,1
+box 10 2.5 0 size:1,5,1
+box 10 2.5 8 size:1,5,1
+
+# Vigas
+color #888888
+box 5 5.5 0 size:12,1,1
+box 10 5.5 4 size:1,1,10
+
+# Losa (rect plano en xz)
+color #aaaacc
+rect 0 6 0 12 10 fill:#dde
+
+# Flechas de carga
+color #ff4444
+arrow 5 9 4 5 6.5 4
+text 5 9.5 4 "P = 200 kN"
+
+# Cota
+color #666666
+dim 0 0 0 10 0 0 -2
+
+# Circulo en planta
+color #33aa66
+circle 5 0.01 4 2
+
+# Nodos esfericos
+color #ff6600
+sphere 0 5 0 r:0.25
+sphere 10 5 0 r:0.25
+sphere 10 5 8 r:0.25
+
+# Piso
+color #336633
+box 0 -0.15 0 size:14,0.3,12
+@{end draw}
+
+## Datos
+P = 200
+L_x = 10
+L_z = 8
+M_base = P * L_x / 4`,
+  },
+  fig55: {
+    name: "Fig 5.5 Grid Frame",
+    code: `# Test Fig 5.5
+> Grid frame with nodal coordinates u1-u9
+
+@{draw 900 700}
+grid off
+bg #ffffff
+proj oblique 45 0.5
+fontsize 14
+color #000
+lw 1.5
+
+# Ejes coordenados
+color #888
+arrow3d 0 0 0  0 0 10
+label3d 0 0 11 Z left
+arrow3d 0 0 0  25 0 0
+label3d 26 0 0 X left
+arrow3d 0 0 0  0 25 0
+label3d 0 26 0 Y left
+
+# Barras con espesor
+color #000
+lw 2
+beam3d 0 0 0  20 0 0  1.2
+beam3d 0 0 0  0 20 0  1.2
+
+# Grados de libertad
+lw 1
+
+# Nodo 1 (origen) - rotaciones: →→  desplazamiento: →
+arrow3d 3.5 0 -0.6  5.5 0 -0.6
+arrow3d 1.5 0 -0.6  3.5 0 -0.6
+label3d 6 0 -0.6 u1 left
+arrow3d 0 3.5 -0.6  0 5.5 -0.6
+arrow3d 0 1.5 -0.6  0 3.5 -0.6
+label3d 0 6 -0.6 u2 left
+dof3d 0 0 0.5  0 0 5  u3
+
+# Nodo 2 (20, 0, 0)
+arrow3d 23 0 -0.6  25 0 -0.6
+arrow3d 21 0 -0.6  23 0 -0.6
+label3d 25.5 0 -0.6 u4 left
+arrow3d 20 3.2 -0.6  20 5.2 -0.6
+arrow3d 20 1.2 -0.6  20 3.2 -0.6
+label3d 20 5.7 -0.6 u5 left
+dof3d 20 0 0.5  0 0 5  u6
+
+# Nodo 3 (0, 20, 0)
+arrow3d 3.2 20 -0.6  5.2 20 -0.6
+arrow3d 1.2 20 -0.6  3.2 20 -0.6
+label3d 5.7 20 -0.6 u7 left
+arrow3d 0 23 -0.6  0 25 -0.6
+arrow3d 0 21 -0.6  0 23 -0.6
+label3d 0 25.5 -0.6 u8 left
+dof3d 0 20 0.5  0 0 5  u9
+
+# Nodos (circulos numerados)
+node3d 0 0 -0.6 1 0.8
+node3d 20 0 -0.6 2 0.8
+node3d 0 20 -0.6 3 0.8
+
+# Arco 90° en Nodo 1
+lw 1
+color #333
+carc3d 0 0 0 4.5 0 1.5708
+label3d 3 3 -1.5 90° below
+
+# Triangulos de elementos
+color #333
+lw 1
+line3d 8.5 0 -3.5  11.5 0 -3.5
+line3d 11.5 0 -3.5  10 0 -1.5
+line3d 10 0 -1.5  8.5 0 -3.5
+label3d 10 0 -3 1 center
+
+line3d 2 9 -1  2 11 -1
+line3d 2 11 -1  2 10 1
+line3d 2 10 1  2 9 -1
+label3d 2 10 -0.3 2 center
+
+# Apoyos empotrados (hatching)
+line3d 20 0 -1.8  20 0 1.8
+line3d 20 0 1.8  21 0 1.2
+line3d 20 0 1.2  21 0 0.6
+line3d 20 0 0.6  21 0 0
+line3d 20 0 0  21 0 -0.6
+line3d 20 0 -0.6  21 0 -1.2
+line3d 20 0 -1.2  21 0 -1.8
+
+line3d 0 20 -1.8  0 20 1.8
+line3d 0 20 1.8  0 21 1.2
+line3d 0 20 1.2  0 21 0.6
+line3d 0 20 0.6  0 21 0
+line3d 0 20 0  0 21 -0.6
+line3d 0 20 -0.6  0 21 -1.2
+line3d 0 20 -1.2  0 21 -1.8
+
+fit
+@{end draw}`,
+  },
+  ifcviewer: {
+    name: "IFC Viewer",
+    code: `# Visor IFC - Three.js WebGL
+> Filtros: all, structural, columns, beams, slabs, rebar,
+> plates, members, fasteners, connections, walls, openings
+
+## Modelo Completo
+@{import:ifc:FINAL.ifc 700 500}
+
+## Detalle: Conexion Columna-Pedestal
+> Columnas + Placas base + Refuerzo + Miembros + Pernos
+@{import:ifc:FINAL.ifc 700 500 connections}`,
   },
 };
 
@@ -1258,19 +1495,123 @@ themeSelect.addEventListener("change", () => {
 // ─── Evaluator ──────────────────────────────────────────
 const evaluator = new HekatanEvaluator();
 
+// Track active 3D scenes for cleanup
+let active3DScenes: Draw3DScene[] = [];
+
 function runCode() {
   const code = codeInput.value;
-  if (!code.trim()) { output.innerHTML = `<div class="output-page"></div>`; return; }
+  if (!code.trim()) { output.innerHTML = `<div class="output-pages-wrapper"><div class="output-page"></div></div>`; return; }
+
+  // Cleanup previous 3D scenes
+  for (const sc of active3DScenes) sc.dispose();
+  active3DScenes = [];
 
   try {
     const results = evaluator.evalDocument(code);
-    output.innerHTML = `<div class="output-page">${renderResults(results, code)}</div>`;
+    const rawHTML = renderResults(results, code);
+    // Split by page break markers into multiple pages
+    const pageContents = rawHTML.split("<!--PAGEBREAK-->");
+    const pagesHTML = pageContents.map(pc => `<div class="output-page">${pc}</div>`).join("\n");
+    output.innerHTML = `<div class="output-pages-wrapper">${pagesHTML}</div>`;
     // Render @{draw} CAD blocks into their canvas elements (must be after innerHTML)
     renderDrawBlocks(results);
+    // Render @{draw:3D} Three.js blocks
+    renderDraw3DBlocks(results);
+    // Render @{draw:3D:IFC} file upload + viewer
+    renderDraw3DIfcBlocks(results);
+    // Render @{import:ifc:file} auto-load IFC models
+    renderImportIfcBlocks(results);
+    // Auto page-break: split pages that overflow A4 height, then fit zoom
+    setTimeout(() => { autoPageBreak(); fitA4Page(); }, 50);
   } catch (e: any) {
-    output.innerHTML = `<div class="output-page"><div class="out-error">Error: ${escHtml(e.message)}</div></div>`;
+    output.innerHTML = `<div class="output-pages-wrapper"><div class="output-page"><div class="out-error">Error: ${escHtml(e.message)}</div></div></div>`;
+    setTimeout(fitA4Page, 50);
   }
 }
+
+// ─── Auto page-break: split pages when content overflows A4 height ───
+function autoPageBreak() {
+  const wrapper = output.querySelector(".output-pages-wrapper") as HTMLElement;
+  if (!wrapper) return;
+
+  // Measure 267mm (A4 297mm - 15mm top padding - 15mm bottom padding) in pixels
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:absolute;visibility:hidden;height:267mm;";
+  document.body.appendChild(probe);
+  const maxContentPx = probe.offsetHeight;
+  document.body.removeChild(probe);
+
+  let safety = 50; // prevent infinite loop
+  while (safety-- > 0) {
+    const pages = Array.from(wrapper.querySelectorAll(".output-page")) as HTMLElement[];
+    let didSplit = false;
+
+    for (const page of pages) {
+      const children = Array.from(page.children) as HTMLElement[];
+      if (children.length <= 1) continue; // single element — can't split further
+
+      let splitIdx = -1;
+      for (let i = 0; i < children.length; i++) {
+        // offsetTop is relative to .output-page (position:relative)
+        const bottom = children[i].offsetTop + children[i].offsetHeight;
+        if (bottom > maxContentPx && i > 0) {
+          splitIdx = i;
+          break;
+        }
+      }
+
+      if (splitIdx > 0) {
+        const newPage = document.createElement("div");
+        newPage.className = "output-page";
+        const toMove = children.slice(splitIdx);
+        for (const el of toMove) newPage.appendChild(el);
+        wrapper.insertBefore(newPage, page.nextSibling);
+        didSplit = true;
+        break; // restart loop since DOM changed
+      }
+    }
+
+    if (!didSplit) break;
+  }
+}
+
+// ─── Auto-fit A4 page + zoom con trackpad ─────────────────
+let outputZoomUser = 1;   // zoom manual del usuario (trackpad)
+let outputZoomBase = 1;   // zoom auto-fit calculado
+
+function fitA4Page() {
+  const wrapper = output.querySelector(".output-pages-wrapper") as HTMLElement;
+  if (!wrapper) return;
+  const container = output;
+  const cW = container.clientWidth - 20;
+  const cH = container.clientHeight - 20;
+  const pageW = 793;  // 210mm ≈ 793px
+  const pageH = 1123; // 297mm ≈ 1123px
+  const scaleW = cW / pageW;
+  const scaleH = cH / pageH;
+  outputZoomBase = Math.min(scaleW, scaleH, 1);
+  applyOutputZoom(wrapper);
+}
+
+function applyOutputZoom(wrapper?: HTMLElement) {
+  wrapper = wrapper || output.querySelector(".output-pages-wrapper") as HTMLElement;
+  if (!wrapper) return;
+  const totalZoom = outputZoomBase * outputZoomUser;
+  wrapper.style.zoom = `${totalZoom}`;
+}
+
+// Auto-fit al cargar y al cambiar tamaño
+window.addEventListener("resize", fitA4Page);
+setTimeout(fitA4Page, 100);
+
+// Zoom manual con trackpad (pinch)
+output.addEventListener("wheel", (e) => {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -0.05 : 0.05;
+  outputZoomUser = Math.min(3, Math.max(0.3, outputZoomUser + delta));
+  applyOutputZoom();
+}, { passive: false });
 
 // ─── Keyboard (Calculate mode textarea) ─────────────────
 codeInput.addEventListener("keydown", (e) => {
@@ -1378,8 +1719,66 @@ function renderResults(results: LineResult[], sourceCode: string): string {
         </div>`);
         break;
       }
-      case "directive":
+      case "draw3d": {
+        const uid3 = `cad3d-output-${r.lineIndex}`;
+        const w3 = r.drawWidth || 500;
+        const h3 = r.drawHeight || 400;
+        html.push(`<div class="draw3d-container" id="${uid3}" style="margin:0.5em 0;width:${w3}px;height:${h3}px;border:1px solid #4488ff;border-radius:4px;overflow:hidden;"></div>`);
         break;
+      }
+      case "draw3difc": {
+        const uidIfc = `ifc3d-output-${r.lineIndex}`;
+        const wIfc = r.drawWidth || 600;
+        const hIfc = r.drawHeight || 450;
+        html.push(`<div class="draw3d-ifc-container" style="margin:0.5em 0;">
+          <div style="margin-bottom:6px;display:flex;align-items:center;gap:8px;">
+            <input type="file" id="${uidIfc}-file" accept=".ifc" style="font-size:12px;">
+            <span id="${uidIfc}-status" style="font-size:11px;color:#888;">Selecciona un archivo .ifc</span>
+          </div>
+          <div id="${uidIfc}" style="width:${wIfc}px;height:${hIfc}px;border:1px solid #4488ff;border-radius:4px;overflow:hidden;background:#1a1a2e;"></div>
+          <div id="${uidIfc}-views" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+        </div>`);
+        break;
+      }
+      case "importifc": {
+        const uidIfc2 = `ifc-import-${r.lineIndex}`;
+        const wI = r.drawWidth || 700;
+        const hI = r.drawHeight || 500;
+        const btnStyle = `padding:2px 7px;font-size:10px;border:1px solid #555;border-radius:3px;cursor:pointer;background:#2a2a3e;color:#ccc;`;
+        html.push(`<div class="draw3d-ifc-container" style="margin:0.5em 0;">
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;flex-wrap:wrap;">
+            <span style="font-size:11px;color:#888;" id="${uidIfc2}-status">Cargando ${r.ifcFile}...</span>
+          </div>
+          <div id="${uidIfc2}-filters" style="display:none;margin-bottom:4px;">
+            <div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;">
+              <span style="font-size:10px;color:#666;margin-right:2px;">Filtros:</span>
+              <button data-filter="all" style="${btnStyle}background:#4488ff;color:#fff;">Todo</button>
+              <button data-filter="structural" style="${btnStyle}">Estructural</button>
+              <button data-filter="connections" style="${btnStyle}">Conexiones</button>
+              <button data-filter="columns" style="${btnStyle}">Columnas</button>
+              <button data-filter="beams" style="${btnStyle}">Vigas</button>
+              <button data-filter="slabs" style="${btnStyle}">Losas</button>
+              <button data-filter="rebar" style="${btnStyle}">Refuerzo</button>
+              <button data-filter="plates" style="${btnStyle}">Placas</button>
+              <button data-filter="members" style="${btnStyle}">Miembros</button>
+              <button data-filter="fasteners" style="${btnStyle}">Pernos</button>
+              <button data-filter="walls" style="${btnStyle}">Muros</button>
+              <button data-filter="openings" style="${btnStyle}">Ventanas</button>
+            </div>
+          </div>
+          <div id="${uidIfc2}" style="width:${wI}px;height:${hI}px;border:1px solid #4488ff;border-radius:4px;overflow:hidden;background:#1a1a2e;cursor:crosshair;"></div>
+          <div id="${uidIfc2}-pick" style="font-size:11px;color:#aaa;margin-top:3px;min-height:16px;">Click en un elemento para seleccionar</div>
+          <div id="${uidIfc2}-views" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+        </div>`);
+        break;
+      }
+      case "directive": {
+        // Detect @{pagebreak} → insert page break marker
+        if (/^@\{pagebreak/i.test(srcLine)) {
+          html.push(`<!--PAGEBREAK-->`);
+        }
+        break;
+      }
     }
   }
 
@@ -1414,6 +1813,232 @@ function renderDrawBlocks(results: LineResult[]): void {
 
     // Render to canvas
     eng.renderToCtx(ctx, w, h);
+  }
+}
+
+/** Post-render: find draw3d results and create Three.js scenes */
+function renderDraw3DBlocks(results: LineResult[]): void {
+  for (const r of results) {
+    if (r.type !== "draw3d" || !r.drawCommands) continue;
+    const uid = `cad3d-output-${r.lineIndex}`;
+    const container = document.getElementById(uid);
+    if (!container) continue;
+
+    const w = r.drawWidth || 500;
+    const h = r.drawHeight || 400;
+
+    // Parse 3D commands
+    const { shapes, config } = parseDraw3D(r.drawCommands);
+
+    // Create Three.js scene
+    const sc = createScene(container, w, h);
+    active3DScenes.push(sc);
+
+    // Apply config
+    if (config.bg) sc.scene.background = new THREEColor(config.bg);
+    if (config.grid === false) {
+      const grid = sc.scene.children.find(c => (c as any).isGridHelper);
+      if (grid) sc.scene.remove(grid);
+    }
+    if (config.camX !== undefined) {
+      sc.camera.position.set(config.camX!, config.camY!, config.camZ!);
+      sc.camera.lookAt(0, 0, 0);
+    }
+
+    // Add shapes
+    addShapesToScene(sc.scene, shapes);
+
+    // Render orthographic 2D views if requested
+    if (config.views && config.views.length > 0) {
+      const viewsDiv = document.createElement("div");
+      viewsDiv.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;";
+      const vw = Math.min(w, 350);
+      const vh = Math.round(vw * 0.75);
+      for (const vname of config.views) {
+        const canvas = renderOrthoView(sc.scene, vname as OrthoView, vw, vh);
+        canvas.style.cssText = "border:1px solid #ccc;border-radius:3px;";
+        viewsDiv.appendChild(canvas);
+      }
+      container.parentElement!.insertBefore(viewsDiv, container.nextSibling);
+    }
+  }
+}
+
+/** Post-render: wire up IFC file inputs to load models into Three.js */
+function renderDraw3DIfcBlocks(results: LineResult[]): void {
+  for (const r of results) {
+    if (r.type !== "draw3difc") continue;
+    const uid = `ifc3d-output-${r.lineIndex}`;
+    const fileInput = document.getElementById(`${uid}-file`) as HTMLInputElement | null;
+    const container = document.getElementById(uid);
+    const statusEl = document.getElementById(`${uid}-status`);
+    const viewsDiv = document.getElementById(`${uid}-views`);
+    if (!fileInput || !container) continue;
+
+    const w = r.drawWidth || 600;
+    const h = r.drawHeight || 450;
+
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      if (statusEl) statusEl.textContent = `Cargando ${file.name}...`;
+      container.innerHTML = "";
+      try {
+        const buf = await file.arrayBuffer();
+        const sc = createScene(container, w, h);
+        sc.scene.background = new THREEColor(0x1a1a2e);
+        active3DScenes.push(sc);
+        const { meshCount, bbox } = await loadIfcToScene(sc.scene, buf);
+        fitCameraToBBox(sc.camera, sc.controls, bbox);
+        if (statusEl) statusEl.textContent = `${file.name} — ${meshCount} meshes (cargado)`;
+        // Vistas ortograficas
+        if (viewsDiv) {
+          viewsDiv.innerHTML = "";
+          const vw = Math.min(w, 300);
+          const vh = Math.round(vw * 0.75);
+          for (const vname of ["front", "side", "top"] as OrthoView[]) {
+            const canvas = renderOrthoView(sc.scene, vname, vw, vh);
+            canvas.style.cssText = "border:1px solid #555;border-radius:3px;";
+            viewsDiv.appendChild(canvas);
+          }
+        }
+      } catch (err: any) {
+        if (statusEl) statusEl.textContent = `Error: ${err.message}`;
+        console.error("IFC load error:", err);
+      }
+    });
+  }
+}
+
+/** Post-render: auto-fetch IFC files and load into Three.js scenes */
+function renderImportIfcBlocks(results: LineResult[]): void {
+  for (const r of results) {
+    if (r.type !== "importifc" || !r.ifcFile) continue;
+    const uid = `ifc-import-${r.lineIndex}`;
+    const container = document.getElementById(uid);
+    const statusEl = document.getElementById(`${uid}-status`);
+    const viewsDiv = document.getElementById(`${uid}-views`);
+    const filtersEl = document.getElementById(`${uid}-filters`);
+    if (!container) continue;
+
+    const w = r.drawWidth || 700;
+    const h = r.drawHeight || 500;
+    const file = r.ifcFile;
+
+    (async () => {
+      try {
+        const url = file.startsWith("/") || file.startsWith("http") ? file : "/" + file;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status} al cargar ${url}`);
+        const buf = await resp.arrayBuffer();
+        if (statusEl) statusEl.textContent = `Procesando ${file}...`;
+        const sc = createScene(container, w, h);
+        sc.scene.background = new THREEColor(0x1a1a2e);
+        active3DScenes.push(sc);
+        const { meshCount, bbox, detailCategories, elementInfo } = await loadIfcToScene(sc.scene, buf);
+        fitCameraToBBox(sc.camera, sc.controls, bbox);
+
+        // Conteo detallado por categoria
+        const counts = getDetailCounts(detailCategories);
+        const parts: string[] = [];
+        if (counts.column)   parts.push(`Col:${counts.column}`);
+        if (counts.beam)     parts.push(`Vig:${counts.beam}`);
+        if (counts.slab)     parts.push(`Los:${counts.slab}`);
+        if (counts.footing)  parts.push(`Zap:${counts.footing}`);
+        if (counts.rebar)    parts.push(`Ref:${counts.rebar}`);
+        if (counts.plate)    parts.push(`Pla:${counts.plate}`);
+        if (counts.member)   parts.push(`Mie:${counts.member}`);
+        if (counts.fastener) parts.push(`Per:${counts.fastener}`);
+        if (counts.wall)     parts.push(`Mur:${counts.wall}`);
+        if (counts.opening)  parts.push(`Ven:${counts.opening}`);
+        if (counts.other)    parts.push(`Otr:${counts.other}`);
+        if (statusEl) statusEl.textContent =
+          `${file} — ${meshCount} meshes (${parts.join(" ")})`;
+
+        // Aplicar filtro inicial desde directiva
+        const initFilter = r.ifcFilter || "all";
+        if (initFilter !== "all") {
+          filterIfcByPreset(detailCategories, initFilter);
+        }
+
+        // Activar botones de filtro
+        if (filtersEl) {
+          filtersEl.style.display = "block";
+          const buttons = filtersEl.querySelectorAll("button[data-filter]");
+          buttons.forEach((b) => {
+            const f = (b as HTMLElement).dataset.filter || "all";
+            (b as HTMLElement).style.background = f === initFilter ? "#4488ff" : "#2a2a3e";
+            (b as HTMLElement).style.color = f === initFilter ? "#fff" : "#ccc";
+          });
+          const lineIdx = r.lineIndex;
+          buttons.forEach((btn) => {
+            btn.addEventListener("click", () => {
+              const f = (btn as HTMLElement).dataset.filter || "all";
+              filterIfcByPreset(detailCategories, f);
+              buttons.forEach((b) => {
+                (b as HTMLElement).style.background = b === btn ? "#4488ff" : "#2a2a3e";
+                (b as HTMLElement).style.color = b === btn ? "#fff" : "#ccc";
+              });
+              // Actualizar la linea en el textarea (two-way binding)
+              const ta = document.getElementById("codeInput") as HTMLTextAreaElement | null;
+              if (ta) {
+                const lines = ta.value.split("\n");
+                if (lineIdx < lines.length) {
+                  const filterSuffix = f === "all" ? "" : " " + f;
+                  lines[lineIdx] = `@{import:ifc:${file} ${w} ${h}${filterSuffix}}`;
+                  ta.value = lines.join("\n");
+                }
+              }
+            });
+          });
+        }
+
+        if (viewsDiv) {
+          const vw = Math.min(w, 300), vh = Math.round(vw * 0.75);
+          for (const vname of ["front", "side", "top"] as OrthoView[]) {
+            const canvas = renderOrthoView(sc.scene, vname, vw, vh);
+            canvas.style.cssText = "border:1px solid #555;border-radius:3px;";
+            viewsDiv.appendChild(canvas);
+          }
+        }
+
+        // Picking: click para seleccionar elementos
+        const pickEl = document.getElementById(`${uid}-pick`);
+        const lineIdx = r.lineIndex;
+        setupIfcPicking(container, sc.camera, sc.scene, elementInfo, (result) => {
+          if (!pickEl) return;
+          if (!result) {
+            pickEl.textContent = "Click en un elemento para seleccionar";
+            pickEl.style.color = "#aaa";
+            return;
+          }
+          const info = result.info;
+          const label = info
+            ? `[${info.typeName}] ${info.name} (ID:${info.expressID}, cat:${info.category})`
+            : `ID:${result.expressID} cat:${result.category}`;
+          pickEl.innerHTML = `<span style="color:#ff6600;">▸</span> ${label}`;
+          pickEl.style.color = "#ddd";
+
+          // Escribir seleccion como comentario en textarea
+          const ta = document.getElementById("codeInput") as HTMLTextAreaElement | null;
+          if (ta) {
+            const lines = ta.value.split("\n");
+            // Buscar si ya hay un comentario de seleccion despues del import
+            const selComment = `> Sel: ${label}`;
+            const nextLine = lineIdx + 1;
+            if (nextLine < lines.length && lines[nextLine].startsWith("> Sel:")) {
+              lines[nextLine] = selComment;
+            } else {
+              lines.splice(nextLine, 0, selComment);
+            }
+            ta.value = lines.join("\n");
+          }
+        });
+      } catch (err: any) {
+        if (statusEl) statusEl.textContent = `Error: ${err.message}`;
+        console.error("IFC import error:", err);
+      }
+    })();
   }
 }
 
@@ -1454,10 +2079,15 @@ function renderLineEq(r: LineResult, srcLine: string): string {
   if (evaluator.isMatrix(value)) {
     if (exprText && /[a-zA-Z]/.test(exprText)) {
       const substituted = substituteValues(exprText, scope);
+      // Solo mostrar sustitucion si difiere del resultado numerico
+      const matHTML = renderMatrixHTML(value);
       if (substituted) {
-        return `${nameHTML} = ${renderMathExpr(exprText)} = ${renderMathExpr(substituted)} = ${renderMatrixHTML(value)}`;
+        const substHTML = renderMathExpr(substituted);
+        if (substHTML !== matHTML) {
+          return `${nameHTML} = ${renderMathExpr(exprText)} = ${substHTML} = ${matHTML}`;
+        }
       }
-      return `${nameHTML} = ${renderMathExpr(exprText)} = ${renderMatrixHTML(value)}`;
+      return `${nameHTML} = ${renderMathExpr(exprText)} = ${matHTML}`;
     }
     return `${nameHTML} = ${renderMatrixHTML(value)}`;
   }
@@ -1807,7 +2437,7 @@ splitter.addEventListener("mousedown", (e) => {
 });
 
 // ─── Init ───────────────────────────────────────────────
-exampleSelect.value = "basico";
-codeInput.value = EXAMPLES.basico.code;
-editor.loadFromText(EXAMPLES.basico.code);
-setMode("canvas"); // MathCanvas mode by default
+exampleSelect.value = "fig55";
+codeInput.value = EXAMPLES.fig55.code;
+editor.loadFromText(EXAMPLES.fig55.code);
+setMode("code");

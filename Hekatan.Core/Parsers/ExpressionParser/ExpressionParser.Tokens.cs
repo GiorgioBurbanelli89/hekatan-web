@@ -30,6 +30,27 @@ namespace Hekatan.Core
         private List<Token> GetTokens(ReadOnlySpan<char> s)
         {
             var tokens = new List<Token>();
+
+            // Markdown-style syntax (hekatan-web compatible):
+            // > text  → Text (like ')
+            // # heading or ## heading → Heading (like ")
+            var trimmed = s.TrimStart();
+            if (trimmed.Length > 1 && trimmed[0] == '>' && trimmed[1] == ' ')
+            {
+                // > text → treat rest as Text
+                var text = trimmed[2..].ToString().TrimStart();
+                tokens.Add(new Token(text + " ", TokenTypes.Text));
+                return tokens;
+            }
+            if (trimmed.Length > 1 && trimmed[0] == '#' &&
+                (trimmed[1] == ' ' || trimmed[1] == '#'))
+            {
+                // # heading or ## heading → treat as Heading
+                var headingText = trimmed.TrimStart('#').ToString().TrimStart();
+                tokens.Add(new Token(headingText, TokenTypes.Heading));
+                return tokens;
+            }
+
             var ts = new TextSpan(s);
             var currentSeparator = ' ';
             for (int i = 0, len = s.Length; i < len; ++i)

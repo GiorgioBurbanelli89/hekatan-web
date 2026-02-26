@@ -11,6 +11,9 @@ export default defineConfig({
   server: {
     port: 4610,
   },
+  optimizeDeps: {
+    exclude: ["web-ifc"],
+  },
   build: {
     rollupOptions: {
       input: {

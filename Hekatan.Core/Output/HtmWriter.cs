@@ -336,7 +336,6 @@ namespace Hekatan.Core
 
         internal override string FormatVector(Vector vector)
         {
-            var div = VectorSpacing;
             var sb = new StringBuilder();
             const double tol = 1e-14;
             var zeroThreshold = GetMaxVisibleVectorValue(vector) * tol;
@@ -348,52 +347,42 @@ namespace Hekatan.Core
 
             var units = hp_v?.Units;
             var len = vector.Length;
-            sb.Append("<b class=\"b0\">[</b>");
+            // Render as vertical column using matrix CSS layout
+            sb.AppendLine("<span class=\"matrix\">");
             for (int i = 0; i < len; ++i)
             {
-                if (i > 0)
-                    sb.Append(div);
-
                 if (i == maxCount)
                 {
-                    var n = len - maxCount;
-                    sb.Append($"<span title=\"{n - Math.Sign(n - 1)} elements skipped.\">...</span>")
-                        .Append(div);
-                    break;
+                    sb.AppendLine("<span class=\"tr\"><span class=\"td\"></span><span class=\"td\">⋮</span><span class=\"td\"></span></span>");
+                    i = len - 1;
                 }
-                AppendElement(i);
+                sb.Append("<span class=\"tr\"><span class=\"td\"></span><span class=\"td\">");
+                if (hp_v is null)
+                    sb.Append(FormatMatrixValue(vector[i], zeroThreshold));
+                else
+                {
+                    var d = hp_v.GetValue(i);
+                    sb.Append(FormatReal(d, units?.FormatString, zeroSmallElements && Math.Abs(d) < zeroThreshold));
+                }
+                sb.AppendLine("</span><span class=\"td\"></span></span>");
             }
-            var last = len - 1;
-            if (maxCount < last)
-                AppendElement(last);
-            sb.Append("<b class=\"b0\">]</b>");
-
+            sb.AppendLine("</span>");
             if (units is not null)
                 sb.Append(HairSpace).Append(units.Html);
 
             return sb.ToString();
-
-            void AppendElement(int index)
-            {
-                if (hp_v is null)
-                    sb.Append(FormatMatrixValue(vector[index], zeroThreshold));
-                else
-                {
-                    var d = hp_v.GetValue(index);
-                    sb.Append(FormatReal(d, units?.FormatString, zeroSmallElements && Math.Abs(d) < zeroThreshold));
-                }
-            }
         }
 
         internal override string FormatVectorExpression(string[] elements)
         {
             var sb = new StringBuilder();
-            sb.Append("<span class=\"matrix\"><span class=\"tr\"><span class=\"td\"></span>");
+            // Render as vertical column using matrix CSS layout
+            sb.AppendLine("<span class=\"matrix\">");
             foreach (var element in elements)
             {
-                sb.Append($"<span class=\"td\">{element}</span>");
+                sb.AppendLine($"<span class=\"tr\"><span class=\"td\"></span><span class=\"td\">{element}</span><span class=\"td\"></span></span>");
             }
-            sb.Append("<span class=\"td\"></span></span></span>");
+            sb.AppendLine("</span>");
             return sb.ToString();
         }
 

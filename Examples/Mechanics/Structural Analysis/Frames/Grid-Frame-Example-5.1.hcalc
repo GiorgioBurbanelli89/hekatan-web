@@ -1,12 +1,17 @@
-"Ejemplo Ilustrativo 5.1 - Grid Frame|Mario Paz
-'<hr/>
+# Ejemplo Ilustrativo 5.1 - Grid Frame | Mario Paz
+> <hr/>
+> Structural Dynamics - Theory and Computation, Chapter 5
+> For the grid frame shown in Figure 5.4, perform the structural analysis to determine:
+> (a) Displacements at the joints between elements
+> (b) End forces on the elements
+> (c) Reactions of the supports
 
-@{draw 580 380}
-# Fig 5.4 - Diagrama Estructural (3D oblicuo)
+@{draw 600 400}
+# Fig. 5.4 Grid frame for Illustrative Example 5.1
 grid off
 bg #ffffff
 proj oblique 45 0.5
-# Ejes de referencia
+# Axes at lower-left
 color #cc3333
 arrow3d -4 0 0 -1 0 0
 text3d -0.5 0 0 X
@@ -16,16 +21,16 @@ text3d -4 3.5 0 Y
 color #3333cc
 arrow3d -4 0 0 -4 0 3
 text3d -4 0 3.5 Z
-# Elem 1: Node1(0,0,0) to Node2(20,0,0) along X
+# Structural members
 color #333
+lw 2
 line3d 0 0 0 20 0 0
-# Elem 2: Node1(0,0,0) to Node3(0,20,0) along Y
 line3d 0 0 0 0 20 0
-# Nodos (circulos pequenos)
+lw 1
 circle3d 0 0 0 0.15 #333
 circle3d 20 0 0 0.15 #333
 circle3d 0 20 0 0.15 #333
-# Carga distribuida peine sobre Elem 2 (lineas cortas perpendiculares -Z)
+# Distributed load on Element 2 (w = 0.1 k/in downward)
 color #cc0000
 line3d 0 2 0 0 18 0
 line3d 0 2 0 0 2 -2.5
@@ -38,15 +43,21 @@ line3d 0 14 0 0 14 -2.5
 line3d 0 16 0 0 16 -2.5
 line3d 0 18 0 0 18 -2.5
 line3d 0 2 -2.5 0 18 -2.5
-text3d 0 11 -4 w = 0.1 k/in
-# Fuerza puntual en Node 1 hacia -Z
+text3d 1 11 -3.5 w = 0.1 k/in
+# 10 kip concentrated load at Node 1 (downward)
 arrow3d 0 0 5 0 0 0.5
 text3d 1 0 5.5 10 k
-# Momento en L/2 del Elem 1
+# 200 k-in torsional moment at L/2 on Element 1
 color #9900cc
 carc3d 10 0 0 0.8 0.2 4.0
-text3d 10 0 1.8 200 k-in
-# Apoyo empotrado en Node 2 (muro + rayado)
+text3d 8 0 2.5 200 k-in
+# L/2 dimension line under Element 1
+color #666
+line3d 0 0 -1.5 0 0 -3
+line3d 10 0 -1.5 10 0 -3
+line3d 0 0 -2.3 10 0 -2.3
+text3d 4 0 -4 L/2
+# Support at Node 2 (triangle + hatch marks)
 color #333
 line3d 20 0 -1.5 20 0 1.5
 line3d 20 0 1.5 21 0 1
@@ -55,7 +66,7 @@ line3d 20 0 0.5 21 0 0
 line3d 20 0 0 21 0 -0.5
 line3d 20 0 -0.5 21 0 -1
 line3d 20 0 -1 21 0 -1.5
-# Apoyo empotrado en Node 3 (muro + rayado)
+# Support at Node 3 (triangle + hatch marks)
 line3d 0 20 -1.5 0 20 1.5
 line3d 0 20 1.5 0 21 1
 line3d 0 20 1 0 21 0.5
@@ -63,98 +74,296 @@ line3d 0 20 0.5 0 21 0
 line3d 0 20 0 0 21 -0.5
 line3d 0 20 -0.5 0 21 -1
 line3d 0 20 -1 0 21 -1.5
-# Labels nodos
+# Node labels
 color #333
 text3d -1.5 0 -1 1
 text3d 20.5 0 -1 2
 text3d 0.5 21 0.5 3
-# Labels elementos
-color #0066cc
-text3d 10 0 1.5 Elem 1
-text3d 0 10 1.5 Elem 2
-# Propiedades
-color #666
-text3d 12 0 -6 I=100 in^4, J=50 in^4
-text3d 12 0 -7.5 E=30000, G=12000 ksi
-text3d 12 0 -9 L1=L2=20 ft
+# Properties box (upper right) with border
+color #999
+line3d 12 0 10.5 24 0 10.5
+line3d 24 0 10.5 24 0 -1
+line3d 24 0 -1 12 0 -1
+line3d 12 0 -1 12 0 10.5
+color #333
+text3d 13 0 9 All Members:
+text3d 13 0 7.5 W 14x82
+text3d 13 0 6 I = 882 in^4
+text3d 13 0 4.5 J = 5.08 in^4
+text3d 13 0 3 E = 29000 ksi
+text3d 13 0 1.5 G = 11600 ksi
+text3d 13 0 0 L = 100 in
 fit
 @{end draw}
 
-@{draw 580 380}
-# Fig 5.5 - Grados de Libertad (DOF)
+## Solution:
+
+### 1. Model the grid frame
+
+> The grid frame has 2 elements, 3 nodes and 9 system DOFs.
+> Free DOFs: u₁ (torsion), u₂ (bending rotation), u₃ (transverse displacement) at Node 1.
+> Fixed DOFs: u₄...u₉ at Nodes 2 and 3.
+
+@{draw 900 700}
 grid off
 bg #ffffff
 proj oblique 45 0.5
-# Elementos (lineas finas)
-color #aaa
-line3d 0 0 0 20 0 0
-line3d 0 0 0 0 20 0
-# Nodos
+fontsize 14
+color #000
+lw 1.5
+
+# Ejes coordenados
+color #888
+arrow3d 0 0 0  0 0 10
+label3d 0 0 11 Z left
+arrow3d 0 0 0  25 0 0
+label3d 26 0 0 X left
+arrow3d 0 0 0  0 25 0
+label3d 0 26 0 Y left
+
+# Barras con espesor
+color #000
+lw 2
+beam3d 0 0 0  20 0 0  1.2
+beam3d 0 0 0  0 20 0  1.2
+
+# Grados de libertad
+lw 1
+
+# Nodo 1 (origen) - rotaciones + desplazamiento
+arrow3d 3.5 0 -0.6  5.5 0 -0.6
+arrow3d 1.5 0 -0.6  3.5 0 -0.6
+label3d 6 0 -0.6 u1 left
+arrow3d 0 3.5 -0.6  0 5.5 -0.6
+arrow3d 0 1.5 -0.6  0 3.5 -0.6
+label3d 0 6 -0.6 u2 left
+dof3d 0 0 0.5  0 0 5  u3
+
+# Nodo 2 (20, 0, 0)
+arrow3d 23 0 -0.6  25 0 -0.6
+arrow3d 21 0 -0.6  23 0 -0.6
+label3d 25.5 0 -0.6 u4 left
+arrow3d 20 3.2 -0.6  20 5.2 -0.6
+arrow3d 20 1.2 -0.6  20 3.2 -0.6
+label3d 20 5.7 -0.6 u5 left
+dof3d 20 0 0.5  0 0 5  u6
+
+# Nodo 3 (0, 20, 0)
+arrow3d 3.2 20 -0.6  5.2 20 -0.6
+arrow3d 1.2 20 -0.6  3.2 20 -0.6
+label3d 5.7 20 -0.6 u7 left
+arrow3d 0 23 -0.6  0 25 -0.6
+arrow3d 0 21 -0.6  0 23 -0.6
+label3d 0 25.5 -0.6 u8 left
+dof3d 0 20 0.5  0 0 5  u9
+
+# Nodos (circulos numerados)
+node3d 0 0 -0.6 1 0.8
+node3d 20 0 -0.6 2 0.8
+node3d 0 20 -0.6 3 0.8
+
+# Arco 90 en Nodo 1
+lw 1
 color #333
-circle3d 0 0 0 0.2
-circle3d 20 0 0 0.2
-circle3d 0 20 0 0.2
-text3d 0 0 -2 Node 1
-text3d 20 0 -2 Node 2
-text3d 0 20.5 -1.5 Node 3
-# Angulo 90
-color #999
-line3d 2.5 0 0 2.5 2.5 0
-line3d 0 2.5 0 2.5 2.5 0
-text3d 3.5 3 0 90
-# DOFs Node 1 (u1=theta_x, u2=theta_y, u3=w)
-color #cc0000
-arrow3d 0 0 0 0 0 5
-text3d 0.5 0 5.5 u3
-arrow3d 0 0 0 4 0 0
-text3d 4.5 0 0.5 u1
-arrow3d 0 0 0 0 4 0
-text3d 0.3 4.5 0 u2
-# DOFs Node 2 (u4=theta_x, u5=theta_y, u6=w)
-color #0066cc
-arrow3d 20 0 0 20 0 5
-text3d 20.5 0 5.5 u6
-arrow3d 20 0 0 24 0 0
-text3d 24.5 0 0.5 u4
-arrow3d 20 0 0 20 4 0
-text3d 20.3 4.5 0 u5
-# DOFs Node 3 (u7=theta_x, u8=theta_y, u9=w)
-color #33aa33
-arrow3d 0 20 0 0 20 5
-text3d 0.5 20 5.5 u9
-arrow3d 0 20 0 4 20 0
-text3d 4.5 20 0.5 u7
-arrow3d 0 20 0 0 24 0
-text3d 0.3 24.5 0 u8
-# Apoyo empotrado Node 2
+carc3d 0 0 0 4.5 0 1.5708
+label3d 3 3 -1.5 90° below
+
+# Triangulos de elementos
 color #333
-line3d 20 0 -1.5 20 0 1.5
-line3d 20 0 1.5 21 0 1
-line3d 20 0 1 21 0 0.5
-line3d 20 0 0.5 21 0 0
-line3d 20 0 0 21 0 -0.5
-line3d 20 0 -0.5 21 0 -1
-line3d 20 0 -1 21 0 -1.5
-# Apoyo empotrado Node 3
-line3d 0 20 -1.5 0 20 1.5
-line3d 0 20 1.5 0 21 1
-line3d 0 20 1 0 21 0.5
-line3d 0 20 0.5 0 21 0
-line3d 0 20 0 0 21 -0.5
-line3d 0 20 -0.5 0 21 -1
-line3d 0 20 -1 0 21 -1.5
-# Ejes
-color #cc3333
-arrow3d -4 0 0 -1 0 0
-text3d -0.5 0 0 X
-color #33aa33
-arrow3d -4 0 0 -4 3 0
-text3d -4 3.5 0 Y
-color #3333cc
-arrow3d -4 0 0 -4 0 3
-text3d -4 0 3.5 Z
-# Titulo
-color #333
-text3d 10 0 -6 Fig 5.5 - DOFs del Grid Frame
+lw 1
+line3d 8.5 0 -3.5  11.5 0 -3.5
+line3d 11.5 0 -3.5  10 0 -1.5
+line3d 10 0 -1.5  8.5 0 -3.5
+label3d 10 0 -3 1 center
+
+line3d 2 9 -1  2 11 -1
+line3d 2 11 -1  2 10 1
+line3d 2 10 1  2 9 -1
+label3d 2 10 -0.3 2 center
+
+# Apoyos empotrados (hatching)
+line3d 20 0 -1.8  20 0 1.8
+line3d 20 0 1.8  21 0 1.2
+line3d 20 0 1.2  21 0 0.6
+line3d 20 0 0.6  21 0 0
+line3d 20 0 0  21 0 -0.6
+line3d 20 0 -0.6  21 0 -1.2
+line3d 20 0 -1.2  21 0 -1.8
+
+line3d 0 20 -1.8  0 20 1.8
+line3d 0 20 1.8  0 21 1.2
+line3d 0 20 1.2  0 21 0.6
+line3d 0 20 0.6  0 21 0
+line3d 0 20 0  0 21 -0.6
+line3d 0 20 -0.6  0 21 -1.2
+line3d 0 20 -1.2  0 21 -1.8
+
 fit
 @{end draw}
+
+> <b>Properties - All Members: W14x82</b>
+
+I = 882
+J = 5.08
+E = 29000
+G = 11600
+L = 100
+
+@{pagebreak}
+@{end pagebreak}
+
+### 2. Element stiffness matrices (local coordinates)
+
+> Eq. (5.7) — Stiffness matrix for a grid frame element:
+
+@{eq}
+[k] = EI/L^3 * [JG*L^2/(EI), 0, 0, -JG*L^2/(EI), 0, 0; 0, 4*L^2, -6*L, 0, 2*L^2, 6*L; 0, -6*L, 12, 0, -6*L, -12; -JG*L^2/(EI), 0, 0, JG*L^2/(EI), 0, 0; 0, 2*L^2, -6*L, 0, 4*L^2, 6*L; 0, 6*L, -12, 0, 6*L, 12]    (5.7)
+@{end eq}
+
+> <b>ELEMENT 1 and 2</b> — Substituting numerical values (both elements are identical):
+
+EI = E*I
+GJ = G*J
+k_t = GJ/L
+k_b = 4*EI/L
+k_c = 2*EI/L
+k_s = 6*EI/L^2
+k_v = 12*EI/L^3
+
+> Stiffness matrix [k]₁ = [k]₂ :
+
+k = [[k_t, 0, 0, -k_t, 0, 0],[0, k_b, -k_s, 0, k_c, k_s],[0, -k_s, k_v, 0, -k_s, -k_v],[-k_t, 0, 0, k_t, 0, 0],[0, k_c, -k_s, 0, k_b, k_s],[0, k_s, -k_v, 0, k_s, k_v]]
+
+@{pagebreak}
+@{end pagebreak}
+
+### 3. Element transformation matrices
+
+> <b>ELEMENT 1:</b> θ = 0° → [T]₁ = [I] (identity matrix)
+
+> <b>ELEMENT 2:</b> θ = 90° — From Eq. (5.11):
+
+@{eq}
+[T]_2 = [0, 1, 0, 0, 0, 0; -1, 0, 0, 0, 0, 0; 0, 0, 1, 0, 0, 0; 0, 0, 0, 0, 1, 0; 0, 0, 0, -1, 0, 0; 0, 0, 0, 0, 0, 1]    (b)
+@{end eq}
+
+T2 = [[0, 1, 0, 0, 0, 0],[-1, 0, 0, 0, 0, 0],[0, 0, 1, 0, 0, 0],[0, 0, 0, 0, 1, 0],[0, 0, 0, -1, 0, 0],[0, 0, 0, 0, 0, 1]]
+
+### 4. Element stiffness matrices (global coordinates)
+
+> <b>ELEMENT 1:</b> Since θ = 0°, [K̄]₁ = [k]₁
+
+K1 = k
+
+> <b>ELEMENT 2:</b> [K̄]₂ = [T]₂ᵀ · [k]₂ · [T]₂
+
+K2 = transpose(T2)*k*T2
+
+@{pagebreak}
+@{end pagebreak}
+
+### 5. Assemblage of the reduced system stiffness matrix
+
+> Transfer coefficients for free DOFs (u₁, u₂, u₃) from [K̄]₁ and [K̄]₂:
+
+KR = [[K1.(1,1) + K2.(1,1), K1.(1,2) + K2.(1,2), K1.(1,3) + K2.(1,3)],[K1.(2,1) + K2.(2,1), K1.(2,2) + K2.(2,2), K1.(2,3) + K2.(2,3)],[K1.(3,1) + K2.(3,1), K1.(3,2) + K2.(3,2), K1.(3,3) + K2.(3,3)]]
+
+### 6. Equivalent nodal forces
+
+> <b>ELEMENT 1</b> — Concentrated moment M₀ = 200 k·in at L/2 (Case b):
+
+M0 = 200
+Lc = L/2
+
+Q3_1 = -6*M0*Lc/L^2
+Q2_1 = M0/L^2*(Lc^2 - 2*L*Lc)
+Q6_1 = 6*M0*Lc/L^2
+Q5_1 = M0/L^2*(Lc*(2*L - 3*Lc))
+
+> Equivalent nodal force vector {Q̃}₁ (global = local, since [T]₁ = [I]):
+
+Qe1 = [0, Q2_1, Q3_1, 0, Q5_1, Q6_1]
+
+> <b>ELEMENT 2</b> — Uniform distributed load w = 0.1 k/in (Case c):
+
+w = 0.1
+Qa = w*L/2
+Qb = w*L^2/12
+
+> Local coordinates:
+
+Q2L = [-Qb, 0, -Qa, Qb, 0, -Qa]
+
+> Global coordinates: {Q̃}₂ = [T]₂ᵀ · {Q}₂
+
+Qe2 = transpose(T2)*Q2L
+
+@{pagebreak}
+@{end pagebreak}
+
+### 7. Reduced system force vector
+
+> Contributions from equivalent nodal forces at DOFs (1,2,3) plus direct load (-10 kips at DOF 3):
+
+FR = [Qe1.(1) + Qe2.(1), Qe1.(2) + Qe2.(2), Qe1.(3) + Qe2.(3)] + [0, 0, -10]
+
+### 8. Reduced system stiffness equation
+
+@{eq}
+{F}_R = [K]_R * {u}    (h)
+@{end eq}
+
+### 9. Solution of unknown displacements at the joints
+
+> Solving {u} = [K]_R⁻¹ · {F}_R :
+
+u = lsolve(KR, FR)
+
+> u₁ = torsional rotation (rad), u₂ = bending rotation (rad), u₃ = transverse displacement (in)
+
+@{pagebreak}
+@{end pagebreak}
+
+### 10. Element nodal displacements (local coordinates)
+
+> <b>ELEMENT 1</b> (θ = 0°, [T]₁ = [I]):
+
+d1 = [u.(1), u.(2), u.(3), 0, 0, 0]
+
+> <b>ELEMENT 2</b> (θ = 90°): {δ}₂ = [T]₂ · {δ}₂_global
+
+d2g = [u.(1), u.(2), u.(3), 0, 0, 0]
+d2 = T2*d2g
+
+### 11. Element end forces
+
+> {P}ᵢ = [k]ᵢ · {δ}ᵢ − {Q}ᵢ — Eq. (4.20)
+
+> <b>ELEMENT 1:</b>
+
+P1 = k*d1 - Qe1
+
+> <b>ELEMENT 2:</b>
+
+P2 = k*d2 - Q2L
+
+@{pagebreak}
+@{end pagebreak}
+
+### 12. Reactions at supports
+
+> <b>Support at Joint 2</b> (Element 1, far-end forces):
+
+R4 = P1.(4)
+R5 = P1.(5)
+R6 = P1.(6)
+
+> <b>Support at Joint 3</b> (Element 2, far-end forces):
+
+R7 = P2.(4)
+R8 = P2.(5)
+R9 = P2.(6)
+
+> <b>Verification:</b> R₆ + R₉ = total applied vertical load = 10 + 0.1×100 = 20 kip
+
+Rtotal = R6 + R9

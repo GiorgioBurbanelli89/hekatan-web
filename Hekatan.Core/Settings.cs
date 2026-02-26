@@ -2,12 +2,28 @@
 
 namespace Hekatan.Core
 {
+    /// <summary>
+    /// Parser syntax mode: Hekatan (modern, default) or Calcpad (legacy)
+    /// </summary>
+    public enum ParserMode
+    {
+        /// <summary>Modern syntax: # heading, > text, [[1,2],[3,4]] matrices, M[i,j] indexing</summary>
+        Hekatan,
+        /// <summary>Legacy syntax: " heading, ' text, [1;2|3;4] matrices, M.(i;j) indexing</summary>
+        Calcpad
+    }
+
     [Serializable()]
     public class Settings
     {
         public MathSettings Math { get; set; } = new();
         public PlotSettings Plot { get; set; } = new();
         public string Units { get; set; } = "m";
+        /// <summary>
+        /// Parser syntax mode. Default: Hekatan (modern, hekatan-web compatible).
+        /// Both modes always accept legacy syntax for backward compatibility.
+        /// </summary>
+        public ParserMode Mode { get; set; } = ParserMode.Hekatan;
     }
 
     [Serializable()]

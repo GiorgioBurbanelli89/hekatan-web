@@ -723,6 +723,22 @@
       "runArgs": "",
       "description": "Muestra codigo C++ y su explicacion lado a lado. Sintaxis: @{cpp-explain spanish}codigo C++@{end cpp-explain}"
     },
+    "draw": {
+      "command": "",
+      "extension": "",
+      "directive": "@{draw}",
+      "endDirective": "@{end draw}",
+      "commentPrefix": "#",
+      "keywords": ["line", "rect", "circle", "arrow", "text", "pline", "arc",
+                   "line3d", "arrow3d", "text3d", "circle3d", "carc3d", "pline3d",
+                   "box", "box3d"],
+      "builtins": ["color", "grid", "bg", "proj", "fit", "lw",
+                   "off", "on", "oblique", "close"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "CAD 2D/3D Drawing DSL - Dibujo tecnico con proyeccion oblicua. Sintaxis: @{draw 600 400} line 0 0 10 5 @{end draw}"
+    },
     "tree": {
       "command": "",
       "extension": "",

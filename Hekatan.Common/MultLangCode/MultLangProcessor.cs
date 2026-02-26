@@ -84,18 +84,18 @@ namespace Hekatan.Common.MultLangCode
 
             if (!MultLangManager.HasLanguageCode(code))
             {
-                // HEKATAN MODE: No @{} blocks → render entire content as markdown
+                // HEKATAN MODE: No @{} blocks → process as Hekatan math/headings/text
                 if (returnHtml)
-                    return RenderMarkdown(code);
+                    return RenderPlainColumnContent(code);
                 return code;
             }
 
             var blocks = MultLangManager.ExtractCodeBlocks(code);
             if (blocks.Count == 0)
             {
-                // HEKATAN MODE: No extractable blocks → render as markdown
+                // HEKATAN MODE: No extractable blocks → process as Hekatan math/headings/text
                 if (returnHtml)
-                    return RenderMarkdown(code);
+                    return RenderPlainColumnContent(code);
                 return code;
             }
 
@@ -315,6 +315,15 @@ namespace Hekatan.Common.MultLangCode
                     {
                         output = ProcessAnimationBlock(block.Code, "animation", variables);
                     }
+                    // Special handling for @{draw} — CAD 2D/3D drawing on Canvas
+                    else if (language.Equals("draw", StringComparison.OrdinalIgnoreCase) ||
+                             language.StartsWith("draw ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var drawDirective = block.StartDirective ?? language;
+                        if (drawDirective.StartsWith("@{")) drawDirective = drawDirective.Substring(2);
+                        if (drawDirective.EndsWith("}")) drawDirective = drawDirective.Substring(0, drawDirective.Length - 1);
+                        output = ProcessDrawBlock(block.Code, drawDirective.Trim(), variables);
+                    }
                     // Special handling for @{tree} - Tree/hierarchy diagrams
                     // Syntax: @{tree}
                     //         Proyecto
@@ -373,9 +382,13 @@ namespace Hekatan.Common.MultLangCode
                     // Note: DetectDirective returns just "eq" as language name (params stripped),
                     //       so we extract alignment from block.StartDirective (e.g., "@{eq left}")
                     else if (language.Equals("eq", StringComparison.OrdinalIgnoreCase) ||
+                             language.StartsWith("eq:", StringComparison.OrdinalIgnoreCase) ||
                              language.Equals("equation", StringComparison.OrdinalIgnoreCase) ||
+                             language.StartsWith("equation:", StringComparison.OrdinalIgnoreCase) ||
                              language.Equals("ecuacion", StringComparison.OrdinalIgnoreCase) ||
-                             language.Equals("formula", StringComparison.OrdinalIgnoreCase))
+                             language.StartsWith("ecuacion:", StringComparison.OrdinalIgnoreCase) ||
+                             language.Equals("formula", StringComparison.OrdinalIgnoreCase) ||
+                             language.StartsWith("formula:", StringComparison.OrdinalIgnoreCase))
                     {
                         var eqAlign = ExtractEqAlignment(block.StartDirective);
                         output = ProcessEquationBlock(block.Code, variables, eqAlign);
@@ -387,6 +400,7 @@ namespace Hekatan.Common.MultLangCode
                     //         @{end eqdef}
                     // Renders equations in left column with Hekatan-style formatting, definitions in right column
                     else if (language.Equals("eqdef", StringComparison.OrdinalIgnoreCase) ||
+                             language.StartsWith("eqdef:", StringComparison.OrdinalIgnoreCase) ||
                              language.Equals("ecuaciondef", StringComparison.OrdinalIgnoreCase) ||
                              language.Equals("eqdefinicion", StringComparison.OrdinalIgnoreCase))
                     {
@@ -735,9 +749,11 @@ namespace Hekatan.Common.MultLangCode
                     if (insertedContent.TryGetValue(i, out var content))
                     {
                         // Flush markdown buffer before block output
+                        // Use RenderPlainColumnContent (NOT RenderMarkdown) so math expressions
+                        // generate CALCPAD_INLINE markers for evaluation by HekatanOutputProcessor
                         if (markdownBuffer.Length > 0)
                         {
-                            htmlBuilder.Append(RenderMarkdown(markdownBuffer.ToString()));
+                            htmlBuilder.Append(RenderPlainColumnContent(markdownBuffer.ToString()));
                             markdownBuffer.Clear();
                         }
 
@@ -766,9 +782,11 @@ namespace Hekatan.Common.MultLangCode
                 }
 
                 // Flush remaining markdown buffer
+                // Use RenderPlainColumnContent (NOT RenderMarkdown) so math expressions
+                // generate CALCPAD_INLINE markers for evaluation by HekatanOutputProcessor
                 if (markdownBuffer.Length > 0)
                 {
-                    htmlBuilder.Append(RenderMarkdown(markdownBuffer.ToString()));
+                    htmlBuilder.Append(RenderPlainColumnContent(markdownBuffer.ToString()));
                     markdownBuffer.Clear();
                 }
 
@@ -977,8 +995,9 @@ namespace Hekatan.Common.MultLangCode
         }
 
         /// <summary>
-        /// Detects if a line is likely Hekatan math (variable assignment, function definition, or expression).
-        /// Examples: "a = 6", "f(x) = x^2 + 1", "Area = a*b", "resultado = c"
+        /// Detects if a line is likely Hekatan math (variable assignment, function call, expression, etc.).
+        /// In Hekatan Calc, any line that's not a heading, text, or HTML is assumed to be math.
+        /// Examples: "a = 6", "f(x) = x^2 + 1", "transpose(A)*k", "100'in", "[1; 2; 3]"
         /// </summary>
         private static bool IsLikelyHekatanMath(string line)
         {
@@ -986,23 +1005,46 @@ namespace Hekatan.Common.MultLangCode
                 return false;
 
             var trimmed = line.Trim();
-
-            // Must start with a letter or Greek letter (Hekatan variable/function names)
             if (trimmed.Length == 0)
                 return false;
+
             char first = trimmed[0];
-            bool startsWithLetter = char.IsLetter(first) || (first >= 'α' && first <= 'ω') || (first >= 'Α' && first <= 'Ω');
-            if (!startsWithLetter)
+
+            // Lines starting with letter, Greek, underscore, digit, bracket, sign, or $ (units)
+            bool startsLikeMath = char.IsLetter(first)
+                || first == '_'
+                || char.IsDigit(first)
+                || first == '(' || first == '['
+                || first == '-' || first == '+'
+                || first == '$'
+                || first == '|'
+                || (first >= 'α' && first <= 'ω')
+                || (first >= 'Α' && first <= 'Ω');
+
+            if (!startsLikeMath)
                 return false;
 
-            // Must contain = (assignment or function definition)
-            if (!trimmed.Contains('='))
-                return false;
+            // Contains assignment → definitely math
+            if (trimmed.Contains('='))
+                return true;
 
-            // Simple heuristic: looks like "identifier = expression" or "f(x) = expression"
-            var assignRegex = new System.Text.RegularExpressions.Regex(
-                @"^[a-zA-Zα-ωΑ-Ω_]\w*(\s*\(.*\))?\s*=\s*.+$");
-            return assignRegex.IsMatch(trimmed);
+            // Contains math operators, brackets, or unit separator → likely math
+            foreach (char c in trimmed)
+            {
+                if (c == '+' || c == '*' || c == '/' || c == '^'
+                    || c == '(' || c == ')' || c == '[' || c == ']'
+                    || c == '\'')
+                    return true;
+            }
+
+            // Standalone identifier (variable evaluation) or number
+            if (trimmed.Length > 0 && (char.IsLetter(first) || first == '_'))
+                return true;
+
+            if (char.IsDigit(first))
+                return true;
+
+            return false;
         }
 
         /// <summary>
@@ -1958,6 +2000,809 @@ namespace Hekatan.Common.MultLangCode
         {
             return ProcessTreeBlock(content, directive, variables);
         }
+
+        /// <summary>
+        /// Processes @{draw W H [align]} blocks.
+        /// Parses CAD DSL commands and generates HTML canvas + JavaScript Canvas2D.
+        /// Supports 2D primitives and 3D oblique projection with auto-fit.
+        /// </summary>
+        private string ProcessDrawBlock(string content, string directive, Dictionary<string, object> variables)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(content))
+                    return "<p style='color:red;'>Error: Bloque @{draw} vac&#237;o</p>";
+
+                var processed = ProcessMarkdownVariables(content, variables);
+                var lines = processed.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+                // Parse directive: @{draw 600 400 left}
+                int canvasW = 600, canvasH = 400;
+                string align = "center";
+                var dirParts = directive.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                if (dirParts.Length >= 3 && int.TryParse(dirParts[1], out int pw) && int.TryParse(dirParts[2], out int ph))
+                { canvasW = pw; canvasH = ph; }
+                else if (dirParts.Length >= 2 && int.TryParse(dirParts[1], out int pw2))
+                { canvasW = pw2; canvasH = (int)(pw2 * 0.67); }
+                if (dirParts.Length >= 4)
+                {
+                    var a = dirParts[3].ToLower();
+                    if (a == "left" || a == "right" || a == "center") align = a;
+                }
+
+                var containerId = "draw_" + Guid.NewGuid().ToString("N").Substring(0, 8);
+
+                // State tracking
+                string currentColor = "#333333";
+                string bgColor = "#ffffff";
+                bool gridOn = false;
+                double lineWidth = 1.5;
+                double fontSize = 12;
+                bool is3d = false;
+                double projAngle = 45;
+                double projScale = 0.5;
+                bool autoFit = false;
+
+                // Collect draw commands as structured data
+                var cmds = new List<string>();
+
+                foreach (var rawLine in lines)
+                {
+                    var line = rawLine.Trim();
+                    if (string.IsNullOrEmpty(line) || line.StartsWith("#")) continue;
+
+                    var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    var cmd = parts[0].ToLower();
+
+                    switch (cmd)
+                    {
+                        case "color":
+                            if (parts.Length >= 2) currentColor = parts[1];
+                            break;
+                        case "bg":
+                            if (parts.Length >= 2) bgColor = parts[1];
+                            break;
+                        case "grid":
+                            gridOn = parts.Length >= 2 && parts[1].ToLower() != "off";
+                            break;
+                        case "lw":
+                            if (parts.Length >= 2 && double.TryParse(parts[1],
+                                System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, out double lwVal))
+                                lineWidth = lwVal;
+                            break;
+                        case "proj":
+                            is3d = true;
+                            if (parts.Length >= 4)
+                            {
+                                double.TryParse(parts[2], System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out projAngle);
+                                double.TryParse(parts[3], System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out projScale);
+                            }
+                            break;
+                        case "fit":
+                            autoFit = true;
+                            break;
+
+                        // 2D Primitives
+                        case "line":
+                            if (parts.Length >= 5)
+                                cmds.Add($"L|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{currentColor}|{F(lineWidth)}");
+                            break;
+                        case "rect":
+                            if (parts.Length >= 5)
+                            {
+                                var fill = parts.Length >= 6 ? parts[5] : "";
+                                cmds.Add($"R|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{currentColor}|{F(lineWidth)}|{fill}");
+                            }
+                            break;
+                        case "circle":
+                            if (parts.Length >= 4)
+                            {
+                                var fill = parts.Length >= 5 && parts[4].StartsWith("#") ? parts[4] : "";
+                                cmds.Add($"C|{parts[1]}|{parts[2]}|{parts[3]}|{currentColor}|{F(lineWidth)}|{fill}");
+                            }
+                            break;
+                        case "arrow":
+                            if (parts.Length >= 5)
+                                cmds.Add($"A|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{currentColor}|{F(lineWidth)}");
+                            break;
+                        case "text":
+                            if (parts.Length >= 4)
+                            {
+                                var txt = string.Join(" ", parts.Skip(3));
+                                cmds.Add($"T|{parts[1]}|{parts[2]}|{DrawEscapeJs(txt)}|{currentColor}");
+                            }
+                            break;
+                        case "pline":
+                            cmds.Add($"P|{string.Join("|", parts.Skip(1))}|COL:{currentColor}|LW:{F(lineWidth)}");
+                            break;
+
+                        // 3D Primitives
+                        case "line3d":
+                            if (parts.Length >= 7)
+                                cmds.Add($"L3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{parts[6]}|{currentColor}|{F(lineWidth)}");
+                            break;
+                        case "arrow3d":
+                            if (parts.Length >= 7)
+                                cmds.Add($"A3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{parts[6]}|{currentColor}|{F(lineWidth)}");
+                            break;
+                        case "text3d":
+                            if (parts.Length >= 5)
+                            {
+                                var txt3 = string.Join(" ", parts.Skip(4));
+                                cmds.Add($"T3|{parts[1]}|{parts[2]}|{parts[3]}|{DrawEscapeJs(txt3)}|{currentColor}");
+                            }
+                            break;
+                        case "circle3d":
+                            if (parts.Length >= 5)
+                            {
+                                var fill3 = parts.Length >= 6 && parts[5].StartsWith("#") ? parts[5] : "";
+                                cmds.Add($"C3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{currentColor}|{F(lineWidth)}|{fill3}");
+                            }
+                            break;
+                        case "carc3d":
+                            if (parts.Length >= 7)
+                                cmds.Add($"CA3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{parts[6]}|{currentColor}|{F(lineWidth)}");
+                            break;
+                        case "pline3d":
+                            cmds.Add($"P3|{string.Join("|", parts.Skip(1))}|COL:{currentColor}|LW:{F(lineWidth)}");
+                            break;
+
+                        // New primitives
+                        case "fontsize":
+                            if (parts.Length >= 2 && double.TryParse(parts[1],
+                                System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, out double fsVal))
+                                fontSize = fsVal;
+                            break;
+                        case "hatch3d":
+                            if (parts.Length >= 13)
+                            {
+                                var hSpacing = parts.Length >= 14 && !parts[13].StartsWith("#") ? parts[13] : "1";
+                                var hColor = parts.Length >= 14 && parts[13].StartsWith("#") ? parts[13]
+                                           : parts.Length >= 15 && parts[14].StartsWith("#") ? parts[14] : currentColor;
+                                cmds.Add($"H3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{parts[6]}|{parts[7]}|{parts[8]}|{parts[9]}|{parts[10]}|{parts[11]}|{parts[12]}|{hSpacing}|{hColor}|{F(lineWidth * 0.3)}");
+                            }
+                            break;
+                        case "fillpoly3d":
+                        {
+                            var fpParts = parts.Skip(1).ToList();
+                            var fpColor = fpParts.LastOrDefault()?.StartsWith("#") == true ? fpParts.Last() : currentColor;
+                            if (fpParts.LastOrDefault()?.StartsWith("#") == true) fpParts.RemoveAt(fpParts.Count - 1);
+                            cmds.Add($"FP3|{string.Join("|", fpParts)}|COL:{fpColor}|LW:{F(lineWidth)}");
+                            break;
+                        }
+                        case "label3d":
+                            if (parts.Length >= 5)
+                            {
+                                var anchorOpts = new[] { "left", "right", "above", "below", "center" };
+                                var lastPart = parts[parts.Length - 1].ToLower();
+                                var hasAnchor = anchorOpts.Contains(lastPart);
+                                var lblText = string.Join(" ", parts.Skip(4).Take(parts.Length - 4 - (hasAnchor ? 1 : 0)));
+                                var anchor = hasAnchor ? lastPart : "center";
+                                cmds.Add($"LB3|{parts[1]}|{parts[2]}|{parts[3]}|{DrawEscapeJs(lblText)}|{currentColor}|{anchor}|{F(fontSize)}");
+                            }
+                            break;
+
+                        // Compound structural elements
+                        case "beam3d":
+                            if (parts.Length >= 7)
+                            {
+                                var bDepth = parts.Length >= 8 ? parts[7] : "1.2";
+                                var bLabel = parts.Length >= 9 ? parts[8] : "";
+                                // Outline
+                                cmds.Add($"L3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{parts[6]}|{currentColor}|{F(lineWidth)}");
+                                cmds.Add($"L3|{parts[1]}|{parts[2]}|{parts[3]}-{bDepth}|{parts[4]}|{parts[5]}|{parts[6]}-{bDepth}|{currentColor}|{F(lineWidth)}");
+                                cmds.Add($"L3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[1]}|{parts[2]}|{parts[3]}-{bDepth}|{currentColor}|{F(lineWidth)}");
+                                cmds.Add($"L3|{parts[4]}|{parts[5]}|{parts[6]}|{parts[4]}|{parts[5]}|{parts[6]}-{bDepth}|{currentColor}|{F(lineWidth)}");
+                                // Hatch
+                                cmds.Add($"H3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{parts[6]}|{parts[4]}|{parts[5]}|{parts[6]}-{bDepth}|{parts[1]}|{parts[2]}|{parts[3]}-{bDepth}|{bDepth}*0.8|{currentColor}|{F(lineWidth * 0.3)}");
+                                if (!string.IsNullOrEmpty(bLabel))
+                                {
+                                    // Direction triangle + label (simplified: just label below midpoint)
+                                    cmds.Add($"BM_LBL|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{parts[6]}|{bDepth}|{DrawEscapeJs(bLabel)}|{currentColor}|{F(fontSize)}");
+                                }
+                            }
+                            break;
+                        case "node3d":
+                            if (parts.Length >= 5)
+                            {
+                                var nRad = parts.Length >= 6 ? parts[5] : "0.8";
+                                cmds.Add($"C3|{parts[1]}|{parts[2]}|{parts[3]}|{nRad}|{currentColor}|{F(lineWidth)}|#ffffff");
+                                cmds.Add($"LB3|{parts[1]}|{parts[2]}|{parts[3]}|{DrawEscapeJs(parts[4])}|{currentColor}|center|{F(fontSize)}");
+                            }
+                            break;
+                        case "dof3d":
+                            if (parts.Length >= 8)
+                            {
+                                // Arrow from (x,y,z) to (x+dx,y+dy,z+dz)
+                                cmds.Add($"A3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[1]}+{parts[4]}|{parts[2]}+{parts[5]}|{parts[3]}+{parts[6]}|{currentColor}|{F(lineWidth)}");
+                                // Label at tip
+                                cmds.Add($"DOF_LBL|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{parts[6]}|{DrawEscapeJs(parts[7])}|{currentColor}|{F(fontSize)}");
+                            }
+                            break;
+                        case "rdof3d":
+                            if (parts.Length >= 8)
+                            {
+                                // Two parallel arrows (rotation DOF) with perpendicular offset
+                                cmds.Add($"RDOF3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{parts[6]}|{DrawEscapeJs(parts[7])}|{currentColor}|{F(lineWidth)}|{F(fontSize)}");
+                            }
+                            break;
+                        case "axes3d":
+                            if (parts.Length >= 4)
+                            {
+                                var axSz = parts.Length >= 5 ? parts[4] : "4";
+                                // Z up
+                                cmds.Add($"A3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[1]}|{parts[2]}|{parts[3]}+{axSz}|#333333|{F(lineWidth)}");
+                                cmds.Add($"LB3|{parts[1]}-1|{parts[2]}|{parts[3]}+{axSz}+0.5|Z|#333333|center|{F(fontSize)}");
+                                // X right
+                                cmds.Add($"A3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[1]}+{axSz}|{parts[2]}|{parts[3]}|#333333|{F(lineWidth)}");
+                                cmds.Add($"LB3|{parts[1]}+{axSz}+0.5|{parts[2]}|{parts[3]}-0.5|X|#333333|center|{F(fontSize)}");
+                                // Y oblique
+                                cmds.Add($"A3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[1]}|{parts[2]}+{axSz}*0.75|{parts[3]}|#333333|{F(lineWidth)}");
+                                cmds.Add($"LB3|{parts[1]}|{parts[2]}+{axSz}*0.75+0.5|{parts[3]}+0.5|Y|#333333|center|{F(fontSize)}");
+                            }
+                            break;
+                        case "support3d":
+                            if (parts.Length >= 5)
+                            {
+                                var supType = parts[4].ToLower();
+                                var sz = "1.5";
+                                switch (supType)
+                                {
+                                    case "pinned":
+                                        // Triangle outline (3 lines)
+                                        cmds.Add($"L3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[1]}-{sz}|{parts[2]}|{parts[3]}-{sz}*1.2|{currentColor}|{F(lineWidth)}");
+                                        cmds.Add($"L3|{parts[1]}-{sz}|{parts[2]}|{parts[3]}-{sz}*1.2|{parts[1]}+{sz}|{parts[2]}|{parts[3]}-{sz}*1.2|{currentColor}|{F(lineWidth)}");
+                                        cmds.Add($"L3|{parts[1]}+{sz}|{parts[2]}|{parts[3]}-{sz}*1.2|{parts[1]}|{parts[2]}|{parts[3]}|{currentColor}|{F(lineWidth)}");
+                                        // Base line
+                                        cmds.Add($"L3|{parts[1]}-{sz}*1.3|{parts[2]}|{parts[3]}-{sz}*1.2|{parts[1]}+{sz}*1.3|{parts[2]}|{parts[3]}-{sz}*1.2|{currentColor}|{F(lineWidth)}");
+                                        // Hatching lines below base
+                                        for (int hi = -2; hi <= 2; hi++)
+                                            cmds.Add($"L3|{parts[1]}+{hi}*{sz}*0.35|{parts[2]}|{parts[3]}-{sz}*1.2|{parts[1]}+{hi}*{sz}*0.35-{sz}*0.3|{parts[2]}|{parts[3]}-{sz}*1.2-{sz}*0.4|{currentColor}|{F(lineWidth * 0.5)}");
+                                        break;
+                                    case "roller":
+                                        // Triangle outline (3 lines)
+                                        cmds.Add($"L3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[1]}-{sz}|{parts[2]}|{parts[3]}-{sz}|{currentColor}|{F(lineWidth)}");
+                                        cmds.Add($"L3|{parts[1]}-{sz}|{parts[2]}|{parts[3]}-{sz}|{parts[1]}+{sz}|{parts[2]}|{parts[3]}-{sz}|{currentColor}|{F(lineWidth)}");
+                                        cmds.Add($"L3|{parts[1]}+{sz}|{parts[2]}|{parts[3]}-{sz}|{parts[1]}|{parts[2]}|{parts[3]}|{currentColor}|{F(lineWidth)}");
+                                        // Circle below
+                                        cmds.Add($"C3|{parts[1]}|{parts[2]}|{parts[3]}-{sz}-{sz}*0.3|{sz}*0.3|{currentColor}|{F(lineWidth)}|");
+                                        // Base line
+                                        cmds.Add($"L3|{parts[1]}-{sz}*1.3|{parts[2]}|{parts[3]}-{sz}-{sz}*0.6|{parts[1]}+{sz}*1.3|{parts[2]}|{parts[3]}-{sz}-{sz}*0.6|{currentColor}|{F(lineWidth)}");
+                                        break;
+                                    case "fixed":
+                                        cmds.Add($"L3|{parts[1]}-{sz}|{parts[2]}|{parts[3]}|{parts[1]}+{sz}|{parts[2]}|{parts[3]}|{currentColor}|{F(lineWidth)}");
+                                        for (int hi = -3; hi <= 3; hi++)
+                                            cmds.Add($"L3|{parts[1]}+{hi}*{sz}*0.3|{parts[2]}|{parts[3]}|{parts[1]}+{hi}*{sz}*0.3-{sz}*0.3|{parts[2]}|{parts[3]}-{sz}*0.4|{currentColor}|{F(lineWidth * 0.5)}");
+                                        break;
+                                }
+                            }
+                            break;
+                    }
+                }
+
+                // Generate HTML + JS
+                var marginStyle = align switch
+                {
+                    "left" => "margin:10px 0;",
+                    "right" => "margin:10px 0 10px auto;",
+                    _ => "margin:10px auto;"
+                };
+
+                var sb = new StringBuilder();
+                var wrapperId = containerId + "_wrap";
+                sb.AppendLine($"<div style='text-align:{align};position:relative;display:inline-block;{marginStyle}'>");
+                sb.AppendLine($"  <div id='{wrapperId}' style='overflow:hidden;border:1px solid #ccc;border-radius:4px;" +
+                              $"width:{canvasW}px;height:{canvasH}px;cursor:grab;position:relative;'>");
+                sb.AppendLine($"    <canvas id='{containerId}' width='{canvasW}' height='{canvasH}' " +
+                              $"style='display:block;background:{bgColor};transform-origin:0 0;'></canvas>");
+                sb.AppendLine("  </div>");
+                // Zoom buttons
+                sb.AppendLine($"  <div style='position:absolute;top:4px;right:4px;display:flex;flex-direction:column;gap:2px;z-index:1;'>");
+                sb.AppendLine($"    <button onclick=\"{containerId}_zf(1.3)\" style='width:26px;height:26px;cursor:pointer;border:1px solid #aaa;border-radius:4px;background:#fff;font-size:14px;line-height:1;'>+</button>");
+                sb.AppendLine($"    <button onclick=\"{containerId}_zf(1/1.3)\" style='width:26px;height:26px;cursor:pointer;border:1px solid #aaa;border-radius:4px;background:#fff;font-size:14px;line-height:1;'>&minus;</button>");
+                sb.AppendLine($"    <button onclick=\"{containerId}_zr()\" style='width:26px;height:26px;cursor:pointer;border:1px solid #aaa;border-radius:4px;background:#fff;font-size:11px;line-height:1;' title='Reset'>R</button>");
+                sb.AppendLine("  </div>");
+                sb.AppendLine("</div>");
+                sb.AppendLine("<script>");
+                sb.AppendLine("(function(){");
+                sb.AppendLine($"var c=document.getElementById('{containerId}');");
+                // Zoom/pan state
+                sb.AppendLine($"var wr=document.getElementById('{wrapperId}');");
+                sb.AppendLine("var zm=1,px=0,py=0,dragging=false,sx=0,sy=0,spx=0,spy=0;");
+                sb.AppendLine("function applyT(){c.style.transform='translate('+px+'px,'+py+'px) scale('+zm+')';}");
+                sb.AppendLine($"window.{containerId}_zf=function(f){{zm*=f;if(zm<0.1)zm=0.1;if(zm>20)zm=20;applyT();}};");
+                sb.AppendLine($"window.{containerId}_zr=function(){{zm=1;px=0;py=0;applyT();}};");
+                // Mouse wheel zoom
+                sb.AppendLine("wr.addEventListener('wheel',function(e){e.preventDefault();" +
+                    "var f=e.deltaY<0?1.15:1/1.15;" +
+                    "var rect=wr.getBoundingClientRect();" +
+                    "var mx=e.clientX-rect.left,my=e.clientY-rect.top;" +
+                    "px=(px-mx)*f+mx;py=(py-my)*f+my;" +
+                    "zm*=f;if(zm<0.1)zm=0.1;if(zm>20)zm=20;applyT();},{passive:false});");
+                // Mouse drag pan
+                sb.AppendLine("wr.addEventListener('mousedown',function(e){if(e.button===0){dragging=true;sx=e.clientX;sy=e.clientY;spx=px;spy=py;wr.style.cursor='grabbing';}});");
+                sb.AppendLine("window.addEventListener('mousemove',function(e){if(dragging){px=spx+(e.clientX-sx);py=spy+(e.clientY-sy);applyT();}});");
+                sb.AppendLine("window.addEventListener('mouseup',function(){if(dragging){dragging=false;wr.style.cursor='grab';}});");
+                // Double-click reset
+                sb.AppendLine("wr.addEventListener('dblclick',function(){zm=1;px=0;py=0;applyT();});");
+                sb.AppendLine("var ctx=c.getContext('2d');");
+                sb.AppendLine($"var W={canvasW},H={canvasH};");
+
+                // Projection function
+                if (is3d)
+                {
+                    sb.AppendLine($"var pA={F(projAngle)}*Math.PI/180,pS={F(projScale)};");
+                    sb.AppendLine("function w2s(x,y,z){return[x+y*Math.cos(pA)*pS,z+y*Math.sin(pA)*pS];}");
+                }
+
+                // Arrow drawing helper
+                sb.AppendLine("function drawArr(ctx,x1,y1,x2,y2,col,lw){" +
+                    "ctx.beginPath();ctx.strokeStyle=col;ctx.lineWidth=lw;" +
+                    "ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();" +
+                    "var a=Math.atan2(y2-y1,x2-x1),h=8*lw;" +
+                    "ctx.beginPath();ctx.fillStyle=col;" +
+                    "ctx.moveTo(x2,y2);" +
+                    "ctx.lineTo(x2-h*Math.cos(a-0.35),y2-h*Math.sin(a-0.35));" +
+                    "ctx.lineTo(x2-h*Math.cos(a+0.35),y2-h*Math.sin(a+0.35));" +
+                    "ctx.closePath();ctx.fill();}");
+
+                if (autoFit)
+                {
+                    // Two-pass: first collect all points, then transform and draw
+                    sb.AppendLine("var pts=[];");
+                    GenerateDrawPointCollection(sb, cmds, is3d);
+                    sb.AppendLine("if(pts.length===0){pts.push([0,0],[1,1]);}");
+                    sb.AppendLine("var mnX=1e9,mnY=1e9,mxX=-1e9,mxY=-1e9;");
+                    sb.AppendLine("for(var i=0;i<pts.length;i++){var p=pts[i];if(p[0]<mnX)mnX=p[0];if(p[0]>mxX)mxX=p[0];if(p[1]<mnY)mnY=p[1];if(p[1]>mxY)mxY=p[1];}");
+                    sb.AppendLine("var pad=30,rX=mxX-mnX||1,rY=mxY-mnY||1;");
+                    sb.AppendLine("var sc=Math.min((W-2*pad)/rX,(H-2*pad)/rY);");
+                    sb.AppendLine("ctx.save();");
+                    // Flip Y: canvas Y goes down, world Y (Z projected) goes up
+                    sb.AppendLine("ctx.translate(pad+(W-2*pad-rX*sc)/2, H-pad-(H-2*pad-rY*sc)/2);");
+                    sb.AppendLine("ctx.scale(sc,-sc);");
+                    sb.AppendLine("ctx.translate(-mnX,-mnY);");
+                    // Adjusted line width
+                    sb.AppendLine("var lwS=1/sc;");
+                    GenerateDrawCommands(sb, cmds, is3d, true);
+                    sb.AppendLine("ctx.restore();");
+                }
+                else
+                {
+                    sb.AppendLine("var lwS=1;");
+                    GenerateDrawCommands(sb, cmds, is3d, false);
+                }
+
+                sb.AppendLine("})();");
+                sb.AppendLine("</script>");
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                return $"<p style='color:red;'>Error en @{{draw}}: {ex.Message}</p>";
+            }
+        }
+
+        /// <summary>Collect projected points for auto-fit bounding box.</summary>
+        private void GenerateDrawPointCollection(StringBuilder sb, List<string> cmds, bool is3d)
+        {
+            foreach (var cmd in cmds)
+            {
+                var p = cmd.Split('|');
+                switch (p[0])
+                {
+                    case "L": // line x1 y1 x2 y2
+                        sb.AppendLine($"pts.push([{p[1]},{p[2]}],[{p[3]},{p[4]}]);");
+                        break;
+                    case "R": // rect x y w h
+                        sb.AppendLine($"pts.push([{p[1]},{p[2]}],[{p[1]}*1+{p[3]}*1,{p[2]}*1+{p[4]}*1]);");
+                        break;
+                    case "C": // circle cx cy r
+                        sb.AppendLine($"pts.push([{p[1]}*1-{p[3]}*1,{p[2]}*1-{p[3]}*1],[{p[1]}*1+{p[3]}*1,{p[2]}*1+{p[3]}*1]);");
+                        break;
+                    case "A": // arrow x1 y1 x2 y2
+                        sb.AppendLine($"pts.push([{p[1]},{p[2]}],[{p[3]},{p[4]}]);");
+                        break;
+                    case "T": // text x y
+                        sb.AppendLine($"pts.push([{p[1]},{p[2]}]);");
+                        break;
+                    case "P": // pline coords...
+                        for (int i = 1; i < p.Length - 2; i += 2)
+                        {
+                            if (p[i].Contains(":")) break;
+                            if (i + 1 < p.Length && !p[i + 1].Contains(":"))
+                                sb.AppendLine($"pts.push([{p[i]},{p[i + 1]}]);");
+                        }
+                        break;
+                    case "L3": // line3d x1 y1 z1 x2 y2 z2
+                        sb.AppendLine($"pts.push(w2s({p[1]},{p[2]},{p[3]}),w2s({p[4]},{p[5]},{p[6]}));");
+                        break;
+                    case "A3":
+                        sb.AppendLine($"pts.push(w2s({p[1]},{p[2]},{p[3]}),w2s({p[4]},{p[5]},{p[6]}));");
+                        break;
+                    case "T3": // text3d x y z
+                        sb.AppendLine($"pts.push(w2s({p[1]},{p[2]},{p[3]}));");
+                        break;
+                    case "C3": // circle3d cx cy cz r
+                        sb.AppendLine($"(function(){{var c=w2s({p[1]},{p[2]},{p[3]});var r={p[4]}*1;" +
+                            "pts.push([c[0]-r,c[1]-r],[c[0]+r,c[1]+r]);})();");
+                        break;
+                    case "CA3": // carc3d cx cy cz r startAngle endAngle
+                        sb.AppendLine($"(function(){{var c=w2s({p[1]},{p[2]},{p[3]});var r={p[4]};" +
+                            "pts.push([c[0]-r,c[1]-r],[c[0]+r,c[1]+r]);})();");
+                        break;
+                    case "P3": // pline3d
+                        for (int i = 1; i < p.Length - 2; i += 3)
+                        {
+                            if (p[i].Contains(":")) break;
+                            if (i + 2 < p.Length && !p[i + 1].Contains(":") && !p[i + 2].Contains(":"))
+                                sb.AppendLine($"pts.push(w2s({p[i]},{p[i + 1]},{p[i + 2]}));");
+                        }
+                        break;
+
+                    // New primitives
+                    case "H3": // hatch3d - 4 corners
+                        sb.AppendLine($"pts.push(w2s({p[1]},{p[2]},{p[3]}),w2s({p[4]},{p[5]},{p[6]}),w2s({p[7]},{p[8]},{p[9]}),w2s({p[10]},{p[11]},{p[12]}));");
+                        break;
+                    case "FP3": // fillpoly3d
+                    {
+                        var fpPts = new List<string>();
+                        for (int i = 1; i < p.Length; i++)
+                        {
+                            if (p[i].Contains(":")) break;
+                            fpPts.Add(p[i]);
+                        }
+                        for (int i = 0; i < fpPts.Count - 2; i += 3)
+                            sb.AppendLine($"pts.push(w2s({fpPts[i]},{fpPts[i + 1]},{fpPts[i + 2]}));");
+                        break;
+                    }
+                    case "LB3": // label3d
+                        sb.AppendLine($"pts.push(w2s({p[1]},{p[2]},{p[3]}));");
+                        break;
+                    case "BM_LBL": // beam3d label
+                        sb.AppendLine($"pts.push(w2s(({p[1]}+{p[4]})/2,({p[2]}+{p[5]})/2,({p[3]}+{p[6]})/2-{p[7]}-3));");
+                        break;
+                    case "DOF_LBL": // dof label
+                        sb.AppendLine($"pts.push(w2s({p[1]}+{p[4]},{p[2]}+{p[5]},{p[3]}+{p[6]}));");
+                        break;
+                    case "RDOF3": // rotational DOF (two parallel arrows)
+                        sb.AppendLine($"pts.push(w2s({p[1]},{p[2]},{p[3]}));");
+                        sb.AppendLine($"pts.push(w2s({p[1]}+{p[4]},{p[2]}+{p[5]},{p[3]}+{p[6]}));");
+                        break;
+                }
+            }
+        }
+
+        /// <summary>Generate Canvas2D draw commands.</summary>
+        private void GenerateDrawCommands(StringBuilder sb, List<string> cmds, bool is3d, bool scaled)
+        {
+            // When scaled (auto-fit), line width must be divided by scale
+            string lwMul(string lw) => scaled ? $"{lw}*lwS" : lw;
+            // Font size: when scaled, text needs inverse scale for readability
+            string fontSize(int sz) => scaled ? $"Math.max(1,{sz}*lwS)" : $"{sz}";
+
+            foreach (var cmd in cmds)
+            {
+                var p = cmd.Split('|');
+                switch (p[0])
+                {
+                    case "L": // line x1 y1 x2 y2 color lw
+                        sb.AppendLine($"ctx.beginPath();ctx.strokeStyle='{p[5]}';ctx.lineWidth={lwMul(p[6])};" +
+                            $"ctx.moveTo({p[1]},{p[2]});ctx.lineTo({p[3]},{p[4]});ctx.stroke();");
+                        break;
+                    case "R": // rect x y w h color lw fill
+                        sb.AppendLine($"ctx.strokeStyle='{p[5]}';ctx.lineWidth={lwMul(p[6])};ctx.strokeRect({p[1]},{p[2]},{p[3]},{p[4]});");
+                        if (!string.IsNullOrEmpty(p[7]))
+                            sb.AppendLine($"ctx.fillStyle='{p[7]}';ctx.fillRect({p[1]},{p[2]},{p[3]},{p[4]});");
+                        break;
+                    case "C": // circle cx cy r color lw fill
+                        sb.AppendLine($"ctx.beginPath();ctx.strokeStyle='{p[4]}';ctx.lineWidth={lwMul(p[5])};" +
+                            $"ctx.arc({p[1]},{p[2]},{p[3]},0,2*Math.PI);ctx.stroke();");
+                        if (!string.IsNullOrEmpty(p[6]))
+                            sb.AppendLine($"ctx.fillStyle='{p[6]}';ctx.fill();");
+                        break;
+                    case "A": // arrow x1 y1 x2 y2 color lw
+                        sb.AppendLine($"drawArr(ctx,{p[1]},{p[2]},{p[3]},{p[4]},'{p[5]}',{lwMul(p[6])});");
+                        break;
+                    case "T": // text x y txt color
+                        if (scaled)
+                        {
+                            sb.AppendLine($"ctx.save();ctx.translate({p[1]},{p[2]});ctx.scale(1,-1);" +
+                                $"ctx.fillStyle='{p[4]}';ctx.font={fontSize(12)}+'px sans-serif';" +
+                                $"ctx.fillText('{p[3]}',0,0);ctx.restore();");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"ctx.fillStyle='{p[4]}';ctx.font='12px sans-serif';ctx.fillText('{p[3]}',{p[1]},{p[2]});");
+                        }
+                        break;
+                    case "P": // pline coords... COL:col LW:lw
+                    {
+                        string pCol = "#333", pLw = "1.5";
+                        var coords = new List<string>();
+                        for (int i = 1; i < p.Length; i++)
+                        {
+                            if (p[i].StartsWith("COL:")) pCol = p[i].Substring(4);
+                            else if (p[i].StartsWith("LW:")) pLw = p[i].Substring(3);
+                            else if (p[i].ToLower() != "close") coords.Add(p[i]);
+                        }
+                        bool closed = cmd.ToLower().Contains("|close|") || cmd.ToLower().EndsWith("|close");
+                        // strip the "close" from coords list if it ended up there
+                        sb.AppendLine($"ctx.beginPath();ctx.strokeStyle='{pCol}';ctx.lineWidth={lwMul(pLw)};");
+                        for (int i = 0; i < coords.Count - 1; i += 2)
+                        {
+                            sb.AppendLine(i == 0 ? $"ctx.moveTo({coords[i]},{coords[i + 1]});" : $"ctx.lineTo({coords[i]},{coords[i + 1]});");
+                        }
+                        if (closed) sb.AppendLine("ctx.closePath();");
+                        sb.AppendLine("ctx.stroke();");
+                        break;
+                    }
+
+                    // 3D commands
+                    case "L3": // line3d x1 y1 z1 x2 y2 z2 color lw
+                        sb.AppendLine($"(function(){{var a=w2s({p[1]},{p[2]},{p[3]}),b=w2s({p[4]},{p[5]},{p[6]});" +
+                            $"ctx.beginPath();ctx.strokeStyle='{p[7]}';ctx.lineWidth={lwMul(p[8])};" +
+                            "ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();})();");
+                        break;
+                    case "A3": // arrow3d x1 y1 z1 x2 y2 z2 color lw
+                        sb.AppendLine($"(function(){{var a=w2s({p[1]},{p[2]},{p[3]}),b=w2s({p[4]},{p[5]},{p[6]});" +
+                            $"drawArr(ctx,a[0],a[1],b[0],b[1],'{p[7]}',{lwMul(p[8])});}})()" + ";");
+                        break;
+                    case "T3": // text3d x y z txt color
+                        if (scaled)
+                        {
+                            sb.AppendLine($"(function(){{var t=w2s({p[1]},{p[2]},{p[3]});" +
+                                $"ctx.save();ctx.translate(t[0],t[1]);ctx.scale(1,-1);" +
+                                $"ctx.fillStyle='{p[5]}';ctx.font={fontSize(12)}+'px sans-serif';" +
+                                $"ctx.fillText('{p[4]}',0,0);ctx.restore();}})();");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"(function(){{var t=w2s({p[1]},{p[2]},{p[3]});" +
+                                $"ctx.fillStyle='{p[5]}';ctx.font='12px sans-serif';" +
+                                $"ctx.fillText('{p[4]}',t[0],t[1]);}})();");
+                        }
+                        break;
+                    case "C3": // circle3d cx cy cz r color lw fill
+                        sb.AppendLine($"(function(){{var c=w2s({p[1]},{p[2]},{p[3]});" +
+                            $"ctx.beginPath();ctx.strokeStyle='{p[5]}';ctx.lineWidth={lwMul(p[6])};" +
+                            $"ctx.arc(c[0],c[1],{p[4]},0,2*Math.PI);ctx.stroke();");
+                        if (!string.IsNullOrEmpty(p[7]))
+                            sb.Append($"ctx.fillStyle='{p[7]}';ctx.fill();");
+                        sb.AppendLine("})();");
+                        break;
+                    case "CA3": // carc3d cx cy cz r startAngle endAngle color lw
+                        // Draw a curved arrow (arc with arrowhead) for moments
+                        // Uses same convention as CadRender.ts: arc(center, r, -startAngle, -endAngle, true=CCW)
+                        sb.AppendLine($"(function(){{var c=w2s({p[1]},{p[2]},{p[3]});" +
+                            $"var r={p[4]},sa={p[5]},ea={p[6]};" +
+                            $"ctx.beginPath();ctx.strokeStyle='{p[7]}';ctx.lineWidth={lwMul(p[8])};" +
+                            "ctx.arc(c[0],c[1],r,-sa,-ea,true);ctx.stroke();" +
+                            // Arrowhead at end of arc
+                            "var endAng=-ea,ex=c[0]+r*Math.cos(endAng),ey=c[1]+r*Math.sin(endAng);" +
+                            "var tx=Math.sin(endAng),ty=-Math.cos(endAng);" +
+                            "var nx=-ty,ny=tx;" +
+                            $"var aL=7*{lwMul("1")},aW=2.8*{lwMul("1")};" +
+                            $"ctx.fillStyle='{p[7]}';ctx.beginPath();" +
+                            "ctx.moveTo(ex,ey);" +
+                            "ctx.lineTo(ex-tx*aL+nx*aW,ey-ty*aL+ny*aW);" +
+                            "ctx.lineTo(ex-tx*aL-nx*aW,ey-ty*aL-ny*aW);" +
+                            "ctx.closePath();ctx.fill();})();");
+                        break;
+                    case "P3": // pline3d coords... COL:col LW:lw
+                    {
+                        string pCol3 = "#333", pLw3 = "1.5";
+                        var coords3 = new List<string>();
+                        bool closed3 = false;
+                        for (int i = 1; i < p.Length; i++)
+                        {
+                            if (p[i].StartsWith("COL:")) pCol3 = p[i].Substring(4);
+                            else if (p[i].StartsWith("LW:")) pLw3 = p[i].Substring(3);
+                            else if (p[i].ToLower() == "close") closed3 = true;
+                            else coords3.Add(p[i]);
+                        }
+                        sb.AppendLine($"(function(){{ctx.beginPath();ctx.strokeStyle='{pCol3}';ctx.lineWidth={lwMul(pLw3)};");
+                        for (int i = 0; i < coords3.Count - 2; i += 3)
+                        {
+                            sb.AppendLine($"var _p=w2s({coords3[i]},{coords3[i + 1]},{coords3[i + 2]});" +
+                                (i == 0 ? "ctx.moveTo(_p[0],_p[1]);" : "ctx.lineTo(_p[0],_p[1]);"));
+                        }
+                        if (closed3) sb.AppendLine("ctx.closePath();");
+                        sb.AppendLine("ctx.stroke();})();");
+                        break;
+                    }
+
+                    // New primitives
+                    case "H3": // hatch3d: H3|x1|y1|z1|x2|y2|z2|x3|y3|z3|x4|y4|z4|spacing|color|lw
+                        sb.AppendLine($"(function(){{" +
+                            $"var p1=w2s({p[1]},{p[2]},{p[3]}),p2=w2s({p[4]},{p[5]},{p[6]})," +
+                            $"p3=w2s({p[7]},{p[8]},{p[9]}),p4=w2s({p[10]},{p[11]},{p[12]});" +
+                            "ctx.save();" +
+                            "ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);" +
+                            "ctx.lineTo(p3[0],p3[1]);ctx.lineTo(p4[0],p4[1]);ctx.closePath();ctx.clip();" +
+                            "var mn=[Math.min(p1[0],p2[0],p3[0],p4[0]),Math.min(p1[1],p2[1],p3[1],p4[1])]," +
+                            "mx=[Math.max(p1[0],p2[0],p3[0],p4[0]),Math.max(p1[1],p2[1],p3[1],p4[1])];" +
+                            // Spacing: in world-projected coords (ctx.scale handles screen mapping)
+                            $"var sp={p[13]};if(sp<0.1)sp=0.1;" +
+                            $"ctx.strokeStyle='{p[14]}';ctx.lineWidth=Math.max(0.8,{p[15]})*lwS;" +
+                            "var dg=(mx[0]-mn[0])+(mx[1]-mn[1]);" +
+                            "for(var d=-dg;d<dg;d+=sp){ctx.beginPath();" +
+                            "ctx.moveTo(mn[0]+d,mn[1]);ctx.lineTo(mn[0]+d+(mx[1]-mn[1]),mx[1]);ctx.stroke();}" +
+                            "ctx.restore();})();");
+                        break;
+
+                    case "FP3": // fillpoly3d: FP3|coords...|COL:color|LW:lw
+                    {
+                        string fpCol = "#333", fpLw = "1";
+                        var fpCoords = new List<string>();
+                        for (int i = 1; i < p.Length; i++)
+                        {
+                            if (p[i].StartsWith("COL:")) fpCol = p[i].Substring(4);
+                            else if (p[i].StartsWith("LW:")) fpLw = p[i].Substring(3);
+                            else fpCoords.Add(p[i]);
+                        }
+                        sb.Append("(function(){ctx.save();ctx.beginPath();");
+                        for (int i = 0; i < fpCoords.Count - 2; i += 3)
+                        {
+                            sb.Append($"var _q=w2s({fpCoords[i]},{fpCoords[i + 1]},{fpCoords[i + 2]});");
+                            sb.Append(i == 0 ? "ctx.moveTo(_q[0],_q[1]);" : "ctx.lineTo(_q[0],_q[1]);");
+                        }
+                        sb.AppendLine($"ctx.closePath();ctx.fillStyle='{fpCol}';ctx.fill();" +
+                            $"ctx.strokeStyle='{fpCol}';ctx.lineWidth={lwMul(fpLw)};ctx.stroke();ctx.restore();}})();");
+                        break;
+                    }
+
+                    case "LB3": // label3d: LB3|x|y|z|text|color|anchor|fontSize
+                    {
+                        var lbAnchor = p.Length >= 7 ? p[6] : "center";
+                        var lbFs = p.Length >= 8 ? p[7] : "12";
+                        var lbAlign = lbAnchor == "left" ? "left" : lbAnchor == "right" ? "right" : "center";
+                        if (scaled)
+                        {
+                            sb.AppendLine($"(function(){{var t=w2s({p[1]},{p[2]},{p[3]});" +
+                                $"ctx.save();ctx.translate(t[0],t[1]);ctx.scale(1,-1);" +
+                                $"ctx.fillStyle='{p[5]}';ctx.font={fontSize(int.TryParse(lbFs.Split('.')[0], out int lfs) ? lfs : 12)}+'px sans-serif';" +
+                                $"ctx.textAlign='{lbAlign}';ctx.textBaseline='middle';" +
+                                $"ctx.fillText('{p[4]}',0,0);ctx.restore();}})();");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"(function(){{var t=w2s({p[1]},{p[2]},{p[3]});" +
+                                $"ctx.fillStyle='{p[5]}';ctx.font='{lbFs}px sans-serif';" +
+                                $"ctx.textAlign='{lbAlign}';ctx.textBaseline='middle';" +
+                                $"ctx.fillText('{p[4]}',t[0],t[1]);}})();");
+                        }
+                        break;
+                    }
+
+                    case "BM_LBL": // beam3d label: BM_LBL|x1|y1|z1|x2|y2|z2|depth|label|color|fontSize
+                    {
+                        var bmFs = p.Length >= 11 ? p[10] : "12";
+                        if (scaled)
+                        {
+                            sb.AppendLine($"(function(){{" +
+                                $"var mx=({p[1]}+{p[4]})/2,my=({p[2]}+{p[5]})/2,mz=({p[3]}+{p[6]})/2;" +
+                                $"var tz=mz-{p[7]}-1;" +
+                                $"var dx={p[4]}-({p[1]}),dy={p[5]}-({p[2]});" +
+                                "var len=Math.sqrt(dx*dx+dy*dy)||1;var ux=dx/len,uy=dy/len;" +
+                                // Direction triangle (filled)
+                                "var t1=w2s(mx-ux*0.7,my-uy*0.7,tz),t2=w2s(mx+ux*0.7,my+uy*0.7,tz),t3=w2s(mx,my,tz+0.5);" +
+                                $"ctx.save();ctx.fillStyle='{p[9]}';ctx.beginPath();" +
+                                "ctx.moveTo(t1[0],t1[1]);ctx.lineTo(t2[0],t2[1]);ctx.lineTo(t3[0],t3[1]);" +
+                                "ctx.closePath();ctx.fill();" +
+                                // Label (white text over dark triangle)
+                                $"var lt=w2s(mx,my,(tz+tz+0.5)/2);" +
+                                $"ctx.translate(lt[0],lt[1]);ctx.scale(1,-1);" +
+                                $"ctx.fillStyle='#ffffff';" +
+                                $"ctx.font={fontSize(int.TryParse(bmFs.Split('.')[0], out int bmfsi) ? bmfsi : 12)}+'px sans-serif';" +
+                                $"ctx.textAlign='center';ctx.textBaseline='middle';" +
+                                $"ctx.fillText('{p[8]}',0,0);ctx.restore();}})();");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"(function(){{" +
+                                $"var mx=({p[1]}+{p[4]})/2,my=({p[2]}+{p[5]})/2,mz=({p[3]}+{p[6]})/2;" +
+                                $"var tz=mz-{p[7]}-1;" +
+                                $"var dx={p[4]}-({p[1]}),dy={p[5]}-({p[2]});" +
+                                "var len=Math.sqrt(dx*dx+dy*dy)||1;var ux=dx/len,uy=dy/len;" +
+                                "var t1=w2s(mx-ux*0.7,my-uy*0.7,tz),t2=w2s(mx+ux*0.7,my+uy*0.7,tz),t3=w2s(mx,my,tz+0.5);" +
+                                $"ctx.fillStyle='{p[9]}';ctx.beginPath();" +
+                                "ctx.moveTo(t1[0],t1[1]);ctx.lineTo(t2[0],t2[1]);ctx.lineTo(t3[0],t3[1]);" +
+                                "ctx.closePath();ctx.fill();" +
+                                $"ctx.fillStyle='#ffffff';" +
+                                $"var lt=w2s(mx,my,(tz+tz+0.5)/2);" +
+                                $"ctx.font='{bmFs}px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';" +
+                                $"ctx.fillText('{p[8]}',lt[0],lt[1]);}})();");
+                        }
+                        break;
+                    }
+
+                    case "DOF_LBL": // dof label: DOF_LBL|x|y|z|dx|dy|dz|label|color|fontSize
+                    {
+                        var dofFs = p.Length >= 10 ? p[9] : "12";
+                        if (scaled)
+                        {
+                            sb.AppendLine($"(function(){{" +
+                                $"var dx={p[4]},dy={p[5]},dz={p[6]};" +
+                                "var len=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;" +
+                                "var ux=dx/len,uy=dy/len,uz=dz/len;" +
+                                $"var t=w2s({p[1]}+dx+ux*0.8,{p[2]}+dy+uy*0.8,{p[3]}+dz+uz*0.8);" +
+                                $"ctx.save();ctx.translate(t[0],t[1]);ctx.scale(1,-1);" +
+                                $"ctx.fillStyle='{p[8]}';ctx.font={fontSize(int.TryParse(dofFs.Split('.')[0], out int dfsi) ? dfsi : 12)}+'px sans-serif';" +
+                                $"ctx.textAlign='center';ctx.textBaseline='middle';" +
+                                $"ctx.fillText('{p[7]}',0,0);ctx.restore();}})();");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"(function(){{" +
+                                $"var dx={p[4]},dy={p[5]},dz={p[6]};" +
+                                "var len=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;" +
+                                "var ux=dx/len,uy=dy/len,uz=dz/len;" +
+                                $"var t=w2s({p[1]}+dx+ux*0.8,{p[2]}+dy+uy*0.8,{p[3]}+dz+uz*0.8);" +
+                                $"ctx.fillStyle='{p[8]}';ctx.font='{dofFs}px sans-serif';" +
+                                $"ctx.textAlign='center';ctx.textBaseline='middle';" +
+                                $"ctx.fillText('{p[7]}',t[0],t[1]);}})();");
+                        }
+                        break;
+                    }
+
+                    case "RDOF3": // rotational DOF: two parallel arrows + label
+                    {
+                        // RDOF3|x|y|z|dx|dy|dz|label|color|lw|fontSize
+                        var rdFs = p.Length >= 11 ? p[10] : "12";
+                        var rdLw = p.Length >= 10 ? p[9] : "1.5";
+                        var rdColor = p.Length >= 9 ? p[8] : "#000";
+                        if (scaled)
+                        {
+                            sb.AppendLine($"(function(){{" +
+                                $"var x={p[1]},y={p[2]},z={p[3]},dx={p[4]},dy={p[5]},dz={p[6]};" +
+                                "var len=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;" +
+                                "var ux=dx/len,uy=dy/len,uz=dz/len;" +
+                                "var px=0,py=0,pz=0;if(Math.abs(uz)>0.7){px=1;}else{pz=1;}" +
+                                "var off=0.3;" +
+                                "var a1=w2s(x+px*off,y+py*off,z+pz*off),b1=w2s(x+dx+px*off,y+dy+py*off,z+dz+pz*off);" +
+                                $"drawArr(ctx,a1[0],a1[1],b1[0],b1[1],'{rdColor}',{lwMul(rdLw)});" +
+                                "var a2=w2s(x-px*off,y-py*off,z-pz*off),b2=w2s(x+dx-px*off,y+dy-py*off,z+dz-pz*off);" +
+                                $"drawArr(ctx,a2[0],a2[1],b2[0],b2[1],'{rdColor}',{lwMul(rdLw)});" +
+                                "var t=w2s(x+dx+ux*0.8,y+dy+uy*0.8,z+dz+uz*0.8);" +
+                                $"ctx.save();ctx.translate(t[0],t[1]);ctx.scale(1,-1);" +
+                                $"ctx.fillStyle='{rdColor}';ctx.font={fontSize(int.TryParse(rdFs.Split('.')[0], out int rdFsi) ? rdFsi : 12)}+'px sans-serif';" +
+                                $"ctx.textAlign='center';ctx.textBaseline='middle';" +
+                                $"ctx.fillText('{p[7]}',0,0);ctx.restore();}})();");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"(function(){{" +
+                                $"var x={p[1]},y={p[2]},z={p[3]},dx={p[4]},dy={p[5]},dz={p[6]};" +
+                                "var len=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;" +
+                                "var ux=dx/len,uy=dy/len,uz=dz/len;" +
+                                "var px=0,py=0,pz=0;if(Math.abs(uz)>0.7){px=1;}else{pz=1;}" +
+                                "var off=0.3;" +
+                                "var a1=w2s(x+px*off,y+py*off,z+pz*off),b1=w2s(x+dx+px*off,y+dy+py*off,z+dz+pz*off);" +
+                                $"drawArr(ctx,a1[0],a1[1],b1[0],b1[1],'{rdColor}',{rdLw});" +
+                                "var a2=w2s(x-px*off,y-py*off,z-pz*off),b2=w2s(x+dx-px*off,y+dy-py*off,z+dz-pz*off);" +
+                                $"drawArr(ctx,a2[0],a2[1],b2[0],b2[1],'{rdColor}',{rdLw});" +
+                                "var t=w2s(x+dx+ux*0.8,y+dy+uy*0.8,z+dz+uz*0.8);" +
+                                $"ctx.fillStyle='{rdColor}';ctx.font='{rdFs}px sans-serif';" +
+                                $"ctx.textAlign='center';ctx.textBaseline='middle';" +
+                                $"ctx.fillText('{p[7]}',t[0],t[1]);}})();");
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>Format a double for JS (invariant culture).</summary>
+        private static string F(double v) =>
+            v.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        /// <summary>Escape a string for use inside JS single-quoted string.</summary>
+        private static string DrawEscapeJs(string s) =>
+            s.Replace("\\", "\\\\").Replace("'", "\\'").Replace("\n", "\\n");
 
         /// <summary>
         /// Process @{three} blocks - Three.js 3D scene DSL
@@ -7022,19 +7867,23 @@ animate();
                     }
                 }
 
-                // Handle subscript: X_a or X_{abc}
+                // Handle subscript: X_a or X_{abc} — recursive rendering (like hekatan-web)
                 if (c == '_' && i + 1 < text.Length)
                 {
                     i++;
                     string subscript = ExtractSubscriptOrSuperscript(text, ref i);
-                    sb.Append($"<sub>{System.Net.WebUtility.HtmlEncode(subscript)}</sub>");
+                    sb.Append("<sub>");
+                    RenderHtmlEquationPart(sb, subscript, fontSize);
+                    sb.Append("</sub>");
                 }
-                // Handle superscript: X^2 or X^{abc}
+                // Handle superscript: X^2 or X^{abc} — recursive rendering (like hekatan-web)
                 else if (c == '^' && i + 1 < text.Length)
                 {
                     i++;
                     string superscript = ExtractSubscriptOrSuperscript(text, ref i);
-                    sb.Append($"<sup>{System.Net.WebUtility.HtmlEncode(superscript)}</sup>");
+                    sb.Append("<sup>");
+                    RenderHtmlEquationPart(sb, superscript, fontSize);
+                    sb.Append("</sup>");
                 }
                 // Handle multiplication: * becomes ·
                 else if (c == '*')
@@ -9933,14 +10782,16 @@ animate();
         private string ExtractEqAlignment(string startDirective)
         {
             if (string.IsNullOrWhiteSpace(startDirective)) return "center";
-            // Remove @{ and } to get inner content: "eq left", "eqdef right", etc.
+            // Remove @{ and } to get inner content: "eq left", "eqdef right", "eq:center", etc.
             var inner = startDirective.Trim().TrimStart('@').TrimStart('{').TrimEnd('}').Trim();
-            var parts = inner.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            // Support both space and colon separators: @{eq left}, @{eq:center}, @{eq:right}
+            var parts = inner.Split(new[] { ' ', ':' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length > 1)
             {
                 var p = parts[1].ToLower();
                 if (p == "left" || p == "izquierda") return "left";
                 if (p == "right" || p == "derecha") return "right";
+                if (p == "center" || p == "centro") return "center";
             }
             return "center";
         }
@@ -10581,36 +11432,68 @@ animate();
                     continue;
                 }
 
+                // Page break: --- (three or more dashes on a line by themselves)
+                if (trimLine.Length >= 3 && trimLine.All(c => c == '-'))
+                {
+                    // Close current .page div and open a new one
+                    lineHtml.AppendLine("</div><div class=\"page\">");
+                    continue;
+                }
+
                 // Regular line - check if it's Hekatan math or text/markdown
                 if (!string.IsNullOrWhiteSpace(trimLine))
                 {
-                    // Lines starting with ' are Hekatan text comments (render as HTML/markdown)
-                    // Lines starting with " are Hekatan headings
-                    // Lines starting with < are HTML
-                    // Other non-empty lines could be Hekatan math (e.g., "x = a*b", "f(x) = x^2")
-                    if (!trimLine.StartsWith("'") && !trimLine.StartsWith("\"") &&
-                        !trimLine.StartsWith("<") && !trimLine.StartsWith("#") &&
-                        IsLikelyHekatanMath(trimLine))
+                    // Hekatan heading: "text (legacy) or # text / ## text (markdown)
+                    if (trimLine.StartsWith("\""))
                     {
-                        // Encode as CALCPAD_INLINE marker for later batch evaluation
-                        var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(trimLine));
-                        lineHtml.AppendLine($"<!--CALCPAD_INLINE:{base64}-->");
-                    }
-                    else if (trimLine.StartsWith("\""))
-                    {
-                        // Hekatan heading
                         var headingText = trimLine.Substring(1).Trim();
                         lineHtml.AppendLine($"<h2 style=\"margin:0.3em 0;\">{System.Web.HttpUtility.HtmlEncode(headingText)}</h2>");
                     }
+                    else if (trimLine.Length > 1 && trimLine[0] == '#' &&
+                             (trimLine[1] == ' ' || trimLine[1] == '#'))
+                    {
+                        // Markdown heading: # or ## or ### ...
+                        var headingText = trimLine.TrimStart('#').Trim();
+                        int level = 0;
+                        foreach (var ch in trimLine)
+                        {
+                            if (ch == '#') level++;
+                            else break;
+                        }
+                        if (level > 6) level = 6;
+                        lineHtml.AppendLine($"<h{level} style=\"margin:0.3em 0;\">{System.Web.HttpUtility.HtmlEncode(headingText)}</h{level}>");
+                    }
+                    // Hekatan text: 'text (legacy) or > text (markdown)
                     else if (trimLine.StartsWith("'"))
                     {
-                        // Hekatan text comment - render the content after '
                         var textContent = trimLine.Substring(1);
                         var renderedLine = RenderMarkdown(textContent);
                         renderedLine = renderedLine.Trim();
                         if (renderedLine.StartsWith("<p>") && renderedLine.EndsWith("</p>"))
                             renderedLine = renderedLine.Substring(3, renderedLine.Length - 7);
                         lineHtml.AppendLine($"<div style=\"margin:0.2em 0;\">{renderedLine}</div>");
+                    }
+                    else if (trimLine.Length > 1 && trimLine[0] == '>' && trimLine[1] == ' ')
+                    {
+                        // > text → Hekatan text (like ')
+                        var textContent = trimLine.Substring(2);
+                        var renderedLine = RenderMarkdown(textContent);
+                        renderedLine = renderedLine.Trim();
+                        if (renderedLine.StartsWith("<p>") && renderedLine.EndsWith("</p>"))
+                            renderedLine = renderedLine.Substring(3, renderedLine.Length - 7);
+                        lineHtml.AppendLine($"<div style=\"margin:0.2em 0;\">{renderedLine}</div>");
+                    }
+                    // HTML passthrough
+                    else if (trimLine.StartsWith("<"))
+                    {
+                        var renderedLine = trimLine;
+                        lineHtml.AppendLine($"<div style=\"margin:0.2em 0;\">{renderedLine}</div>");
+                    }
+                    // Hekatan math: everything else → CALCPAD_INLINE marker
+                    else if (IsLikelyHekatanMath(trimLine))
+                    {
+                        var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(trimLine));
+                        lineHtml.AppendLine($"<!--CALCPAD_INLINE:{base64}-->");
                     }
                     else
                     {

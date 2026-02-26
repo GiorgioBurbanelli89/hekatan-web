@@ -17,7 +17,8 @@ export interface CadScreenPt { x: number; y: number; }
 export type CadShapeType =
   | "linea" | "rectangulo" | "circulo" | "elipse"
   | "arco" | "arco_circular" | "polilinea" | "mano"
-  | "cota" | "grupo" | "texto" | "flecha";
+  | "cota" | "grupo" | "texto" | "flecha"
+  | "rayado" | "poligono_relleno";
 
 export interface CadShape {
   tipo: CadShapeType;
@@ -42,6 +43,12 @@ export interface CadShape {
   // texto
   fontSize?: number;
   textAlign?: "left" | "center" | "right";
+  // arco_circular: suppress arrowhead (used by rrect corners)
+  noArrow?: boolean;
+  // rayado: spacing between hatch lines
+  spacing?: number;
+  // label anchor: "left" | "right" | "above" | "below" | "center"
+  anchor?: string;
   // 3D flag (usa w2s3 con proyección oblicua en vez de w2s)
   is3d?: boolean;
   // grupo

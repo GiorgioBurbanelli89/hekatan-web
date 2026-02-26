@@ -2150,3 +2150,106 @@ export class MathDraw extends MathElement {
     return `@{draw ${this.drawW} ${this.drawH}${alignStr}}\n${this.code}\n@{end draw}`;
   }
 }
+
+// ============================================================================
+// MathDraw3D — Bloque Three.js @{draw:3D W H}
+// En MathCanvas: placeholder, el WebGL se monta en overlay
+// En Calculate mode: container div con Three.js scene
+// ============================================================================
+export class MathDraw3D extends MathElement {
+  code = "";
+  drawW = 600;
+  drawH = 400;
+
+  constructor(code = "", drawW = 600, drawH = 400) {
+    super();
+    this.code = code;
+    this.drawW = drawW;
+    this.drawH = drawH;
+  }
+
+  measure(ctx: CanvasRenderingContext2D, fontSize: number) {
+    this.width = this.drawW + 4;
+    this.height = this.drawH + 4;
+    this.baseline = textBaseline(fontSize);
+  }
+
+  render(ctx: CanvasRenderingContext2D, x: number, y: number, fontSize: number) {
+    this.x = x; this.y = y;
+
+    // Placeholder con fondo oscuro y texto
+    ctx.fillStyle = "#1a1a2e";
+    ctx.strokeStyle = "#4488ff";
+    ctx.lineWidth = 2;
+    ctx.fillRect(x, y, this.width, this.height);
+    ctx.strokeRect(x, y, this.width, this.height);
+
+    // Icono 3D placeholder
+    ctx.fillStyle = "#4488ff";
+    ctx.font = `bold 14px ${S.UIFont}`;
+    ctx.textAlign = "center";
+    ctx.fillText("3D WebGL", x + this.width / 2, y + this.height / 2 - 8);
+    ctx.fillStyle = "#888";
+    ctx.font = `11px ${S.UIFont}`;
+    ctx.fillText("(renderizado en overlay)", x + this.width / 2, y + this.height / 2 + 12);
+    ctx.textAlign = "left";
+
+    // Label tag
+    ctx.font = `bold ${fontSize * 0.65}px ${S.UIFont}`;
+    ctx.fillStyle = "#4488ff";
+    ctx.textAlign = "right";
+    ctx.fillText(`@{draw:3D ${this.drawW}x${this.drawH}}`, x + this.width - 4, y + fontSize * 0.7);
+    ctx.textAlign = "left";
+  }
+
+  toHekatan(): string {
+    return `@{draw:3D ${this.drawW} ${this.drawH}}\n${this.code}\n@{end draw}`;
+  }
+}
+
+export class MathImportIfc extends MathElement {
+  ifcFile = "";
+  drawW = 700;
+  drawH = 500;
+
+  constructor(ifcFile = "", drawW = 700, drawH = 500) {
+    super();
+    this.ifcFile = ifcFile;
+    this.drawW = drawW;
+    this.drawH = drawH;
+  }
+
+  measure(ctx: CanvasRenderingContext2D, fontSize: number) {
+    this.width = this.drawW + 4;
+    this.height = this.drawH + 4;
+    this.baseline = textBaseline(fontSize);
+  }
+
+  render(ctx: CanvasRenderingContext2D, x: number, y: number, fontSize: number) {
+    this.x = x; this.y = y;
+    ctx.fillStyle = "#1a1a2e";
+    ctx.strokeStyle = "#4488ff";
+    ctx.lineWidth = 2;
+    ctx.fillRect(x, y, this.width, this.height);
+    ctx.strokeRect(x, y, this.width, this.height);
+
+    ctx.fillStyle = "#4488ff";
+    ctx.font = `bold 14px ${S.UIFont}`;
+    ctx.textAlign = "center";
+    ctx.fillText("IFC 3D Viewer", x + this.width / 2, y + this.height / 2 - 8);
+    ctx.fillStyle = "#888";
+    ctx.font = `11px ${S.UIFont}`;
+    ctx.fillText(this.ifcFile, x + this.width / 2, y + this.height / 2 + 12);
+    ctx.textAlign = "left";
+
+    ctx.font = `bold ${fontSize * 0.65}px ${S.UIFont}`;
+    ctx.fillStyle = "#4488ff";
+    ctx.textAlign = "right";
+    ctx.fillText(`@{import:ifc:${this.ifcFile}}`, x + this.width - 4, y + fontSize * 0.7);
+    ctx.textAlign = "left";
+  }
+
+  toHekatan(): string {
+    return `@{import:ifc:${this.ifcFile} ${this.drawW} ${this.drawH}}`;
+  }
+}

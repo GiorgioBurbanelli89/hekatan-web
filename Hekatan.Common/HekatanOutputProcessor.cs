@@ -101,16 +101,11 @@ namespace Hekatan.Common
         }
 
         /// <summary>
-        /// Batch-evaluates all CALCPAD_INLINE markers in ONE ExpressionParser.Parse() call.
-        /// This ensures variables persist across lines (e.g., a=6, b=4, c=a+b works).
+        /// Batch-evaluates all CALCPAD_INLINE markers in ONE ExpressionParser.Parse() call
+        /// so variables persist across lines (e.g., a=6, b=4, c=a+b works).
         ///
-        /// Strategy:
-        /// 1. Find all markers in order
-        /// 2. Decode each to get the Hekatan math line
-        /// 3. Join ALL lines into ONE code block
-        /// 4. Call ExpressionParser.Parse() ONCE
-        /// 5. Split the HTML result into per-line segments
-        /// 6. Replace each marker with its corresponding HTML segment
+        /// Uses separator lines between expressions to correctly split multi-line outputs
+        /// (e.g. matrices) back to their corresponding marker positions.
         /// </summary>
         private static string BatchEvaluateInlineMarkers(string html, HekatanExecutor executor)
         {
@@ -119,6 +114,8 @@ namespace Hekatan.Common
 
             if (matches.Count == 0)
                 return html;
+
+            const string SEP = "__HKTN_SEP__";
 
             // 1. Decode all markers to get Hekatan code lines
             var codeLines = new List<string>();
@@ -132,12 +129,12 @@ namespace Hekatan.Common
                 }
                 catch
                 {
-                    codeLines.Add(""); // placeholder for failed decode
+                    codeLines.Add("");
                 }
             }
 
-            // 2. Combine ALL lines into ONE code block and parse ONCE
-            var combinedCode = string.Join("\n", codeLines);
+            // 2. Combine ALL lines with separator text lines between them
+            var combinedCode = string.Join($"\n'{SEP}\n", codeLines);
             string combinedHtml;
             try
             {
@@ -145,48 +142,29 @@ namespace Hekatan.Common
             }
             catch (Exception ex)
             {
-                // If parsing fails entirely, replace all markers with error message
-                var errorHtml = $"<p><span class='err'>Error: {ex.Message}</span></p>";
+                var errorHtml = $"<p><span class='err'>Error: {System.Web.HttpUtility.HtmlEncode(ex.Message)}</span></p>";
                 var errorResult = html;
                 foreach (Match match in matches)
                     errorResult = errorResult.Replace(match.Value, errorHtml);
                 return errorResult;
             }
 
-            // 3. Split HTML result into per-line segments
-            // ExpressionParser terminates each line's output with AppendLine() (\n)
-            // Each non-empty segment corresponds to one input line
-            var segments = combinedHtml.Split('\n')
-                .Select(s => s.TrimEnd('\r'))
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .ToArray();
+            // 3. Split result by the separator's rendered HTML
+            var sepPattern = new Regex($@"<p[^>]*>\s*{Regex.Escape(SEP)}\s*</p>\s*");
+            var segments = sepPattern.Split(combinedHtml);
 
             // 4. Replace each marker with its corresponding HTML segment
-            // Build result forward for efficiency
             var sb = new StringBuilder(html.Length + combinedHtml.Length);
             int pos = 0;
             for (int i = 0; i < matches.Count; i++)
             {
                 var marker = matches[i];
-                // Append everything before this marker
                 sb.Append(html, pos, marker.Index - pos);
-                // Append the evaluated HTML for this line
                 if (i < segments.Length)
-                    sb.Append(segments[i]);
+                    sb.Append(segments[i].Trim());
                 pos = marker.Index + marker.Length;
             }
-            // Append remainder after last marker
             sb.Append(html, pos, html.Length - pos);
-
-            // Append extra segments (error summary, etc.) if any
-            if (segments.Length > matches.Count)
-            {
-                for (int i = matches.Count; i < segments.Length; i++)
-                {
-                    sb.AppendLine();
-                    sb.Append(segments[i]);
-                }
-            }
 
             return sb.ToString();
         }

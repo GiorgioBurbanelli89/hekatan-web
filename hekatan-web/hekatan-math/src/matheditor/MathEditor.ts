@@ -6,7 +6,7 @@ import * as S from "./MathStyles";
 import {
   MathElement, MathGroup, MathText, MathFraction, MathPower, MathRoot,
   MathSubscript, MathIntegral, MathDerivative, MathMatrix, MathVector,
-  MathComment, MathCode, MathColumns, MathSvg, MathDraw,
+  MathComment, MathCode, MathColumns, MathSvg, MathDraw, MathDraw3D, MathImportIfc,
 } from "./MathElement";
 import { parseExpression, type ASTNode } from "../evaluator.js";
 import { HekatanEvaluator } from "../mathEngine.js";
@@ -172,12 +172,13 @@ export class MathEditor {
         continue;
       }
 
-      // @{draw W H [align]} ... @{end draw}  — CAD drawing block
-      const drawMatch = trimmed.match(/^@\{draw(?:\s+(\d+%?)(?:\s+(\d+%?))?(?:\s+(left|right|center))?)?\s*\}$/i);
+      // @{draw W H}, @{draw:2D W H}, @{draw:3D W H}, @{draw:3D:IFC W H}
+      const drawMatch = trimmed.match(/^@\{draw(?::(2D|3D|3D:IFC))?(?:\s+(\d+%?)(?:\s+(\d+%?))?(?:\s+(left|right|center))?)?\s*\}$/i);
       if (drawMatch) {
-        const dW = drawMatch[1] ? parseInt(drawMatch[1]) : 600;
-        const dH = drawMatch[2] ? parseInt(drawMatch[2]) : (drawMatch[1] ? Math.round(parseInt(drawMatch[1]) * 0.67) : 400);
-        const align = (drawMatch[3] as "left" | "right" | "center") || "center";
+        const mode = (drawMatch[1] || "2D").toUpperCase();
+        const dW = drawMatch[2] ? parseInt(drawMatch[2]) : 600;
+        const dH = drawMatch[3] ? parseInt(drawMatch[3]) : (drawMatch[2] ? Math.round(parseInt(drawMatch[2]) * 0.67) : 400);
+        const align = (drawMatch[4] as "left" | "right" | "center") || "center";
         const codeLines: string[] = [];
         i++;
         while (i < rawLines.length) {
@@ -185,7 +186,22 @@ export class MathEditor {
           codeLines.push(rawLines[i]);
           i++;
         }
-        this.grid.push([[new MathDraw(codeLines.join("\n"), dW, dH, align)]]);
+        if (mode === "3D" || mode === "3D:IFC") {
+          this.grid.push([[new MathDraw3D(codeLines.join("\n"), dW, dH)]]);
+        } else {
+          this.grid.push([[new MathDraw(codeLines.join("\n"), dW, dH, align)]]);
+        }
+        i++;
+        continue;
+      }
+
+      // @{import:ifc:filename W H} - IFC 3D model
+      const ifcMatch = trimmed.match(/^@\{import:ifc:([^\s}]+)(?:\s+(\d+))?(?:\s+(\d+))?\s*\}$/i);
+      if (ifcMatch) {
+        const ifcFile = ifcMatch[1];
+        const ifcW = ifcMatch[2] ? parseInt(ifcMatch[2]) : 700;
+        const ifcH = ifcMatch[3] ? parseInt(ifcMatch[3]) : 500;
+        this.grid.push([[new MathImportIfc(ifcFile, ifcW, ifcH)]]);
         i++;
         continue;
       }

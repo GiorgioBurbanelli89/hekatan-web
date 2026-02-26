@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Hekatan.Core
 {
@@ -89,8 +90,129 @@ namespace Hekatan.Core
                 TokenTypes.Error,
             };
 
+            /// <summary>
+            /// Normalizes hekatan-web syntax to internal parser syntax:
+            /// - Commas to semicolons inside brackets: [1,2] → [1;2], f(a,b) → f(a;b)
+            /// - Nested matrix brackets: [[1,2],[3,4]] → [1;2|3;4]
+            /// - Bracket indexing: v[i] → v.(i), M[i,j] → M.(i;j)
+            /// Returns null if no normalization is needed (fast path).
+            /// </summary>
+            private static string NormalizeExpression(ReadOnlySpan<char> expr)
+            {
+                bool hasComma = expr.IndexOf(',') >= 0;
+                bool hasBracket = expr.IndexOf('[') >= 0;
+                if (!hasComma && !hasBracket)
+                    return null;
+
+                var sb = new StringBuilder(expr.Length + 8);
+                int sqDepth = 0;   // depth for literal [...] brackets
+                int rdDepth = 0;   // depth for (...) parentheses
+                int idxDepth = 0;  // depth for indexing brackets converted to .(...)
+
+                for (int i = 0; i < expr.Length; i++)
+                {
+                    var c = expr[i];
+                    switch (c)
+                    {
+                        case '(':
+                            rdDepth++;
+                            sb.Append(c);
+                            break;
+                        case ')':
+                            if (rdDepth > 0) rdDepth--;
+                            sb.Append(c);
+                            break;
+                        case '[':
+                        {
+                            // Determine if this is indexing or a literal
+                            bool isIndexing = false;
+                            if (sb.Length > 0)
+                            {
+                                char prev = sb[sb.Length - 1];
+                                isIndexing = char.IsLetterOrDigit(prev) || prev == '_'
+                                    || prev == ')' || prev == ']'
+                                    || (prev >= 'α' && prev <= 'ω')
+                                    || (prev >= 'Α' && prev <= 'Ω')
+                                    || prev == '⁰' || prev == '¹' || prev == '²'
+                                    || prev == '³' || prev == '⁴' || prev == '⁵'
+                                    || prev == '⁶' || prev == '⁷' || prev == '⁸' || prev == '⁹';
+                            }
+
+                            if (isIndexing)
+                            {
+                                // v[i] → v.(i), M[i,j] → M.(i;j)
+                                sb.Append(".(");
+                                idxDepth++;
+                            }
+                            else
+                            {
+                                sqDepth++;
+                                if (sqDepth == 1)
+                                {
+                                    sb.Append(c);
+                                    // Check for [[ (nested matrix)
+                                    int peek = i + 1;
+                                    while (peek < expr.Length && expr[peek] == ' ') peek++;
+                                    if (peek < expr.Length && expr[peek] == '[')
+                                    {
+                                        sqDepth++;
+                                        i = peek;
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                        case ']':
+                        {
+                            if (idxDepth > 0)
+                            {
+                                // Close indexing bracket → )
+                                sb.Append(')');
+                                idxDepth--;
+                            }
+                            else if (sqDepth > 1)
+                            {
+                                sqDepth--;
+                                int j = i + 1;
+                                while (j < expr.Length && expr[j] == ' ') j++;
+                                if (j < expr.Length && expr[j] == ',')
+                                {
+                                    int k = j + 1;
+                                    while (k < expr.Length && expr[k] == ' ') k++;
+                                    if (k < expr.Length && expr[k] == '[')
+                                    {
+                                        sb.Append('|');
+                                        sqDepth++;
+                                        i = k;
+                                        break;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (sqDepth > 0) sqDepth--;
+                                sb.Append(c);
+                            }
+                            break;
+                        }
+                        case ',':
+                            sb.Append(sqDepth > 0 || rdDepth > 0 || idxDepth > 0 ? ';' : c);
+                            break;
+                        default:
+                            sb.Append(c);
+                            break;
+                    }
+                }
+                return sb.ToString();
+            }
+
             internal Queue<Token> GetInput(ReadOnlySpan<char> expression, bool allowAssignment)
             {
+                // Normalize hekatan-web syntax (commas, nested brackets)
+                var normalized = NormalizeExpression(expression);
+                if (normalized != null)
+                    expression = normalized.AsSpan();
+
                 var tokens = new Queue<Token>(expression.Length);
                 var pt = TokenTypes.None;
                 var st = SolverBlock.SolverTypes.None;

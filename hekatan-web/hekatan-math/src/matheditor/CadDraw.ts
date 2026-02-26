@@ -24,13 +24,16 @@ export function addLine(engine: CadEngine, x1: number, y1: number, x2: number, y
   return engine.formas.length - 1;
 }
 
-export function addRect(engine: CadEngine, x: number, y: number, w: number, h: number, color?: string): number {
+export function addRect(engine: CadEngine, x: number, y: number, w: number, h: number, color?: string, opts?: { fill?: string; lw?: number }): number {
   const c = color || engine.currentColor;
-  engine.formas.push({
+  const shape: CadShape = {
     tipo: "rectangulo",
     x: engine.toPx(x), y: engine.toPx(y), w: engine.toPx(w), h: engine.toPx(h),
     z: engine.currentZ, color: c,
-  });
+  };
+  if (opts?.fill) shape.fill = opts.fill;
+  if (opts?.lw) shape.lw = opts.lw;
+  engine.formas.push(shape);
   engine.refresh();
   return engine.formas.length - 1;
 }
@@ -72,14 +75,16 @@ export function addArc(engine: CadEngine, x1: number, y1: number, cx: number, cy
   return engine.formas.length - 1;
 }
 
-export function addCarc(engine: CadEngine, cx: number, cy: number, r: number, startAngle: number, endAngle: number, color?: string): number {
+export function addCarc(engine: CadEngine, cx: number, cy: number, r: number, startAngle: number, endAngle: number, color?: string, opts?: { noArrow?: boolean }): number {
   const c = color || engine.currentColor;
-  engine.formas.push({
+  const shape: CadShape = {
     tipo: "arco_circular",
     cx: engine.toPx(cx), cy: engine.toPx(cy), r: engine.toPx(r),
     startAngle, endAngle,
     z: engine.currentZ, color: c,
-  });
+  };
+  if (opts?.noArrow) shape.noArrow = true;
+  engine.formas.push(shape);
   engine.refresh();
   return engine.formas.length - 1;
 }
@@ -221,6 +226,67 @@ export function addCarc3d(engine: CadEngine, cx: number, cy: number, cz: number,
     cx: engine.toPx(cx), cy: engine.toPx(cy), r: engine.toPx(r),
     startAngle, endAngle,
     z: engine.toPx(cz), color: c, is3d: true,
+  });
+  engine.refresh();
+  return engine.formas.length - 1;
+}
+
+// ============================================================================
+// New 3D primitives: hatch, fillpoly, label
+// ============================================================================
+
+export function addHatch3d(engine: CadEngine, x1: number, y1: number, z1: number, x2: number, y2: number, z2: number, x3: number, y3: number, z3: number, x4: number, y4: number, z4: number, spacing?: number, color?: string): number {
+  const c = color || engine.currentColor;
+  const sp = spacing || 1.0;
+  const pts: CadPoint[] = [
+    { x: engine.toPx(x1), y: engine.toPx(y1), z: engine.toPx(z1) },
+    { x: engine.toPx(x2), y: engine.toPx(y2), z: engine.toPx(z2) },
+    { x: engine.toPx(x3), y: engine.toPx(y3), z: engine.toPx(z3) },
+    { x: engine.toPx(x4), y: engine.toPx(y4), z: engine.toPx(z4) },
+  ];
+  engine.formas.push({
+    tipo: "rayado",
+    pts,
+    spacing: engine.toPx(sp),
+    z: 0, color: c, is3d: true, lw: engine.currentLineWidth * 0.3,
+  });
+  engine.refresh();
+  return engine.formas.length - 1;
+}
+
+export function addFillPoly3d(engine: CadEngine, coords: number[], color?: string): number {
+  const c = color || engine.currentColor;
+  const pts: CadPoint[] = [];
+  for (let i = 0; i < coords.length; i += 3) {
+    pts.push({ x: engine.toPx(coords[i]), y: engine.toPx(coords[i + 1]), z: engine.toPx(coords[i + 2]) });
+  }
+  if (pts.length < 3) return -1;
+  engine.formas.push({
+    tipo: "poligono_relleno",
+    pts, fill: c,
+    z: 0, color: c, is3d: true,
+  });
+  engine.refresh();
+  return engine.formas.length - 1;
+}
+
+export function addLabel3d(engine: CadEngine, x: number, y: number, z: number, text: string, anchor?: string, color?: string): number {
+  const c = color || engine.currentColor;
+  let textAlign: "left" | "center" | "right" = "center";
+  let offX = 0, offY = 0;
+  switch (anchor) {
+    case "left": textAlign = "left"; offX = 0.3; break;
+    case "right": textAlign = "right"; offX = -0.3; break;
+    case "above": offY = 0.5; break;
+    case "below": offY = -0.5; break;
+  }
+  engine.formas.push({
+    tipo: "texto",
+    x: engine.toPx(x + offX), y: engine.toPx(y),
+    z: engine.toPx(z + offY),
+    text, color: c, is3d: true,
+    fontSize: engine.currentFontSize,
+    textAlign,
   });
   engine.refresh();
   return engine.formas.length - 1;

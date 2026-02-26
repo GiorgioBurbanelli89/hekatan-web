@@ -6,7 +6,7 @@
 
 import { CadSnapState } from "./CadSnap.js";
 import { renderToCtx as _renderToCtx, zoomFit as _zoomFit } from "./CadRender.js";
-import { addLine, addRect, addCircle, addEllipse, addArc, addCarc, addPline, addDim, addHdim, addVdim, addText, addArrow, addLine3d, addArrow3d, addText3d, addPline3d, addCircle3d, addCarc3d, clearShapes } from "./CadDraw.js";
+import { addLine, addRect, addCircle, addEllipse, addArc, addCarc, addPline, addDim, addHdim, addVdim, addText, addArrow, addLine3d, addArrow3d, addText3d, addPline3d, addCircle3d, addCarc3d, addHatch3d, addFillPoly3d, addLabel3d, clearShapes } from "./CadDraw.js";
 import { deleteShape, moveShape, copyShape, rotateShape, scaleShapeOp, mirrorShape, arrayShape, polarArrayShape, groupShapes, ungroupShape } from "./CadEdit.js";
 import { execCommands } from "./CadCli.js";
 
@@ -33,6 +33,8 @@ export class CadEngine {
   selectedShapes: number[] = [];
   currentColor = "#333";
   currentZ = 0;
+  currentFontSize = 12;
+  currentLineWidth = 1.5;
 
   // ── Scale / units ──
   escala = 1;
@@ -162,11 +164,11 @@ export class CadEngine {
   // ════════════════════════════════════════════════════════════════════
 
   line(x1: number, y1: number, x2: number, y2: number, color?: string, opts?: { lw?: number }): number { return addLine(this, x1, y1, x2, y2, color, opts); }
-  rect(x: number, y: number, w: number, h: number, color?: string): number { return addRect(this, x, y, w, h, color); }
+  rect(x: number, y: number, w: number, h: number, color?: string, opts?: { fill?: string; lw?: number }): number { return addRect(this, x, y, w, h, color, opts); }
   circle(cx: number, cy: number, r: number, color?: string, opts?: { fill?: string; lw?: number }): number { return addCircle(this, cx, cy, r, color, opts); }
   ellipse(cx: number, cy: number, rx: number, ry: number, color?: string): number { return addEllipse(this, cx, cy, rx, ry, color); }
   arc(x1: number, y1: number, cx: number, cy: number, x2: number, y2: number, color?: string): number { return addArc(this, x1, y1, cx, cy, x2, y2, color); }
-  carc(cx: number, cy: number, r: number, startAngle: number, endAngle: number, color?: string): number { return addCarc(this, cx, cy, r, startAngle, endAngle, color); }
+  carc(cx: number, cy: number, r: number, startAngle: number, endAngle: number, color?: string, opts?: { noArrow?: boolean }): number { return addCarc(this, cx, cy, r, startAngle, endAngle, color, opts); }
   pline(coords: number[], color?: string): number { return addPline(this, coords, color); }
   dim(x1: number, y1: number, x2: number, y2: number, offset?: number, text?: string, color?: string): number { return addDim(this, x1, y1, x2, y2, offset, text, color); }
   hdim(x1: number, y1: number, x2: number, y2: number, offset?: number, text?: string, color?: string): number { return addHdim(this, x1, y1, x2, y2, offset, text, color); }
@@ -182,6 +184,162 @@ export class CadEngine {
   pline3d(coords: number[], color?: string): number { return addPline3d(this, coords, color); }
   circle3d(cx: number, cy: number, cz: number, r: number, color?: string, opts?: { fill?: string; lw?: number }): number { return addCircle3d(this, cx, cy, cz, r, color, opts); }
   carc3d(cx: number, cy: number, cz: number, r: number, startAngle: number, endAngle: number, color?: string): number { return addCarc3d(this, cx, cy, cz, r, startAngle, endAngle, color); }
+  hatch3d(x1: number, y1: number, z1: number, x2: number, y2: number, z2: number, x3: number, y3: number, z3: number, x4: number, y4: number, z4: number, spacing?: number, color?: string): void { addHatch3d(this, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, spacing, color); }
+  fillpoly3d(coords: number[], color?: string): number { return addFillPoly3d(this, coords, color); }
+  label3d(x: number, y: number, z: number, txt: string, anchor?: string, color?: string): number { return addLabel3d(this, x, y, z, txt, anchor, color); }
+
+  // ── Compound 3D elements (structural engineering) ──
+
+  beam3d(x1: number, y1: number, z1: number, x2: number, y2: number, z2: number, depth?: number, label?: string): void {
+    const d = depth || 1.2;
+    const c = this.currentColor;
+    this.beginBatch();
+    // Outline: top, bottom, end caps
+    this.line3d(x1, y1, z1, x2, y2, z2, c);
+    this.line3d(x1, y1, z1 - d, x2, y2, z2 - d, c);
+    this.line3d(x1, y1, z1, x1, y1, z1 - d, c);
+    this.line3d(x2, y2, z2, x2, y2, z2 - d, c);
+    // Hatch fill
+    addHatch3d(this, x1, y1, z1, x2, y2, z2, x2, y2, z2 - d, x1, y1, z1 - d, d * 0.8);
+    // Direction triangle (filled) + label inside
+    if (label) {
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, mz = (z1 + z2) / 2;
+      const dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
+      const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const ux = dx / len, uy = dy / len, uz = dz / len;
+      const triSize = 1.0;
+      const triOff = d + 1.5; // offset below element
+      const tx1 = mx - ux * triSize, ty1 = my - uy * triSize, tz1 = mz - triOff;
+      const tx2 = mx + ux * triSize, ty2 = my + uy * triSize, tz2 = tz1;
+      const tx3 = mx, ty3 = my, tz3 = tz1 + triSize * 1.2;
+      // Filled triangle
+      addFillPoly3d(this, [tx1, ty1, tz1, tx2, ty2, tz2, tx3, ty3, tz3], "#333");
+      // Label centered inside triangle (white text)
+      addLabel3d(this, mx, my, (tz1 + tz3) / 2, label, "center", "#fff");
+    }
+    this.endBatch();
+  }
+
+  node3d(x: number, y: number, z: number, label: string, radius?: number): void {
+    const r = radius || 0.8;
+    this.beginBatch();
+    this.circle3d(x, y, z, r, "#333", { fill: "#fff" });
+    addLabel3d(this, x, y, z, label, "center", "#333");
+    this.endBatch();
+  }
+
+  dof3d(x: number, y: number, z: number, dx: number, dy: number, dz: number, label: string): void {
+    const c = this.currentColor;
+    this.beginBatch();
+    this.arrow3d(x, y, z, x + dx, y + dy, z + dz, c);
+    // Label at tip with small offset
+    const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const ux = dx / len, uy = dy / len, uz = dz / len;
+    const off = 0.8;
+    addLabel3d(this, x + dx + ux * off, y + dy + uy * off, z + dz + uz * off, label, "center", c);
+    this.endBatch();
+  }
+
+  /** Rotational DOF: two parallel arrows pointing in same direction + label */
+  rdof3d(x: number, y: number, z: number, dx: number, dy: number, dz: number, label: string): void {
+    const c = this.currentColor;
+    this.beginBatch();
+
+    const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (len === 0) { this.endBatch(); return; }
+    const ux = dx / len, uy = dy / len, uz = dz / len;
+
+    // Perpendicular offset: Z for horizontal arrows, X for vertical
+    let px = 0, py = 0, pz = 0;
+    if (Math.abs(uz) > 0.7) {
+      px = 1;  // vertical arrow → offset in X
+    } else {
+      pz = 1;  // horizontal arrow → offset in Z
+    }
+
+    const off = 0.3;
+
+    // Arrow 1 (offset +perp)
+    this.arrow3d(
+      x + px * off, y + py * off, z + pz * off,
+      x + dx + px * off, y + dy + py * off, z + dz + pz * off, c
+    );
+    // Arrow 2 (offset -perp)
+    this.arrow3d(
+      x - px * off, y - py * off, z - pz * off,
+      x + dx - px * off, y + dy - py * off, z + dz - pz * off, c
+    );
+
+    // Label at tip
+    const loff = 0.8;
+    addLabel3d(this, x + dx + ux * loff, y + dy + uy * loff, z + dz + uz * loff, label, "center", c);
+    this.endBatch();
+  }
+
+  axes3d(x: number, y: number, z: number, size?: number): void {
+    const s = size || 4;
+    const oldColor = this.currentColor;
+    this.beginBatch();
+    // Z axis (up)
+    this.currentColor = "#333";
+    this.arrow3d(x, y, z, x, y, z + s);
+    addLabel3d(this, x - 1, y, z + s + 0.5, "Z", "center", "#333");
+    // X axis (right)
+    this.arrow3d(x, y, z, x + s, y, z);
+    addLabel3d(this, x + s + 0.5, y, z - 0.5, "X", "center", "#333");
+    // Y axis (oblique/depth)
+    this.arrow3d(x, y, z, x, y + s * 0.75, z);
+    addLabel3d(this, x, y + s * 0.75 + 0.5, z + 0.5, "Y", "center", "#333");
+    this.currentColor = oldColor;
+    this.endBatch();
+  }
+
+  support3d(x: number, y: number, z: number, type: string, angle?: number): void {
+    const c = this.currentColor;
+    const sz = 1.5;
+    this.beginBatch();
+    switch (type) {
+      case "pinned": {
+        // Triangle outline (NOT filled)
+        this.line3d(x, y, z, x - sz, y, z - sz * 1.2, c);
+        this.line3d(x - sz, y, z - sz * 1.2, x + sz, y, z - sz * 1.2, c);
+        this.line3d(x + sz, y, z - sz * 1.2, x, y, z, c);
+        // Base line
+        this.line3d(x - sz * 1.3, y, z - sz * 1.2, x + sz * 1.3, y, z - sz * 1.2, c);
+        // Hatching lines below base
+        const oldLw = this.currentLineWidth;
+        this.currentLineWidth = 0.5;
+        for (let i = -2; i <= 2; i++) {
+          const hx = x + i * sz * 0.35;
+          this.line3d(hx, y, z - sz * 1.2, hx - sz * 0.3, y, z - sz * 1.2 - sz * 0.4, c);
+        }
+        this.currentLineWidth = oldLw;
+        break;
+      }
+      case "roller": {
+        // Triangle outline (NOT filled)
+        this.line3d(x, y, z, x - sz, y, z - sz * 1.0, c);
+        this.line3d(x - sz, y, z - sz * 1.0, x + sz, y, z - sz * 1.0, c);
+        this.line3d(x + sz, y, z - sz * 1.0, x, y, z, c);
+        // Circle below
+        this.circle3d(x, y, z - sz * 1.0 - sz * 0.3, sz * 0.3, c);
+        // Base line
+        this.line3d(x - sz * 1.3, y, z - sz * 1.0 - sz * 0.6, x + sz * 1.3, y, z - sz * 1.0 - sz * 0.6, c);
+        break;
+      }
+      case "fixed": {
+        // Thick wall line
+        this.line3d(x - sz, y, z, x + sz, y, z, c);
+        // Hatching (ground symbol)
+        for (let i = -3; i <= 3; i++) {
+          const bx = x + i * sz * 0.3;
+          this.line3d(bx, y, z, bx - sz * 0.3, y, z - sz * 0.4, c);
+        }
+        break;
+      }
+    }
+    this.endBatch();
+  }
 
   // ════════════════════════════════════════════════════════════════════
   // Edit API → CadEdit.ts
@@ -210,10 +368,11 @@ export class CadEngine {
     this.line(x, y + h - r, x, y + r, c);
     if (r > 0) {
       const PI = Math.PI;
-      this.carc(x + r, y + r, r, PI, 3 * PI / 2, c);
-      this.carc(x + w - r, y + r, r, 3 * PI / 2, 2 * PI, c);
-      this.carc(x + w - r, y + h - r, r, 0, PI / 2, c);
-      this.carc(x + r, y + h - r, r, PI / 2, PI, c);
+      const na = { noArrow: true };
+      this.carc(x + r, y + r, r, PI, 3 * PI / 2, c, na);
+      this.carc(x + w - r, y + r, r, 3 * PI / 2, 2 * PI, c, na);
+      this.carc(x + w - r, y + h - r, r, 0, PI / 2, c, na);
+      this.carc(x + r, y + h - r, r, PI / 2, PI, c, na);
     }
     this.endBatch();
   }
@@ -237,7 +396,7 @@ export class CadEngine {
     bendR = bendR || (dStirrup * 3);
     rec = rec || 4;
     const x0 = cx - bw / 2, y0 = cy - bh / 2;
-    this.rect(x0, y0, bw, bh, cConcrete);
+    this.rect(x0, y0, bw, bh, "#999999", { fill: cConcrete });
     const sxO = x0 + rec, syO = y0 + rec;
     const swO = bw - 2 * rec, shO = bh - 2 * rec;
     const rO = bendR + dStirrup / 2;

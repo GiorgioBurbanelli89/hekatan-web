@@ -112,6 +112,76 @@ export function execCommands(engine: CadEngine, cmdText: string): void {
           engine.circle3d(n[1], n[2], n[3], n[4], tokens[5]); break;
         case "carc3d":
           engine.carc3d(n[1], n[2], n[3], n[4], n[5], n[6], tokens[7]); break;
+
+        // ── New primitives ──
+        case "fontsize": case "fs":
+          if (!isNaN(n[1])) engine.currentFontSize = n[1]; break;
+        case "lw": case "linewidth":
+          if (!isNaN(n[1])) engine.currentLineWidth = n[1]; break;
+        case "hatch3d": case "h3d": {
+          // hatch3d x1 y1 z1 x2 y2 z2 x3 y3 z3 x4 y4 z4 [spacing] [color]
+          const sp = tokens.length >= 14 && !tokens[13].startsWith("#") ? n[13] : undefined;
+          const hc = tokens.length >= 14 && tokens[13].startsWith("#") ? tokens[13]
+                   : tokens.length >= 15 && tokens[14].startsWith("#") ? tokens[14] : undefined;
+          engine.hatch3d(n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8], n[9], n[10], n[11], n[12], sp, hc);
+          break;
+        }
+        case "fillpoly3d": case "fp3d": {
+          // fillpoly3d x1 y1 z1 x2 y2 z2 ... [color]
+          const args = tokens.slice(1);
+          const lastArg = args[args.length - 1];
+          const fpColor = lastArg && lastArg.startsWith("#") ? args.pop() : undefined;
+          const fpCoords = args.map(parseFloat).filter(v => !isNaN(v));
+          engine.fillpoly3d(fpCoords, fpColor);
+          break;
+        }
+        case "label3d": case "lb3d": {
+          // label3d x y z text [anchor]
+          const anchorOpts = ["left", "right", "above", "below", "center"];
+          const lastTok = tokens[tokens.length - 1]?.toLowerCase();
+          const hasAnchor = anchorOpts.includes(lastTok);
+          const anchor = hasAnchor ? lastTok : undefined;
+          const lblText = tokens.slice(4, hasAnchor ? -1 : undefined).join(" ");
+          engine.label3d(n[1], n[2], n[3], lblText, anchor);
+          break;
+        }
+
+        // ── Compound structural elements ──
+        case "beam3d": case "bm3d": {
+          // beam3d x1 y1 z1 x2 y2 z2 [depth] [label]
+          const bdepth = tokens.length >= 8 && !isNaN(n[7]) ? n[7] : undefined;
+          const blabel = tokens.length >= 9 ? tokens[8] : undefined;
+          engine.beam3d(n[1], n[2], n[3], n[4], n[5], n[6], bdepth, blabel);
+          break;
+        }
+        case "node3d": case "nd3d": {
+          // node3d x y z label [radius]
+          const nrad = tokens.length >= 6 && !isNaN(n[5]) ? n[5] : undefined;
+          engine.node3d(n[1], n[2], n[3], tokens[4], nrad);
+          break;
+        }
+        case "dof3d": {
+          // dof3d x y z dx dy dz label
+          engine.dof3d(n[1], n[2], n[3], n[4], n[5], n[6], tokens[7]);
+          break;
+        }
+        case "rdof3d": {
+          // rdof3d x y z dx dy dz label (rotational DOF - double arrow)
+          engine.rdof3d(n[1], n[2], n[3], n[4], n[5], n[6], tokens[7]);
+          break;
+        }
+        case "axes3d": case "ax3d": {
+          // axes3d x y z [size]
+          const axSize = tokens.length >= 5 ? n[4] : undefined;
+          engine.axes3d(n[1], n[2], n[3], axSize);
+          break;
+        }
+        case "support3d": case "sup3d": {
+          // support3d x y z type [angle]
+          const supAngle = tokens.length >= 6 ? n[5] : undefined;
+          engine.support3d(n[1], n[2], n[3], tokens[4], supAngle);
+          break;
+        }
       }
     } catch (err: any) {
       console.warn(`[CadEngine] Error in: ${trimmed}`, err.message);

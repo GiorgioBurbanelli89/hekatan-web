@@ -818,6 +818,25 @@ namespace Hekatan.Core
             if (ivalue is Vector vec)
                 return vec;
 
+            // Auto-convert Nx1 or 1xN matrix to vector
+            if (ivalue is Matrix m)
+            {
+                if (m.ColCount == 1)
+                {
+                    var v = new Vector(m.RowCount);
+                    for (int i = 0; i < m.RowCount; i++)
+                        v[i] = m[i, 0];
+                    return v;
+                }
+                if (m.RowCount == 1)
+                {
+                    var v = new Vector(m.ColCount);
+                    for (int j = 0; j < m.ColCount; j++)
+                        v[j] = m[0, j];
+                    return v;
+                }
+            }
+
             throw Exceptions.MustBeVector(item);
         }
 

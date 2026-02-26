@@ -114,15 +114,13 @@ namespace Hekatan.Common.MultLangCode
             // Special handling for CSS and HTML (no command execution needed)
             if (language == "css")
             {
-                _tracker?.ReportStep("Detected CSS block, saving to styles.css");
-                // CSS: Just save to file, don't execute
+                // CSS: Save to file silently (no visible output)
                 var cssPath = Path.Combine(_tempDir, "styles.css");
                 File.WriteAllText(cssPath, code);
-                _tracker?.ReportStep($"CSS saved to: {cssPath}");
                 return new ExecutionResult
                 {
                     Success = true,
-                    Output = $"CSS saved to: {cssPath}"
+                    Output = ""
                 };
             }
 

@@ -158,20 +158,21 @@ export function drawShape(engine: CadEngine, ctx: CanvasRenderingContext2D, f: C
       ctx.beginPath();
       ctx.arc(ac2.x, ac2.y, sr2, -f.startAngle!, -f.endAngle!, true);
       ctx.stroke();
-      // Arrowhead at end of arc (same pattern as drawArrow)
-      const endAng = -f.endAngle!;
-      const ex = ac2.x + sr2 * Math.cos(endAng);
-      const ey = ac2.y + sr2 * Math.sin(endAng);
-      // Tangent: direction of travel for CCW arc (decreasing angle)
-      const tx = Math.sin(endAng), ty = -Math.cos(endAng);
-      const nx = -ty, ny = tx; // perpendicular
-      const aLen = 7, aW = 2.8;
-      ctx.fillStyle = f.color || engine.currentColor;
-      ctx.beginPath();
-      ctx.moveTo(ex, ey);
-      ctx.lineTo(ex - tx * aLen + nx * aW, ey - ty * aLen + ny * aW);
-      ctx.lineTo(ex - tx * aLen - nx * aW, ey - ty * aLen - ny * aW);
-      ctx.closePath(); ctx.fill();
+      // Arrowhead at end of arc (skip for rrect corners via noArrow flag)
+      if (!f.noArrow) {
+        const endAng = -f.endAngle!;
+        const ex = ac2.x + sr2 * Math.cos(endAng);
+        const ey = ac2.y + sr2 * Math.sin(endAng);
+        const tx = Math.sin(endAng), ty = -Math.cos(endAng);
+        const nx = -ty, ny = tx;
+        const aLen = 7, aW = 2.8;
+        ctx.fillStyle = f.color || engine.currentColor;
+        ctx.beginPath();
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(ex - tx * aLen + nx * aW, ey - ty * aLen + ny * aW);
+        ctx.lineTo(ex - tx * aLen - nx * aW, ey - ty * aLen - ny * aW);
+        ctx.closePath(); ctx.fill();
+      }
       if (sel) drawNode(ctx, ac2);
       break;
     }
@@ -206,6 +207,14 @@ export function drawShape(engine: CadEngine, ctx: CanvasRenderingContext2D, f: C
     }
     case "flecha": {
       drawArrow(engine, ctx, f, sel);
+      break;
+    }
+    case "rayado": {
+      drawHatch(engine, ctx, f, sel);
+      break;
+    }
+    case "poligono_relleno": {
+      drawFillPoly(engine, ctx, f, sel);
       break;
     }
   }
@@ -371,7 +380,7 @@ function drawArrow(engine: CadEngine, ctx: CanvasRenderingContext2D, f: CadShape
   if (len < 2) { ctx.restore(); return; }
   const ux = dx / len, uy = dy / len;
   const nx = -uy, ny = ux;
-  const arrowLen = 8, arrowW = 3;
+  const arrowLen = 12, arrowW = 5;
   ctx.fillStyle = arrowColor;
   ctx.beginPath();
   ctx.moveTo(b.x, b.y);
@@ -380,6 +389,83 @@ function drawArrow(engine: CadEngine, ctx: CanvasRenderingContext2D, f: CadShape
   ctx.closePath(); ctx.fill();
 
   if (sel) { drawNode(ctx, a); drawNode(ctx, b); }
+  ctx.restore();
+}
+
+// ============================================================================
+// drawHatch - rayado diagonal dentro de un polígono 3D (4 vértices)
+// ============================================================================
+
+function drawHatch(engine: CadEngine, ctx: CanvasRenderingContext2D, f: CadShape, sel: boolean): void {
+  if (!f.pts || f.pts.length < 4) return;
+  ctx.save();
+  const fz = f.z || 0;
+  // Project 4 corners to screen
+  const corners = f.pts.map(p => engine.w2s3(p.x, p.y, p.z || fz));
+
+  // Create clip path
+  ctx.beginPath();
+  ctx.moveTo(corners[0].x, corners[0].y);
+  for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].x, corners[i].y);
+  ctx.closePath();
+  ctx.clip();
+
+  // Bounding box in screen space
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const c of corners) {
+    minX = Math.min(minX, c.x); minY = Math.min(minY, c.y);
+    maxX = Math.max(maxX, c.x); maxY = Math.max(maxY, c.y);
+  }
+
+  // Draw diagonal lines at 45° with spacing
+  const spacing = (f.spacing || 10) * engine.cam.zoom;
+  const hatchColor = sel ? "#0066dd" : (f.color || "#666");
+  const hatchLw = f.lw || 0.5;
+  ctx.strokeStyle = hatchColor;
+  ctx.lineWidth = Math.max(hatchLw / Math.max(engine.cam.zoom, 0.2), 0.5);
+
+  const diag = (maxX - minX) + (maxY - minY);
+  for (let d = -diag; d < diag; d += spacing) {
+    const x1 = minX + d, y1 = minY;
+    const x2 = minX + d + (maxY - minY), y2 = maxY;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+  if (sel && f.pts) {
+    for (const p of f.pts) drawNode(ctx, engine.w2s3(p.x, p.y, p.z || fz));
+  }
+}
+
+// ============================================================================
+// drawFillPoly - polígono relleno 3D
+// ============================================================================
+
+function drawFillPoly(engine: CadEngine, ctx: CanvasRenderingContext2D, f: CadShape, sel: boolean): void {
+  if (!f.pts || f.pts.length < 3) return;
+  ctx.save();
+  const fz = f.z || 0;
+  const pts = f.pts.map(p => engine.w2s3(p.x, p.y, p.z || fz));
+
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.closePath();
+
+  if (f.fill) {
+    ctx.fillStyle = f.fill;
+    ctx.fill();
+  }
+  ctx.strokeStyle = sel ? "#0066dd" : (f.color || "#333");
+  ctx.lineWidth = Math.max((f.lw || 1) / Math.max(engine.cam.zoom, 0.2), 0.5);
+  ctx.stroke();
+
+  if (sel) {
+    for (const p of pts) drawNode(ctx, p);
+  }
   ctx.restore();
 }
 
@@ -475,6 +561,12 @@ export function getBounds(engine: CadEngine): { minX: number; minY: number; maxX
       case "flecha":
         expandPt(f.x1!, f.y1!, f.z1 ?? fz, f.is3d);
         expandPt(f.x2!, f.y2!, f.z2 ?? fz, f.is3d);
+        break;
+      case "rayado":
+      case "poligono_relleno":
+        if (f.pts) {
+          for (const p of f.pts) expandPt(p.x, p.y, p.z || fz, f.is3d);
+        }
         break;
       case "grupo":
         if (f.children) for (const c of f.children) processShape(c);

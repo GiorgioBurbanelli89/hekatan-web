@@ -23,16 +23,19 @@ export interface CellResult {
 export interface LineResult {
   lineIndex: number;
   input: string;
-  type: "assignment" | "expression" | "comment" | "heading" | "empty" | "directive" | "cells" | "draw" | "error";
+  type: "assignment" | "expression" | "comment" | "heading" | "empty" | "directive" | "cells" | "draw" | "draw3d" | "draw3difc" | "importifc" | "error";
   varName?: string;
   value?: any;
   display?: string;
   error?: string;
   cells?: CellResult[];
-  /** For type "draw": width, height, and CAD command lines */
+  /** For type "draw"/"draw3d": width, height, and command lines */
   drawWidth?: number;
   drawHeight?: number;
   drawCommands?: string[];
+  /** For type "importifc": IFC file path/URL and optional filter */
+  ifcFile?: string;
+  ifcFilter?: string;
 }
 
 // ─── HekatanEvaluator ───────────────────────────────────
@@ -92,21 +95,39 @@ export class HekatanEvaluator {
 
       // @{end columns} already handled above
 
-      // @{draw W H} - CAD block: collect lines until @{end draw}
-      const drawMatch = trimmed.match(/^@\{draw\s+(\d+)\s+(\d+)\}/i);
+      // @{draw W H}, @{draw:2D W H}, @{draw:3D W H}, @{draw:3D:IFC W H} - CAD block
+      const drawMatch = trimmed.match(/^@\{draw(?::(2D|3D|3D:IFC))?\s+(\d+)\s+(\d+)\}/i);
       if (drawMatch) {
-        const drawWidth = parseInt(drawMatch[1]);
-        const drawHeight = parseInt(drawMatch[2]);
+        const mode = (drawMatch[1] || "2D").toUpperCase();
+        const drawWidth = parseInt(drawMatch[2]);
+        const drawHeight = parseInt(drawMatch[3]);
         const drawCommands: string[] = [];
         i++;
         while (i < lines.length && !/^@\{end\s+draw\}/i.test(lines[i].trim())) {
           drawCommands.push(lines[i]);
           i++;
         }
-        // i now points to @{end draw} line (or past end)
+        let dtype: LineResult["type"] = "draw";
+        if (mode === "3D") dtype = "draw3d";
+        else if (mode === "3D:IFC") dtype = "draw3difc";
         results.push({
-          lineIndex: i, input: raw, type: "draw",
+          lineIndex: i, input: raw,
+          type: dtype,
           drawWidth, drawHeight, drawCommands,
+        });
+        continue;
+      }
+
+      // @{import:ifc:filename W H filter} - load IFC model
+      const ifcMatch = trimmed.match(/^@\{import:ifc:([^\s}]+)(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(all|structural|columns|beams|slabs|rebar|plates|members|fasteners|connections|walls|openings))?\s*\}/i);
+      if (ifcMatch) {
+        results.push({
+          lineIndex: i, input: raw,
+          type: "importifc",
+          ifcFile: ifcMatch[1],
+          drawWidth: ifcMatch[2] ? parseInt(ifcMatch[2]) : 700,
+          drawHeight: ifcMatch[3] ? parseInt(ifcMatch[3]) : 500,
+          ifcFilter: ifcMatch[4]?.toLowerCase() || "all",
         });
         continue;
       }
