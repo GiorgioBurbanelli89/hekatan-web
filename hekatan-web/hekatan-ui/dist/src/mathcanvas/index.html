@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hekatan Math Editor</title>
-  <script type="module" crossorigin src="/assets/mathcanvas-BwhxXfee.js"></script>
+  <script type="module" crossorigin src="/assets/mathcanvas-kw6b55t8.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
-  <link rel="modulepreload" crossorigin href="/assets/evaluator-CgBoaY4m.js">
-  <link rel="stylesheet" crossorigin href="/assets/mathcanvas-DJnDAy55.css">
+  <link rel="modulepreload" crossorigin href="/assets/evaluator-C8FPjifL.js">
+  <link rel="stylesheet" crossorigin href="/assets/mathcanvas-CNQUFTF2.css">
 </head>
 <body>
   <!-- Top bar: tabs + dropdown + autorun -->
@@ -36,9 +36,14 @@
       <textarea id="codeInput" spellcheck="false" wrap="off"></textarea>
     </div>
     <div class="splitter" id="splitter"></div>
-    <div class="output-panel">
+    <div class="output-panel" id="outputPanel">
       <div class="output-header">Output</div>
       <div id="output" class="output-content"></div>
+      <div class="custom-scrollbar" id="customScrollbar">
+        <div class="custom-scrollbar-up" id="scrollUp">&#9650;</div>
+        <div class="custom-scrollbar-thumb" id="scrollThumb"></div>
+        <div class="custom-scrollbar-down" id="scrollDown">&#9660;</div>
+      </div>
     </div>
   </div>
 
@@ -48,6 +53,7 @@
       <canvas id="mathCanvas"></canvas>
     </div>
   </div>
-
+
+  <script src="/web-ifc-api-iife.js"></script>
 </body>
 </html>

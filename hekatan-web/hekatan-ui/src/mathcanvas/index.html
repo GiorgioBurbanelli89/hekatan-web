@@ -27,24 +27,42 @@
     <span class="app-title">Hekatan Math Editor v1.0</span>
   </div>
 
-  <!-- Mode: Code (textarea + output) -->
-  <div class="split-layout" id="codeMode" style="display:none;">
-    <div class="editor-panel">
+  <!-- Split layout: editor (left) + output (right) — always visible -->
+  <div class="split-layout" id="splitLayout">
+    <div class="editor-panel" id="editorPanel">
+      <div class="editor-header" id="editorHeader">MathCanvas</div>
+      <!-- Code editor (visible in Code mode) -->
       <textarea id="codeInput" spellcheck="false" wrap="off"></textarea>
+      <!-- MathCanvas editor (visible in MathCanvas mode) -->
+      <div class="canvas-container" id="canvasContainer" style="display:none;">
+        <canvas id="mathCanvas"></canvas>
+      </div>
     </div>
     <div class="splitter" id="splitter"></div>
-    <div class="output-panel">
+    <div class="output-panel" id="outputPanel">
       <div class="output-header">Output</div>
       <div id="output" class="output-content"></div>
+      <div class="custom-scrollbar" id="customScrollbar">
+        <div class="custom-scrollbar-up" id="scrollUp">&#9650;</div>
+        <div class="custom-scrollbar-thumb" id="scrollThumb"></div>
+        <div class="custom-scrollbar-down" id="scrollDown">&#9660;</div>
+      </div>
     </div>
   </div>
 
-  <!-- Mode: MathCanvas (WYSIWYG canvas editor like MathCAD) -->
-  <div class="canvas-layout" id="canvasMode">
-    <div class="canvas-container">
-      <canvas id="mathCanvas"></canvas>
+  <!-- Debug CLI Panel para MathEditor -->
+  <div id="debugPanel" class="debug-panel" style="display:none;">
+    <div class="debug-header">
+      <span>🔧 MathEditor Debug CLI</span>
+      <button id="debugToggle" class="debug-close" title="Cerrar">✕</button>
+    </div>
+    <div id="debugOutput" class="debug-output"></div>
+    <div class="debug-input-row">
+      <span class="debug-prompt">&gt;</span>
+      <input type="text" id="debugInput" class="debug-input" placeholder="Comando... (help para ver comandos)" spellcheck="false" autocomplete="off">
     </div>
   </div>
+  <button id="btnDebug" class="debug-btn" title="Debug CLI (F12)">🔧</button>
 
   <script src="/web-ifc-api-iife.js"></script>
   <script type="module" src="./main.ts"></script>

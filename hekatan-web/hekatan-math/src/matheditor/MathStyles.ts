@@ -22,7 +22,7 @@ export const NumberColor = "#000";
 export const OperatorColor = "#000";
 export const TextColor = "#000";
 export const SelectionColor = "#00f";
-export const CursorColor = "#06d";
+export const CursorColor = "#ff00ff";  // Magenta para debug visual (canvas cursor vs plain text)
 export const LineColor = "#666";
 export const BracketColor = "#000";
 
@@ -134,7 +134,8 @@ export function tokenize(text: string): HighlightToken[] {
       i++;
     } else if (/[a-zA-Zα-ωΑ-Ω_]/.test(c)) {
       const start = i;
-      while (i < text.length && /[\w_]/.test(text[i])) i++;
+      while (i < text.length && /[\w_α-ωΑ-Ω]/.test(text[i])) i++;
+      if (i === start) i++; // Safety: always advance at least 1 char
       const word = text.slice(start, i);
       tokens.push({ text: word, type: isKnownFunction(word) ? "function" : "variable" });
     } else {

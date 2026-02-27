@@ -5,6 +5,16 @@
  * Supports: variables, functions, units, cell arrays, vectors, matrices
  */
 
+// ─── Cell Array type (vector of matrices/vectors/scalars) ─
+export type HVal = number | number[] | number[][];
+export interface CellArray {
+  __cell: true;
+  elements: HVal[];
+}
+export function isCellArray(v: any): v is CellArray {
+  return v && typeof v === "object" && (v as any).__cell === true;
+}
+
 // ─── AST Node types ───────────────────────────────────────
 export type ASTNode =
   | { type: "number"; value: number }
@@ -12,7 +22,7 @@ export type ASTNode =
   | { type: "binary"; op: string; left: ASTNode; right: ASTNode }
   | { type: "unary"; op: string; operand: ASTNode }
   | { type: "call"; name: string; args: ASTNode[] }
-  | { type: "index"; target: ASTNode; indices: ASTNode[] }
+  | { type: "index"; target: ASTNode; indices: ASTNode[]; cellIndex?: boolean }
   | { type: "assign"; name: string; expr: ASTNode; indices?: ASTNode[] }
   | { type: "vector"; elements: ASTNode[] }
   | { type: "matrix"; rows: ASTNode[][] }
@@ -240,7 +250,7 @@ class Parser {
 
   private parsePostfix(): ASTNode {
     let node = this.parsePrimary();
-    // Function calls and indexing
+    // Function calls, indexing [...] and cell indexing {...}
     while (true) {
       if (this.peek().type === "lbracket") {
         this.advance();
@@ -251,6 +261,12 @@ class Parser {
         }
         this.expect("rbracket");
         node = { type: "index", target: node, indices };
+      } else if (this.peek().type === "lbrace" && node.type === "variable") {
+        // Cell indexing: V{i} → access i-th element of cell array
+        this.advance();
+        const idx = this.parseExpr();
+        this.expect("rbrace");
+        node = { type: "index", target: node, indices: [idx], cellIndex: true } as any;
       } else {
         break;
       }
@@ -406,8 +422,10 @@ const CONSTANTS: Record<string, number> = {
 };
 
 // ─── Environment ──────────────────────────────────────────
+export type EnvVal = number | number[] | number[][] | CellArray;
+
 export class HekatanEnvironment {
-  variables: Map<string, number | number[] | number[][]> = new Map();
+  variables: Map<string, EnvVal> = new Map();
   userFunctions: Map<string, { params: string[]; body: ASTNode }> = new Map();
   /** Multiline function bodies: name → lines (raw text) */
   multilineFunctions: Map<string, { params: string[]; lines: string[] }> = new Map();
@@ -419,12 +437,12 @@ export class HekatanEnvironment {
     this.multilineFunctions.clear();
   }
 
-  getVar(name: string): number | number[] | number[][] | undefined {
+  getVar(name: string): EnvVal | undefined {
     if (CONSTANTS[name] !== undefined) return CONSTANTS[name];
     return this.variables.get(name);
   }
 
-  setVar(name: string, value: number | number[] | number[][]): void {
+  setVar(name: string, value: EnvVal): void {
     this.variables.set(name, value);
   }
 }
@@ -435,7 +453,7 @@ export function parseExpression(expr: string): ASTNode {
   return new Parser(tokens).parse();
 }
 
-export function evaluate(node: ASTNode, env: HekatanEnvironment): number | number[] | number[][] {
+export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
   switch (node.type) {
     case "number":
       return node.value;
@@ -648,6 +666,13 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): number | numbe
 
     case "index": {
       const target = evaluate(node.target, env);
+
+      // Cell array indexing: V{i}
+      if (isCellArray(target)) {
+        const idx = Math.round(evaluate(node.indices[0], env) as number) - 1; // 1-based
+        return target.elements[idx] ?? NaN;
+      }
+
       if (!Array.isArray(target)) return NaN;
 
       // Helper: resolve an index node to number or [start,end] range (1-based → 0-based)
@@ -706,8 +731,14 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): number | numbe
       return vec[idx as number] ?? NaN;
     }
 
-    case "cellarray":
-      return node.elements.map(e => evaluate(e, env) as number);
+    case "cellarray": {
+      const elems: HVal[] = node.elements.map(e => {
+        const v = evaluate(e, env);
+        if (isCellArray(v)) throw new Error("Nested cell arrays not supported");
+        return v as HVal;
+      });
+      return { __cell: true, elements: elems } as CellArray;
+    }
 
     case "vector":
       return node.elements.map(e => evaluate(e, env) as number);

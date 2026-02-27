@@ -9,8 +9,12 @@ import { CadEngine } from "./CadEngine";
 // ============================================================================
 // Canvas helpers
 // ============================================================================
+
+/** Canvas renders serif fonts heavier than HTML — use light weight to match */
+const EQ_WEIGHT = "300";
+
 function measureText(ctx: CanvasRenderingContext2D, text: string, font: string, fontSize: number): TextMetrics {
-  ctx.font = `${fontSize}px ${font}`;
+  ctx.font = `${EQ_WEIGHT} ${fontSize}px ${font}`;
   return ctx.measureText(text);
 }
 
@@ -136,7 +140,7 @@ export class MathText extends MathElement {
     }
     const isItalic = !(/^\d/.test(this._text)) && !S.isOperator(this._text) && !S.isKnownFunction(this._text);
     const style = isItalic ? "italic " : "";
-    ctx.font = `${style}${fontSize}px ${S.EquationFont}`;
+    ctx.font = `${style}${EQ_WEIGHT} ${fontSize}px ${S.EquationFont}`;
     this.width = ctx.measureText(dt).width;
     this.height = textHeight(fontSize);
     this.baseline = textBaseline(fontSize);
@@ -175,7 +179,7 @@ export class MathText extends MathElement {
         color = S.VariableColor;
         fontStyle = "italic ";
       }
-      ctx.font = `${fontStyle}${fontSize}px ${S.EquationFont}`;
+      ctx.font = `${fontStyle}${EQ_WEIGHT} ${fontSize}px ${S.EquationFont}`;
       ctx.fillStyle = color;
       ctx.fillText(tk.text, cx, y + this.baseline);
       cx += ctx.measureText(tk.text).width;
@@ -188,17 +192,20 @@ export class MathText extends MathElement {
       const sx = x + this._getOffset(ctx, s, fontSize);
       const ex = x + this._getOffset(ctx, e, fontSize);
       ctx.fillStyle = S.SelectionBackground;
-      ctx.fillRect(sx, y + 2, ex - sx, this.height - 4);
+      const selPad = Math.min(2, this.height * 0.1);
+      ctx.fillRect(sx, y + selPad, ex - sx, Math.max(this.height - selPad * 2, 4));
     }
 
     // Cursor
     if (this.isCursorHere) {
       const cursorX = x + this._getCursorOffset(ctx, fontSize);
       ctx.strokeStyle = S.CursorColor;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = Math.max(1, fontSize * 0.12);
+      const pad = Math.min(2, this.height * 0.1);
+      const cursorH = Math.max(this.height - pad * 2, 8); // mínimo 8px visible
       ctx.beginPath();
-      ctx.moveTo(cursorX, y + 2);
-      ctx.lineTo(cursorX, y + this.height - 2);
+      ctx.moveTo(cursorX, y + pad);
+      ctx.lineTo(cursorX, y + pad + cursorH);
       ctx.stroke();
     }
   }
@@ -207,7 +214,7 @@ export class MathText extends MathElement {
     if (pos <= 0 || !this._text) return 0;
     const before = this._text.slice(0, Math.min(pos, this._text.length));
     const isItalic = !(/^\d/.test(before)) && !S.isOperator(before);
-    ctx.font = `${isItalic ? "italic " : ""}${fontSize}px ${S.EquationFont}`;
+    ctx.font = `${isItalic ? "italic " : ""}${EQ_WEIGHT} ${fontSize}px ${S.EquationFont}`;
     return ctx.measureText(S.transformOperatorsForDisplay(before)).width;
   }
 
@@ -474,10 +481,12 @@ export class MathSubscript extends MathElement {
       if (el.isCursorHere) {
         const coff = textWidth(ctx, dt.slice(0, Math.min(el.cursorPosition, dt.length)), S.SubscriptFont, subFs);
         ctx.strokeStyle = S.CursorColor;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = Math.max(1, subFs * 0.12);
+        const subPad = Math.min(2, subFs * 0.1);
+        const subCursorH = Math.max(subFs - subPad * 2, 6);
         ctx.beginPath();
-        ctx.moveTo(subX + coff, subY + 2);
-        ctx.lineTo(subX + coff, subY + subFs - 2);
+        ctx.moveTo(subX + coff, subY + subPad);
+        ctx.lineTo(subX + coff, subY + subPad + subCursorH);
         ctx.stroke();
       }
     } else {
@@ -957,6 +966,8 @@ export class MathComment extends MathElement {
   private _segments: CommentSegment[] = [];
   private _isBold = false;
   private _isItalic = false;
+  private _isEquation = false;   // @{eq} display equation (centered, serif)
+  private _eqNumber = "";        // equation number e.g. "(5.1)"
   private _headingLevel = 0;
   cursorPosition = 0;
 
@@ -968,8 +979,9 @@ export class MathComment extends MathElement {
 
   get displayText(): string { return this._displayText; }
 
-  constructor(text = "") {
+  constructor(text = "", isEquation = false) {
     super();
+    this._isEquation = isEquation;
     this._text = text;
     this._parseMarkdown(text);
   }
@@ -1007,6 +1019,16 @@ export class MathComment extends MathElement {
       text = text.slice(1).trimStart();
     }
 
+    // For equations: extract equation number like (5.1) at end
+    if (this._isEquation) {
+      this._isItalic = true;
+      const eqNumMatch = text.match(/\s+(\(\d[\d.]*\))\s*$/);
+      if (eqNumMatch) {
+        this._eqNumber = eqNumMatch[1];
+        text = text.slice(0, text.length - eqNumMatch[0].length);
+      }
+    }
+
     // **bold**
     if (/\*\*(.+)\*\*/.test(text)) {
       this._isBold = true;
@@ -1036,14 +1058,14 @@ export class MathComment extends MathElement {
         return ctx.measureText(seg.text).width;
       }
       case "subscript": {
-        ctx.font = `italic ${fs}px ${eqFont}`;
+        ctx.font = `italic ${EQ_WEIGHT} ${fs}px ${eqFont}`;
         const bw = ctx.measureText(seg.base).width;
         ctx.font = `${subFs}px ${S.SubscriptFont}`;
         const sw = ctx.measureText(seg.sub).width;
         return bw + sw;
       }
       case "superscript": {
-        ctx.font = `italic ${fs}px ${eqFont}`;
+        ctx.font = `italic ${EQ_WEIGHT} ${fs}px ${eqFont}`;
         const bw = ctx.measureText(seg.base).width;
         ctx.font = `${fs * S.SuperscriptSizeRatio}px ${S.SubscriptFont}`;
         const sw = ctx.measureText(seg.sup).width;
@@ -1053,7 +1075,7 @@ export class MathComment extends MathElement {
         // {u} → bold italic u with curly braces
         ctx.font = `bold italic ${fs}px ${eqFont}`;
         const nw = ctx.measureText(seg.name).width;
-        ctx.font = `${fs}px ${eqFont}`;
+        ctx.font = `${EQ_WEIGHT} ${fs}px ${eqFont}`;
         const lbw = ctx.measureText("{").width;
         const rbw = ctx.measureText("}").width;
         return lbw + nw + rbw;
@@ -1062,7 +1084,7 @@ export class MathComment extends MathElement {
         // [K] → bold K with square brackets
         ctx.font = `bold italic ${fs}px ${eqFont}`;
         const nw = ctx.measureText(seg.name).width;
-        ctx.font = `${fs}px ${eqFont}`;
+        ctx.font = `${EQ_WEIGHT} ${fs}px ${eqFont}`;
         const lbw = ctx.measureText("[").width;
         const rbw = ctx.measureText("]").width;
         return lbw + nw + rbw;
@@ -1087,7 +1109,11 @@ export class MathComment extends MathElement {
     this.width = totalW;
     this.height = textHeight(actual);
     this.baseline = textBaseline(actual);
-    if (this._headingLevel > 0) this.height += actual * 0.5;
+    if (this._headingLevel === 1) {
+      this.height += actual * 0.8; // extra space for horizontal lines above/below
+    } else if (this._headingLevel > 0) {
+      this.height += actual * 0.5;
+    }
   }
 
   render(ctx: CanvasRenderingContext2D, x: number, y: number, fontSize: number) {
@@ -1096,7 +1122,118 @@ export class MathComment extends MathElement {
     const bl = textBaseline(actual);
     const eqFont = S.EquationFont;
     const baseStyle = (this._isBold ? "bold " : "") + (this._isItalic ? "italic " : "");
-    const baseColor = this._headingLevel > 0 && this._headingLevel <= 3 ? "#333" : "#000";
+    const baseColor = this._headingLevel > 0 && this._headingLevel <= 3 ? "#3a2a1a" : "#000";
+
+    // ── h1 Chapter heading: right-aligned with horizontal lines ──
+    if (this._headingLevel === 1) {
+      // A4 page content area scaled to current page size
+      // fontSize = 14 * pageScale, so docScale = fontSize / 14
+      const docScale = fontSize / 14;
+      const a4PageW = Math.round(210 * 96 / 25.4); // 794px
+      const a4MarginR = Math.round(15 * 96 / 25.4); // 57px
+      const a4MarginL = Math.round(20 * 96 / 25.4); // 76px
+      const contentW = (a4PageW - a4MarginL - a4MarginR) * docScale;
+
+      const serifFont = "'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif";
+      const lineY1 = y + 2;
+      const lineY2 = y + this.height - 4;
+
+      // Horizontal line above
+      ctx.strokeStyle = "#444";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, lineY1);
+      ctx.lineTo(x + contentW, lineY1);
+      ctx.stroke();
+
+      // Parse chapter number vs title: "5 Grid Frames" → num="5", title="Grid Frames"
+      const chapMatch = this._displayText.match(/^(\d+)\s+(.*)/);
+      if (chapMatch) {
+        const numText = chapMatch[1];
+        const titleText = chapMatch[2];
+        // Measure to right-align
+        const numFs = actual * 1.3;
+        const titleFs = actual * 0.65;
+        ctx.font = `bold ${numFs}px ${serifFont}`;
+        const numW = ctx.measureText(numText).width;
+        ctx.font = `${EQ_WEIGHT} ${titleFs}px ${serifFont}`;
+        const titleW = ctx.measureText(titleText).width;
+        const gap = actual * 0.3;
+        const totalTextW = numW + gap + titleW;
+        const textX = x + contentW - totalTextW;
+        const textY = y + bl + 2;
+        // Draw number (bold, large)
+        ctx.font = `bold ${numFs}px ${serifFont}`;
+        ctx.fillStyle = baseColor;
+        ctx.fillText(numText, textX, textY);
+        // Draw title (normal, smaller)
+        ctx.font = `${EQ_WEIGHT} ${titleFs}px ${serifFont}`;
+        ctx.fillStyle = baseColor;
+        ctx.fillText(titleText, textX + numW + gap, textY);
+      } else {
+        // No number, just right-align the title
+        const titleFs = actual * 0.65;
+        ctx.font = `${EQ_WEIGHT} ${titleFs}px ${serifFont}`;
+        const tw = ctx.measureText(this._displayText).width;
+        ctx.fillStyle = baseColor;
+        ctx.fillText(this._displayText, x + contentW - tw, y + bl + 2);
+      }
+
+      // Horizontal line below
+      ctx.strokeStyle = "#444";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, lineY2);
+      ctx.lineTo(x + contentW, lineY2);
+      ctx.stroke();
+
+      this._drawCommentCursor(ctx, x, y, actual);
+      return; // skip default segment rendering
+    }
+
+    // ── h2 Section heading: extra spacing between number and title ──
+    if (this._headingLevel === 2) {
+      const serifFont = "'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif";
+      const secMatch = this._displayText.match(/^([\d.]+)\s+(.*)/);
+      if (secMatch) {
+        const numText = secMatch[1];
+        const titleText = secMatch[2];
+        const numGap = actual * 1.0; // wide gap like CSS margin-right: 1.2em
+        ctx.font = `bold ${actual}px ${serifFont}`;
+        ctx.fillStyle = baseColor;
+        ctx.fillText(numText, x, y + bl);
+        const numW = ctx.measureText(numText).width;
+        ctx.fillText(titleText, x + numW + numGap, y + bl);
+        this._drawCommentCursor(ctx, x, y, actual);
+        return; // skip default segment rendering
+      }
+    }
+
+    // ── @{eq} Display equation: centered on page, serif italic, eq number right ──
+    if (this._isEquation && this._displayText) {
+      const docScale = fontSize / 14;
+      const a4PageW = Math.round(210 * 96 / 25.4);
+      const a4MarginL = Math.round(20 * 96 / 25.4);
+      const a4MarginR = Math.round(15 * 96 / 25.4);
+      const eqContentW = (a4PageW - a4MarginL - a4MarginR) * docScale;
+      const serifFont = "'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif";
+      const eqFs = actual;
+      ctx.font = `italic ${EQ_WEIGHT} ${eqFs}px ${serifFont}`;
+      ctx.fillStyle = "#000";
+      const tw = ctx.measureText(this._displayText).width;
+      // Center the equation in the content area
+      const centerX = x + (eqContentW - tw) / 2;
+      ctx.fillText(this._displayText, centerX, y + bl);
+      // Equation number at the right margin
+      if (this._eqNumber) {
+        ctx.font = `${EQ_WEIGHT} ${eqFs}px ${serifFont}`;
+        const numW = ctx.measureText(this._eqNumber).width;
+        ctx.fillText(this._eqNumber, x + eqContentW - numW, y + bl);
+      }
+      this._drawCommentCursor(ctx, x, y, actual);
+      return;
+    }
+
     let cx = x;
 
     for (const seg of this._segments) {
@@ -1110,7 +1247,7 @@ export class MathComment extends MathElement {
         }
         case "subscript": {
           // Base in italic equation font
-          ctx.font = `italic ${actual}px ${eqFont}`;
+          ctx.font = `italic ${EQ_WEIGHT} ${actual}px ${eqFont}`;
           ctx.fillStyle = S.VariableColor;
           ctx.fillText(seg.base, cx, y + bl);
           cx += ctx.measureText(seg.base).width;
@@ -1124,7 +1261,7 @@ export class MathComment extends MathElement {
         }
         case "superscript": {
           // Base in italic equation font
-          ctx.font = `italic ${actual}px ${eqFont}`;
+          ctx.font = `italic ${EQ_WEIGHT} ${actual}px ${eqFont}`;
           ctx.fillStyle = S.VariableColor;
           ctx.fillText(seg.base, cx, y + bl);
           cx += ctx.measureText(seg.base).width;
@@ -1138,7 +1275,7 @@ export class MathComment extends MathElement {
         }
         case "vector": {
           // {u} → curly braces + bold italic name
-          ctx.font = `${actual}px ${eqFont}`;
+          ctx.font = `${EQ_WEIGHT} ${actual}px ${eqFont}`;
           ctx.fillStyle = baseColor;
           ctx.fillText("{", cx, y + bl);
           cx += ctx.measureText("{").width;
@@ -1146,7 +1283,7 @@ export class MathComment extends MathElement {
           ctx.fillStyle = S.VariableColor;
           ctx.fillText(seg.name, cx, y + bl);
           cx += ctx.measureText(seg.name).width;
-          ctx.font = `${actual}px ${eqFont}`;
+          ctx.font = `${EQ_WEIGHT} ${actual}px ${eqFont}`;
           ctx.fillStyle = baseColor;
           ctx.fillText("}", cx, y + bl);
           cx += ctx.measureText("}").width;
@@ -1154,7 +1291,7 @@ export class MathComment extends MathElement {
         }
         case "matrix": {
           // [K] → square brackets + bold italic name
-          ctx.font = `${actual}px ${eqFont}`;
+          ctx.font = `${EQ_WEIGHT} ${actual}px ${eqFont}`;
           ctx.fillStyle = baseColor;
           ctx.fillText("[", cx, y + bl);
           cx += ctx.measureText("[").width;
@@ -1162,7 +1299,7 @@ export class MathComment extends MathElement {
           ctx.fillStyle = S.VariableColor;
           ctx.fillText(seg.name, cx, y + bl);
           cx += ctx.measureText(seg.name).width;
-          ctx.font = `${actual}px ${eqFont}`;
+          ctx.font = `${EQ_WEIGHT} ${actual}px ${eqFont}`;
           ctx.fillStyle = baseColor;
           ctx.fillText("]", cx, y + bl);
           cx += ctx.measureText("]").width;
@@ -1172,21 +1309,32 @@ export class MathComment extends MathElement {
     }
 
     // Cursor
-    if (this.isCursorHere) {
-      ctx.font = `${baseStyle}${actual}px ${S.UIFont}`;
-      const coff = this.cursorPosition > 0 && this._text
-        ? ctx.measureText(this._text.slice(0, Math.min(this.cursorPosition, this._text.length))).width
-        : 0;
-      ctx.strokeStyle = S.CursorColor;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(x + coff, y + 2);
-      ctx.lineTo(x + coff, y + this.height - 2);
-      ctx.stroke();
-    }
+    this._drawCommentCursor(ctx, x, y, actual, baseStyle);
   }
 
-  toHekatan(): string { return this._text; }
+  /** Draw blinking cursor for MathComment (shared by all heading/eq/text branches) */
+  private _drawCommentCursor(ctx: CanvasRenderingContext2D, x: number, y: number, fontSize: number, fontStyle = "") {
+    if (!this.isCursorHere) return;
+    ctx.font = `${fontStyle}${fontSize}px ${S.UIFont}`;
+    const coff = this.cursorPosition > 0 && this._text
+      ? ctx.measureText(this._text.slice(0, Math.min(this.cursorPosition, this._text.length))).width
+      : 0;
+    ctx.strokeStyle = S.CursorColor;
+    ctx.lineWidth = Math.max(1, fontSize * 0.12);
+    const pad = Math.min(2, this.height * 0.1);
+    const cursorH = Math.max(this.height - pad * 2, 8);
+    ctx.beginPath();
+    ctx.moveTo(x + coff, y + pad);
+    ctx.lineTo(x + coff, y + pad + cursorH);
+    ctx.stroke();
+  }
+
+  toHekatan(): string {
+    if (this._isEquation) {
+      return `@{eq}\n${this._text}\n@{end eq}`;
+    }
+    return this._text;
+  }
 
   insertChar(c: string) {
     this._text = this._text.slice(0, this.cursorPosition) + c + this._text.slice(this.cursorPosition);
@@ -1492,14 +1640,16 @@ export class MathSvg extends MathElement {
   }
 
   measure(ctx: CanvasRenderingContext2D, fontSize: number) {
-    // Fixed size from directive @{svg W H}
-    this.width = this.svgW + 4;   // +4 for border
-    this.height = this.svgH + 4;
+    // Scale SVG block to match page scale (fontSize = 14 * pageScale)
+    const s = fontSize / 14;
+    this.width = (this.svgW + 4) * s;
+    this.height = (this.svgH + 4) * s;
     this.baseline = textBaseline(fontSize);
   }
 
   render(ctx: CanvasRenderingContext2D, x: number, y: number, fontSize: number) {
     this.x = x; this.y = y;
+    const s = fontSize / 14;
 
     // Border + background
     ctx.save();
@@ -1509,14 +1659,18 @@ export class MathSvg extends MathElement {
     ctx.fillRect(x, y, this.width, this.height);
     ctx.strokeRect(x, y, this.width, this.height);
 
-    // Clip to SVG area
+    // Clip to SVG area (scaled)
     ctx.beginPath();
-    ctx.rect(x + 2, y + 2, this.svgW, this.svgH);
+    ctx.rect(x + 2 * s, y + 2 * s, this.svgW * s, this.svgH * s);
     ctx.clip();
 
-    // Origin offset
-    const ox = x + 2;
-    const oy = y + 2;
+    // Scale SVG content rendering
+    ctx.translate(x + 2 * s, y + 2 * s);
+    ctx.scale(s, s);
+
+    // Origin offset (now in unscaled SVG coordinates since we applied ctx.scale)
+    const ox = 0;
+    const oy = 0;
 
     const lines = this.code.split("\n");
 
@@ -2106,14 +2260,35 @@ export class MathDraw extends MathElement {
     }
   }
 
+  /** Effective scale used by both measure() and render() */
+  private _drawScale = 1;
+
   measure(ctx: CanvasRenderingContext2D, fontSize: number) {
-    this.width = this.drawW + 4;   // +4 for border
-    this.height = this.drawH + 4;
+    // Scale draw block to match page scale (fontSize = 14 * pageScale)
+    const s = fontSize / 14;
+    // Compute max available content width (A4 page minus margins, scaled)
+    const a4PageW = Math.round(210 * 96 / 25.4);   // 794
+    const marginL = Math.round(20 * 96 / 25.4);     // 76
+    const marginR = Math.round(15 * 96 / 25.4);     // 57
+    const maxContentW = (a4PageW - marginL - marginR) * s;
+
+    let w = (this.drawW + 4) * s;
+    let h = (this.drawH + 4) * s;
+    // If draw is wider than content area, shrink proportionally
+    if (w > maxContentW) {
+      const ratio = maxContentW / w;
+      h = h * ratio;
+      w = maxContentW;
+    }
+    this._drawScale = w / ((this.drawW + 4) * s) * s;
+    this.width = w;
+    this.height = h;
     this.baseline = textBaseline(fontSize);
   }
 
   render(ctx: CanvasRenderingContext2D, x: number, y: number, fontSize: number) {
     this.x = x; this.y = y;
+    const ds = this._drawScale;  // effective scale (includes page scale + fit)
 
     ctx.save();
 
@@ -2124,14 +2299,15 @@ export class MathDraw extends MathElement {
     ctx.fillRect(x, y, this.width, this.height);
     ctx.strokeRect(x, y, this.width, this.height);
 
-    // Clip to draw area
+    // Clip to draw area (scaled)
     ctx.beginPath();
-    ctx.rect(x + 2, y + 2, this.drawW, this.drawH);
+    ctx.rect(x + 2 * ds, y + 2 * ds, this.drawW * ds, this.drawH * ds);
     ctx.clip();
 
-    // Render CAD engine content
+    // Render CAD engine content scaled
     ctx.save();
-    ctx.translate(x + 2, y + 2);
+    ctx.translate(x + 2 * ds, y + 2 * ds);
+    ctx.scale(ds, ds);
     this.cadEngine.renderToCtx(ctx, this.drawW, this.drawH);
     ctx.restore();
 
@@ -2169,13 +2345,15 @@ export class MathDraw3D extends MathElement {
   }
 
   measure(ctx: CanvasRenderingContext2D, fontSize: number) {
-    this.width = this.drawW + 4;
-    this.height = this.drawH + 4;
+    const s = fontSize / 14;
+    this.width = (this.drawW + 4) * s;
+    this.height = (this.drawH + 4) * s;
     this.baseline = textBaseline(fontSize);
   }
 
   render(ctx: CanvasRenderingContext2D, x: number, y: number, fontSize: number) {
     this.x = x; this.y = y;
+    const s = fontSize / 14;
 
     // Placeholder con fondo oscuro y texto
     ctx.fillStyle = "#1a1a2e";
@@ -2186,12 +2364,12 @@ export class MathDraw3D extends MathElement {
 
     // Icono 3D placeholder
     ctx.fillStyle = "#4488ff";
-    ctx.font = `bold 14px ${S.UIFont}`;
+    ctx.font = `bold ${14 * s}px ${S.UIFont}`;
     ctx.textAlign = "center";
-    ctx.fillText("3D WebGL", x + this.width / 2, y + this.height / 2 - 8);
+    ctx.fillText("3D WebGL", x + this.width / 2, y + this.height / 2 - 8 * s);
     ctx.fillStyle = "#888";
-    ctx.font = `11px ${S.UIFont}`;
-    ctx.fillText("(renderizado en overlay)", x + this.width / 2, y + this.height / 2 + 12);
+    ctx.font = `${11 * s}px ${S.UIFont}`;
+    ctx.fillText("(renderizado en overlay)", x + this.width / 2, y + this.height / 2 + 12 * s);
     ctx.textAlign = "left";
 
     // Label tag

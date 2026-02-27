@@ -52,24 +52,31 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   background: #90caf9;
 }
 
-/* ─── Canvas Layout (MathCanvas WYSIWYG mode) ─── */
-.canvas-layout {
-  display: flex; height: calc(100vh - 38px);
-}
+/* ─── Canvas Container (inside editor-panel, toggled with textarea) ─── */
 .canvas-container {
   flex: 1; position: relative; overflow: hidden;
+  width: 100%; height: 100%;
 }
 .canvas-container canvas {
   display: block;
-  cursor: text;
+  cursor: default;
 }
+/* Hide native scrollbars on canvas-container (canvas handles its own scrolling) */
+.canvas-container::-webkit-scrollbar { display: none; }
+.canvas-container { scrollbar-width: none; }
 
 /* ─── Editor Panel (left) ─── */
 .editor-panel {
-  flex: 0 0 33%; display: flex; overflow: hidden;
+  flex: 0 0 50%; display: flex; flex-direction: column; overflow: hidden;
+  position: relative;
+}
+.editor-header {
+  padding: 6px 14px; background: #f0f0f0; border-bottom: 1px solid #d0d0d0;
+  font-size: 0.85rem; font-weight: 600; color: #555;
+  flex: 0 0 auto;
 }
 .editor-panel textarea {
-  width: 100%; height: 100%; border: none; padding: 12px 14px;
+  width: 100%; flex: 1; border: none; padding: 12px 14px;
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   font-size: 13px; line-height: 1.6; resize: none; outline: none;
   background: #fafafa; color: #222; tab-size: 2;
@@ -78,17 +85,80 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
 /* ─── Output Panel (right) ─── */
 .output-panel {
   flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; background: #b0b0b0;
+  position: relative;
 }
 .output-header {
   padding: 6px 14px; background: #f0f0f0; border-bottom: 1px solid #d0d0d0;
   font-size: 0.85rem; font-weight: 600; color: #555;
 }
 .output-content {
-  flex: 1; overflow: auto;
+  flex: 1; overflow-y: auto; overflow-x: auto;
   min-width: 0;
   padding: 10px;
+  padding-top: 22px;   /* space for horizontal ruler (18px ruler + 4px gap, matches MathCanvas) */
+  padding-left: 22px;  /* space for vertical ruler (18px ruler + 4px gap, matches MathCanvas) */
+  padding-right: 28px; /* space for custom scrollbar */
   display: flex; justify-content: flex-start; align-items: flex-start;
+  scrollbar-width: none; /* hide native Firefox scrollbar */
 }
+.output-content::-webkit-scrollbar { display: none; } /* hide native Chrome scrollbar */
+
+/* ─── Custom Scrollbar Track (always visible) ─── */
+.custom-scrollbar {
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 16px;
+  background: #ddd;
+  border-left: 1px solid #999;
+  z-index: 20;
+  cursor: pointer;
+}
+.custom-scrollbar-thumb {
+  position: absolute;
+  right: 2px;
+  width: 12px;
+  min-height: 30px;
+  background: #555;
+  border-radius: 6px;
+  cursor: grab;
+  transition: background 0.15s;
+}
+.custom-scrollbar-thumb:hover { background: #333; }
+.custom-scrollbar-thumb.dragging { background: #222; cursor: grabbing; }
+.custom-scrollbar-up,
+.custom-scrollbar-down {
+  position: absolute;
+  right: 0; width: 16px; height: 18px;
+  background: #bbb;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 9px; color: #444;
+  user-select: none;
+}
+.custom-scrollbar-up { top: 0; border-bottom: 1px solid #999; }
+.custom-scrollbar-down { bottom: 0; border-top: 1px solid #999; }
+.custom-scrollbar-up:hover,
+.custom-scrollbar-down:hover { background: #888; color: #fff; }
+/* ─── Output Rulers (Word-style, created by JS) ─── */
+.output-ruler-h-overlay {
+  position: absolute; left: 18px; right: 0;
+  height: 18px; z-index: 15;
+  pointer-events: none;
+}
+.output-ruler-v-overlay {
+  position: absolute; left: 0;
+  width: 18px; z-index: 14;
+  pointer-events: none;
+}
+.output-ruler-corner-overlay {
+  position: absolute; left: 0;
+  width: 18px; height: 18px; z-index: 16;
+  background: #d0ccc8;
+  border-right: 1px solid #aaa;
+  border-bottom: 1px solid #aaa;
+  box-sizing: border-box;
+}
+
 .output-pages-wrapper {
   display: flex;
   flex-direction: column;
@@ -96,7 +166,7 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
 }
 .output-page {
   position: relative;
-  background: white;
+  background: var(--page-bg, #f4eeef);
   width: 210mm;
   min-height: 297mm;
   padding: 15mm 15mm 15mm 20mm;
@@ -106,11 +176,24 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   font-size: 10.5pt; line-height: 120%;
 }
 
-/* ─── Scrollbar visible y gruesa ─── */
-.output-content::-webkit-scrollbar { width: 10px; height: 10px; }
-.output-content::-webkit-scrollbar-track { background: #f0f0f0; }
-.output-content::-webkit-scrollbar-thumb { background: #bbb; border-radius: 5px; }
-.output-content::-webkit-scrollbar-thumb:hover { background: #888; }
+/* ─── Cell Array (vector de matrices) ─── */
+.cell-array {
+  display: inline-flex; gap: 12px; align-items: center;
+  vertical-align: middle;
+}
+.cell-element {
+  display: inline-flex; align-items: center; gap: 4px;
+  vertical-align: middle;
+}
+.cell-label { font-style: italic; color: #1565c0; }
+.cell-brace {
+  font-size: 160%; font-weight: 300; color: #333;
+  vertical-align: middle; line-height: 1;
+  font-family: 'Jost* Thin', 'Segoe UI', sans-serif;
+}
+.cell-sep { color: #888; margin: 0 2px; vertical-align: middle; }
+
+/* (custom scrollbar implemented via JS + .custom-scrollbar CSS above) */
 
 .editor-panel textarea::-webkit-scrollbar { width: 10px; }
 .editor-panel textarea::-webkit-scrollbar-track { background: #f5f5f5; }
@@ -130,6 +213,39 @@ h3 { font-size: 1.4em; }
 h4 { font-size: 1.2em; }
 h5 { font-size: 1.1em; }
 h6 { font-size: 1.0em; }
+
+/* ─── Book-style chapter heading (h1 in output) ─── */
+.output-content h1.chapter-heading {
+  text-align: right;
+  border-top: 1.5px solid #444;
+  border-bottom: 1.5px solid #444;
+  padding: 0.4em 0.3em;
+  margin: 0.8em 0 0.6em 0;
+  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-weight: normal;
+  color: #3a2a1a;
+}
+.output-content h1.chapter-heading .chapter-num {
+  font-size: 1.3em;
+  font-weight: bold;
+  margin-right: 0.25em;
+}
+.output-content h1.chapter-heading .chapter-title {
+  font-size: 0.65em;
+  font-weight: normal;
+  letter-spacing: 0.02em;
+}
+
+/* ─── Book-style section heading (h2 in output) ─── */
+.output-content h2.section-heading {
+  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-weight: bold;
+  color: #3a2a1a;
+  margin: 1em 0 0.5em 0;
+}
+.output-content .section-heading .section-num {
+  margin-right: 1.2em;
+}
 
 p, li {
   margin: 0.05em 0;
@@ -415,7 +531,7 @@ sup.unit {
 
 /* ─── Output line wrappers ─── */
 .out-line { margin: 0.05em 0; line-height: 120%; white-space: nowrap; }
-.out-empty { height: 0.3em; }
+.out-empty { height: 1em; }
 .out-comment { color: #444; margin: 0.05em 0; line-height: 120%; }
 .out-error { color: Crimson; background-color: #FEE; font-size: 0.88em; margin: 2px 0; padding: 2px 4px; border-radius: 3px; }
 
@@ -750,3 +866,66 @@ sup.unit {
   pointer-events: auto;
 }
 .cad-overlay.hidden { display: none; }
+
+/* ═══════════════════════════════════════════════════════════
+   Debug CLI Panel - Testing interactivo del MathEditor
+   ═══════════════════════════════════════════════════════════ */
+.debug-btn {
+  position: fixed; bottom: 12px; right: 12px; z-index: 200;
+  width: 36px; height: 36px; border-radius: 50%; border: 2px solid #ff00ff;
+  background: #1a1a2e; color: #ff00ff; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(255,0,255,0.3);
+  transition: all 0.2s;
+}
+.debug-btn:hover { background: #ff00ff; color: #fff; transform: scale(1.1); }
+
+.debug-panel {
+  position: fixed; bottom: 56px; right: 12px; z-index: 200;
+  width: 520px; max-height: 400px;
+  background: #1a1a2e; border: 2px solid #ff00ff; border-radius: 8px;
+  font-family: Consolas, 'Courier New', monospace; font-size: 12px;
+  color: #e0e0e0; display: flex; flex-direction: column;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.debug-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; background: #2a2a4e; border-radius: 6px 6px 0 0;
+  font-size: 11px; color: #ff00ff; font-weight: 600;
+  border-bottom: 1px solid #ff00ff44;
+}
+.debug-close {
+  background: none; border: none; color: #ff00ff; cursor: pointer;
+  font-size: 14px; padding: 0 4px;
+}
+.debug-close:hover { color: #fff; }
+.debug-output {
+  flex: 1; overflow-y: auto; padding: 6px 10px;
+  max-height: 300px; min-height: 60px;
+  scrollbar-width: thin; scrollbar-color: #ff00ff55 transparent;
+}
+.debug-output::-webkit-scrollbar { width: 6px; }
+.debug-output::-webkit-scrollbar-thumb { background: #ff00ff55; border-radius: 3px; }
+.debug-output .dbg-line { margin: 1px 0; line-height: 1.4; white-space: pre-wrap; word-break: break-all; }
+.debug-output .dbg-cmd { color: #00ffff; }
+.debug-output .dbg-ok { color: #00ff88; }
+.debug-output .dbg-err { color: #ff4444; }
+.debug-output .dbg-info { color: #ffcc00; }
+.debug-output .dbg-data { color: #aaa; }
+.debug-output .dbg-help { color: #cc88ff; }
+.debug-output .dbg-copy {
+  color: #ff00ff; cursor: pointer; font-size: 10px; margin-left: 6px;
+  border: 1px solid #ff00ff44; padding: 0 4px; border-radius: 3px;
+}
+.debug-output .dbg-copy:hover { background: #ff00ff33; }
+.debug-input-row {
+  display: flex; align-items: center; padding: 4px 10px 6px;
+  border-top: 1px solid #ff00ff44; background: #2a2a4e;
+  border-radius: 0 0 6px 6px;
+}
+.debug-prompt { color: #ff00ff; margin-right: 6px; font-weight: bold; }
+.debug-input {
+  flex: 1; background: transparent; border: none; color: #e0e0e0;
+  font-family: Consolas, 'Courier New', monospace; font-size: 12px;
+  outline: none; caret-color: #ff00ff;
+}

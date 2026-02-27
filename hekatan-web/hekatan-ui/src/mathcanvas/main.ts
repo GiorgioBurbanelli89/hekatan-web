@@ -63,6 +63,295 @@ R_A = P/2
 R_B = P/2
 M_max = P*L/4`,
   },
+  cellarrays: {
+    name: "Cell Arrays (Matrices)",
+    code: `# Cell Arrays - Notacion Matricial
+> Similar a cell arrays de MATLAB: {A, B, C}
+> Notacion: k{1} → [k]₁,  k~{1} → [k̄]₁ (barra superior)
+
+## 1. Matrices de Rigidez Local por Elemento
+E = 29000
+I = 882
+L = 100
+c = 12 * E * I / L^3
+
+k1 = [[c, -c], [-c, c]]
+k2 = [[2*c, -2*c], [-2*c, 2*c]]
+
+## 2. Cell Array de Rigidez
+> k = {k1, k2} agrupa matrices locales
+k = {k1, k2}
+
+## 3. Acceso con notacion matricial
+> k{1} se renderiza como [k]₁
+ke1 = k{1}
+ke2 = k{2}
+
+## 4. Matriz de Rigidez Global (con barra ~)
+> T = matriz de transformacion (identidad para ejemplo)
+T = [[1, 0], [0, 1]]
+
+> K~{1} = T' * k{1} * T  (rigidez global elem 1)
+Kg1 = transpose(T) * k{1} * T
+Kg2 = transpose(T) * k{2} * T
+
+> Cell array global
+K = {Kg1, Kg2, Kg1 + Kg2}
+
+> K{3} = ensamblaje total
+Ktotal = K{3}`,
+  },
+  libroC5: {
+    name: "Cap 5 - Grid Frames (Libro)",
+    code: `# 5 Grid Frames
+
+## 5.1 Introduccion
+
+@{text}
+En el Capitulo 4 se abordo el analisis estructural de porticos planos con
+cargas aplicadas en el plano del portico. Cuando el portico plano esta
+sometido a cargas aplicadas normalmente a su plano, la estructura se denomina
+grid frame (marco de rejilla).
+
+Estas estructuras tambien podrian tratarse como porticos tridimensionales
+(Capitulo 6). Sin embargo, las estructuras modeladas como porticos planos o
+como grid frames se tratan como casos especiales porque se obtiene una
+reduccion inmediata en el numero de coordenadas nodales de la estructura.
+
+Al analizar el portico plano bajo la accion de cargas en su plano, los unicos
+desplazamientos nodales a considerar son las traslaciones en las direcciones
+X e Y y la rotacion respecto al eje Z, resultando en un total de tres
+coordenadas nodales en cada nodo. Para un grid frame ubicado en el plano X-Y
+y cargado normalmente al plano de la estructura, solo se consideran tres
+coordenadas nodales: la traslacion en la direccion Z y las rotaciones
+respecto a los ejes X e Y.
+
+En consecuencia, el analisis de grid frames requiere considerar solo tres
+coordenadas nodales en cada nodo, mientras que tratarlas como porticos
+tridimensionales requeriria seis coordenadas nodales, lo que implica un
+aumento considerable en el tamano del problema.
+@{end text}
+
+## 5.2 Efectos Torsionales
+
+@{text}
+La similitud entre estas dos derivaciones ocurre porque la ecuacion
+diferencial para ambos problemas tiene la misma forma matematica.
+Para el problema axial, la ecuacion diferencial para la funcion de
+desplazamiento esta dada por la ec. (4.4) como:
+@{end text}
+
+@{eq}
+du/dx = P/(AE)  (5.1)
+@{end eq}
+
+@{text}
+Analogamente, la ecuacion diferencial para el desplazamiento
+angular torsional es:
+@{end text}
+
+@{eq}
+dθ/dx = T/(JG)  (5.2)
+@{end eq}
+
+> donde,
+
+@{columns 2}
+> u = desplazamiento lineal
+> P = fuerza axial
+> E = modulo de elasticidad
+> A = area de la seccion transversal
+> θ = desplazamiento angular torsional
+> T = momento torsor
+> G = modulo de rigidez al cortante
+> J = constante torsional (momento polar de inercia para secciones circulares)
+@{end columns}
+
+@{text}
+Como consecuencia de la analogia entre las ecs. (5.1) y (5.2), podemos
+expresar las funciones de desplazamiento para efectos torsionales como las
+funciones correspondientes para desplazamientos por efectos axiales; por lo
+tanto, por analogia con las ecs. (4.5) y (4.6) y con referencia a las
+coordenadas nodales mostradas en la Figura 5.1, tenemos:
+@{end text}
+
+@{eq}
+θ_1(x) = (1 - x/L)  (5.3)
+@{end eq}
+
+> y
+
+@{eq}
+θ_2(x) = x/L  (5.4)
+@{end eq}
+
+@{text}
+en donde la funcion de desplazamiento angular θ_1(x) corresponde a la
+funcion de desplazamiento lineal u_1(x) y la funcion de desplazamiento
+angular θ_2(x) corresponde a la funcion de desplazamiento lineal u_2(x).
+Tambien, analogamente a la ec. (4.7), los coeficientes de rigidez para
+efectos torsionales pueden calcularse a partir de:
+@{end text}
+
+@{eq}
+k_{ij} = ∫_0^L JG * θ_i'(x) * θ_j'(x) dx  (5.5)
+@{end eq}
+
+@{text}
+en donde θ_i(x) y θ_j(x) son las derivadas respecto a x de las funciones
+de desplazamiento angular θ_i(x) y θ_j(x) dadas por las ecs. (5.3) o (5.4).
+@{end text}
+
+## 5.5 Ejemplo Ilustrativo 5.1
+
+> Para el grid frame mostrado en la Figura 5.4, realizar el analisis
+> estructural para determinar lo siguiente:
+> (a) Desplazamientos en las juntas entre elementos
+> (b) Fuerzas internas en los elementos
+> (c) Reacciones en los apoyos
+> Ref: Mario Paz - Matrix Structural Analysis, 2 elementos, 3 nodos, 9 GDL
+> Unidades: kip, inch, rad
+
+@{draw 580 380}
+# Fig 5.4 - Diagrama Estructural (3D oblicuo)
+grid off
+bg #ffffff
+proj oblique 45 0.5
+# Ejes de referencia
+color #cc3333
+arrow3d -4 0 0 -1 0 0
+text3d -0.5 0 0 X
+color #33aa33
+arrow3d -4 0 0 -4 3 0
+text3d -4 3.5 0 Y
+color #3333cc
+arrow3d -4 0 0 -4 0 3
+text3d -4 0 3.5 Z
+# Elem 1: Node1(0,0,0) to Node2(20,0,0) along X
+color #333
+line3d 0 0 0 20 0 0
+# Elem 2: Node1(0,0,0) to Node3(0,20,0) along Y
+line3d 0 0 0 0 20 0
+# Nodos (circulos pequenos)
+circle3d 0 0 0 0.15 #333
+circle3d 20 0 0 0.15 #333
+circle3d 0 20 0 0.15 #333
+# Textos de nodos
+color #1565c0
+text3d 0.5 -1.5 0 1
+text3d 20 -1.5 0 2
+text3d 0 21.5 0 3
+# Etiquetas de longitud
+color #888
+text3d 10 -2.5 0 L1=12*28 ft
+text3d -3 10 0 L2=12*28 ft
+# Carga puntual en nodo 2
+color #cc0000
+arrow3d 20 0 3 20 0 0.3
+text3d 20.5 0 2.5 10 k
+# Carga puntual en nodo 3
+arrow3d 0 20 3 0 20 0.3
+text3d 0.5 20 2.5 10 k
+# Apoyos empotrados
+color #666
+text3d 0 -1.2 -0.5 (empotrado)
+# Propiedades
+color #444
+text3d 7 2 0 E=30000 ksi
+text3d 7 3.5 0 I=100 in^4
+text3d 7 5 0 J=50 in^4
+text3d 7 6.5 0 G=12000 ksi
+@{end draw}
+
+> -Fig. 5.4- Grid frame - Ejemplo Ilustrativo 5.1
+
+### Datos del problema
+
+E = 30000
+I_z = 100
+G = 12000
+J = 50
+L = 336
+
+### 1. Rigidez Flexional y Torsional
+
+EI = E * I_z
+GJ = G * J
+
+> Coeficientes de rigidez flexional (eq 5.3)
+
+@{eq}
+[k]_f = EI/L^3 * [12, 6L, -12, 6L; 6L, 4L^2, -6L, 2L^2; -12, -6L, 12, -6L; 6L, 2L^2, -6L, 4L^2]  (5.3)
+@{end eq}
+
+> Coeficientes de rigidez torsional (eq 5.5)
+
+@{eq}
+[k]_t = GJ/L * [1, -1; -1, 1]  (5.5)
+@{end eq}
+
+### 2. Matriz de Rigidez Local [k] (eq 5.7)
+
+> La matriz de rigidez local de un elemento de grid frame
+> combina flexion y torsion en un sistema de 6x6:
+
+c = 12 * EI / L^3
+a = 6 * EI / L^2
+b = 4 * EI / L
+d = 2 * EI / L
+t = GJ / L
+
+@{eq}
+[k] = [12EI/L^3, 6EI/L^2, 0, -12EI/L^3, 6EI/L^2, 0; 6EI/L^2, 4EI/L, 0, -6EI/L^2, 2EI/L, 0; 0, 0, GJ/L, 0, 0, -GJ/L; -12EI/L^3, -6EI/L^2, 0, 12EI/L^3, -6EI/L^2, 0; 6EI/L^2, 2EI/L, 0, -6EI/L^2, 4EI/L, 0; 0, 0, -GJ/L, 0, 0, GJ/L]  (5.7)
+@{end eq}
+
+> Evaluacion numerica:
+
+k1 = [[c, a, 0, -c, a, 0], [a, b, 0, -a, d, 0], [0, 0, t, 0, 0, -t], [-c, -a, 0, c, -a, 0], [a, d, 0, -a, b, 0], [0, 0, -t, 0, 0, t]]
+
+> Nota: Ambos elementos tienen la misma seccion transversal,
+> por lo tanto k{1} = k{2}
+
+k = {k1, k1}
+
+### 3. Ensamblaje de la Matriz Global
+
+> DOF: theta_x, theta_y, delta_z por nodo
+> Nodo 1: GDL 1,2,3 (libres)
+> Nodo 2: GDL 4,5,6 (empotrados)
+> Nodo 3: GDL 7,8,9 (empotrados)
+
+> Condensando los GDL empotrados, la matriz reducida [K]_R es 3x3:
+
+K_R = [[k1.(1,1) + k1.(1,1), k1.(1,2), k1.(1,2)], [k1.(2,1), k1.(2,2) + k1.(5,5), 0], [k1.(2,1), 0, k1.(2,2) + k1.(5,5)]]
+
+### 4. Vector de Fuerzas
+
+> Cargas en Nodo 2: P_z = 10 kip
+> Cargas en Nodo 3: P_z = 10 kip
+
+F_R = [20, 0, 0]
+
+### 5. Solucion del Sistema
+
+> {u} = [K]_R^-1 * {F}
+
+u = lusolve(K_R, F_R)
+
+> Desplazamientos en el nodo central (Nodo 1):
+
+delta_z = u.(1)
+theta_x = u.(2)
+theta_y = u.(3)
+
+### 6. Reacciones en los Apoyos
+
+> Las reacciones se obtienen multiplicando la submatriz
+> correspondiente por los desplazamientos:
+
+> R{2} = k{1} * [u; 0; 0; 0] (reacciones en nodo 2)
+> R{3} = k{2} * [u; 0; 0; 0] (reacciones en nodo 3)`,
+  },
   gridframe: {
     name: "Ej 5.1 - Grid Frame (Paz)",
     code: `# 5.5 Analisis de Grid Frames
@@ -264,8 +553,6 @@ fit
 @{cells} |L = 100|I_z = 882|J_t = 5.08|
 @{cells} |E_s = 29000|G_s = 11600|
 
-@{pagebreak}
-@{end pagebreak}
 
 ## 2. Coeficientes de Rigidez
 @{cells} |t_1 = G_s*J_t/L|a_4 = 4*E_s*I_z/L|a_2 = 2*E_s*I_z/L|
@@ -275,8 +562,7 @@ fit
 > DOF: [theta_x, theta_z, delta_y] por nodo
 k = [[t_1,0,0,-t_1,0,0],[0,a_4,b_6,0,a_2,-b_6],[0,b_6,c_12,0,b_6,-c_12],[-t_1,0,0,t_1,0,0],[0,a_2,b_6,0,a_4,-b_6],[0,-b_6,-c_12,0,-b_6,c_12]]
 
-@{pagebreak}
-@{end pagebreak}
+
 
 ## 4. Transformacion Elemento 2
 > Elem 2: theta=90 grados (eq 5.11)
@@ -292,8 +578,7 @@ k1R = k[4:6, 4:6]
 k2R = kb2[1:3, 1:3]
 K_R = k1R + k2R
 
-@{pagebreak}
-@{end pagebreak}
+
 
 ## 7. Fuerzas de Empotramiento
 > Elem 1: M_0=200 kip*in a L/2, Apendice I Caso (b) (eq e)
@@ -310,8 +595,7 @@ Q_f2L = [[0], [w_0*L^2/12], [w_0*L/2], [0], [-w_0*L^2/12], [w_0*L/2]]
 > Q_f global via T_2'
 Q_f2 = transpose(T_2) * Q_f2L
 
-@{pagebreak}
-@{end pagebreak}
+
 
 ## 8. Vector de Fuerzas Reducido
 > {F}_R = P - Q_f1(4:6) - Q_f2(1:3) (eq g)
@@ -322,8 +606,7 @@ F_R = P_d - Q_f1[4:6, 1:1] - Q_f2[1:3, 1:1]
 > [K]_R {u} = {F}_R
 u = lusolve(K_R, F_R)
 
-@{pagebreak}
-@{end pagebreak}
+
 
 ## 10. Desplazamientos Locales
 > Componentes: theta_x, theta_z, delta_y
@@ -339,8 +622,7 @@ P_1 = k * d_1 + Q_f1
 > Elem 2 (Q_f en locales):
 P_2 = k * d_2 + Q_f2L
 
-@{pagebreak}
-@{end pagebreak}
+
 
 ## 12. Reacciones en Apoyos
 > Nodo 1 (empotrado):
@@ -742,12 +1024,13 @@ const tabCanvas = document.getElementById("tabCanvas") as HTMLButtonElement;
 const btnRun = document.getElementById("btnRun") as HTMLButtonElement;
 const btnCad = document.getElementById("btnCad") as HTMLButtonElement;
 const themeSelect = document.getElementById("themeSelect") as HTMLSelectElement;
-const codeMode = document.getElementById("codeMode") as HTMLDivElement;
-const canvasMode = document.getElementById("canvasMode") as HTMLDivElement;
+const canvasContainer = document.getElementById("canvasContainer") as HTMLDivElement;
 const mathCanvasEl = document.getElementById("mathCanvas") as HTMLCanvasElement;
+const editorHeader = document.getElementById("editorHeader") as HTMLDivElement;
 
 // ─── MathEditor (WYSIWYG canvas) ────────────────────────
 const editor = new MathEditor(mathCanvasEl);
+(window as any)._editor = editor; // debug access
 
 // ─── CAD Floating Toolbar + Interactive Drawing ──────────
 let activeDrawBlock: any = null;
@@ -811,7 +1094,6 @@ cadToolbar.innerHTML = `
   <span class="sep">|</span>
   <button class="tool-close" data-action="close" title="Cerrar toolbar">✕</button>
 `;
-const canvasContainer = canvasMode.querySelector(".canvas-container")!;
 canvasContainer.appendChild(cadToolbar);
 
 const coordDisplay = cadToolbar.querySelector("#coordDisplay") as HTMLSpanElement;
@@ -1418,29 +1700,48 @@ for (const [key, ex] of Object.entries(EXAMPLES)) {
   exampleSelect.appendChild(opt);
 }
 
-// ─── Mode switching ─────────────────────────────────────
-let currentMode: "code" | "canvas" = "canvas";
+// ─── Mode switching (like WPF: toggle textarea/canvas in same panel) ──
+let currentMode: "code" | "canvas" = "code";
+let _isSyncingModes = false; // Guard flag to prevent feedback loops
 
 function setMode(mode: "code" | "canvas") {
-  const wasCanvas = currentMode === "canvas";
-  currentMode = mode;
-  tabCode.classList.toggle("active", mode === "code");
-  tabCanvas.classList.toggle("active", mode === "canvas");
+  if (_isSyncingModes) return;
+  try {
+    _isSyncingModes = true;
+    const wasCanvas = currentMode === "canvas";
+    currentMode = mode;
+    tabCode.classList.toggle("active", mode === "code");
+    tabCanvas.classList.toggle("active", mode === "canvas");
 
-  if (mode === "code") {
-    codeMode.style.display = "flex";
-    canvasMode.style.display = "none";
-    // Only sync from canvas if we were in canvas mode
-    if (wasCanvas) {
-      codeInput.value = editor.toHekatan();
+    editorHeader.textContent = mode === "canvas" ? "MathCanvas" : "Code";
+
+    if (mode === "code") {
+      // Code mode: show textarea, hide canvas (output always visible)
+      codeInput.style.display = "";
+      canvasContainer.style.display = "none";
+      // Sync from canvas → code
+      if (wasCanvas) {
+        codeInput.value = editor.toHekatan();
+      }
+      runCode();
+    } else {
+      // MathCanvas mode: show canvas, hide textarea (output always visible)
+      codeInput.style.display = "none";
+      canvasContainer.style.display = "";
+      // Sync code → canvas
+      editor.loadFromText(codeInput.value);
+      requestAnimationFrame(() => {
+        editor.resize();
+        editor.render();
+        // Focus canvas AFTER browser has painted so cursor blink timer starts
+        mathCanvasEl.focus();
+      });
+      // Also run code to update output
+      runCode();
     }
-    runCode();
-  } else {
-    codeMode.style.display = "none";
-    canvasMode.style.display = "flex";
-    // Sync textarea content to canvas
-    editor.loadFromText(codeInput.value);
-    mathCanvasEl.focus();
+  } finally {
+    // Reset flag async to allow UI to update
+    setTimeout(() => { _isSyncingModes = false; }, 0);
   }
 }
 
@@ -1450,9 +1751,23 @@ btnRun.addEventListener("click", () => {
   if (currentMode === "canvas") {
     codeInput.value = editor.toHekatan();
   }
-  setMode("code");
   runCode();
 });
+
+// ─── Live sync: MathCanvas → Code → Output (like WPF ContentChanged) ──
+editor.onContentChanged = (code: string) => {
+  if (_isSyncingModes) return;
+  try {
+    _isSyncingModes = true;
+    codeInput.value = code;
+    // Auto-run if enabled
+    if (chkAutoRun.checked) {
+      runCode();
+    }
+  } finally {
+    setTimeout(() => { _isSyncingModes = false; }, 0);
+  }
+};
 
 // ─── Example selection ──────────────────────────────────
 exampleSelect.addEventListener("change", () => {
@@ -1460,10 +1775,9 @@ exampleSelect.addEventListener("change", () => {
   if (!ex) return;
   codeInput.value = ex.code;
   editor.loadFromText(ex.code);
+  runCode(); // Always update output
   if (currentMode === "canvas") {
     mathCanvasEl.focus();
-  } else {
-    runCode();
   }
 });
 
@@ -1473,11 +1787,7 @@ chkAutoRun.addEventListener("change", () => {
 });
 
 // ─── MathEditor callbacks ───────────────────────────────
-editor.onContentChanged = (code: string) => {
-  // AutoRun: evaluate and could show results (future: inline results on canvas)
-  // For now, just keep textarea synced
-  codeInput.value = code;
-};
+// onContentChanged is already set above (with AutoRun support)
 
 editor.onExecute = (code: string) => {
   // F5 / Ctrl+Enter: switch to code mode to see results
@@ -1522,10 +1832,10 @@ function runCode() {
     // Render @{import:ifc:file} auto-load IFC models
     renderImportIfcBlocks(results);
     // Auto page-break: split pages that overflow A4 height, then fit zoom
-    setTimeout(() => { autoPageBreak(); fitA4Page(); }, 50);
+    setTimeout(() => { autoPageBreak(); syncZoom(); }, 50);
   } catch (e: any) {
     output.innerHTML = `<div class="output-pages-wrapper"><div class="output-page"><div class="out-error">Error: ${escHtml(e.message)}</div></div></div>`;
-    setTimeout(fitA4Page, 50);
+    setTimeout(syncZoom, 50);
   }
 }
 
@@ -1550,11 +1860,15 @@ function autoPageBreak() {
       const children = Array.from(page.children) as HTMLElement[];
       if (children.length <= 1) continue; // single element — can't split further
 
+      // offsetTop includes padding-top, so max = padTop + contentHeight
+      const padTop = parseFloat(getComputedStyle(page).paddingTop) || 0;
+      const maxBottomPx = padTop + maxContentPx;
+
       let splitIdx = -1;
       for (let i = 0; i < children.length; i++) {
         // offsetTop is relative to .output-page (position:relative)
         const bottom = children[i].offsetTop + children[i].offsetHeight;
-        if (bottom > maxContentPx && i > 0) {
+        if (bottom > maxBottomPx && i > 0) {
           splitIdx = i;
           break;
         }
@@ -1575,43 +1889,348 @@ function autoPageBreak() {
   }
 }
 
-// ─── Auto-fit A4 page + zoom con trackpad ─────────────────
-let outputZoomUser = 1;   // zoom manual del usuario (trackpad)
-let outputZoomBase = 1;   // zoom auto-fit calculado
+// ─── Output Rulers (Word-style, JS-created canvas overlays) ────────
+const outputPanel = document.getElementById("outputPanel") as HTMLElement;
 
-function fitA4Page() {
+// Create ruler canvases
+const outRulerH = document.createElement("canvas");
+outRulerH.className = "output-ruler-h-overlay";
+const outRulerV = document.createElement("canvas");
+outRulerV.className = "output-ruler-v-overlay";
+const outRulerCorner = document.createElement("div");
+outRulerCorner.className = "output-ruler-corner-overlay";
+
+// Insert into output-panel (which has position:relative)
+outputPanel.appendChild(outRulerCorner);
+outputPanel.appendChild(outRulerH);
+outputPanel.appendChild(outRulerV);
+
+// Position overlays below the "Output" header
+function positionOutputRulers() {
+  const header = outputPanel.querySelector(".output-header") as HTMLElement;
+  const headerH = header ? header.offsetHeight : 30;
+  const panelW = outputPanel.offsetWidth;
+  outRulerCorner.style.top = `${headerH}px`;
+  outRulerH.style.top = `${headerH}px`;
+  outRulerH.style.width = `${panelW - 18 - 16}px`;  // -18 vRuler, -16 scrollbar
+  outRulerV.style.top = `${headerH + 18}px`;
+  outRulerV.style.height = `${outputPanel.offsetHeight - headerH - 18}px`;
+}
+
+/** Get the first output page's bounding rect relative to the output panel */
+function getPageGeometry() {
+  const page = output.querySelector(".output-page") as HTMLElement;
+  if (!page) return null;
+  const pageRect = page.getBoundingClientRect();
+  const panelRect = outputPanel.getBoundingClientRect();
+  const headerEl = outputPanel.querySelector(".output-header") as HTMLElement;
+  const headerH = headerEl ? headerEl.offsetHeight : 30;
+  // Page position relative to the ruler overlay origin
+  const rulerHLeft = 18; // ruler H starts at left=18px (after vRuler)
+  return {
+    // Page left edge relative to hRuler canvas origin
+    pageX: pageRect.left - panelRect.left - rulerHLeft,
+    // Page visual width and height (after CSS zoom)
+    pageW: pageRect.width,
+    pageH: pageRect.height,
+    // Page top relative to vRuler canvas origin (vRuler starts at headerH + 18)
+    pageY: pageRect.top - panelRect.top - headerH - 18,
+    headerH,
+  };
+}
+
+/** Draw horizontal ruler on the Output panel */
+function drawOutputHRuler() {
+  const geo = getPageGeometry();
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = outRulerH.offsetWidth;
+  const cssH = 18;
+  outRulerH.width = Math.round(cssW * dpr);
+  outRulerH.height = Math.round(cssH * dpr);
+  const ctx = outRulerH.getContext("2d")!;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Background
+  ctx.fillStyle = "#d0ccc8";
+  ctx.fillRect(0, 0, cssW, cssH);
+
+  if (!geo) return;
+
+  // Derive scale: visual page width / A4 CSS width (794px)
+  const a4Wmm = 210, marginLmm = 20, marginRmm = 15;
+  const pxPerMm = 96 / 25.4;
+  const a4Wpx = a4Wmm * pxPerMm;
+  const visScale = geo.pageW / a4Wpx;
+  const marginL = marginLmm * pxPerMm * visScale;
+  const marginR = marginRmm * pxPerMm * visScale;
+
+  // Content area highlight
+  const cLeft = Math.max(0, geo.pageX + marginL);
+  const cRight = Math.min(cssW, geo.pageX + geo.pageW - marginR);
+  if (cRight > cLeft) {
+    ctx.fillStyle = "#f0eeec";
+    ctx.fillRect(cLeft, 0, cRight - cLeft, cssH);
+  }
+
+  // Cm ticks
+  const cmPx = (96 / 2.54) * visScale;
+  const totalCm = Math.ceil(a4Wmm / 10);
+  const labelInterval = cmPx < 8 ? 10 : cmPx < 14 ? 5 : cmPx < 22 ? 2 : 1;
+  const rulerFontSize = Math.max(6, Math.min(10, Math.round(cmPx * 0.6)));
+  ctx.font = `${rulerFontSize}px 'Segoe UI', Arial, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+
+  for (let cm = 0; cm <= totalCm; cm++) {
+    const x = geo.pageX + cm * cmPx;
+    if (x < -1 || x > cssW + 1) continue;
+    const isLabel = cm % labelInterval === 0;
+    ctx.strokeStyle = "#777";
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(x, cssH - 1);
+    ctx.lineTo(x, cssH - (isLabel ? 7 : 4));
+    ctx.stroke();
+    if (cm > 0 && isLabel) {
+      ctx.fillStyle = "#555";
+      ctx.fillText(`${cm}`, x, cssH - 7);
+    }
+    if (cmPx >= 10) {
+      const halfX = x + cmPx / 2;
+      if (halfX >= 0 && halfX <= cssW) {
+        ctx.beginPath();
+        ctx.moveTo(halfX, cssH - 1);
+        ctx.lineTo(halfX, cssH - 3);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Margin triangles
+  ctx.fillStyle = "#666";
+  const triL = geo.pageX + marginL;
+  const triR = geo.pageX + geo.pageW - marginR;
+  if (triL >= 0 && triL <= cssW) {
+    ctx.beginPath();
+    ctx.moveTo(triL, cssH - 1);
+    ctx.lineTo(triL - 4, cssH - 5);
+    ctx.lineTo(triL + 4, cssH - 5);
+    ctx.closePath(); ctx.fill();
+  }
+  if (triR >= 0 && triR <= cssW) {
+    ctx.beginPath();
+    ctx.moveTo(triR, cssH - 1);
+    ctx.lineTo(triR - 4, cssH - 5);
+    ctx.lineTo(triR + 4, cssH - 5);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // Bottom border
+  ctx.strokeStyle = "#aaa";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, cssH - 0.5);
+  ctx.lineTo(cssW, cssH - 0.5);
+  ctx.stroke();
+}
+
+/** Draw vertical ruler on the Output panel */
+function drawOutputVRuler() {
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = 18;
+  const cssH = outRulerV.offsetHeight;
+  if (cssH <= 0) return;
+  outRulerV.width = Math.round(cssW * dpr);
+  outRulerV.height = Math.round(cssH * dpr);
+  const ctx = outRulerV.getContext("2d")!;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Background
+  ctx.fillStyle = "#d0ccc8";
+  ctx.fillRect(0, 0, cssW, cssH);
+
+  // Get all visible pages
+  const pages = output.querySelectorAll(".output-page");
+  if (!pages.length) return;
+
+  const panelRect = outputPanel.getBoundingClientRect();
+  const headerEl = outputPanel.querySelector(".output-header") as HTMLElement;
+  const headerH = headerEl ? headerEl.offsetHeight : 30;
+  const vRulerTop = panelRect.top + headerH + 18;
+
+  const a4Hmm = 297, marginTmm = 15, marginBmm = 15;
+  const pxPerMm = 96 / 25.4;
+
+  // Process each visible page
+  for (const pg of pages) {
+    const pgRect = (pg as HTMLElement).getBoundingClientRect();
+    const pageTopInRuler = pgRect.top - vRulerTop;
+    const pageH = pgRect.height;
+
+    // Skip pages completely outside view
+    if (pageTopInRuler + pageH < -10 || pageTopInRuler > cssH + 10) continue;
+
+    const visScale = pageH / (a4Hmm * pxPerMm);
+    const marginT = marginTmm * pxPerMm * visScale;
+    const marginB = marginBmm * pxPerMm * visScale;
+
+    // Content area highlight
+    const contentTop = pageTopInRuler + marginT;
+    const contentBottom = pageTopInRuler + pageH - marginB;
+    const clampedTop = Math.max(0, contentTop);
+    const clampedBottom = Math.min(cssH, contentBottom);
+    if (clampedBottom > clampedTop) {
+      ctx.fillStyle = "#f0eeec";
+      ctx.fillRect(0, clampedTop, cssW, clampedBottom - clampedTop);
+    }
+
+    // Cm ticks
+    const cmPx = (96 / 2.54) * visScale;
+    const totalCm = Math.ceil(a4Hmm / 10);
+    const labelInterval = cmPx < 8 ? 10 : cmPx < 14 ? 5 : cmPx < 22 ? 2 : 1;
+    const vFontSize = Math.max(6, Math.min(10, Math.round(cmPx * 0.6)));
+    ctx.font = `${vFontSize}px 'Segoe UI', Arial, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    for (let cm = 0; cm <= totalCm; cm++) {
+      const y = pageTopInRuler + cm * cmPx;
+      if (y < -1 || y > cssH + 1) continue;
+      const isLabel = cm % labelInterval === 0;
+      ctx.strokeStyle = "#777";
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cssW - 1, y);
+      ctx.lineTo(cssW - (isLabel ? 7 : 4), y);
+      ctx.stroke();
+      if (cm > 0 && isLabel && y > 4) {
+        ctx.fillStyle = "#555";
+        ctx.fillText(`${cm}`, cssW / 2 - 1, y);
+      }
+      if (cmPx >= 10) {
+        const halfY = y + cmPx / 2;
+        if (halfY >= 0 && halfY <= cssH) {
+          ctx.beginPath();
+          ctx.moveTo(cssW - 1, halfY);
+          ctx.lineTo(cssW - 3, halfY);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Margin triangles
+    ctx.fillStyle = "#666";
+    if (contentTop >= 0 && contentTop <= cssH) {
+      ctx.beginPath();
+      ctx.moveTo(cssW - 1, contentTop);
+      ctx.lineTo(cssW - 5, contentTop - 2);
+      ctx.lineTo(cssW - 5, contentTop + 2);
+      ctx.closePath(); ctx.fill();
+    }
+    if (contentBottom >= 0 && contentBottom <= cssH) {
+      ctx.beginPath();
+      ctx.moveTo(cssW - 1, contentBottom);
+      ctx.lineTo(cssW - 5, contentBottom - 2);
+      ctx.lineTo(cssW - 5, contentBottom + 2);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // Right border
+  ctx.strokeStyle = "#aaa";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cssW - 0.5, 0);
+  ctx.lineTo(cssW - 0.5, cssH);
+  ctx.stroke();
+}
+
+function updateOutputRulers() {
+  positionOutputRulers();
+  drawOutputHRuler();
+  drawOutputVRuler();
+}
+
+// ─── Shared CSS-transform zoom ──────────────────────────────────────
+// zoomLevel is applied as CSS transform on the canvas and CSS zoom on
+// the output wrapper. This makes EVERYTHING scale visually: pages,
+// text, equations, @{draw} diagrams, matrices, etc.
+
+function syncZoom() {
+  const zoom = editor.getDebugInfo().zoomLevel;
+
+  // Canvas panel: CSS zoom (changes layout size → scrollbars work naturally)
+  (mathCanvasEl.style as any).zoom = `${zoom}`;
+
+  // Output panel: compute SAME auto-fit scale as MathCanvas (same formula)
+  // so both pages are always identical size regardless of timing
   const wrapper = output.querySelector(".output-pages-wrapper") as HTMLElement;
-  if (!wrapper) return;
-  const container = output;
-  const cW = container.clientWidth - 20;
-  const cH = container.clientHeight - 20;
-  const pageW = 793;  // 210mm ≈ 793px
-  const pageH = 1123; // 297mm ≈ 1123px
-  const scaleW = cW / pageW;
-  const scaleH = cH / pageH;
-  outputZoomBase = Math.min(scaleW, scaleH, 1);
-  applyOutputZoom(wrapper);
+  if (wrapper) {
+    const a4Wpx = 210 * 96 / 25.4;            // 794px = A4 width
+    const vRulerW = 18, sbW = 10, sbMargin = 2; // same as MathEditor constants
+    // Use canvas width if visible, else use codeInput/editorPanel width
+    let panelW = mathCanvasEl.clientWidth;
+    if (!panelW) panelW = codeInput.clientWidth || output.clientWidth;
+    const availW = panelW - sbW - sbMargin - vRulerW;
+    const scale = Math.min((availW - 20) / a4Wpx, 1);
+    wrapper.style.zoom = `${scale * zoom}`;
+
+    // Dynamic padding-top: match MathCanvas gap exactly
+    // MathCanvas pagesStartY = rulerH(18) + max(4, 12*scale), no zoom mult
+    const rulerH = 18;
+    const mcPageGap = Math.max(4, 12 * scale);
+    const dynPadTop = Math.round(rulerH + mcPageGap);
+    output.style.paddingTop = `${dynPadTop}px`;
+  }
+
+  updateOutputRulers();
 }
 
-function applyOutputZoom(wrapper?: HTMLElement) {
-  wrapper = wrapper || output.querySelector(".output-pages-wrapper") as HTMLElement;
-  if (!wrapper) return;
-  const totalZoom = outputZoomBase * outputZoomUser;
-  wrapper.style.zoom = `${totalZoom}`;
-}
+// Auto-fit al cargar y al cambiar tamaño — re-render canvas then sync
+window.addEventListener("resize", () => {
+  editor.resize();          // recomputes autoFitScale
+  syncZoom();               // includes updateOutputRulers()
+});
+setTimeout(() => { editor.resize(); syncZoom(); }, 100);
+setTimeout(() => { updateOutputRulers(); }, 200);
 
-// Auto-fit al cargar y al cambiar tamaño
-window.addEventListener("resize", fitA4Page);
-setTimeout(fitA4Page, 100);
+// When canvas zoom changes → sync output
+editor.onZoomChange = (_zoom) => {
+  syncZoom();
+};
 
-// Zoom manual con trackpad (pinch)
-output.addEventListener("wheel", (e) => {
+// Global Ctrl+wheel → always route to our shared zoom (prevent browser zoom)
+document.addEventListener("wheel", (e) => {
   if (!e.ctrlKey) return;
   e.preventDefault();
   const delta = e.deltaY > 0 ? -0.05 : 0.05;
-  outputZoomUser = Math.min(3, Math.max(0.3, outputZoomUser + delta));
-  applyOutputZoom();
+  const info = editor.getDebugInfo();
+  const newZoom = Math.max(0.5, Math.min(3.0, info.zoomLevel + delta));
+  editor.setZoom(newZoom);    // fires onZoomChange → syncZoom
 }, { passive: false });
+
+// ─── Scroll sync: MathCanvas ↔ Output ───────────────────
+let scrollSyncing = false;
+
+// Canvas scroll → Output scroll
+editor.onScrollChange = (fraction) => {
+  if (scrollSyncing) return;
+  scrollSyncing = true;
+  const maxScroll = output.scrollHeight - output.clientHeight;
+  if (maxScroll > 0) output.scrollTop = fraction * maxScroll;
+  scrollSyncing = false;
+};
+
+// Output scroll → Canvas scroll + update vertical ruler
+output.addEventListener("scroll", () => {
+  if (scrollSyncing) return;
+  scrollSyncing = true;
+  const maxScroll = output.scrollHeight - output.clientHeight;
+  const fraction = maxScroll > 0 ? output.scrollTop / maxScroll : 0;
+  editor.setScrollFraction(fraction);
+  scrollSyncing = false;
+  updateOutputRulers();
+});
 
 // ─── Keyboard (Calculate mode textarea) ─────────────────
 codeInput.addEventListener("keydown", (e) => {
@@ -1688,7 +2307,26 @@ function renderResults(results: LineResult[], sourceCode: string): string {
         const match = r.display!.match(/^(#{1,6})\s+(.*)/);
         if (match) {
           const level = match[1].length;
-          html.push(`<h${level}>${escHtml(match[2])}</h${level}>`);
+          const headText = match[2];
+          // Book-style chapter heading: "# 5 Grid Frames" → number big, title right-aligned, ruled lines
+          if (level === 1) {
+            const chapMatch = headText.match(/^(\d+)\s+(.*)/);
+            if (chapMatch) {
+              html.push(`<h1 class="chapter-heading"><span class="chapter-num">${escHtml(chapMatch[1])}</span> <span class="chapter-title">${escHtml(chapMatch[2])}</span></h1>`);
+            } else {
+              html.push(`<h1 class="chapter-heading"><span class="chapter-title">${escHtml(headText)}</span></h1>`);
+            }
+          } else if (level === 2) {
+            // Section heading: "## 5.2 Efectos" → number spaced from title
+            const secMatch = headText.match(/^([\d.]+)\s+(.*)/);
+            if (secMatch) {
+              html.push(`<h${level} class="section-heading"><span class="section-num">${escHtml(secMatch[1])}</span><span class="section-title">${escHtml(secMatch[2])}</span></h${level}>`);
+            } else {
+              html.push(`<h${level}>${escHtml(headText)}</h${level}>`);
+            }
+          } else {
+            html.push(`<h${level}>${escHtml(headText)}</h${level}>`);
+          }
         }
         break;
       }
@@ -1714,8 +2352,8 @@ function renderResults(results: LineResult[], sourceCode: string): string {
         const uid = `cad-output-${r.lineIndex}`;
         const w = r.drawWidth || 500;
         const h = r.drawHeight || 400;
-        html.push(`<div class="draw-container" style="margin:0.5em 0;">
-          <canvas id="${uid}" width="${w}" height="${h}" style="border:1px solid #ccc;max-width:100%;"></canvas>
+        html.push(`<div class="draw-container" style="margin:0.5em 0;max-width:100%;overflow:hidden;">
+          <canvas id="${uid}" width="${w}" height="${h}" style="border:1px solid #ccc;display:block;max-width:100%;height:auto;"></canvas>
         </div>`);
         break;
       }
@@ -1723,7 +2361,7 @@ function renderResults(results: LineResult[], sourceCode: string): string {
         const uid3 = `cad3d-output-${r.lineIndex}`;
         const w3 = r.drawWidth || 500;
         const h3 = r.drawHeight || 400;
-        html.push(`<div class="draw3d-container" id="${uid3}" style="margin:0.5em 0;width:${w3}px;height:${h3}px;border:1px solid #4488ff;border-radius:4px;overflow:hidden;"></div>`);
+        html.push(`<div class="draw3d-container" id="${uid3}" style="margin:0.5em 0;width:${w3}px;max-width:100%;height:${h3}px;border:1px solid #4488ff;border-radius:4px;overflow:hidden;box-sizing:border-box;"></div>`);
         break;
       }
       case "draw3difc": {
@@ -1735,7 +2373,7 @@ function renderResults(results: LineResult[], sourceCode: string): string {
             <input type="file" id="${uidIfc}-file" accept=".ifc" style="font-size:12px;">
             <span id="${uidIfc}-status" style="font-size:11px;color:#888;">Selecciona un archivo .ifc</span>
           </div>
-          <div id="${uidIfc}" style="width:${wIfc}px;height:${hIfc}px;border:1px solid #4488ff;border-radius:4px;overflow:hidden;background:#1a1a2e;"></div>
+          <div id="${uidIfc}" style="width:${wIfc}px;max-width:100%;height:${hIfc}px;border:1px solid #4488ff;border-radius:4px;overflow:hidden;background:#1a1a2e;box-sizing:border-box;"></div>
           <div id="${uidIfc}-views" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
         </div>`);
         break;
@@ -2075,6 +2713,11 @@ function renderLineEq(r: LineResult, srcLine: string): string {
 
   const scope = evaluator.getScope();
 
+  // Si es un cell array, mostrar con formato especial
+  if (evaluator.isCellArray(value)) {
+    return `${nameHTML} = ${renderCellArrayHTML(value, varName)}`;
+  }
+
   // Si es una matriz, mostrar nombre = expr simbolica = matriz numerica
   if (evaluator.isMatrix(value)) {
     if (exprText && /[a-zA-Z]/.test(exprText)) {
@@ -2280,6 +2923,18 @@ function renderMathExpr(expr: string): string {
 
   let result = expr;
 
+  // 0. Cell array / matrix bracket notation:
+  //    k~{1} → [k̄]₁  (overbar + brackets + subscript)
+  //    k{1}  → [k]₁   (brackets + subscript)
+  //    K~{R} → [K̄]ᵣ   (overbar + brackets + subscript)
+  //    K{R}  → [K]ᵣ   (brackets + subscript)
+  result = result.replace(/\b([a-zA-Z]\w*)~\{(\w+)\}/g, (_, name, idx) => {
+    return `[<var>${greekify(name)}</var>\u0304]<sub>${greekify(idx)}</sub>`;
+  });
+  result = result.replace(/\b([a-zA-Z]\w*)\{(\w+)\}/g, (_, name, idx) => {
+    return `[<var>${greekify(name)}</var>]<sub>${greekify(idx)}</sub>`;
+  });
+
   // 1. sqrt(expr) -> radical con clase .r0 + .o0 (SVG)
   result = result.replace(/sqrt\(([^)]+)\)/g, (_, inner) => {
     return `<span class="radical-wrap"><span class="r0"></span><span class="o0">${renderMathExpr(inner)}</span></span>`;
@@ -2304,10 +2959,21 @@ function renderMathExpr(expr: string): string {
   });
 
   // 6. Variables simples (letras solas que no son parte de tags HTML) -> <var>
-  result = result.replace(/\b([a-zA-Z])\b(?![(<\/])/g, '<var>$1</var>');
+  //    Lookbehind: skip letters preceded by < or / (inside <i>, </i> tags)
+  //    Lookahead:  skip letters followed by >, (, <, / (closing tag or function call)
+  result = result.replace(/(?<![<\/])\b([a-zA-Z])\b(?![>(<\/])/g, '<var>$1</var>');
 
-  // 6. * -> ·  (middle dot)
-  result = result.replace(/\*/g, ' \u00B7 ');
+  // 6. Smart multiplication rendering:
+  // 6a. number * <var> → implicit juxtaposition (no dot): 2c, -2c, 12c
+  result = result.replace(/(\d+(?:\.\d+)?)\s*\*\s*(<var>)/g, '$1$2');
+  // 6b. </var|sub|sup> * <var> → implicit (variable × variable): EI, E_s·I_z
+  result = result.replace(/(<\/(?:var|sub|sup)>)\s*\*\s*(<var>)/g, '$1$2');
+  // 6c. number * number → parenthesized product: (2·306.936)
+  //     negative lookahead: NOT when second number is followed by ^, digit, or dot
+  //     (avoids breaking 0.1*100^2 → (0.1·100)^2 which changes meaning)
+  result = result.replace(/(-?\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)(?![0-9.^])/g, '($1\u00B7$2)');
+  // 6d. remaining * → ·
+  result = result.replace(/\*/g, '\u00B7');
 
   // 7. ^N -> <sup>N</sup>  (AFTER variables para que <var>a</var>^2 funcione)
   result = result.replace(/\^(\d+)/g, '<sup>$1</sup>');
@@ -2319,6 +2985,15 @@ function renderMathExpr(expr: string): string {
 /** Renderiza texto de comentario con formato math (subscripts, superscripts, griego) */
 function renderCommentMath(text: string): string {
   let result = escHtml(text);
+
+  // Cell/matrix bracket notation in comments:
+  //   k~{1} → [k̄]₁,  k{1} → [k]₁
+  result = result.replace(/\b([a-zA-Z]\w*)~\{(\w+)\}/g, (_, name, idx) => {
+    return `[${greekify(name)}\u0304]<sub>${greekify(idx)}</sub>`;
+  });
+  result = result.replace(/\b([a-zA-Z]\w*)\{(\w+)\}/g, (_, name, idx) => {
+    return `[${greekify(name)}]<sub>${greekify(idx)}</sub>`;
+  });
 
   // Greek letter words -> Unicode
   result = result.replace(/\b(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|omicron|rho|sigma|tau|upsilon|phi|chi|psi|omega|Alpha|Beta|Gamma|Delta|Epsilon|Zeta|Eta|Theta|Iota|Kappa|Lambda|Mu|Nu|Xi|Omicron|Rho|Sigma|Tau|Upsilon|Phi|Chi|Psi|Omega)\b/g,
@@ -2363,6 +3038,20 @@ function renderValueSpan(value: any): string {
   return escHtml(String(value));
 }
 
+/** Renderiza un cell array: V = { V₁ = [mat], V₂ = [mat], ... } */
+function renderCellArrayHTML(value: any, varName?: string): string {
+  if (!value || !(value as any).__cell) return renderValueSpan(value);
+  const elems = (value as any).elements as any[];
+  const parts = elems.map((e: any, i: number) => {
+    const label = varName
+      ? `<span class="cell-label">${renderVarName(varName + "_" + (i + 1))}</span> = `
+      : "";
+    const valHTML = evaluator.isMatrix(e) ? renderMatrixHTML(e) : renderValueSpan(e);
+    return `<span class="cell-element">${label}${valHTML}</span>`;
+  });
+  return `<span class="cell-array"><span class="cell-brace">{</span>${parts.join('<span class="cell-sep">,</span>')}<span class="cell-brace">}</span></span>`;
+}
+
 /** Renderiza una matriz math.js usando clases .matrix .tr .td de template.html */
 function renderMatrixHTML(m: any): string {
   const arr = m.toArray() as any[];
@@ -2399,16 +3088,7 @@ function fmtNum(v: any): string {
   return escHtml(String(v));
 }
 
-// ─── Pinch-to-zoom en output (trackpad Ctrl+wheel) ───────
-output.addEventListener("wheel", (e) => {
-  if (e.ctrlKey) {
-    e.preventDefault();
-    const delta = -e.deltaY * 0.002;
-    const currentSize = parseFloat(getComputedStyle(output).fontSize);
-    const newSize = Math.max(8, Math.min(24, currentSize + delta * currentSize));
-    output.style.fontSize = `${newSize}px`;
-  }
-}, { passive: false });
+// (Duplicate fontSize zoom handler removed — zoom is synced from MathCanvas)
 
 // ─── Splitter drag to resize ─────────────────────────────
 const splitter = document.getElementById("splitter") as HTMLDivElement;
@@ -2419,25 +3099,781 @@ splitter.addEventListener("mousedown", (e) => {
   splitter.classList.add("dragging");
   const parent = splitter.parentElement!;
 
+  let rafId = 0;
   const onMove = (ev: MouseEvent) => {
     const rect = parent.getBoundingClientRect();
     const x = ev.clientX - rect.left;
     const pct = Math.max(15, Math.min(85, (x / rect.width) * 100));
     editorPanel.style.flexBasis = `${pct}%`;
+    // Wait for DOM reflow before re-rendering
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => {
+      editor.resize();
+      syncZoom();
+    });
   };
 
   const onUp = () => {
     splitter.classList.remove("dragging");
     document.removeEventListener("mousemove", onMove);
     document.removeEventListener("mouseup", onUp);
+    cancelAnimationFrame(rafId);
+    // Final re-render after drag ends (DOM already reflowed)
+    requestAnimationFrame(() => {
+      editor.resize();
+      syncZoom();
+    });
   };
 
   document.addEventListener("mousemove", onMove);
   document.addEventListener("mouseup", onUp);
 });
 
+// ─── Custom Scrollbar for Output Panel ────────────────────
+(() => {
+  const scrollContent = output;  // .output-content
+  const scrollbar = document.getElementById("customScrollbar") as HTMLDivElement;
+  const thumb = document.getElementById("scrollThumb") as HTMLDivElement;
+  const btnUp = document.getElementById("scrollUp") as HTMLDivElement;
+  const btnDown = document.getElementById("scrollDown") as HTMLDivElement;
+  if (!scrollbar || !thumb || !btnUp || !btnDown) return;
+
+  const BTN_H = 18;  // height of up/down buttons
+
+  function updateThumb() {
+    const { scrollHeight, clientHeight, scrollTop } = scrollContent;
+    if (scrollHeight <= clientHeight) {
+      scrollbar.style.display = "none";
+      return;
+    }
+    scrollbar.style.display = "";
+    // Position scrollbar to start below output-header
+    const outputHeader = scrollContent.previousElementSibling as HTMLElement;
+    const headerH = outputHeader ? outputHeader.offsetHeight : 0;
+    scrollbar.style.top = headerH + "px";
+
+    const trackH = scrollbar.clientHeight - BTN_H * 2;
+    const ratio = clientHeight / scrollHeight;
+    const thumbH = Math.max(30, trackH * ratio);
+    const scrollRange = scrollHeight - clientHeight;
+    const thumbTop = BTN_H + (scrollTop / scrollRange) * (trackH - thumbH);
+    thumb.style.height = thumbH + "px";
+    thumb.style.top = thumbTop + "px";
+  }
+
+  scrollContent.addEventListener("scroll", updateThumb);
+  new ResizeObserver(updateThumb).observe(scrollContent);
+  // Also update when content changes
+  new MutationObserver(updateThumb).observe(scrollContent, { childList: true, subtree: true });
+
+  // Drag thumb
+  let dragging = false;
+  let dragStartY = 0;
+  let dragStartScroll = 0;
+
+  thumb.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    dragging = true;
+    dragStartY = e.clientY;
+    dragStartScroll = scrollContent.scrollTop;
+    thumb.classList.add("dragging");
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const { scrollHeight, clientHeight } = scrollContent;
+    const trackH = scrollbar.clientHeight - BTN_H * 2;
+    const ratio = clientHeight / scrollHeight;
+    const thumbH = Math.max(30, trackH * ratio);
+    const dy = e.clientY - dragStartY;
+    const scrollRange = scrollHeight - clientHeight;
+    const scrollDelta = (dy / (trackH - thumbH)) * scrollRange;
+    scrollContent.scrollTop = dragStartScroll + scrollDelta;
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (dragging) {
+      dragging = false;
+      thumb.classList.remove("dragging");
+    }
+  });
+
+  // Click on track to jump
+  scrollbar.addEventListener("mousedown", (e) => {
+    if (e.target === thumb || e.target === btnUp || e.target === btnDown) return;
+    const rect = scrollbar.getBoundingClientRect();
+    const clickY = e.clientY - rect.top - BTN_H;
+    const { scrollHeight, clientHeight } = scrollContent;
+    const trackH = scrollbar.clientHeight - BTN_H * 2;
+    const ratio = clickY / trackH;
+    scrollContent.scrollTop = ratio * (scrollHeight - clientHeight);
+  });
+
+  // Up/Down buttons
+  let scrollInterval: number | null = null;
+  const startScroll = (dir: number) => {
+    scrollContent.scrollBy({ top: dir * 60 });
+    scrollInterval = window.setInterval(() => scrollContent.scrollBy({ top: dir * 60 }), 120);
+  };
+  const stopScroll = () => { if (scrollInterval !== null) { clearInterval(scrollInterval); scrollInterval = null; } };
+
+  btnUp.addEventListener("mousedown", (e) => { e.stopPropagation(); startScroll(-1); });
+  btnDown.addEventListener("mousedown", (e) => { e.stopPropagation(); startScroll(1); });
+  document.addEventListener("mouseup", stopScroll);
+
+  // Initial state
+  updateThumb();
+})();
+
+// ═══════════════════════════════════════════════════════════
+// DEBUG CLI PANEL - Testing interactivo del MathEditor
+// ═══════════════════════════════════════════════════════════
+{
+  const debugPanel = document.getElementById("debugPanel") as HTMLDivElement;
+  const debugOutput = document.getElementById("debugOutput") as HTMLDivElement;
+  const debugInput = document.getElementById("debugInput") as HTMLInputElement;
+  const debugToggle = document.getElementById("debugToggle") as HTMLButtonElement;
+  const btnDebug = document.getElementById("btnDebug") as HTMLButtonElement;
+
+  let debugVisible = false;
+  const cmdHistory: string[] = [];
+  let histIdx = -1;
+
+  function toggleDebug() {
+    debugVisible = !debugVisible;
+    debugPanel.style.display = debugVisible ? "flex" : "none";
+    if (debugVisible) {
+      debugInput.focus();
+      dbgPrint("help", "Escribe 'help' para ver comandos disponibles");
+    }
+  }
+
+  btnDebug.addEventListener("click", toggleDebug);
+  debugToggle.addEventListener("click", toggleDebug);
+
+  // F12 para toggle (no interfiere con DevTools si ctrl+shift+I)
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "F12" && !e.ctrlKey && !e.shiftKey) {
+      e.preventDefault();
+      toggleDebug();
+    }
+  });
+
+  function dbgPrint(cls: string, text: string, copyable?: string) {
+    const line = document.createElement("div");
+    line.className = "dbg-line dbg-" + cls;
+    line.textContent = text;
+    if (copyable) {
+      const btn = document.createElement("span");
+      btn.className = "dbg-copy";
+      btn.textContent = "[copiar]";
+      btn.title = "Copiar al portapapeles";
+      btn.addEventListener("click", () => {
+        navigator.clipboard.writeText(copyable).then(() => {
+          btn.textContent = "[copiado!]";
+          setTimeout(() => btn.textContent = "[copiar]", 1500);
+        });
+      });
+      line.appendChild(btn);
+    }
+    debugOutput.appendChild(line);
+    debugOutput.scrollTop = debugOutput.scrollHeight;
+  }
+
+  function dbgJSON(obj: any) {
+    const json = JSON.stringify(obj, null, 2);
+    dbgPrint("data", json, json);
+  }
+
+  function execDebugCmd(raw: string) {
+    const input = raw.trim();
+    if (!input) return;
+
+    cmdHistory.push(input);
+    histIdx = cmdHistory.length;
+    dbgPrint("cmd", "> " + input);
+
+    const parts = input.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    try {
+      switch (cmd) {
+        case "help":
+        case "h":
+        case "?":
+          dbgPrint("help", "=== MathEditor Debug CLI ===");
+          dbgPrint("help", "── Navegacion ──");
+          dbgPrint("help", "info / i          - Estado actual del editor");
+          dbgPrint("help", "pos / p           - Posicion del cursor con coordenadas");
+          dbgPrint("help", "chars / ch        - Coordenadas pixel de cada caracter");
+          dbgPrint("help", "elements / el [r] - Lista elementos en fila r");
+          dbgPrint("help", "rows              - Lista todas las filas");
+          dbgPrint("help", "left / l [N]      - Mover cursor izquierda N veces");
+          dbgPrint("help", "right / r [N]     - Mover cursor derecha N veces");
+          dbgPrint("help", "up / u            - Mover cursor arriba");
+          dbgPrint("help", "down / d          - Mover cursor abajo");
+          dbgPrint("help", "goto R C [P]      - Ir a fila R, columna C, posicion P");
+          dbgPrint("help", "click X Y         - Simular click en canvas (X,Y)");
+          dbgPrint("help", "── Edicion ──");
+          dbgPrint("help", "type TEXTO        - Insertar texto");
+          dbgPrint("help", "del [N]           - Borrar N caracteres (backspace)");
+          dbgPrint("help", "line TEXTO        - Insertar nueva fila con texto");
+          dbgPrint("help", "text              - Mostrar texto del elemento actual");
+          dbgPrint("help", "all               - Serializar contenido completo");
+          dbgPrint("help", "── Estructuras matematicas ──");
+          dbgPrint("help", "frac [num] [den]  - Insertar fraccion");
+          dbgPrint("help", "pow [base] [exp]  - Insertar potencia/superindice");
+          dbgPrint("help", "sub [base] [sub]  - Insertar subindice");
+          dbgPrint("help", "sqrt [expr]       - Insertar raiz cuadrada");
+          dbgPrint("help", "int [lo] [hi] [f] - Insertar integral");
+          dbgPrint("help", "deriv [f] [var]   - Insertar derivada");
+          dbgPrint("help", "mat [R] [C]       - Insertar matriz RxC");
+          dbgPrint("help", "vec [v1] [v2] ... - Insertar vector columna");
+          dbgPrint("help", "── Ventana ──");
+          dbgPrint("help", "new               - Nueva hoja en blanco");
+          dbgPrint("help", "examples          - Listar ejemplos disponibles");
+          dbgPrint("help", "load NOMBRE       - Cargar ejemplo por nombre");
+          dbgPrint("help", "mode canvas|code  - Cambiar modo editor");
+          dbgPrint("help", "theme calcpad|hekatan - Cambiar tema");
+          dbgPrint("help", "autorun on|off    - Toggle AutoRun");
+          dbgPrint("help", "run               - Ejecutar codigo (F5)");
+          dbgPrint("help", "── Debug ──");
+          dbgPrint("help", "clicklog on|off   - Log coordenadas al hacer click");
+          dbgPrint("help", "bounds [row]      - Mostrar bounds de elementos");
+          dbgPrint("help", "── Sistema ──");
+          dbgPrint("help", "eval              - Forzar evaluacion");
+          dbgPrint("help", "render            - Re-render canvas");
+          dbgPrint("help", "focus             - Focus canvas + cursor timer");
+          dbgPrint("help", "test              - Ejecutar test completo automatizado");
+          dbgPrint("help", "clear / cls       - Limpiar consola");
+          break;
+
+        case "info":
+        case "i": {
+          const info = editor.getDebugInfo();
+          dbgPrint("info", `Cursor: fila=${info.row} col=${info.col} | fontSize=${info.fontSize.toFixed(2)}px | zoom=${info.zoomLevel}`);
+          dbgPrint("info", `Canvas: ${info.canvasW}x${info.canvasH}px | scroll=${info.scrollY} | contentH=${info.contentHeight}`);
+          dbgPrint("info", `Timer: ${info.cursorTimer ? 'ON' : 'OFF'} | Visible: ${info.cursorVisible}`);
+          if (info.element) {
+            const e = info.element;
+            dbgPrint("ok", `Elemento: ${e.type} @ (${e.x}, ${e.y}) size=${e.width}x${e.height}`);
+            if (e.text !== undefined) {
+              dbgPrint("ok", `Texto: "${e.text}" | display: "${e.displayText}" | cursorPos=${e.cursorPosition}/${e.textLength}`);
+            }
+          }
+          const json = JSON.stringify(info, null, 2);
+          dbgPrint("data", "JSON completo:", json);
+          break;
+        }
+
+        case "pos":
+        case "p": {
+          const info = editor.getDebugInfo();
+          if (info.element) {
+            const e = info.element;
+            const msg = `[${info.row},${info.col}] ${e.type} pos=${e.cursorPosition ?? '?'} @ pixel(${e.x}, ${e.y}) size(${e.width}x${e.height})`;
+            dbgPrint("ok", msg, msg);
+          } else {
+            dbgPrint("err", "No hay elemento activo");
+          }
+          break;
+        }
+
+        case "chars":
+        case "ch": {
+          const chars = editor.getCharCoords();
+          if (chars.length === 0) {
+            dbgPrint("err", "No hay caracteres (elemento vacio o no es MathText)");
+          } else {
+            dbgPrint("info", `${chars.length} caracteres:`);
+            for (const c of chars) {
+              dbgPrint("data", `  [${c.idx}] '${c.char}' @ x=${c.x} y=${c.y} w=${c.w} h=${c.h}`);
+            }
+            const json = JSON.stringify(chars, null, 2);
+            dbgPrint("data", "JSON:", json);
+          }
+          break;
+        }
+
+        case "elements":
+        case "el": {
+          const row = args[0] !== undefined ? parseInt(args[0]) : undefined;
+          const elements = editor.getRowElements(row);
+          if (elements.length === 0) {
+            dbgPrint("err", "Sin elementos en esa fila");
+          } else {
+            dbgPrint("info", `${elements.length} elementos en fila ${row ?? '(actual)'}:`);
+            for (const e of elements) {
+              const cur = e.cursor ? " <<CURSOR>>" : "";
+              const txt = e.text !== undefined ? ` "${e.text}"` : "";
+              dbgPrint("data", `  [${e.row},${e.col}][${e.idx}] ${e.type}${txt} @ (${e.x},${e.y}) ${e.w}x${e.h}${cur}`);
+            }
+          }
+          break;
+        }
+
+        case "rows": {
+          const info = editor.getDebugInfo();
+          for (let r = 0; r < info.totalRows; r++) {
+            const els = editor.getRowElements(r);
+            const texts = els.filter((e: any) => e.text !== undefined).map((e: any) => e.text).join(" | ");
+            const mark = r === info.row ? " <<<" : "";
+            dbgPrint("data", `  fila ${r}: ${els.length} elementos — ${texts}${mark}`);
+          }
+          break;
+        }
+
+        case "left":
+        case "l": {
+          const n = parseInt(args[0] || "1");
+          for (let i = 0; i < n; i++) editor.moveCursorLeft();
+          const info = editor.getDebugInfo();
+          dbgPrint("ok", `Cursor: [${info.row},${info.col}] pos=${info.element?.cursorPosition ?? '?'}`);
+          break;
+        }
+
+        case "right":
+        case "r": {
+          const n = parseInt(args[0] || "1");
+          for (let i = 0; i < n; i++) editor.moveCursorRight();
+          const info = editor.getDebugInfo();
+          dbgPrint("ok", `Cursor: [${info.row},${info.col}] pos=${info.element?.cursorPosition ?? '?'}`);
+          break;
+        }
+
+        case "up":
+        case "u":
+          editor.moveCursorUp();
+          dbgPrint("ok", `Cursor: [${editor.getDebugInfo().row},${editor.getDebugInfo().col}]`);
+          break;
+
+        case "down":
+        case "d":
+          editor.moveCursorDown();
+          dbgPrint("ok", `Cursor: [${editor.getDebugInfo().row},${editor.getDebugInfo().col}]`);
+          break;
+
+        case "goto": {
+          const r = parseInt(args[0] ?? "-1");
+          const c = parseInt(args[1] ?? "0");
+          const p = args[2] !== undefined ? parseInt(args[2]) : undefined;
+          const result = editor.moveCursorTo(r, c, p);
+          dbgPrint(result.startsWith("OK") ? "ok" : "err", result);
+          break;
+        }
+
+        case "click": {
+          const cx = parseFloat(args[0] ?? "0");
+          const cy = parseFloat(args[1] ?? "0");
+          const result = editor.simulateClick(cx, cy);
+          dbgPrint("ok", result);
+          // Mostrar info del nuevo elemento
+          const info = editor.getDebugInfo();
+          if (info.element) {
+            dbgPrint("info", `→ ${info.element.type} "${info.element.text ?? ''}" pos=${info.element.cursorPosition ?? '?'} @ (${info.element.x},${info.element.y})`);
+          }
+          break;
+        }
+
+        case "type": {
+          const text = parts.slice(1).join(" ");
+          if (!text) { dbgPrint("err", "Uso: type TEXTO"); break; }
+          const result = editor.typeText(text);
+          dbgPrint(result.startsWith("OK") ? "ok" : "err", result);
+          break;
+        }
+
+        case "del": {
+          const n = parseInt(args[0] || "1");
+          const result = editor.deleteBack(n);
+          dbgPrint(result.startsWith("OK") ? "ok" : "err", result);
+          break;
+        }
+
+        case "text": {
+          const info = editor.getDebugInfo();
+          if (info.element?.text !== undefined) {
+            dbgPrint("ok", `Texto plano: "${info.element.text}"`);
+            dbgPrint("ok", `Display:     "${info.element.displayText}"`);
+            dbgPrint("info", `Pos: ${info.element.cursorPosition}/${info.element.textLength}`);
+          } else {
+            dbgPrint("err", "Elemento actual no tiene texto");
+          }
+          break;
+        }
+
+        case "all": {
+          const code = editor.toHekatan();
+          dbgPrint("ok", `${code.split('\n').length} lineas:`);
+          for (const line of code.split('\n')) {
+            dbgPrint("data", "  " + line);
+          }
+          dbgPrint("data", "", code);
+          break;
+        }
+
+        case "clicklog": {
+          const onoff = (args[0] || "").toLowerCase();
+          if (onoff === "on") {
+            editor.onDebugClick = (info) => {
+              dbgPrint("info", `CLICK mouse=(${info.mouseX},${info.mouseY}) content=(${info.contentX},${info.contentY})`);
+              dbgPrint("info", `  hitTest → row=${info.foundRow} col=${info.foundCol} type=${info.elementType} text="${info.elementText}"`);
+              dbgPrint("info", `  cursor → row=${info.cursorRow} element="${info.cursorElement}"`);
+            };
+            dbgPrint("ok", "Click logging ACTIVADO — haz click en el canvas");
+          } else if (onoff === "off") {
+            editor.onDebugClick = null;
+            dbgPrint("ok", "Click logging DESACTIVADO");
+          } else {
+            dbgPrint("err", "Uso: clicklog on|off");
+          }
+          break;
+        }
+
+        case "bounds": {
+          const rowArg = args[0] ? parseInt(args[0]) : -1;
+          const allBounds = editor.getElementBounds();
+          const rows = rowArg >= 0 ? allBounds.filter(r => r.row === rowArg) : allBounds;
+          for (const r of rows) {
+            dbgPrint("info", `Row ${r.row}:`);
+            for (const el of r.elements) {
+              dbgPrint("data", `  ${el.type} "${el.text}" @ (${el.x},${el.y}) ${el.w}x${el.h}`);
+            }
+          }
+          if (rows.length === 0) dbgPrint("err", `No se encontro row ${rowArg}`);
+          break;
+        }
+
+        case "eval":
+          editor.render();
+          dbgPrint("ok", "Evaluacion forzada");
+          break;
+
+        case "render":
+          editor.render();
+          dbgPrint("ok", "Canvas re-renderizado");
+          break;
+
+        case "focus":
+          mathCanvasEl.focus();
+          dbgPrint("ok", `Focus + cursor timer: ${editor.getDebugInfo().cursorTimer ? 'ON' : 'OFF'}`);
+          break;
+
+        case "clear":
+        case "cls":
+          debugOutput.innerHTML = "";
+          break;
+
+        // ─── Insertar estructuras matemáticas ───
+
+        case "line": {
+          const text = parts.slice(1).join(" ");
+          if (!text) { dbgPrint("err", "Uso: line TEXTO (inserta nueva fila)"); break; }
+          const result = editor.insertLine(text);
+          dbgPrint(result.startsWith("OK") ? "ok" : "err", result);
+          break;
+        }
+
+        case "frac": {
+          const num = args[0] || "";
+          const den = args[1] || "";
+          dbgPrint("ok", editor.insertFraction(num, den));
+          break;
+        }
+
+        case "pow":
+        case "power": {
+          const base = args[0] || "";
+          const exp = args[1] || "";
+          dbgPrint("ok", editor.insertPower(base, exp));
+          break;
+        }
+
+        case "sub":
+        case "subscript": {
+          const base = args[0] || "x";
+          const sub = args[1] || "i";
+          dbgPrint("ok", editor.insertSubscript(base, sub));
+          break;
+        }
+
+        case "sqrt":
+        case "root": {
+          const rad = args[0] || "";
+          dbgPrint("ok", editor.insertRoot(rad));
+          break;
+        }
+
+        case "integral":
+        case "int": {
+          const lo = args[0] || "0";
+          const hi = args[1] || "1";
+          const body = args[2] || "";
+          dbgPrint("ok", editor.insertIntegral(lo, hi, body));
+          break;
+        }
+
+        case "deriv":
+        case "derivative": {
+          const fn = args[0] || "f";
+          const vr = args[1] || "x";
+          dbgPrint("ok", editor.insertDerivative(fn, vr));
+          break;
+        }
+
+        case "matrix":
+        case "mat": {
+          const rows = parseInt(args[0] || "2");
+          const cols = parseInt(args[1] || "2");
+          dbgPrint("ok", editor.insertMatrix(rows, cols));
+          break;
+        }
+
+        case "vector":
+        case "vec": {
+          const vals = args.length > 0 ? args : ["0", "0", "0"];
+          dbgPrint("ok", editor.insertVector(vals));
+          break;
+        }
+
+        // ─── Test completo automatizado ───
+        case "test": {
+          dbgPrint("info", "=== TEST COMPLETO DEL MATHEDITOR ===");
+          dbgPrint("info", "");
+
+          // 1. Insertar ecuación simple
+          dbgPrint("info", "--- 1. Insertar ecuación: x = 5 ---");
+          const r1 = editor.insertLine("x = 5");
+          dbgPrint("ok", r1);
+          dbgPrint("ok", `  → info: ${JSON.stringify(editor.getDebugInfo().element)}`);
+
+          // 2. Insertar ecuación con operaciones
+          dbgPrint("info", "--- 2. Insertar: y = x^2 + 3*x - 1 ---");
+          const r2 = editor.insertLine("y = x^2 + 3*x - 1");
+          dbgPrint("ok", r2);
+
+          // 3. Insertar raíz cuadrada
+          dbgPrint("info", "--- 3. Insertar: z = sqrt(x^2 + y^2) ---");
+          const r3 = editor.insertLine("z = sqrt(x^2 + y^2)");
+          dbgPrint("ok", r3);
+
+          // 4. Navegar y editar
+          dbgPrint("info", "--- 4. Navegar arriba 2 filas (a 'y = x^2...') ---");
+          editor.moveCursorUp();
+          editor.moveCursorUp();
+          const infoY = editor.getDebugInfo();
+          dbgPrint("ok", `  En fila ${infoY.row}: "${infoY.element?.text}"`);
+
+          // 5. Ir al final y eliminar
+          dbgPrint("info", "--- 5. Ir al final y borrar 2 chars ---");
+          editor.moveCursorRight();
+          editor.moveCursorRight();
+          editor.moveCursorRight();
+          // Navigate to last text element
+          const rowEls = editor.getRowElements();
+          dbgPrint("data", `  Elementos en fila: ${rowEls.map((e: any) => e.type + ':"' + (e.text ?? '') + '"').join(', ')}`);
+
+          // 6. Insertar nueva línea con fracción
+          dbgPrint("info", "--- 6. Insertar ecuación con fracción: a/b ---");
+          const r6 = editor.insertLine("w = a/b + c");
+          dbgPrint("ok", r6);
+          const els6 = editor.getRowElements();
+          dbgPrint("data", `  Elementos: ${els6.map((e: any) => e.type).join(', ')}`);
+
+          // 7. Insertar línea vacía + matriz
+          dbgPrint("info", "--- 7. Insertar matriz 2x2 ---");
+          editor.insertLine("M = ");
+          const r7 = editor.insertMatrix(2, 2);
+          dbgPrint("ok", r7);
+
+          // 8. Insertar vector
+          dbgPrint("info", "--- 8. Insertar vector ---");
+          editor.insertLine("v = ");
+          const r8 = editor.insertVector(["1", "2", "3"]);
+          dbgPrint("ok", r8);
+
+          // 9. Verificar que todo el contenido se serializa
+          dbgPrint("info", "--- 9. Verificar serialización ---");
+          const code = editor.toHekatan();
+          const lines = code.split('\n');
+          dbgPrint("ok", `Total: ${lines.length} líneas`);
+
+          // 10. Forzar evaluación
+          dbgPrint("info", "--- 10. Evaluación ---");
+          editor.render();
+          dbgPrint("ok", "Render completado");
+
+          dbgPrint("info", "");
+          dbgPrint("info", "=== TEST COMPLETO FINALIZADO ===");
+          break;
+        }
+
+        // ─── Comandos de ventana ───
+        case "new":
+        case "blank": {
+          editor.loadFromText("");
+          codeInput.value = "";
+          exampleSelect.value = "";
+          if (currentMode === "canvas") {
+            mathCanvasEl.focus();
+          }
+          runCode();
+          dbgPrint("ok", "Nueva hoja en blanco");
+          break;
+        }
+
+        case "examples":
+        case "list": {
+          dbgPrint("info", "Ejemplos disponibles:");
+          for (const [key, ex] of Object.entries(EXAMPLES)) {
+            const mark = exampleSelect.value === key ? " <<<" : "";
+            dbgPrint("data", `  ${key} — ${ex.name}${mark}`);
+          }
+          break;
+        }
+
+        case "load": {
+          const name = args[0];
+          if (!name) {
+            dbgPrint("err", "Uso: load NOMBRE (usa 'examples' para ver lista)");
+            break;
+          }
+          const ex = EXAMPLES[name];
+          if (!ex) {
+            // Try partial match
+            const match = Object.keys(EXAMPLES).find(k => k.toLowerCase().startsWith(name.toLowerCase()));
+            if (match) {
+              const mex = EXAMPLES[match];
+              exampleSelect.value = match;
+              codeInput.value = mex.code;
+              editor.loadFromText(mex.code);
+              runCode();
+              if (currentMode === "canvas") mathCanvasEl.focus();
+              dbgPrint("ok", `Cargado: ${match} — ${mex.name}`);
+            } else {
+              dbgPrint("err", `Ejemplo '${name}' no encontrado. Usa 'examples' para ver lista.`);
+            }
+            break;
+          }
+          exampleSelect.value = name;
+          codeInput.value = ex.code;
+          editor.loadFromText(ex.code);
+          runCode();
+          if (currentMode === "canvas") mathCanvasEl.focus();
+          dbgPrint("ok", `Cargado: ${name} — ${ex.name}`);
+          break;
+        }
+
+        case "mode": {
+          const m = (args[0] || "").toLowerCase();
+          if (m === "canvas" || m === "c") {
+            setMode("canvas");
+            dbgPrint("ok", "Modo: MathCanvas");
+          } else if (m === "code" || m === "t") {
+            setMode("code");
+            dbgPrint("ok", "Modo: Code");
+          } else {
+            dbgPrint("info", `Modo actual: ${currentMode}`);
+            dbgPrint("help", "Uso: mode canvas|code");
+          }
+          break;
+        }
+
+        case "theme": {
+          const t = (args[0] || "").toLowerCase();
+          if (t === "calcpad" || t === "c") {
+            themeSelect.value = "calcpad";
+            themeSelect.dispatchEvent(new Event("change"));
+            dbgPrint("ok", "Tema: Calcpad");
+          } else if (t === "hekatan" || t === "h") {
+            themeSelect.value = "hekatan";
+            themeSelect.dispatchEvent(new Event("change"));
+            dbgPrint("ok", "Tema: Hekatan");
+          } else {
+            dbgPrint("info", `Tema actual: ${themeSelect.value}`);
+            dbgPrint("help", "Uso: theme calcpad|hekatan");
+          }
+          break;
+        }
+
+        case "autorun": {
+          const v = (args[0] || "").toLowerCase();
+          if (v === "on" || v === "1") {
+            chkAutoRun.checked = true;
+            chkAutoRun.dispatchEvent(new Event("change"));
+            dbgPrint("ok", "AutoRun: ON");
+          } else if (v === "off" || v === "0") {
+            chkAutoRun.checked = false;
+            chkAutoRun.dispatchEvent(new Event("change"));
+            dbgPrint("ok", "AutoRun: OFF");
+          } else {
+            dbgPrint("info", `AutoRun: ${chkAutoRun.checked ? "ON" : "OFF"}`);
+          }
+          break;
+        }
+
+        case "run": {
+          if (currentMode === "canvas") {
+            codeInput.value = editor.toHekatan();
+          }
+          runCode();
+          dbgPrint("ok", "Codigo ejecutado");
+          break;
+        }
+
+        default:
+          dbgPrint("err", `Comando desconocido: '${cmd}'. Escribe 'help' para ver comandos.`);
+      }
+    } catch (err: any) {
+      dbgPrint("err", `Error: ${err.message}`);
+    }
+  }
+
+  // Input handlers
+  debugInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      execDebugCmd(debugInput.value);
+      debugInput.value = "";
+      e.preventDefault();
+    } else if (e.key === "ArrowUp") {
+      if (histIdx > 0) {
+        histIdx--;
+        debugInput.value = cmdHistory[histIdx];
+      }
+      e.preventDefault();
+    } else if (e.key === "ArrowDown") {
+      if (histIdx < cmdHistory.length - 1) {
+        histIdx++;
+        debugInput.value = cmdHistory[histIdx];
+      } else {
+        histIdx = cmdHistory.length;
+        debugInput.value = "";
+      }
+      e.preventDefault();
+    } else if (e.key === "Escape") {
+      toggleDebug();
+    }
+    e.stopPropagation(); // No enviar keys al canvas/textarea
+  });
+  debugInput.addEventListener("keypress", (e) => e.stopPropagation());
+  debugInput.addEventListener("keyup", (e) => e.stopPropagation());
+
+  // Expose to window for console access
+  (window as any).__dbg = execDebugCmd;
+  (window as any).__editor = editor;
+}
+
 // ─── Init ───────────────────────────────────────────────
-exampleSelect.value = "fig55";
-codeInput.value = EXAMPLES.fig55.code;
-editor.loadFromText(EXAMPLES.fig55.code);
-setMode("code");
+// Load default example: Ej 5.1 - Grid Frame
+const defaultEx = EXAMPLES["gridframe"];
+if (defaultEx) {
+  exampleSelect.value = "gridframe";
+  codeInput.value = defaultEx.code;
+  editor.loadFromText(defaultEx.code);
+} else {
+  exampleSelect.value = "";
+  codeInput.value = "";
+  editor.loadFromText("");
+}
+setMode("canvas");

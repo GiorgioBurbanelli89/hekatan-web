@@ -11,8 +11,8 @@ import {
 import { parseExpression, type ASTNode } from "../evaluator.js";
 import { HekatanEvaluator } from "../mathEngine.js";
 
-const BASE_FONT_SIZE = 14.67; // 11pt
-const BASE_LINE_HEIGHT = 22;
+const BASE_FONT_SIZE = 14; // 10.5pt (matches Output CSS font-size: 10.5pt)
+const BASE_LINE_HEIGHT = 16.8; // 120% line-height (matches Output CSS line-height: 120%)
 
 export class MathEditor {
   private canvas: HTMLCanvasElement;
@@ -32,8 +32,13 @@ export class MathEditor {
   private scrollbarDragging = false;
   private scrollbarDragStartY = 0;
   private scrollbarDragStartScroll = 0;
+  private clickIndicator: { x: number; y: number; alpha: number; timer: number | null } = { x: 0, y: 0, alpha: 0, timer: null };
   private autoRun = true;
+  /** Last computed render scale (autoFit * zoomLevel) — use to sync Output panel */
+  lastScale = 1;
   private autoRunTimer: number | null = null;
+  /** Rows rendered in the last frame (used for hit-test filtering) */
+  private visibleRows = new Set<number>();
 
   /** Minimum cell width in pixels */
   private readonly minCellWidth = 40;
@@ -56,6 +61,20 @@ export class MathEditor {
 
   /** Callback para cuando se ejecuta (F5 / Ctrl+Enter) */
   onExecute: ((code: string) => void) | null = null;
+
+  /** Fires when scroll position changes (fraction 0..1) */
+  onScrollChange: ((fraction: number) => void) | null = null;
+  /** Fires when zoom level changes */
+  onZoomChange: ((zoomLevel: number) => void) | null = null;
+
+  /** Debug click callback — fires on every mousedown with diagnostic info */
+  onDebugClick: ((info: {
+    mouseX: number; mouseY: number;
+    contentX: number; contentY: number;
+    foundRow: number; foundCol: number;
+    elementType: string; elementText: string;
+    cursorRow: number; cursorElement: string;
+  }) => void) | null = null;
 
   /** Get current cell (array of elements) */
   get currentCell(): MathElement[] {
@@ -95,6 +114,27 @@ export class MathEditor {
   // ==========================================================================
   // Público
   // ==========================================================================
+
+  /** Debug: returns element bounding info for all rows */
+  getElementBounds(): { row: number; elements: { type: string; text: string; x: number; y: number; w: number; h: number }[] }[] {
+    const result: { row: number; elements: { type: string; text: string; x: number; y: number; w: number; h: number }[] }[] = [];
+    for (let ri = 0; ri < this.grid.length; ri++) {
+      const row = this.grid[ri];
+      const elems: { type: string; text: string; x: number; y: number; w: number; h: number }[] = [];
+      for (let ci = 0; ci < row.length; ci++) {
+        for (const el of row[ci]) {
+          elems.push({
+            type: el.constructor.name,
+            text: el instanceof MathText ? el.text : el.toHekatan().slice(0, 30),
+            x: Math.round(el.x), y: Math.round(el.y),
+            w: Math.round(el.width), h: Math.round(el.height),
+          });
+        }
+      }
+      result.push({ row: ri, elements: elems });
+    }
+    return result;
+  }
 
   /** Obtiene todo el contenido como texto Hekatan */
   toHekatan(): string {
@@ -144,6 +184,8 @@ export class MathEditor {
         while (i < rawLines.length) {
           const lt = rawLines[i].trim();
           if (/^@\{end\s+columns\}/i.test(lt)) break;
+          // Auto-close columns if another @{} directive is encountered
+          if (/^@\{(?!column\})\w+/i.test(lt)) { i--; break; }
           if (/^@\{column\}/i.test(lt)) { colIdx++; i++; continue; }
           for (const el of this._parseLine(rawLines[i])) {
             cols.addElement(colIdx, el);
@@ -206,6 +248,46 @@ export class MathEditor {
         continue;
       }
 
+      // @{text} ... @{end text}  — flowing text (each line becomes a MathComment row)
+      if (/^@\{text\}$/i.test(trimmed)) {
+        i++;
+        while (i < rawLines.length) {
+          if (/^@\{end\s+text\}/i.test(rawLines[i].trim())) break;
+          const tLine = rawLines[i];
+          const tTrimmed = tLine.trim();
+          if (!tTrimmed) {
+            this.grid.push([[new MathComment("")]]);
+          } else {
+            // Strip leading > if present (blockquote style)
+            const cleaned = tTrimmed.startsWith(">") ? tTrimmed.slice(1).trimStart() : tTrimmed;
+            this.grid.push([[new MathComment("> " + cleaned)]]);
+          }
+          i++;
+        }
+        i++;
+        continue;
+      }
+
+      // @{eq} ... @{end eq}  — display equations (centered, italic, serif, eq numbers)
+      if (/^@\{eq\b/i.test(trimmed)) {
+        const eqLines: string[] = [];
+        i++;
+        while (i < rawLines.length) {
+          if (/^@\{end\s+eq\}/i.test(rawLines[i].trim())) break;
+          eqLines.push(rawLines[i]);
+          i++;
+        }
+        // Each equation line becomes a centered equation MathComment
+        for (const eLine of eqLines) {
+          const et = eLine.trim();
+          if (et) {
+            this.grid.push([[new MathComment(et, true)]]);
+          }
+        }
+        i++;
+        continue;
+      }
+
       // @{python/js/etc} blocks (generic code blocks)
       const blockMatch = trimmed.match(/^@\{(\w+)\}$/);
       if (blockMatch && !["column", "end"].some(k => trimmed.includes(k))) {
@@ -242,14 +324,331 @@ export class MathEditor {
     this.evaluateAll();
     this._notifyDrawFocus();
     this.render();
+    // Ensure cursor blink timer is running and canvas has focus
+    this._startCursor();
+    this.canvas.focus();
   }
 
-  /** Zoom in/out */
+  /** Zoom in/out — CSS zoom is applied externally; canvas is resized to compensate */
   setZoom(level: number) {
     this.zoomLevel = Math.max(0.5, Math.min(3.0, level));
-    this.fontSize = BASE_FONT_SIZE * this.zoomLevel;
-    this.lineHeight = BASE_LINE_HEIGHT * this.zoomLevel;
+    // Resize canvas to compensate for CSS zoom (canvas CSS size = container / zoomLevel)
+    this._resize();
+    if (this.onZoomChange) this.onZoomChange(this.zoomLevel);
+  }
+
+  /** Public resize (triggers _resize) */
+  resize() { this._resize(); }
+
+  // ==========================================================================
+  // Debug CLI API - Para testing interactivo del cursor y elementos
+  // ==========================================================================
+
+  /** Devuelve info completa del estado actual del editor para debug */
+  getDebugInfo(): Record<string, any> {
+    const el = this.currentElement;
+    const cell = this.grid[this.currentRow]?.[this.currentCol] ?? [];
+    const elIdx = el ? cell.indexOf(el) : -1;
+    const info: Record<string, any> = {
+      row: this.currentRow,
+      col: this.currentCol,
+      totalRows: this.grid.length,
+      totalCols: this.grid[this.currentRow]?.length ?? 0,
+      elementIndex: elIdx,
+      elementsInCell: cell.length,
+      fontSize: this.fontSize,
+      lineHeight: this.lineHeight,
+      zoomLevel: this.zoomLevel,
+      cursorVisible: this.cursorVisible,
+      cursorTimer: this.cursorTimer !== null,
+      canvasW: this.canvas.width,
+      canvasH: this.canvas.height,
+      scrollY: this.scrollY,
+      contentHeight: this.contentHeight,
+    };
+    if (el) {
+      info.element = {
+        type: el.constructor.name,
+        x: Math.round(el.x * 100) / 100,
+        y: Math.round(el.y * 100) / 100,
+        width: Math.round(el.width * 100) / 100,
+        height: Math.round(el.height * 100) / 100,
+        isCursorHere: el.isCursorHere,
+      };
+      if (el instanceof MathText) {
+        info.element.text = el.text;
+        info.element.displayText = el.displayText;
+        info.element.cursorPosition = el.cursorPosition;
+        info.element.textLength = el.text.length;
+      } else if (el instanceof MathComment) {
+        info.element.text = el.text;
+        info.element.displayText = el.displayText;
+        info.element.cursorPosition = el.cursorPosition;
+        info.element.textLength = el.text.length;
+      }
+    }
+    return info;
+  }
+
+  /** Lista todos los elementos en una fila con sus coordenadas y texto */
+  getRowElements(row?: number): Record<string, any>[] {
+    const r = row ?? this.currentRow;
+    if (r < 0 || r >= this.grid.length) return [];
+    const result: Record<string, any>[] = [];
+    const gridRow = this.grid[r];
+    for (let c = 0; c < gridRow.length; c++) {
+      for (let e = 0; e < gridRow[c].length; e++) {
+        const el = gridRow[c][e];
+        const entry: Record<string, any> = {
+          row: r, col: c, idx: e,
+          type: el.constructor.name,
+          x: Math.round(el.x * 100) / 100,
+          y: Math.round(el.y * 100) / 100,
+          w: Math.round(el.width * 100) / 100,
+          h: Math.round(el.height * 100) / 100,
+          cursor: el.isCursorHere,
+        };
+        if (el instanceof MathText) {
+          entry.text = el.text;
+          entry.display = el.displayText;
+          entry.cursorPos = el.cursorPosition;
+        } else if (el instanceof MathComment) {
+          entry.text = el.text;
+          entry.display = el.displayText;
+          entry.cursorPos = el.cursorPosition;
+        }
+        result.push(entry);
+      }
+    }
+    return result;
+  }
+
+  /** Devuelve las coordenadas pixel de cada carácter del elemento actual */
+  getCharCoords(): Record<string, any>[] {
+    const el = this.currentElement;
+    if (!el) return [];
+    const ctx = this.ctx;
+    const fs = this.fontSize;
+    let dt = "";
+    let font = `${fs}px ${S.EquationFont}`;
+    if (el instanceof MathText) {
+      dt = el.displayText;
+    } else if (el instanceof MathComment) {
+      dt = el.displayText || el.text;
+      font = `${fs}px ${S.UIFont}`;
+    } else {
+      return [];
+    }
+    ctx.font = font;
+    const chars: Record<string, any>[] = [];
+    let cx = el.x;
+    for (let i = 0; i < dt.length; i++) {
+      const ch = dt[i];
+      const cw = ctx.measureText(ch).width;
+      chars.push({
+        idx: i,
+        char: ch,
+        x: Math.round(cx * 100) / 100,
+        y: Math.round(el.y * 100) / 100,
+        w: Math.round(cw * 100) / 100,
+        h: Math.round(el.height * 100) / 100,
+      });
+      cx += cw;
+    }
+    return chars;
+  }
+
+  /** Mueve el cursor a la izquierda (público) */
+  moveCursorLeft() { this._moveCursorLeft(); this.cursorVisible = true; this.render(); }
+  /** Mueve el cursor a la derecha (público) */
+  moveCursorRight() { this._moveCursorRight(); this.cursorVisible = true; this.render(); }
+  /** Mueve el cursor arriba (público) */
+  moveCursorUp() { this._moveCursorUp(); this.cursorVisible = true; this.render(); }
+  /** Mueve el cursor abajo (público) */
+  moveCursorDown() { this._moveCursorDown(); this.cursorVisible = true; this.render(); }
+
+  /** Mueve el cursor a una fila y columna específica */
+  moveCursorTo(row: number, col: number, charPos?: number) {
+    if (row < 0 || row >= this.grid.length) return "Error: fila fuera de rango";
+    const gridRow = this.grid[row];
+    if (col < 0 || col >= gridRow.length) return "Error: columna fuera de rango";
+    if (this.currentElement) this.currentElement.isCursorHere = false;
+    this.currentRow = row;
+    this.currentCol = col;
+    const cell = gridRow[col];
+    const first = this._getFirstTextElement(cell);
+    if (first) {
+      first.isCursorHere = true;
+      this.currentElement = first;
+      if (charPos !== undefined && first instanceof MathText) {
+        first.cursorPosition = Math.min(charPos, first.text.length);
+      }
+      if (charPos !== undefined && first instanceof MathComment) {
+        first.cursorPosition = Math.min(charPos, (first as any)._text?.length ?? 0);
+      }
+    }
+    this.cursorVisible = true;
     this.render();
+    return `OK: cursor en [${row},${col}]` + (charPos !== undefined ? ` pos=${charPos}` : "");
+  }
+
+  /** Inserta texto en la posición actual del cursor */
+  typeText(text: string) {
+    const el = this.currentElement;
+    if (!el) return "Error: no hay elemento activo";
+    if (el instanceof MathText || el instanceof MathComment) {
+      for (const ch of text) el.insertChar(ch);
+      this._recheckLineType();
+      this._triggerAutoRun();
+      this.render();
+      const cur = this.currentElement as any;
+      return `OK: insertado "${text}" en pos ${cur.cursorPosition}`;
+    }
+    return "Error: elemento no es MathText ni MathComment";
+  }
+
+  /** Elimina N caracteres hacia atrás (backspace) */
+  deleteBack(n: number = 1) {
+    const el = this.currentElement;
+    if (!el || !(el instanceof MathText || el instanceof MathComment))
+      return "Error: no MathText ni MathComment";
+    for (let i = 0; i < n; i++) el.deleteChar();
+    this._recheckLineType();
+    this._triggerAutoRun();
+    this.render();
+    const cur = this.currentElement as any;
+    return `OK: eliminados ${n} chars, texto="${cur.text}" pos=${cur.cursorPosition}`;
+  }
+
+  /** Simula un click en coordenadas del canvas (internal CSS pixels) */
+  simulateClick(canvasX: number, canvasY: number) {
+    // Fake event with offsetX/offsetY — _onMouseDown detects missing clientX
+    // and uses offsetX/offsetY directly as canvas-space coordinates.
+    const fakeEvent = { offsetX: canvasX, offsetY: canvasY, button: 0, preventDefault: () => {} } as any;
+    this._onMouseDown(fakeEvent);
+    this.cursorVisible = true;
+    this.render();
+    const el = this.currentElement;
+    if (el) {
+      const cursorInfo = (el instanceof MathText || el instanceof MathComment)
+        ? ` cursorPos=${(el as any).cursorPosition}/${el.text.length}` : "";
+      return `OK: click(${canvasX},${canvasY}) → ${el.constructor.name} en [${this.currentRow},${this.currentCol}]${cursorInfo}`;
+    }
+    return `OK: click(${canvasX},${canvasY}) → sin elemento`;
+  }
+
+  // ─── Insertar estructuras matemáticas (para debug CLI) ───
+
+  /** Inserta una fracción en la posición actual */
+  insertFraction(num?: string, den?: string): string {
+    const numEl = new MathText(num ?? "");
+    const denEl = new MathText(den ?? "");
+    const frac = new MathFraction(numEl, denEl);
+    return this._insertStructure(frac, denEl);
+  }
+
+  /** Inserta una potencia (superíndice) */
+  insertPower(base?: string, exp?: string): string {
+    const baseEl = new MathText(base ?? "");
+    const expEl = new MathText(exp ?? "");
+    const pow = new MathPower(baseEl, expEl);
+    return this._insertStructure(pow, expEl);
+  }
+
+  /** Inserta un subíndice */
+  insertSubscript(base?: string, sub?: string): string {
+    const baseEl = new MathText(base ?? "");
+    const subEl = new MathText(sub ?? "");
+    // MathSubscript stores subscript within parent MathText
+    // Just insert base_sub text
+    const cell = this.grid[this.currentRow]?.[this.currentCol] ?? [];
+    const idx = this.currentElement ? cell.indexOf(this.currentElement) : cell.length - 1;
+    const combined = new MathText(`${base ?? "x"}_${sub ?? "i"}`);
+    cell.splice(idx + 1, 0, combined);
+    this._setCursor(combined);
+    combined.cursorPosition = combined.text.length;
+    this.needsEval = true;
+    this.render();
+    return `OK: subscript '${base}_${sub}' insertado`;
+  }
+
+  /** Inserta una raíz cuadrada */
+  insertRoot(radicand?: string): string {
+    const radEl = new MathText(radicand ?? "");
+    const root = new MathRoot(radEl);
+    return this._insertStructure(root, radEl);
+  }
+
+  /** Inserta una integral */
+  insertIntegral(lower?: string, upper?: string, integrand?: string): string {
+    const lowerEl = new MathText(lower ?? "0");
+    const upperEl = new MathText(upper ?? "1");
+    const intEl = new MathIntegral(lowerEl, upperEl);
+    const cell = this.grid[this.currentRow]?.[this.currentCol] ?? [];
+    const idx = this.currentElement ? cell.indexOf(this.currentElement) : cell.length - 1;
+    cell.splice(idx + 1, 0, intEl);
+    if (integrand) {
+      const body = new MathText(integrand);
+      cell.splice(idx + 2, 0, body);
+    }
+    this._setCursor(lowerEl);
+    this.needsEval = true;
+    this.render();
+    return `OK: integral insertada [${lower ?? "0"}, ${upper ?? "1"}]`;
+  }
+
+  /** Inserta una derivada */
+  insertDerivative(func?: string, variable?: string): string {
+    const fEl = new MathText(func ?? "f");
+    const vEl = new MathText(variable ?? "x");
+    const deriv = new MathDerivative(fEl, vEl);
+    return this._insertStructure(deriv, fEl);
+  }
+
+  /** Inserta una matriz NxM */
+  insertMatrix(rows: number = 2, cols: number = 2, values?: string[][]): string {
+    const cells: MathText[][] = [];
+    for (let r = 0; r < rows; r++) {
+      const row: MathText[] = [];
+      for (let c = 0; c < cols; c++) {
+        row.push(new MathText(values?.[r]?.[c] ?? "0"));
+      }
+      cells.push(row);
+    }
+    const mat = new MathMatrix(cells);
+    return this._insertStructure(mat, cells[0][0]);
+  }
+
+  /** Inserta un vector (columna) */
+  insertVector(elements: string[] = ["0", "0", "0"]): string {
+    const els = elements.map(v => new MathText(v));
+    const vec = new MathVector(els);
+    return this._insertStructure(vec, els[0]);
+  }
+
+  /** Inserta una nueva fila con texto en la posición actual */
+  insertLine(text: string): string {
+    const newRow: MathElement[][] = [this._parseLine(text)];
+    this.grid.splice(this.currentRow + 1, 0, newRow);
+    this.currentRow++;
+    this.currentCol = 0;
+    const cell = this.grid[this.currentRow][0];
+    this.currentElement = this._getFirstTextElement(cell);
+    if (this.currentElement) this.currentElement.isCursorHere = true;
+    this._triggerAutoRun();
+    this.render();
+    return `OK: línea insertada en fila ${this.currentRow}: "${text}"`;
+  }
+
+  /** Helper: inserta estructura en la celda actual */
+  private _insertStructure(struct: MathElement, focusEl: MathElement): string {
+    const cell = this.grid[this.currentRow]?.[this.currentCol] ?? [];
+    const idx = this.currentElement ? cell.indexOf(this.currentElement) : cell.length - 1;
+    cell.splice(idx + 1, 0, struct);
+    this._setCursor(focusEl);
+    this.needsEval = true;
+    this.render();
+    return `OK: ${struct.constructor.name} insertado en [${this.currentRow},${this.currentCol}]`;
   }
 
   // ==========================================================================
@@ -695,6 +1094,7 @@ export class MathEditor {
           this._mergeLineUp();
         }
       }
+      this._recheckLineType();
       this.render();
       this._triggerAutoRun();
       return;
@@ -706,6 +1106,7 @@ export class MathEditor {
       if (el instanceof MathText) {
         el.deleteForward();
       }
+      this._recheckLineType();
       this.render();
       this._triggerAutoRun();
       return;
@@ -801,6 +1202,7 @@ export class MathEditor {
       } else if (el instanceof MathComment) {
         el.insertChar(e.key);
       }
+      this._recheckLineType();
       this.render();
       this._triggerAutoRun();
       return;
@@ -1096,6 +1498,52 @@ export class MathEditor {
     }
   }
 
+  /**
+   * Re-check if current line should change element type:
+   *   MathText → MathComment  (when text starts with #, >, ')
+   *   MathComment → MathText  (when text no longer starts with those)
+   * Called after each character insert/delete to provide live formatting.
+   */
+  private _recheckLineType() {
+    const cell = this.grid[this.currentRow]?.[this.currentCol];
+    if (!cell || cell.length !== 1) return;
+
+    const el = cell[0];
+
+    // MathText → MathComment: heading, comment, or blockquote detected
+    if (el instanceof MathText) {
+      const text = el.text;
+      const trimmed = text.trim();
+      const isHeading = /^#{1,6}\s/.test(trimmed);
+      const isComment = trimmed.startsWith("'");
+      const isBlockquote = trimmed.startsWith(">");
+
+      if (isHeading || isComment || isBlockquote) {
+        const comment = new MathComment(text);
+        comment.cursorPosition = el.cursorPosition;
+        comment.isCursorHere = el.isCursorHere;
+        cell[0] = comment;
+        this.currentElement = comment;
+      }
+    }
+    // MathComment → MathText: no longer matches any special pattern
+    else if (el instanceof MathComment) {
+      const text = el.text;
+      const trimmed = text.trim();
+      const isHeading = /^#{1,6}\s/.test(trimmed);
+      const isComment = trimmed.startsWith("'");
+      const isBlockquote = trimmed.startsWith(">");
+
+      if (!isHeading && !isComment && !isBlockquote) {
+        const newText = new MathText(text);
+        newText.cursorPosition = Math.min(el.cursorPosition, text.length);
+        newText.isCursorHere = el.isCursorHere;
+        cell[0] = newText;
+        this.currentElement = newText;
+      }
+    }
+  }
+
   /** Backspace al inicio de celda: merge con celda anterior o fila anterior */
   private _mergeLineUp() {
     if (this.currentCol > 0) {
@@ -1156,10 +1604,23 @@ export class MathEditor {
   }
 
   private _onMouseDown(e: MouseEvent) {
-    const rect = this.canvas.getBoundingClientRect();
-    // Coordinates in CSS pixels (ctx is already scaled by DPR)
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
+    let px: number, py: number;
+
+    if (e.clientX !== undefined && e.clientY !== undefined) {
+      // Real MouseEvent — compensate for CSS zoom on the canvas.
+      // getBoundingClientRect() returns the VISUAL size (after CSS zoom),
+      // so we scale the offset to match the canvas's internal coordinate space.
+      const rect = this.canvas.getBoundingClientRect();
+      const scaleX = this.canvas.offsetWidth / rect.width;   // ≈ 1/zoomLevel
+      const scaleY = this.canvas.offsetHeight / rect.height;
+      px = (e.clientX - rect.left) * scaleX;
+      py = (e.clientY - rect.top) * scaleY;
+    } else {
+      // Fake event from simulateClick() — offsetX/offsetY are already in
+      // the canvas's internal coordinate space, use them directly.
+      px = (e as any).offsetX ?? 0;
+      py = (e as any).offsetY ?? 0;
+    }
 
     // Check if click is on scrollbar
     const sb = this._getScrollbarGeometry();
@@ -1171,8 +1632,10 @@ export class MathEditor {
       return;
     }
 
-    // Normal click — add scrollY for content coordinates
-    const py2 = py + this.scrollY;
+    // Normal click — element coordinates are in screen-space (scroll already
+    // applied during render via pagesStartY = pageGap - scrollY), so use
+    // screen-space mouse coordinates directly (no scrollY addition).
+    const screenY = py;
 
     // Buscar fila, columna y elemento
     let foundRow = -1;
@@ -1180,10 +1643,13 @@ export class MathEditor {
     let foundElement: MathElement | null = null;
 
     for (let ri = 0; ri < this.grid.length; ri++) {
+      // Only hit-test rows that were rendered in the last frame
+      // (off-screen rows have stale coordinates that cause wrong matches)
+      if (!this.visibleRows.has(ri)) continue;
       const row = this.grid[ri];
       for (let ci = 0; ci < row.length; ci++) {
         for (const el of row[ci]) {
-          const hit = el.hitTest(px, py2);
+          const hit = el.hitTest(px, screenY);
           if (hit) {
             foundRow = ri;
             foundCol = ci;
@@ -1206,12 +1672,32 @@ export class MathEditor {
       // Posicionar cursor dentro del texto
       if (foundElement instanceof MathText) {
         foundElement.cursorPosition = this._hitTextPosition(foundElement, px);
+      } else if (foundElement instanceof MathComment) {
+        foundElement.cursorPosition = this._hitCommentPosition(foundElement, px);
       }
+    }
+
+    // Debug click callback
+    if (this.onDebugClick) {
+      const elType = foundElement ? foundElement.constructor.name : "none";
+      const elText = foundElement instanceof MathText ? foundElement.text : (foundElement ? foundElement.toHekatan() : "");
+      this.onDebugClick({
+        mouseX: Math.round(px), mouseY: Math.round(py),
+        contentX: Math.round(px), contentY: Math.round(screenY),
+        foundRow, foundCol, elementType: elType, elementText: elText,
+        cursorRow: this.currentRow,
+        cursorElement: this.currentElement instanceof MathText ? this.currentElement.text : (this.currentElement?.constructor.name ?? "none"),
+      });
     }
 
     this.canvas.focus();
     this.cursorVisible = true;
+    this._startCursor();
     this._notifyDrawFocus();
+
+    // Brief click indicator — small circle at click point
+    this._showClickIndicator(px, py);
+
     this.render();
   }
 
@@ -1220,7 +1706,7 @@ export class MathEditor {
     if (!dt) return 0;
     const isItalic = !(/^\d/.test(el.text)) && !S.isOperator(el.text) && !S.isKnownFunction(el.text);
     const style = isItalic ? "italic " : "";
-    this.ctx.font = `${style}${this.fontSize}px ${S.EquationFont}`;
+    this.ctx.font = `${style}300 ${this.fontSize}px ${S.EquationFont}`;
     let best = 0;
     let bestDist = Infinity;
     for (let i = 0; i <= dt.length; i++) {
@@ -1234,40 +1720,125 @@ export class MathEditor {
     return Math.min(best, el.text.length);
   }
 
+  private _showClickIndicator(px: number, py: number) {
+    if (this.clickIndicator.timer) cancelAnimationFrame(this.clickIndicator.timer);
+    this.clickIndicator.x = px;
+    this.clickIndicator.y = py;
+    this.clickIndicator.alpha = 1.0;
+    let frame = 0;
+    const totalFrames = 30; // ~500ms at 60fps
+    const fade = () => {
+      frame++;
+      // Stay fully visible for 10 frames, then fade out over remaining 20
+      if (frame <= 10) {
+        this.clickIndicator.alpha = 1.0;
+      } else {
+        this.clickIndicator.alpha = 1.0 - (frame - 10) / (totalFrames - 10);
+      }
+      if (frame < totalFrames) {
+        this.render();
+        this.clickIndicator.timer = requestAnimationFrame(fade);
+      } else {
+        this.clickIndicator.alpha = 0;
+        this.clickIndicator.timer = null;
+        this.render();
+      }
+    };
+    this.clickIndicator.timer = requestAnimationFrame(fade);
+  }
+
+  private _hitCommentPosition(el: MathComment, px: number): number {
+    const raw = el.text;
+    if (!raw) return 0;
+    // MathComment cursor rendering uses raw text with UIFont + heading size
+    const headingLevel = (el as any)._headingLevel ?? 0;
+    const mult = S.HeadingSizeRatios[headingLevel] ?? 1.0;
+    const actual = this.fontSize * mult;
+    const isBold = (el as any)._isBold ?? false;
+    const isItalic = (el as any)._isItalic ?? false;
+    const baseStyle = (isBold ? "bold " : "") + (isItalic ? "italic " : "");
+    this.ctx.font = `${baseStyle}${actual}px ${S.UIFont}`;
+    let best = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i <= raw.length; i++) {
+      const w = this.ctx.measureText(raw.slice(0, i)).width;
+      const dist = Math.abs(el.x + w - px);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = i;
+      }
+    }
+    return Math.min(best, raw.length);
+  }
+
   // ==========================================================================
   // Scroll / Zoom + Scrollbar drag
   // ==========================================================================
 
   private _onMouseMove(e: MouseEvent) {
-    if (!this.scrollbarDragging) return;
+    // Scrollbar dragging
+    if (this.scrollbarDragging) {
+      const rect = this.canvas.getBoundingClientRect();
+      const scaleY = this.canvas.offsetHeight / rect.height; // compensate CSS transform
+      const h = this.canvas.height / (window.devicePixelRatio || 1);
+      const dy = ((e.clientY - rect.top) * scaleY) - this.scrollbarDragStartY;
+      const sb = this._getScrollbarGeometry();
+      if (!sb) return;
+      const scrollRange = h - sb.barH;
+      if (scrollRange <= 0) return;
+      const scrollDelta = (dy / scrollRange) * sb.maxScroll;
+      this.scrollY = Math.max(0, Math.min(sb.maxScroll, this.scrollbarDragStartScroll + scrollDelta));
+      this.render();
+      if (this.onScrollChange) {
+        this.onScrollChange(sb.maxScroll > 0 ? this.scrollY / sb.maxScroll : 0);
+      }
+      return;
+    }
+
+    // Dynamic cursor: text over page content area, default elsewhere
     const rect = this.canvas.getBoundingClientRect();
-    const h = this.canvas.height / (window.devicePixelRatio || 1);
-    const dy = (e.clientY - rect.top) - this.scrollbarDragStartY;
+    const zoom = this.zoomLevel;
+    const scaleX = this.canvas.offsetWidth / rect.width;
+    const scaleY = this.canvas.offsetHeight / rect.height;
+    const px = (e.clientX - rect.left) * scaleX;
+    const py = (e.clientY - rect.top) * scaleY;
+
+    // Check if over scrollbar area
     const sb = this._getScrollbarGeometry();
-    if (!sb) return;
-    const scrollRange = h - sb.barH;
-    if (scrollRange <= 0) return;
-    const scrollDelta = (dy / scrollRange) * sb.maxScroll;
-    this.scrollY = Math.max(0, Math.min(sb.maxScroll, this.scrollbarDragStartScroll + scrollDelta));
-    this.render();
+    if (sb && px >= sb.trackX) {
+      this.canvas.style.cursor = "default";
+      return;
+    }
+
+    // Check if over ruler area (top ruler or left ruler)
+    const vRulerW = 18;
+    const hRulerH = 18;
+    if (py < hRulerH || px < vRulerW) {
+      this.canvas.style.cursor = "default";
+      return;
+    }
+
+    // Over page content → text cursor
+    this.canvas.style.cursor = "text";
   }
 
   private _onMouseUp() {
     if (this.scrollbarDragging) {
       this.scrollbarDragging = false;
-      this.canvas.style.cursor = "text";
+      this.canvas.style.cursor = "default";
     }
   }
 
   private _onWheel(e: WheelEvent) {
-    if (e.ctrlKey) {
-      e.preventDefault();
-      this.setZoom(this.zoomLevel - e.deltaY * 0.001);
-    } else {
-      const h = this.canvas.height / (window.devicePixelRatio || 1);
-      const maxScroll = Math.max(0, this.contentHeight - h + 20);
-      this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollY + e.deltaY));
-      this.render();
+    // Ctrl+wheel zoom is handled by the global handler in main.ts
+    // (prevents browser zoom and routes to setZoom for both panels).
+    if (e.ctrlKey) { e.preventDefault(); return; }
+    const h = this.canvas.height / (window.devicePixelRatio || 1);
+    const maxScroll = Math.max(0, this.contentHeight - h + 20);
+    this.scrollY = Math.max(0, Math.min(maxScroll, this.scrollY + e.deltaY));
+    this.render();
+    if (this.onScrollChange) {
+      this.onScrollChange(maxScroll > 0 ? this.scrollY / maxScroll : 0);
     }
   }
 
@@ -1289,82 +1860,63 @@ export class MathEditor {
     const cssW = w / dpr;
     const cssH = h / dpr;
 
-    // ── Page layout constants (Letter/A4-like margins in CSS px) ──
-    const lineNumWidth = 45;           // line numbers column width
-    const pageMarginLeft = 30;         // left margin inside "page" (after line nums)
-    const pageMarginRight = 30;        // right margin
-    const pageMarginTop = 24;          // top margin
-    const pageMarginBottom = 24;       // bottom margin (visual only)
-    const leftMargin = lineNumWidth + pageMarginLeft;  // total x offset for content
-    const topMargin = pageMarginTop;
+    // ── Apply DPR scale every render (transform resets on canvas resize) ──
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // ── Text rendering quality ──
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    (ctx as any).textRendering = "optimizeLegibility";
+    (ctx as any).fontKerning = "normal";
 
-    // Clear with gray background (outside "page")
-    ctx.fillStyle = "#e0e0e0";
-    ctx.fillRect(0, 0, w, h);
+    // ── Page layout constants (A4-like, matching Output CSS exactly) ──
+    // Output CSS: width:210mm, min-height:297mm, padding:15mm 15mm 15mm 20mm
+    // 210mm at 96dpi = 793.7px, 297mm at 96dpi = 1122.5px
+    const pageW_base = Math.round(210 * 96 / 25.4);   // 794px = 210mm
+    const pageH_base = Math.round(297 * 96 / 25.4);    // 1123px = 297mm
+    const marginL_base = Math.round(20 * 96 / 25.4);   // 76px = 20mm
+    const marginR_base = Math.round(15 * 96 / 25.4);   // 57px = 15mm
+    const marginT_base = Math.round(15 * 96 / 25.4);   // 57px = 15mm
+    const marginB_base = Math.round(15 * 96 / 25.4);   // 57px = 15mm
+    const gap_base = 12;               // gap between pages (matches output gap: 12px)
 
-    // Draw the "page" area (white sheet with shadow)
-    const pageX = lineNumWidth;
-    const pageW = cssW - lineNumWidth - this.scrollbarWidth - this.scrollbarMargin - 2;
-    // Shadow
-    ctx.shadowColor = "rgba(0,0,0,0.18)";
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 3;
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(pageX, 0, pageW, cssH);
-    ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
+    // Auto-fit: scale A4 page to fit available canvas width (like Output's fitA4Page)
+    // NOTE: zoomLevel is NOT applied here — it's applied as CSS zoom on the
+    // canvas element (in main.ts) so that EVERYTHING scales visually together:
+    // pages, text, equations, @{draw} diagrams, matrices, etc.
+    const vRulerW = 18;  // vertical ruler width
+    const availW = cssW - this.scrollbarWidth - this.scrollbarMargin - vRulerW;
+    const autoFitScale = Math.min((availW - 20) / pageW_base, 1);
+    const scale = autoFitScale;   // zoom handled externally via CSS zoom
+    this.lastScale = scale;
 
-    // Margin guide lines — visible dashed blue
-    ctx.save();
-    ctx.setLineDash([5, 3]);
-    ctx.strokeStyle = "rgba(70,130,200,0.45)";
-    ctx.lineWidth = 1;
-    // Left margin guide
-    ctx.beginPath();
-    ctx.moveTo(leftMargin - 2, 0);
-    ctx.lineTo(leftMargin - 2, cssH);
-    ctx.stroke();
-    // Right margin guide
-    const rightGuideX = pageX + pageW - pageMarginRight;
-    ctx.beginPath();
-    ctx.moveTo(rightGuideX, 0);
-    ctx.lineTo(rightGuideX, cssH);
-    ctx.stroke();
-    // Top margin guide
-    const topGuideY = topMargin - this.scrollY;
-    if (topGuideY > 0 && topGuideY < cssH) {
-      ctx.beginPath();
-      ctx.moveTo(pageX, topGuideY - 2);
-      ctx.lineTo(pageX + pageW, topGuideY - 2);
-      ctx.stroke();
-    }
-    ctx.restore();
+    // Scaled dimensions (all rendering uses these)
+    const pageW = pageW_base * scale;
+    const pageH = pageH_base * scale;
+    const pageMarginLeft = marginL_base * scale;
+    const pageMarginRight = marginR_base * scale;
+    const pageMarginTop = marginT_base * scale;
+    const pageMarginBottom = marginB_base * scale;
+    const pageGap = Math.max(4, gap_base * scale);
 
-    // Números de línea column background
-    ctx.fillStyle = S.LineNumberBackground;
-    ctx.fillRect(0, 0, lineNumWidth, cssH);
-    ctx.strokeStyle = "#ddd";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(lineNumWidth, 0);
-    ctx.lineTo(lineNumWidth, cssH);
-    ctx.stroke();
+    // Update class font metrics (used by mouse handling too)
+    this.fontSize = BASE_FONT_SIZE * scale;
+    this.lineHeight = BASE_LINE_HEIGHT * scale;
 
-    // Toggle cursor visibility on current element for blink effect
-    if (this.currentElement && !this.cursorVisible) {
-      this.currentElement.isCursorHere = false;
-    }
+    // Center page horizontally in the canvas area (after vertical ruler and scrollbar)
+    const pageX = Math.max(vRulerW, Math.round(vRulerW + (availW - pageW) / 2));
+    const contentH = pageH - pageMarginTop - pageMarginBottom; // usable height per page
+    const leftMargin = pageX + pageMarginLeft;
 
-    // Medir y renderizar líneas
-    let y = topMargin - this.scrollY;
+    // Clear with gray background (outside pages, matches output-panel bg #b0b0b0)
+    // Use CSS dimensions since ctx is already scaled by dpr
+    ctx.fillStyle = "#b0b0b0";
+    ctx.fillRect(0, 0, cssW, cssH);
 
+    // ── Pass 1: Measure all row heights to compute page breaks ──
+    const rowHeights: number[] = [];
+    const rowBaselines: number[] = [];
     for (let ri = 0; ri < this.grid.length; ri++) {
       const row = this.grid[ri];
-
-      // Medir todos los elementos de todas las celdas de la fila
       let maxHeight = this.lineHeight;
       let maxBaseline = this.fontSize * 0.85;
       for (let ci = 0; ci < row.length; ci++) {
@@ -1373,7 +1925,6 @@ export class MathEditor {
           maxHeight = Math.max(maxHeight, el.height);
           maxBaseline = Math.max(maxBaseline, el.baseline);
         }
-        // Also measure result matrix height if present
         const resultVal = this.cellResultValues[ri]?.[ci];
         if (resultVal && typeof resultVal === "object" && typeof resultVal.toArray === "function") {
           const mh = this._measureResultMatrix(resultVal, ctx, this.fontSize);
@@ -1381,30 +1932,99 @@ export class MathEditor {
           maxBaseline = Math.max(maxBaseline, mh.baseline);
         }
       }
+      rowHeights.push(maxHeight + 4);
+      rowBaselines.push(maxBaseline);
+    }
 
-      // Skip si está fuera de la vista
-      if (y + maxHeight < 0) { y += maxHeight + 4; continue; }
-      if (y > h) break;
+    // ── Compute page assignments: which page each row belongs to ──
+    // Rows taller than a page span multiple pages; we track the absolute Y
+    // position (summing page heights + gaps) for each row.
+    const rowAbsY: number[] = [];      // absolute Y position for each row (from top of first page content)
+    const rowPage: number[] = [];      // page index where the row starts
+    const rowYInPage: number[] = [];   // y offset within that page's content area
+    let currentPage = 0;
+    let yInPage = 0;
+    for (let ri = 0; ri < rowHeights.length; ri++) {
+      const rh = rowHeights[ri];
+      if (yInPage + rh > contentH && yInPage > 0) {
+        // Move to next page
+        currentPage++;
+        yInPage = 0;
+      }
+      rowPage.push(currentPage);
+      rowYInPage.push(yInPage);
+      yInPage += rh;
+      // If this row itself exceeds one page, advance pages accordingly
+      if (rh > contentH) {
+        const extraPages = Math.ceil((yInPage) / contentH) - 1;
+        currentPage += extraPages;
+        yInPage = yInPage - extraPages * contentH;
+      }
+    }
+    const totalPages = currentPage + 1;
 
-      // Highlight fila actual
+    // Total virtual height (all pages + gaps)
+    const rulerH = 18;   // ruler height — pages start below
+    const totalH = totalPages * pageH + (totalPages - 1) * pageGap + pageGap * 2; // top+bottom padding
+
+    // ── Draw pages (white sheets with shadow) ──
+    const pagesStartY = rulerH + pageGap - this.scrollY; // first page top (below ruler)
+
+    for (let p = 0; p < totalPages; p++) {
+      const py = pagesStartY + p * (pageH + pageGap);
+      // Skip pages completely outside viewport
+      if (py + pageH < 0 || py > cssH) continue;
+
+      // Shadow
+      ctx.shadowColor = "rgba(0,0,0,0.3)";
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 3;
+      ctx.fillStyle = "#f4eeef";
+      ctx.fillRect(pageX, py, pageW, pageH);
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    }
+
+    // (No line numbers in A4 page mode — matches Output)
+
+    // Toggle cursor visibility on current element for blink effect
+    if (this.currentElement && !this.cursorVisible) {
+      this.currentElement.isCursorHere = false;
+    }
+
+    // ── Pass 2: Render rows on their assigned pages ──
+    this.visibleRows.clear();
+    for (let ri = 0; ri < this.grid.length; ri++) {
+      const row = this.grid[ri];
+      const pg = rowPage[ri];
+      const pageTopY = pagesStartY + pg * (pageH + pageGap);
+      const y = pageTopY + pageMarginTop + rowYInPage[ri];
+      const maxHeight = rowHeights[ri] - 4;
+      const maxBaseline = rowBaselines[ri];
+
+      // Skip si está completamente fuera de la vista
+      if (y + maxHeight + 4 < -100) continue;
+      if (y > cssH + 100) continue;
+
+      // Clip to page area — skip rows that start beyond the page bottom,
+      // but allow rows taller than a page (they span multiple pages)
+      if (rowYInPage[ri] > contentH + 2 && maxHeight + 4 <= contentH) continue;
+
+      this.visibleRows.add(ri);
+
+      // Highlight fila actual (subtle)
       if (ri === this.currentRow) {
         ctx.fillStyle = "rgba(0,102,221,0.04)";
-        ctx.fillRect(lineNumWidth, y, pageW, maxHeight + 4);
+        ctx.fillRect(pageX + pageMarginLeft - 4, y, pageW - pageMarginLeft - pageMarginRight + 8, maxHeight + 4);
       }
-
-      // Número de línea
-      ctx.font = `${this.fontSize * 0.8}px ${S.UIFont}`;
-      ctx.fillStyle = "#999";
-      ctx.textAlign = "right";
-      ctx.fillText(String(ri + 1), lineNumWidth - 8, y + maxBaseline);
-      ctx.textAlign = "left";
 
       // Renderizar celdas de la fila horizontalmente
       let x = leftMargin;
       for (let ci = 0; ci < row.length; ci++) {
         const cell = row[ci];
-
-        // Espacio entre celdas (sin separador visible)
 
         // Highlight celda activa
         if (ri === this.currentRow && ci === this.currentCol) {
@@ -1429,21 +2049,18 @@ export class MathEditor {
         const result = this.cellResults[ri]?.[ci];
         const resultVal = this.cellResultValues[ri]?.[ci];
         if (result) {
-          // Check if result is a matrix/vector (math.js object with toArray)
           const isMatrixResult = resultVal && typeof resultVal === "object" && typeof resultVal.toArray === "function";
           if (isMatrixResult) {
-            // Draw " = " prefix
             const eqText = " = ";
-            ctx.font = `${this.fontSize}px ${S.EquationFont}`;
+            ctx.font = `300 ${this.fontSize}px ${S.EquationFont}`;
             ctx.fillStyle = "#0066dd";
             ctx.fillText(eqText, x, y + maxBaseline);
             x += ctx.measureText(eqText).width;
-            // Draw matrix/vector with brackets
             x += this._renderResultMatrix(ctx, resultVal, x, y, maxBaseline, this.fontSize);
             x += S.ElementSpacing;
           } else {
             const resultText = ` = ${result}`;
-            ctx.font = `${this.fontSize}px ${S.EquationFont}`;
+            ctx.font = `300 ${this.fontSize}px ${S.EquationFont}`;
             ctx.fillStyle = "#0066dd";
             ctx.fillText(resultText, x, y + maxBaseline);
             x += ctx.measureText(resultText).width + S.ElementSpacing;
@@ -1452,12 +2069,10 @@ export class MathEditor {
 
         x += this.cellGap;
       }
-
-      y += maxHeight + 4;
     }
 
-    // Track actual content height (y is relative, add scrollY back)
-    this.contentHeight = y + this.scrollY;
+    // Track actual content height
+    this.contentHeight = totalH;
 
     // Restore cursor visibility flag after render
     if (this.currentElement && !this.cursorVisible) {
@@ -1478,7 +2093,7 @@ export class MathEditor {
       const isHover = this.scrollbarDragging;
       ctx.fillStyle = isHover ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.2)";
       ctx.beginPath();
-      const r = 3; // border radius
+      const r = 3;
       const bx = sbX + 1, by = barY, bw = sbW - 2, bh = barH;
       ctx.moveTo(bx + r, by);
       ctx.lineTo(bx + bw - r, by);
@@ -1492,6 +2107,260 @@ export class MathEditor {
       ctx.closePath();
       ctx.fill();
     }
+
+    // Click indicator — small fading circle at last click position
+    if (this.clickIndicator.alpha > 0) {
+      const ci = this.clickIndicator;
+      ctx.save();
+      ctx.globalAlpha = ci.alpha;
+      ctx.strokeStyle = "#1a73e8";
+      ctx.lineWidth = 1.5;
+      const radius = 6;
+      ctx.beginPath();
+      ctx.arc(ci.x, ci.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      // Small crosshair inside
+      ctx.beginPath();
+      ctx.moveTo(ci.x - 3, ci.y);
+      ctx.lineTo(ci.x + 3, ci.y);
+      ctx.moveTo(ci.x, ci.y - 3);
+      ctx.lineTo(ci.x, ci.y + 3);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── Rulers (Word-style) — fixed at top and left of canvas ──
+    this._renderRuler(ctx, cssW, pageX, pageW, pageMarginLeft, pageMarginRight, scale);
+    this._renderVerticalRuler(ctx, cssH, pageX, pageH, pageMarginTop, pageMarginBottom, pagesStartY, scale, totalPages, pageGap);
+  }
+
+  // ==========================================================================
+  // Ruler rendering (Word-style horizontal ruler)
+  // ==========================================================================
+
+  private _renderRuler(
+    ctx: CanvasRenderingContext2D,
+    canvasW: number,
+    pageX: number,
+    pageW: number,
+    marginL: number,
+    marginR: number,
+    scale: number,
+  ) {
+    const rulerH = 18;    // ruler height in CSS px
+    const rulerY = 0;     // fixed at top
+
+    // ── Ruler background (margin areas = darker, content area = lighter) ──
+    // Full-width ruler background
+    ctx.fillStyle = "#d0ccc8";
+    ctx.fillRect(0, rulerY, canvasW, rulerH);
+
+    // Content area (between margins) — lighter
+    const contentLeft = pageX + marginL;
+    const contentRight = pageX + pageW - marginR;
+    ctx.fillStyle = "#f0eeec";
+    ctx.fillRect(contentLeft, rulerY, contentRight - contentLeft, rulerH);
+
+    // ── Tick marks in centimeters ──
+    // 1cm at 96dpi = 96/2.54 ≈ 37.795px, scaled by page scale
+    const cmPx = (96 / 2.54) * scale;
+    const totalCm = Math.ceil(pageW / cmPx);
+
+    // Smart label interval: skip numbers when ticks are too close together
+    // (happens at high CSS zoom where internal scale gets very small)
+    const labelInterval = cmPx < 8 ? 10 : cmPx < 14 ? 5 : cmPx < 22 ? 2 : 1;
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    const rulerFontSize = Math.max(6, Math.min(10, Math.round(cmPx * 0.6)));
+    ctx.font = `${rulerFontSize}px ${S.UIFont}`;
+
+    for (let cm = 0; cm <= totalCm; cm++) {
+      const x = pageX + cm * cmPx;
+      if (x < pageX - 1 || x > pageX + pageW + 1) continue;
+
+      const isLabel = cm % labelInterval === 0;
+
+      // Major tick at label positions, smaller tick otherwise
+      ctx.strokeStyle = "#777";
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(x, rulerY + rulerH - 1);
+      ctx.lineTo(x, rulerY + rulerH - (isLabel ? 7 : 4));
+      ctx.stroke();
+
+      // Number label only at interval positions (skip 0)
+      if (cm > 0 && isLabel) {
+        ctx.fillStyle = "#555";
+        ctx.fillText(`${cm}`, x, rulerY + rulerH - 7);
+      }
+
+      // Half-cm tick (only when spacing allows)
+      if (cmPx >= 10) {
+        const halfX = x + cmPx / 2;
+        if (halfX <= pageX + pageW) {
+          ctx.beginPath();
+          ctx.moveTo(halfX, rulerY + rulerH - 1);
+          ctx.lineTo(halfX, rulerY + rulerH - 3);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // ── Margin indicators (small triangles at margin boundaries) ──
+    ctx.fillStyle = "#666";
+    // Left margin indicator
+    this._drawMarginTriangle(ctx, contentLeft, rulerY + rulerH - 1, 4, true);
+    // Right margin indicator
+    this._drawMarginTriangle(ctx, contentRight, rulerY + rulerH - 1, 4, true);
+
+    // Bottom border line
+    ctx.strokeStyle = "#aaa";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, rulerY + rulerH - 0.5);
+    ctx.lineTo(canvasW, rulerY + rulerH - 0.5);
+    ctx.stroke();
+
+    // Reset text state so subsequent renders use correct alignment
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+  }
+
+  /** Draw a small triangle marker for margin indicators */
+  private _drawMarginTriangle(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, pointUp: boolean) {
+    ctx.beginPath();
+    if (pointUp) {
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x - size / 2, y);
+      ctx.lineTo(x + size / 2, y);
+    } else {
+      ctx.moveTo(x, y + size);
+      ctx.lineTo(x - size / 2, y);
+      ctx.lineTo(x + size / 2, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // ==========================================================================
+  // Vertical ruler (Word-style, left side)
+  // ==========================================================================
+
+  private _renderVerticalRuler(
+    ctx: CanvasRenderingContext2D,
+    canvasH: number,
+    _pageX: number,
+    pageH: number,
+    marginT: number,
+    marginB: number,
+    pagesStartY: number,
+    scale: number,
+    totalPages: number,
+    pageGap: number,
+  ) {
+    const rulerW = 18;    // ruler width in CSS px
+    const rulerH = 18;    // horizontal ruler height (vertical ruler starts below it)
+    const rulerX = 0;     // fixed at left edge
+
+    // Ruler background — full height below horizontal ruler
+    ctx.fillStyle = "#d0ccc8";
+    ctx.fillRect(rulerX, rulerH, rulerW, canvasH - rulerH);
+
+    // ── Iterate over ALL pages and draw ruler marks for each visible page ──
+    const cmPx = (96 / 2.54) * scale;
+    const totalCm = Math.ceil(pageH / cmPx);
+    const labelInterval = cmPx < 8 ? 10 : cmPx < 14 ? 5 : cmPx < 22 ? 2 : 1;
+    const vRulerFontSize = Math.max(6, Math.min(10, Math.round(cmPx * 0.6)));
+
+    for (let p = 0; p < totalPages; p++) {
+      const pageTop = pagesStartY + p * (pageH + pageGap);
+
+      // Skip pages completely outside viewport
+      if (pageTop + pageH < rulerH - 10 || pageTop > canvasH + 10) continue;
+
+      // Content area (between top/bottom margins) — lighter
+      const contentTop = pageTop + marginT;
+      const contentBottom = pageTop + pageH - marginB;
+      const clampedTop = Math.max(rulerH, contentTop);
+      const clampedBottom = Math.min(canvasH, contentBottom);
+      if (clampedBottom > clampedTop) {
+        ctx.fillStyle = "#f0eeec";
+        ctx.fillRect(rulerX, clampedTop, rulerW, clampedBottom - clampedTop);
+      }
+
+      // ── Tick marks in centimeters ──
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `${vRulerFontSize}px ${S.UIFont}`;
+
+      for (let cm = 0; cm <= totalCm; cm++) {
+        const y = pageTop + cm * cmPx;
+        if (y < rulerH - 1 || y > canvasH + 1) continue;
+
+        const isLabel = cm % labelInterval === 0;
+        ctx.strokeStyle = "#777";
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(rulerX + rulerW - 1, y);
+        ctx.lineTo(rulerX + rulerW - (isLabel ? 7 : 4), y);
+        ctx.stroke();
+
+        if (cm > 0 && isLabel && y > rulerH + 4) {
+          ctx.fillStyle = "#555";
+          ctx.fillText(`${cm}`, rulerX + rulerW / 2 - 1, y);
+        }
+
+        if (cmPx >= 10) {
+          const halfY = y + cmPx / 2;
+          if (halfY <= pageTop + pageH && halfY > rulerH) {
+            ctx.beginPath();
+            ctx.moveTo(rulerX + rulerW - 1, halfY);
+            ctx.lineTo(rulerX + rulerW - 3, halfY);
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.restore();
+
+      // ── Margin indicators ──
+      ctx.fillStyle = "#666";
+      if (contentTop >= rulerH && contentTop <= canvasH) {
+        this._drawMarginTriangleH(ctx, rulerX + rulerW - 1, contentTop, 4);
+      }
+      if (contentBottom >= rulerH && contentBottom <= canvasH) {
+        this._drawMarginTriangleH(ctx, rulerX + rulerW - 1, contentBottom, 4);
+      }
+    }
+
+    // Right border line
+    ctx.strokeStyle = "#aaa";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(rulerX + rulerW - 0.5, rulerH);
+    ctx.lineTo(rulerX + rulerW - 0.5, canvasH);
+    ctx.stroke();
+
+    // Corner box (intersection of horizontal and vertical rulers)
+    ctx.fillStyle = "#d0ccc8";
+    ctx.fillRect(0, 0, rulerW, rulerH);
+    ctx.strokeStyle = "#aaa";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(rulerW - 0.5, 0);
+    ctx.lineTo(rulerW - 0.5, rulerH);
+    ctx.stroke();
+  }
+
+  /** Draw a small horizontal triangle (pointing right) for vertical ruler margin indicator */
+  private _drawMarginTriangleH(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - size, y - size / 2);
+    ctx.lineTo(x - size, y + size / 2);
+    ctx.closePath();
+    ctx.fill();
   }
 
   // ==========================================================================
@@ -1510,7 +2379,7 @@ export class MathEditor {
       const rows = arr as any[][];
       const rowHeight = inner * 1.2;
       const totalH = rows.length * (rowHeight + cellPad) - cellPad + cellPad * 2;
-      ctx.font = `${inner}px ${S.EquationFont}`;
+      ctx.font = `300 ${inner}px ${S.EquationFont}`;
       const colWidths: number[] = new Array(rows[0].length).fill(0);
       for (const row of rows) {
         for (let j = 0; j < row.length; j++) {
@@ -1521,7 +2390,7 @@ export class MathEditor {
       return { width: totalW, height: totalH, baseline: totalH / 2 };
     } else {
       // 1D vector - inline
-      ctx.font = `${inner}px ${S.EquationFont}`;
+      ctx.font = `300 ${inner}px ${S.EquationFont}`;
       const texts = (arr as any[]).map((v: any) => this._fmtNum(v));
       const str = "[" + texts.join(", ") + "]";
       return { width: ctx.measureText(str).width, height: inner * 1.2, baseline: inner * 0.85 };
@@ -1544,7 +2413,7 @@ export class MathEditor {
       const numCols = rows[0].length;
 
       // Measure columns
-      ctx.font = `${inner}px ${S.EquationFont}`;
+      ctx.font = `300 ${inner}px ${S.EquationFont}`;
       const colWidths = new Array(numCols).fill(0);
       const rowHeight = inner * 1.2;
       for (const row of rows) {
@@ -1567,7 +2436,7 @@ export class MathEditor {
         let cx = x + bracketW;
         for (let j = 0; j < numCols; j++) {
           const text = this._fmtNum(rows[i][j]);
-          ctx.font = `${inner}px ${S.EquationFont}`;
+          ctx.font = `300 ${inner}px ${S.EquationFont}`;
           ctx.fillStyle = "#0066dd";
           const tw = ctx.measureText(text).width;
           ctx.fillText(text, cx + (colWidths[j] - tw) / 2, cy + inner * 0.85);
@@ -1582,7 +2451,7 @@ export class MathEditor {
       return totalW;
     } else {
       // 1D vector - render inline as [a, b, c]
-      ctx.font = `${inner}px ${S.EquationFont}`;
+      ctx.font = `300 ${inner}px ${S.EquationFont}`;
       ctx.fillStyle = "#0066dd";
       const texts = (arr as any[]).map((v: any) => this._fmtNum(v));
       const str = "[" + texts.join(", ") + "]";
@@ -1614,8 +2483,11 @@ export class MathEditor {
     const parent = this.canvas.parentElement;
     if (!parent) return;
     const dpr = window.devicePixelRatio || 1;
-    const w = parent.clientWidth;
-    const h = parent.clientHeight;
+    // Compensate for CSS zoom: canvas CSS size = container / zoomLevel
+    // so that after CSS zoom, it fills exactly the container.
+    const zoom = this.zoomLevel;
+    const w = Math.round(parent.clientWidth / zoom);
+    const h = Math.round(parent.clientHeight / zoom);
     this.canvas.width = w * dpr;
     this.canvas.height = h * dpr;
     this.canvas.style.width = `${w}px`;
@@ -1691,6 +2563,21 @@ export class MathEditor {
 
   /** Public scroll offset for overlay positioning */
   get scrollOffset(): number { return this.scrollY; }
+
+  /** Set scroll position from outside (fraction 0..1) — does NOT fire onScrollChange */
+  setScrollFraction(fraction: number) {
+    const h = this.canvas.height / (window.devicePixelRatio || 1);
+    const maxScroll = Math.max(0, this.contentHeight - h + 20);
+    this.scrollY = Math.max(0, Math.min(maxScroll, fraction * maxScroll));
+    this.render();
+  }
+
+  /** Current scroll fraction (0..1) */
+  get scrollFraction(): number {
+    const h = this.canvas.height / (window.devicePixelRatio || 1);
+    const maxScroll = Math.max(0, this.contentHeight - h + 20);
+    return maxScroll > 0 ? this.scrollY / maxScroll : 0;
+  }
 
   /** Callback when cursor enters/leaves a draw block */
   onDrawBlockFocus: ((draw: MathDraw | null) => void) | null = null;
