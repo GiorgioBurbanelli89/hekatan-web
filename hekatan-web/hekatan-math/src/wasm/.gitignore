@@ -1,0 +1,6 @@
+# Eigen headers (downloaded by build.sh)
+eigen/
+
+# Keep built WASM (commit the compiled artifacts)
+!built/eigen_sparse.js
+!built/eigen_sparse.wasm

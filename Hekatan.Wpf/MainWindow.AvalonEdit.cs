@@ -1002,12 +1002,13 @@ namespace Hekatan.Wpf
                             });
                         }
                     }
-                    // Conditional blocks: #if ... #end if
-                    else if (lineText.StartsWith("#if ") || lineText.StartsWith("#if\t"))
+                    // Conditional blocks: #if/#end if or if/end if
+                    else if (lineText.StartsWith("#if ") || lineText.StartsWith("#if\t") ||
+                             lineText.StartsWith("if ") || lineText.StartsWith("if\t"))
                     {
                         ifStack.Push(lineNumber);
                     }
-                    else if (lineText.StartsWith("#end if"))
+                    else if (lineText.StartsWith("#end if") || lineText.StartsWith("end if"))
                     {
                         if (ifStack.Count > 0)
                         {
@@ -1017,24 +1018,26 @@ namespace Hekatan.Wpf
                             {
                                 StartOffset = startDocLine.Offset,
                                 EndOffset = documentLine.EndOffset,
-                                Name = "▼ #if ..."
+                                Name = lineText.StartsWith("#") ? "▼ #if ..." : "▼ if ..."
                             });
                         }
                     }
-                    // Loop blocks: #for, #repeat, #while all end with #loop
-                    else if (lineText.StartsWith("#for ") || lineText.StartsWith("#for\t"))
+                    // Loop blocks: #for/#repeat/#while end with #loop, or for/repeat/while end with loop
+                    else if (lineText.StartsWith("#for ") || lineText.StartsWith("#for\t") ||
+                             lineText.StartsWith("for ") || lineText.StartsWith("for\t"))
                     {
-                        loopStack.Push((lineNumber, "#for"));
+                        loopStack.Push((lineNumber, lineText.StartsWith("#") ? "#for" : "for"));
                     }
-                    else if (lineText.StartsWith("#repeat"))
+                    else if (lineText.StartsWith("#repeat") || lineText.StartsWith("repeat"))
                     {
-                        loopStack.Push((lineNumber, "#repeat"));
+                        loopStack.Push((lineNumber, lineText.StartsWith("#") ? "#repeat" : "repeat"));
                     }
-                    else if (lineText.StartsWith("#while ") || lineText.StartsWith("#while\t"))
+                    else if (lineText.StartsWith("#while ") || lineText.StartsWith("#while\t") ||
+                             lineText.StartsWith("while ") || lineText.StartsWith("while\t"))
                     {
-                        loopStack.Push((lineNumber, "#while"));
+                        loopStack.Push((lineNumber, lineText.StartsWith("#") ? "#while" : "while"));
                     }
-                    else if (lineText.StartsWith("#loop"))
+                    else if (lineText.StartsWith("#loop") || lineText.StartsWith("loop"))
                     {
                         if (loopStack.Count > 0)
                         {

@@ -6,7 +6,7 @@
  * comments, markdown, user functions
  */
 import { parseExpression, evaluate, HekatanEnvironment, type ASTNode } from "./evaluator.js";
-import { renderNode, renderValue, renderInlineText, renderEquationText } from "./renderer.js";
+import { renderNode, renderValue, renderValueRow, renderValueCol, renderInlineText, renderEquationText } from "./renderer.js";
 
 const BLOCK_OPEN_RE = /^@\{(plot|plotly|svg|three|eq)\b\s*([^}]*)\}\s*$/i;
 const BLOCK_CLOSE_RE = /^@\{end\s+(plot|plotly|svg|three|eq)\}\s*$/i;
@@ -32,6 +32,21 @@ export function parse(source: string, existingEnv?: HekatanEnvironment, compact?
       if (!trimmed) { i++; continue; }
     }
 
+    // @{hide} ... @{show}: parse silently (evaluate but suppress output)
+    if (/^@\{hide\}\s*$/i.test(trimmed)) {
+      const hideLines: string[] = [];
+      i++;
+      while (i < lines.length) {
+        const ht = lines[i].trim();
+        if (/^@\{show\}\s*$/i.test(ht)) { i++; break; }
+        hideLines.push(lines[i]);
+        i++;
+      }
+      // Evaluate all lines silently (variables get set, functions defined, but no HTML)
+      parse(hideLines.join("\n"), env);
+      continue;
+    }
+
     // Directive block @{plot} ... @{end plot}
     const blockMatch = trimmed.match(BLOCK_OPEN_RE);
     if (blockMatch) {
@@ -45,7 +60,7 @@ export function parse(source: string, existingEnv?: HekatanEnvironment, compact?
         blockLines.push(lines[i]);
         i++;
       }
-      html += parseDirectiveBlock(blockType, blockLines, blockArgs);
+      html += parseDirectiveBlock(blockType, blockLines, blockArgs, env);
       continue;
     }
 
@@ -193,6 +208,29 @@ function renderIntegralNotation(callNode: any, env: HekatanEnvironment): string 
 function parseLine(line: string, env: HekatanEnvironment, compact?: boolean): string {
   try {
     const ast = parseExpression(line);
+
+    // Display hint: row(expr) → horizontal, col(expr) → vertical
+    if (ast.type === "call" && (ast.name === "row" || ast.name === "col") && ast.args.length === 1) {
+      const innerAst = ast.args[0];
+      const val = evaluate(innerAst, env);
+      const valHtml = ast.name === "row" ? renderValueRow(val) : renderValueCol(val);
+      if (compact) return `<div class="line expr">${valHtml}</div>`;
+      return `<div class="line expr">${renderNode(innerAst)} = ${valHtml}</div>`;
+    }
+    // Display hint on assignment: x = row(expr)
+    if (ast.type === "assign" && (ast.expr as any).type === "call" &&
+        ((ast.expr as any).name === "row" || (ast.expr as any).name === "col") &&
+        (ast.expr as any).args?.length === 1) {
+      const callExpr = ast.expr as any;
+      const innerAst = callExpr.args[0];
+      const val = evaluate(innerAst, env);
+      env.setVar(ast.name, val);
+      const valHtml = callExpr.name === "row" ? renderValueRow(val) : renderValueCol(val);
+      const lhs = `<var>${ast.name}</var>`;
+      if (compact) return `<div class="line assign">${lhs} = ${valHtml}</div>`;
+      return `<div class="line assign">${lhs} = ${renderNode(innerAst)} = ${valHtml}</div>`;
+    }
+
     const val = evaluate(ast, env);
 
     if (ast.type === "assign") {
@@ -231,10 +269,10 @@ function parseLine(line: string, env: HekatanEnvironment, compact?: boolean): st
 }
 
 // ─── Directive blocks ────────────────────────────────────
-function parseDirectiveBlock(type: string, lines: string[], args?: string): string {
+function parseDirectiveBlock(type: string, lines: string[], args?: string, env?: HekatanEnvironment): string {
   switch (type) {
     case "eq": return handleEqBlock(lines, args || "");
-    case "plot": return handlePlotBlock(lines);
+    case "plot": return handlePlotBlock(lines, env);
     case "plotly": return handlePlotlyBlock(lines);
     case "svg": return handleSvgBlock(lines);
     case "three": return handleThreeBlock(lines);
@@ -270,11 +308,25 @@ function handleEqBlock(lines: string[], args: string): string {
 }
 
 // ─── @{plot} SVG renderer ────────────────────────────────
-function handlePlotBlock(lines: string[]): string {
+function heatColor(t: number): string {
+  // t in [0,1] → blue → cyan → green → yellow → red
+  t = Math.max(0, Math.min(1, t));
+  let r: number, g: number, b: number;
+  if (t < 0.25)      { r = 0; g = Math.round(255 * t * 4); b = 255; }
+  else if (t < 0.5)  { r = 0; g = 255; b = Math.round(255 * (1 - (t - 0.25) * 4)); }
+  else if (t < 0.75) { r = Math.round(255 * (t - 0.5) * 4); g = 255; b = 0; }
+  else               { r = 255; g = Math.round(255 * (1 - (t - 0.75) * 4)); b = 0; }
+  return `rgb(${r},${g},${b})`;
+}
+
+function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment): string {
   const W = 600, H = 400, PAD = 50;
   let xMin = -5, xMax = 5, yMin = -2, yMax = 2;
   const funcs: { expr: string; color: string; width: number; label: string }[] = [];
   const annotations: string[] = [];
+  let heatmapVar = "";
+  let colorbarLabel = "";
+  let showMesh = false;
 
   for (const line of lines) {
     const t = line.trim();
@@ -285,6 +337,17 @@ function handlePlotBlock(lines: string[]): string {
     if (xRange) { xMin = +xRange[1]; xMax = +xRange[2]; continue; }
     const yRange = t.match(/^y\s*=\s*([-\d.]+)\s*:\s*([-\d.]+)/);
     if (yRange) { yMin = +yRange[1]; yMax = +yRange[2]; continue; }
+
+    // Heatmap: heatmap VARNAME
+    const hmMatch = t.match(/^heatmap\s+(\w+)\s*$/i);
+    if (hmMatch) { heatmapVar = hmMatch[1]; continue; }
+
+    // Colorbar: colorbar "label"
+    const cbMatch = t.match(/^colorbar\s+"([^"]+)"/i);
+    if (cbMatch) { colorbarLabel = cbMatch[1]; continue; }
+
+    // Mesh overlay
+    if (/^mesh\s*$/i.test(t)) { showMesh = true; continue; }
 
     // Function: y = sin(x) | color: #F00 | width: 2 | label: "f(x)"
     const fMatch = t.match(/^y\s*=\s*(.+?)(\s*\|.*)?$/);
@@ -312,7 +375,8 @@ function handlePlotBlock(lines: string[]): string {
   const sx = (x: number) => PAD + (x - xMin) / (xMax - xMin) * (W - 2 * PAD);
   const sy = (y: number) => H - PAD - (y - yMin) / (yMax - yMin) * (H - 2 * PAD);
 
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="max-width:${W}px;background:#fff;border:1px solid #ddd;">`;
+  const totalW = colorbarLabel ? W + 50 : W;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${H}" style="max-width:${totalW}px;background:#fff;border:1px solid #ddd;">`;
 
   // Grid
   svg += `<g stroke="#e0e0e0" stroke-width="0.5">`;
@@ -323,6 +387,71 @@ function handlePlotBlock(lines: string[]): string {
     svg += `<line x1="${PAD}" y1="${sy(y)}" x2="${W - PAD}" y2="${sy(y)}"/>`;
   }
   svg += `</g>`;
+
+  // ── Heatmap rendering (before axes, so axes draw on top) ──
+  if (heatmapVar && outerEnv) {
+    const hmVal = outerEnv.getVar(heatmapVar);
+    if (hmVal !== undefined && Array.isArray(hmVal)) {
+      let matrix: number[][] | null = null;
+      if (Array.isArray(hmVal[0])) {
+        matrix = hmVal as number[][];
+      } else {
+        // 1D array → single row
+        matrix = [hmVal as number[]];
+      }
+      if (matrix) {
+        const nRows = matrix.length, nCols = matrix[0].length;
+        // Find min/max
+        let vmin = Infinity, vmax = -Infinity;
+        for (const r of matrix) for (const v of r) { if (v < vmin) vmin = v; if (v > vmax) vmax = v; }
+        const cellW = (xMax - xMin) / nCols;
+        const cellH = (yMax - yMin) / nRows;
+        const fmt = (v: number) => { const s = v.toFixed(2); return s.replace(/\.?0+$/, "") || "0"; };
+        for (let r = 0; r < nRows; r++) {
+          for (let c = 0; c < nCols; c++) {
+            const v = matrix[r][c];
+            const t = vmax > vmin ? (v - vmin) / (vmax - vmin) : 0.5;
+            const color = heatColor(t);
+            const x1 = xMin + c * cellW;
+            const y1 = yMax - r * cellH;  // row 0 = top
+            const px = sx(x1), py = sy(y1);
+            const pw = sx(x1 + cellW) - sx(x1);
+            const ph = sy(y1 - cellH) - sy(y1);
+            svg += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="${color}" stroke="${showMesh ? '#333' : color}" stroke-width="${showMesh ? 1 : 0.5}"/>`;
+            // Value label at center
+            const tx = sx(x1 + cellW / 2), ty = sy(y1 - cellH / 2);
+            const textColor = t > 0.3 && t < 0.7 ? "#000" : "#fff";
+            svg += `<text x="${tx}" y="${ty + 1}" fill="${textColor}" font-size="10" text-anchor="middle" dominant-baseline="central" font-weight="bold">${fmt(v)}</text>`;
+          }
+        }
+      }
+    }
+  }
+
+  // ── Colorbar ──
+  if (colorbarLabel && heatmapVar) {
+    const cbX = W - PAD + 10, cbY = PAD, cbW = 15, cbH = H - 2 * PAD;
+    const hmVal = outerEnv?.getVar(heatmapVar);
+    let vmin = 0, vmax = 1;
+    if (hmVal && Array.isArray(hmVal)) {
+      const flat = Array.isArray(hmVal[0]) ? (hmVal as number[][]).flat() : (hmVal as number[]);
+      vmin = Math.min(...flat); vmax = Math.max(...flat);
+    }
+    // Gradient rectangles
+    const nSteps = 20;
+    for (let s = 0; s < nSteps; s++) {
+      const t = 1 - s / nSteps;
+      const ry = cbY + (s / nSteps) * cbH;
+      const rh = cbH / nSteps + 0.5;
+      svg += `<rect x="${cbX}" y="${ry}" width="${cbW}" height="${rh}" fill="${heatColor(t)}" stroke="none"/>`;
+    }
+    svg += `<rect x="${cbX}" y="${cbY}" width="${cbW}" height="${cbH}" fill="none" stroke="#333" stroke-width="0.5"/>`;
+    // Min/max labels
+    const fmt2 = (v: number) => { const s = v.toFixed(2); return s.replace(/\.?0+$/, "") || "0"; };
+    svg += `<text x="${cbX + cbW + 3}" y="${cbY + 4}" fill="#333" font-size="9">${fmt2(vmax)}</text>`;
+    svg += `<text x="${cbX + cbW + 3}" y="${cbY + cbH}" fill="#333" font-size="9">${fmt2(vmin)}</text>`;
+    svg += `<text x="${cbX + cbW / 2}" y="${cbY - 6}" fill="#333" font-size="9" text-anchor="middle">${colorbarLabel}</text>`;
+  }
 
   // Axes
   if (yMin <= 0 && yMax >= 0) svg += `<line x1="${PAD}" y1="${sy(0)}" x2="${W - PAD}" y2="${sy(0)}" stroke="#666" stroke-width="1"/>`;
@@ -770,8 +899,10 @@ function animate(){requestAnimationFrame(animate);controls.update();renderer.ren
 // ─── Control flow: for / #for ────────────────────────────
 function parseFor(lines: string[], startIdx: number, env: HekatanEnvironment): { html: string; nextLine: number } {
   const header = lines[startIdx].trim();
-  // for i = 1 to 10 : 2  OR  #for i = 1 to 10 : 2
-  const m = header.match(/^#?for\s+(\w+)\s*=\s*(.*?)\s+to\s+(.*?)(?:\s*:\s*(.+))?\s*$/i);
+  // Syntax 1: for i = 1 to 10 : 2  OR  #for i = 1 to 10 : 2
+  let m = header.match(/^#?for\s+(\w+)\s*=\s*(.*?)\s+to\s+(.*?)(?:\s*:\s*(.+))?\s*$/i);
+  // Syntax 2: for i = 1:10  OR  for i = 1:10:2  (colon syntax, MATLAB-like)
+  if (!m) m = header.match(/^#?for\s+(\w+)\s*=\s*(.+?)\s*:\s*(.+?)(?:\s*:\s*(.+))?\s*$/i);
   if (!m) return { html: `<div class="error">Invalid for: ${header}</div>`, nextLine: startIdx + 1 };
 
   const varName = m[1];
@@ -779,14 +910,23 @@ function parseFor(lines: string[], startIdx: number, env: HekatanEnvironment): {
   const endVal = evalNum(m[3], env);
   const step = m[4] ? evalNum(m[4], env) : 1;
 
-  // Collect body until next / #next
+  // Collect body until next/end (with unified depth tracking)
   const body: string[] = [];
   let i = startIdx + 1;
   let depth = 1;
   while (i < lines.length) {
     const t = lines[i].trim();
+    // Block openers
     if (/^#?for\s+/i.test(t)) depth++;
-    if (/^#?next\s*$/i.test(t)) { depth--; if (depth === 0) { i++; break; } }
+    if (/^#?if\s+/i.test(t) && !/^#?else\s+if/i.test(t)) depth++;
+    if (/^#?while\s+/i.test(t)) depth++;
+    if (/^#?repeat\s*$/i.test(t)) depth++;
+    // Block closers
+    if (/^#?(next|end)\s*$/i.test(t) || /^#?end\s+if\s*$/i.test(t) ||
+        /^#?loop\s*$/i.test(t) || /^#?until\s+/i.test(t)) {
+      depth--;
+      if (depth === 0) { i++; break; }
+    }
     body.push(lines[i]);
     i++;
   }
@@ -811,8 +951,14 @@ function parseIf(lines: string[], startIdx: number, env: HekatanEnvironment): { 
 
   while (i < lines.length) {
     const t = lines[i].trim();
-    if (/^#?if\s+/i.test(t)) { depth++; current.body.push(lines[i]); i++; continue; }
-    if (/^#?end\s+if\s*$/i.test(t)) {
+    // Block openers (unified depth tracking)
+    if (/^#?if\s+/i.test(t) && !/^#?else\s+if/i.test(t)) { depth++; current.body.push(lines[i]); i++; continue; }
+    if (/^#?for\s+/i.test(t)) { depth++; current.body.push(lines[i]); i++; continue; }
+    if (/^#?while\s+/i.test(t)) { depth++; current.body.push(lines[i]); i++; continue; }
+    if (/^#?repeat\s*$/i.test(t)) { depth++; current.body.push(lines[i]); i++; continue; }
+    // Block closers
+    if (/^#?end\s+if\s*$/i.test(t) || /^#?(next|end)\s*$/i.test(t) ||
+        /^#?loop\s*$/i.test(t) || /^#?until\s+/i.test(t)) {
       depth--;
       if (depth === 0) { branches.push(current); i++; break; }
       current.body.push(lines[i]); i++; continue;

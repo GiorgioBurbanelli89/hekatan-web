@@ -9,6 +9,11 @@
     "./cas/*": "./src/cas/*",
     "./*": "./src/*"
   },
+  "scripts": {
+    "test": "tsx src/wasm/cli.ts",
+    "bench": "tsx src/wasm/cli.ts bench",
+    "cli": "tsx src/wasm/cli.ts"
+  },
   "dependencies": {
     "mathjs": "^13.2.3",
     "pyodide": "^0.27.5"

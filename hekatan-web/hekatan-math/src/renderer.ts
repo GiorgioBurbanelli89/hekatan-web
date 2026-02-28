@@ -69,6 +69,7 @@ function opSymbol(op: string): string {
 }
 
 function formatNum(v: number): string {
+  if (typeof v !== "number") return String(v);
   if (!isFinite(v)) return v > 0 ? "∞" : v < 0 ? "−∞" : "NaN";
   const s = v.toFixed(_decimals);
   return s.replace(/\.?0+$/, "") || "0";
@@ -86,11 +87,15 @@ function renderMatrixNode(rows: ASTNode[][]): string {
 
 // ─── renderValue: number → HTML ──────────────────────────
 export function renderValue(val: number | number[] | number[][], units?: string): string {
+  // Handle math.js DenseMatrix objects
+  if (val && typeof val === "object" && typeof (val as any).toArray === "function") {
+    val = (val as any).toArray();
+  }
   if (Array.isArray(val)) {
     if (Array.isArray(val[0])) return renderMatrix(val as number[][]);
     return renderVector(val as number[]);
   }
-  let s = formatNum(val);
+  let s = formatNum(val as number);
   if (units) s += ` <span class="units">${esc(units)}</span>`;
   return s;
 }
@@ -107,6 +112,34 @@ export function renderMatrix(m: number[][]): string {
 
 export function renderVector(v: number[]): string {
   return `{${v.map(formatNum).join("; ")}}`;
+}
+
+/** row() display: render any matrix/vector as a single horizontal line */
+export function renderValueRow(val: number | number[] | number[][]): string {
+  if (val && typeof val === "object" && typeof (val as any).toArray === "function") val = (val as any).toArray();
+  if (Array.isArray(val)) {
+    if (Array.isArray(val[0])) {
+      const m = val as number[][];
+      if (m.length === 1) return `[${m[0].map(formatNum).join("&ensp;")}]`;
+      return `[${m.map(row => row.map(formatNum).join("&ensp;")).join(";&ensp;")}]`;
+    }
+    return `[${(val as number[]).map(formatNum).join("&ensp;")}]`;
+  }
+  return formatNum(val);
+}
+
+/** col() display: render any matrix/vector as a vertical column table */
+export function renderValueCol(val: number | number[] | number[][]): string {
+  if (val && typeof val === "object" && typeof (val as any).toArray === "function") val = (val as any).toArray();
+  if (Array.isArray(val)) {
+    if (Array.isArray(val[0])) return renderMatrix(val as number[][]);
+    // 1D vector → vertical column
+    const v = val as number[];
+    let html = '<table class="mat"><tbody>';
+    for (const x of v) html += `<tr><td>${formatNum(x)}</td></tr>`;
+    return html + "</tbody></table>";
+  }
+  return formatNum(val);
 }
 
 export function renderMatrixOperation(label: string, m: number[][]): string {

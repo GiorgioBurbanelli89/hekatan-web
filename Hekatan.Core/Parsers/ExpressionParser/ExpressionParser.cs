@@ -497,7 +497,7 @@ namespace Hekatan.Core
                     _condition.SetCondition(-1);
                     return keyword == Keyword.None;
                 }
-                _condition.SetCondition(keyword - Keyword.If);
+                _condition.SetCondition(keyword - Keyword.If, _keywordHasHash);
                 if (IsEnabled())
                 {
                     if (_condition.KeywordLength == s.Length)

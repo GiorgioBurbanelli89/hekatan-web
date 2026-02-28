@@ -63,6 +63,9 @@ namespace Hekatan.Core
         }
 
         private Keyword _previousKeyword = Keyword.None;
+        private bool _keywordHasHash = true; // tracks if current keyword line has '#' prefix
+        /// <summary>Returns the keyword display prefix: "#" if user wrote with hash, "" otherwise.</summary>
+        private string KeywordPrefix => _keywordHasHash ? "#" : "";
         private static string[] KeywordNames;
         private static Keyword[] KeywordValues;
         private static List<int>[] KeywordIndex;
@@ -87,13 +90,18 @@ namespace Hekatan.Core
             }
         }
 
-        private static Keyword GetKeyword(ReadOnlySpan<char> s)
+        private static Keyword GetKeyword(ReadOnlySpan<char> s) => GetKeyword(s, 1);
+
+        /// <summary>
+        /// Matches a keyword in the line, skipping 'skip' characters (1 for '#', 0 for no prefix).
+        /// </summary>
+        private static Keyword GetKeyword(ReadOnlySpan<char> s, int skip)
         {
-            var n = Math.Min(MaxKeywordLength, s.Length - 1);
+            var n = Math.Min(MaxKeywordLength, s.Length - skip);
             if (n < 3)
                 return Keyword.None;
 
-            var i = char.ToLowerInvariant(s[1]) - 'a';
+            var i = char.ToLowerInvariant(s[skip]) - 'a';
             if (i < 0 || i >= KeywordNames.Length)
                 return Keyword.None;
 
@@ -102,7 +110,7 @@ namespace Hekatan.Core
                 return Keyword.None;
 
             Span<char> lower = stackalloc char[n];
-            s.Slice(1, n).ToLowerInvariant(lower);
+            s.Slice(skip, n).ToLowerInvariant(lower);
             for (int j = 0; j < ind.Count; ++j)
             {
                 var k = ind[j];
@@ -117,7 +125,20 @@ namespace Hekatan.Core
             if (_isPausedByUser)
                 keyword = Keyword.Pause;
             else if (s[0] == '#' && keyword == Keyword.None)
+            {
                 keyword = GetKeyword(s);
+                _keywordHasHash = true;
+            }
+            else if (keyword == Keyword.None && s.Length > 2 && char.IsLetter(s[0]))
+            {
+                // v1.0.0: Allow control flow keywords without '#' prefix (MATLAB-style)
+                var kw = GetKeyword(s, 0);
+                if (kw >= Keyword.If && kw <= Keyword.Continue)
+                {
+                    keyword = kw;
+                    _keywordHasHash = false;
+                }
+            }
 
             if (keyword == Keyword.None)
                 return KeywordResult.None;
@@ -306,8 +327,9 @@ namespace Hekatan.Core
 
         private void ParseKeywordRepeat(ReadOnlySpan<char> s)
         {
-            ReadOnlySpan<char> expression = s.Length > 7 ? //#repeat - 7    
-                s[7..].Trim() :
+            var skip = _keywordHasHash ? 7 : 6; //#repeat=7, repeat=6
+            ReadOnlySpan<char> expression = s.Length > skip ?
+                s[skip..].Trim() :
                 [];
 
             if (_calculate)
@@ -340,13 +362,13 @@ namespace Hekatan.Core
             else if (_isVisible)
             {
                 if (expression.IsWhiteSpace())
-                    _sb.Append($"<p{HtmlId} class=\"cond\">#repeat</p><div class=\"indent\">");
+                    _sb.Append($"<p{HtmlId} class=\"cond\">{KeywordPrefix}repeat</p><div class=\"indent\">");
                 else
                 {
                     try
                     {
                         _parser.Parse(expression);
-                        _sb.Append($"<p{HtmlId}><span class=\"cond\">#repeat</span> <span class=\"eq\">{_parser.ToHtml()}</span></p><div class=\"indent\">");
+                        _sb.Append($"<p{HtmlId}><span class=\"cond\">{KeywordPrefix}repeat</span> <span class=\"eq\">{_parser.ToHtml()}</span></p><div class=\"indent\">");
                     }
                     catch (MathParserException ex)
                     {
@@ -358,8 +380,9 @@ namespace Hekatan.Core
 
         private void ParseKeywordFor(ReadOnlySpan<char> s)
         {
-            ReadOnlySpan<char> expression = s.Length > 4 ? //#for - 4
-                s[4..].Trim() :
+            var skip = _keywordHasHash ? 4 : 3; //#for=4, for=3
+            ReadOnlySpan<char> expression = s.Length > skip ?
+                s[skip..].Trim() :
                 [];
 
             if (expression.IsWhiteSpace())
@@ -424,7 +447,7 @@ namespace Hekatan.Core
                             var startHtml = _parser.ToHtml();
                             _parser.Parse(endExpr);
                             var endHtml = _parser.ToHtml();
-                            _sb.Append($"<p{HtmlId}><span class=\"cond\">#for</span> <span class=\"eq\">{varHtml} = {startHtml} : {endHtml}</span></p><div class=\"indent\">");
+                            _sb.Append($"<p{HtmlId}><span class=\"cond\">{KeywordPrefix}for</span> <span class=\"eq\">{varHtml} = {startHtml} : {endHtml}</span></p><div class=\"indent\">");
                         }
                         catch (MathParserException ex)
                         {
@@ -437,8 +460,9 @@ namespace Hekatan.Core
 
         private void ParseKeywordWhile(ReadOnlySpan<char> s)
         {
-            ReadOnlySpan<char> expression = s.Length > 6 ? //#while - 6
-                s[7..].Trim() :
+            var skip = _keywordHasHash ? 7 : 6; //#while=6+space=7, while=5+space=6
+            ReadOnlySpan<char> expression = s.Length > (skip - 1) ?
+                s[skip..].Trim() :
                 [];
 
             if (expression.IsWhiteSpace())
@@ -454,7 +478,7 @@ namespace Hekatan.Core
                         var condition = commentStart < 0 ? expression : expression[..commentStart];
                         _parser.Parse(condition);
                         _parser.Calculate();
-                        _condition.SetCondition(Keyword.While - Keyword.If);
+                        _condition.SetCondition(Keyword.While - Keyword.If, _keywordHasHash);
                         _condition.Check(_parser.Result);
                         if (_condition.IsSatisfied)
                         {
@@ -473,7 +497,7 @@ namespace Hekatan.Core
             {
                 try
                 {
-                    _sb.Append($"<p{HtmlId}><span class=\"cond\">#while</span> ");
+                    _sb.Append($"<p{HtmlId}><span class=\"cond\">{KeywordPrefix}while</span> ");
                     ParseTokens(GetTokens(expression), true, false);
                     _sb.Append("</p><div class=\"indent\">");
                 }
@@ -505,7 +529,7 @@ namespace Hekatan.Core
                     _condition.SetCondition(Condition.RemoveConditionKeyword);
             }
             else if (_isVisible)
-                _sb.Append($"</div><p{HtmlId} class=\"cond\">#loop</p>");
+                _sb.Append($"</div><p{HtmlId} class=\"cond\">{KeywordPrefix}loop</p>");
         }
 
         private bool Iterate(Loop loop, bool removeWhileCondition)
@@ -557,7 +581,7 @@ namespace Hekatan.Core
                 }
             }
             else if (_isVisible)
-                _sb.Append($"<p{HtmlId} class=\"cond\">#break</p>");
+                _sb.Append($"<p{HtmlId} class=\"cond\">{KeywordPrefix}break</p>");
 
             return false;
         }
@@ -569,7 +593,7 @@ namespace Hekatan.Core
                 if (_condition.IsSatisfied)
                 {
                     if (_loops.Count == 0)
-                        AppendError("#continue", Messages.continue_without_a_corresponding_repeat, _currentLine);
+                        AppendError($"{KeywordPrefix}continue", Messages.continue_without_a_corresponding_repeat, _currentLine);
                     else
                     {
                         var loop = _loops.Peek();
@@ -582,7 +606,7 @@ namespace Hekatan.Core
                 }
             }
             else if (_isVisible)
-                _sb.Append($"<p{HtmlId} class=\"cond\">#continue</p>");
+                _sb.Append($"<p{HtmlId} class=\"cond\">{KeywordPrefix}continue</p>");
         }
 
         private static (int, int) GetForLoopLimits(ReadOnlySpan<char> expression)

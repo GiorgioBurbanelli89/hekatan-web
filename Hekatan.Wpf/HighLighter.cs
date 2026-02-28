@@ -444,10 +444,10 @@ namespace Hekatan.Wpf
         private static readonly FrozenSet<string> Keywords =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "#if",
-            "#else",
-            "#else if",
-            "#end if",
+            "#if", "if",
+            "#else", "else",
+            "#else if", "else if",
+            "#end if", "end if",
             "#rad",
             "#deg",
             "#gra",
@@ -465,12 +465,12 @@ namespace Hekatan.Wpf
             "#wrap",
             "#pre",
             "#post",
-            "#repeat",
-            "#for",
-            "#while",
-            "#loop",
-            "#break",
-            "#continue",
+            "#repeat", "repeat",
+            "#for", "for",
+            "#while", "while",
+            "#loop", "loop",
+            "#break", "break",
+            "#continue", "continue",
             "#include",
             "#local",
             "#global",
@@ -489,10 +489,10 @@ namespace Hekatan.Wpf
         private static readonly FrozenSet<string> SingleExpressionKeywords =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "#if",
-            "#else if",
-            "#repeat",
-            "#for",
+            "#if", "if",
+            "#else if", "else if",
+            "#repeat", "repeat",
+            "#for", "for",
             "#round",
             "#format",
         }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
@@ -500,7 +500,7 @@ namespace Hekatan.Wpf
         private static readonly FrozenSet<string> CompoundExpressionKeywords =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "#while",
+            "#while", "while",
             "#def",
             "#include",
             "#read",

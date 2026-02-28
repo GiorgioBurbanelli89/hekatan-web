@@ -30,6 +30,9 @@ namespace Hekatan.Wpf.MathEditor
             { "#if", "#if condition\n\t\n#end if" },
             { "#def", "#def name$(x$) = \n#end def" },
             { "#hide", "#hide\n\n#show" },
+            { "for", "for i = 1 : n\n\t\nloop" },
+            { "while", "while condition\n\t\nloop" },
+            { "if", "if condition\n\t\nend if" },
         };
 
         public MathAutoComplete(Popup popup, ListBox listBox)
@@ -99,6 +102,17 @@ namespace Hekatan.Wpf.MathEditor
             AddDirective("#while");
             AddDirective("#wrap");
             AddDirective("#write");
+            // Control flow without # (MATLAB-style)
+            AddDirective("for");
+            AddDirective("while");
+            AddDirective("if");
+            AddDirective("else");
+            AddDirective("else if");
+            AddDirective("end if");
+            AddDirective("repeat");
+            AddDirective("loop");
+            AddDirective("break");
+            AddDirective("continue");
             AddDirective("default");
 
             // Funciones especiales (magenta)

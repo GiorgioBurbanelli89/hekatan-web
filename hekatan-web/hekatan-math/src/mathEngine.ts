@@ -116,7 +116,7 @@ export interface CellResult {
 export interface LineResult {
   lineIndex: number;
   input: string;
-  type: "assignment" | "expression" | "comment" | "heading" | "empty" | "directive" | "cells" | "draw" | "draw3d" | "draw3difc" | "importifc" | "hrule" | "eqline" | "error";
+  type: "assignment" | "expression" | "comment" | "heading" | "empty" | "directive" | "cells" | "draw" | "draw3d" | "draw3difc" | "importifc" | "hrule" | "eqline" | "plot" | "error";
   varName?: string;
   value?: any;
   display?: string;
@@ -126,11 +126,15 @@ export interface LineResult {
   drawWidth?: number;
   drawHeight?: number;
   drawCommands?: string[];
+  /** For type "plot": plot command lines */
+  plotCommands?: string[];
   /** For type "importifc": IFC file path/URL and optional filter */
   ifcFile?: string;
   ifcFilter?: string;
   /** When true, hide the expression/function in rendering — show only varName = result */
   hideExpr?: boolean;
+  /** Display hint: "row" = horizontal inline, "col" = vertical column */
+  displayHint?: "row" | "col";
   /** For lusolve rendering: show {F} = [K]{u} matrix equation */
   lsolveData?: { K: any; F: any; Z: any };
 }
@@ -272,6 +276,14 @@ export class HekatanEvaluator {
         continue;
       }
 
+      // @{align:center}, @{align:right}, @{align:left} — standalone alignment directive
+      const alignMatch = trimmed.match(/^@\{align(?::([^}]+))?\}\s*$/i);
+      if (alignMatch) {
+        const align = (alignMatch[1] || "left").toLowerCase().trim();
+        results.push({ lineIndex: i, input: raw, type: "directive", display: `align:${align}` });
+        continue;
+      }
+
       // @{text}, @{text:center}, @{text:right}, @{text:left} ... @{end text}
       // Pure text block — everything inside is literal text, nothing is processed
       // @{end text} can appear anywhere in a line (not just at the start)
@@ -323,6 +335,22 @@ export class HekatanEvaluator {
           i++;
         }
         flushPara();
+        continue;
+      }
+
+      // @{plot}...@{end plot} - Plot block (heatmap, curves, etc.)
+      if (/^@\{plot\}\s*$/i.test(trimmed)) {
+        const plotCommands: string[] = [];
+        i++;
+        while (i < lines.length && !/^@\{end\s+plot\}/i.test(lines[i].trim())) {
+          plotCommands.push(lines[i]);
+          i++;
+        }
+        results.push({
+          lineIndex: i, input: raw,
+          type: "plot",
+          plotCommands,
+        });
         continue;
       }
 
@@ -549,6 +577,32 @@ export class HekatanEvaluator {
       // ── Stray end/else keywords (not consumed by for/if) ───
       if (/^(end(\s+(for|if|while))?|else)\s*$/i.test(trimmed)) {
         results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        continue;
+      }
+
+      // ── Display hints: row(expr) / col(expr) ────────────────
+      const hintMatch = trimmed.match(/^(row|col)\((.+)\)$/i);
+      if (hintMatch) {
+        const hint = hintMatch[1].toLowerCase() as "row" | "col";
+        const innerExpr = hintMatch[2];
+        try {
+          const innerResult = this._evalLine(innerExpr);
+          const lr: LineResult = {
+            lineIndex: i, input: raw,
+            type: innerResult.type as any ?? "expression",
+            value: innerResult.value,
+            display: innerResult.display,
+            varName: innerResult.varName,
+            displayHint: hint,
+          };
+          if (this.hideMode === "all") {
+            results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+          } else {
+            results.push(lr);
+          }
+        } catch (e: any) {
+          results.push({ lineIndex: i, input: raw, type: "error", error: e.message || String(e) });
+        }
         continue;
       }
 

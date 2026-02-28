@@ -31,6 +31,7 @@ namespace Hekatan.Core
             private int _count;
             private string _keyword;
             private int _keywordLength;
+            private bool _hasHash = true;
             private readonly Item[] _conditions = new Item[20];
             private Types Type => _conditions[Id].Type;
             internal int Id { get; private set; }
@@ -71,7 +72,7 @@ namespace Hekatan.Core
                 _conditions[Id] = new Item(value, type);
             }
 
-            internal void SetCondition(int index)
+            internal void SetCondition(int index, bool hasHash = true)
             {
                 if (index < 0 || index >= (int)Types.While)
                 {
@@ -83,6 +84,7 @@ namespace Hekatan.Core
                     return;
                 }
 
+                _hasHash = hasHash;
                 var type = (Types)(index + 1);
                 _keywordLength = GetKeywordLength(type);
                 _keyword = GetConditinalKeyword(type);
@@ -146,9 +148,9 @@ namespace Hekatan.Core
                 return $"<span class=\"cond\">{_keyword}</span>";
             }
 
-            private static int GetKeywordLength(Types type)
+            private int GetKeywordLength(Types type)
             {
-                return type switch
+                var baseLen = type switch
                 {
                     Types.If => 3,
                     Types.Else => 5,
@@ -157,17 +159,19 @@ namespace Hekatan.Core
                     Types.ElseIf => 8,
                     _ => 0,
                 };
+                return _hasHash ? baseLen : (baseLen > 0 ? baseLen - 1 : 0);
             }
 
-            private static string GetConditinalKeyword(Types type)
+            private string GetConditinalKeyword(Types type)
             {
+                var prefix = _hasHash ? "#" : "";
                 return type switch
                 {
-                    Types.If => "#if ",
-                    Types.ElseIf => "#else if ",
-                    Types.Else => "#else",
-                    Types.EndIf => "#end if",
-                    Types.While => "#while ",
+                    Types.If => $"{prefix}if ",
+                    Types.ElseIf => $"{prefix}else if ",
+                    Types.Else => $"{prefix}else",
+                    Types.EndIf => $"{prefix}end if",
+                    Types.While => $"{prefix}while ",
                     _ => string.Empty,
                 };
             }

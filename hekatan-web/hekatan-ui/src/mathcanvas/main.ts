@@ -1842,6 +1842,10 @@ themeSelect.addEventListener("change", () => {
   if (currentMode === "code") runCode();
 });
 
+// ─── Eigen WASM (pre-load for fast linear algebra) ──────
+import { eigenSolver } from "hekatan-math/wasm/eigenSolver.js";
+eigenSolver.init().then(() => console.log("Eigen WASM loaded (229 KB) — sparse/dense solvers ready"));
+
 // ─── Evaluator ──────────────────────────────────────────
 const evaluator = new HekatanEvaluator();
 
@@ -2602,8 +2606,8 @@ function renderResults(results: LineResult[], sourceCode: string): string {
     const cmtIdx = srcLine.indexOf("//");
     if (cmtIdx >= 0) srcLine = srcLine.slice(0, cmtIdx).trim();
 
-    // Detect alignment from @{text:...} and @{eq:...} directives
-    if (r.type === "directive" && r.display && /^(text|eq):/.test(r.display)) {
+    // Detect alignment from @{align:...}, @{text:...} and @{eq:...} directives
+    if (r.type === "directive" && r.display && /^(align|text|eq):/.test(r.display)) {
       const align = r.display.split(":")[1];
       if (align === "end") {
         currentAlign = "left";
@@ -2653,15 +2657,15 @@ function renderResults(results: LineResult[], sourceCode: string): string {
           if (level === 1) {
             const chapMatch = headText.match(/^(\d+)\s+(.*)/);
             if (chapMatch) {
-              html.push(`<h1 class="chapter-heading"><span class="chapter-num">${escHtml(chapMatch[1])}</span> <span class="chapter-title">${escHtml(chapMatch[2])}</span></h1>`);
+              html.push(`<h1 class="chapter-heading align-${currentAlign}"><span class="chapter-num">${escHtml(chapMatch[1])}</span> <span class="chapter-title">${escHtml(chapMatch[2])}</span></h1>`);
             } else {
-              html.push(`<h1 class="chapter-heading"><span class="chapter-title">${escHtml(headText)}</span></h1>`);
+              html.push(`<h1 class="chapter-heading align-${currentAlign}"><span class="chapter-title">${escHtml(headText)}</span></h1>`);
             }
           } else if (level === 2) {
             // Section heading: "## 5.2 Efectos" → number spaced from title
             const secMatch = headText.match(/^([\d.]+)\s+(.*)/);
             if (secMatch) {
-              html.push(`<h${level} class="section-heading"><span class="section-num">${escHtml(secMatch[1])}</span><span class="section-title">${escHtml(secMatch[2])}</span></h${level}>`);
+              html.push(`<h${level} class="section-heading align-${currentAlign}"><span class="section-num">${escHtml(secMatch[1])}</span><span class="section-title">${escHtml(secMatch[2])}</span></h${level}>`);
             } else {
               html.push(`<h${level} class="align-${currentAlign}">${escHtml(headText)}</h${level}>`);
             }
@@ -2698,10 +2702,21 @@ function renderResults(results: LineResult[], sourceCode: string): string {
         break;
       }
       case "assignment":
-        html.push(`<p class="eq out-line align-${currentAlign}">${renderLineEq(r, srcLine)}</p>`);
+        if (r.displayHint) {
+          html.push(`<p class="eq out-line align-${currentAlign}">${renderDisplayHint(r)}</p>`);
+        } else {
+          html.push(`<p class="eq out-line align-${currentAlign}">${renderLineEq(r, srcLine)}</p>`);
+        }
         break;
       case "expression":
-        html.push(`<p class="eq out-line align-${currentAlign}">${renderExprResult(r)}</p>`);
+        if (r.displayHint) {
+          html.push(`<p class="eq out-line align-${currentAlign}">${renderDisplayHint(r)}</p>`);
+        } else {
+          html.push(`<p class="eq out-line align-${currentAlign}">${renderExprResult(r)}</p>`);
+        }
+        break;
+      case "plot":
+        html.push(renderPlotBlock(r));
         break;
       case "cells":
         html.push(renderCells(r));
@@ -3217,6 +3232,213 @@ function renderLineEq(r: LineResult, srcLine: string): string {
 /** Renderiza una expresion pura (sin asignacion) */
 function renderExprResult(r: LineResult): string {
   return renderValueSpan(r.value);
+}
+
+/** Renderiza con display hint row/col */
+function renderDisplayHint(r: LineResult): string {
+  const val = r.value;
+  const nameHTML = r.varName ? renderVarName(r.varName) + " = " : "";
+  if (r.displayHint === "row") {
+    return nameHTML + renderRowValue(val);
+  }
+  if (r.displayHint === "col") {
+    return nameHTML + renderColumnVector(val);
+  }
+  return nameHTML + renderValueSpan(val);
+}
+
+/** Renderiza valor en una sola linea horizontal [a b c ...] */
+function renderRowValue(val: any): string {
+  if (val === undefined || val === null) return "";
+  let arr: any[] | null = null;
+  if (evaluator.isMatrix(val)) arr = val.toArray();
+  else if (Array.isArray(val)) arr = val;
+  if (!arr) return fmtNum(val);
+  // Flatten: [[1],[2],[3]] → [1,2,3] or [[1,2],[3,4]] → "1 2 ; 3 4"
+  if (Array.isArray(arr[0])) {
+    const rows = arr as any[][];
+    if (rows[0].length === 1) {
+      // Column vector Nx1 → flat horizontal
+      return `[${rows.map(r => fmtNum(r[0])).join("&ensp;")}]`;
+    }
+    // Matrix: rows separated by ;
+    return `[${rows.map(row => row.map(fmtNum).join("&ensp;")).join(";&ensp;")}]`;
+  }
+  return `[${arr.map(fmtNum).join("&ensp;")}]`;
+}
+
+/** Renderiza @{plot} block como SVG con heatmap/mesh/colorbar */
+function renderPlotBlock(r: LineResult): string {
+  if (!r.plotCommands || r.plotCommands.length === 0) return "";
+  const scope = evaluator.getScope();
+
+  let xRange: number[] | null = null;
+  let yRange: number[] | null = null;
+  let heatmapVar: string | null = null;
+  let showMesh = false;
+  let colorbarLabel = "";
+  let titleText = "";
+  let titleX = 0;
+  let titleY = 0;
+
+  for (const line of r.plotCommands) {
+    const t = line.trim();
+    if (!t || t.startsWith("//")) continue;
+
+    // x = 0 : 6
+    const xMatch = t.match(/^x\s*=\s*(.+?)\s*:\s*(.+)$/);
+    if (xMatch) {
+      const a = Number(math.evaluate(xMatch[1], scope));
+      const b = Number(math.evaluate(xMatch[2], scope));
+      const n = Math.round(b - a);
+      xRange = [];
+      for (let i = 0; i <= n; i++) xRange.push(a + i);
+      continue;
+    }
+    // y = 0 : 4
+    const yMatch = t.match(/^y\s*=\s*(.+?)\s*:\s*(.+)$/);
+    if (yMatch) {
+      const a = Number(math.evaluate(yMatch[1], scope));
+      const b = Number(math.evaluate(yMatch[2], scope));
+      const n = Math.round(b - a);
+      yRange = [];
+      for (let i = 0; i <= n; i++) yRange.push(a + i);
+      continue;
+    }
+    // heatmap VARNAME
+    const heatMatch = t.match(/^heatmap\s+(\w+)/i);
+    if (heatMatch) { heatmapVar = heatMatch[1]; continue; }
+    // mesh
+    if (/^mesh\s*$/i.test(t)) { showMesh = true; continue; }
+    // colorbar "label"
+    const cbMatch = t.match(/^colorbar\s+"([^"]+)"/i);
+    if (cbMatch) { colorbarLabel = cbMatch[1]; continue; }
+    // text X Y "label"
+    const txtMatch = t.match(/^text\s+([\d.]+)\s+([\d.-]+)\s+"([^"]+)"/i);
+    if (txtMatch) { titleX = parseFloat(txtMatch[1]); titleY = parseFloat(txtMatch[2]); titleText = txtMatch[3]; continue; }
+  }
+
+  if (!heatmapVar || !xRange || !yRange) return `<div class="out-error">Plot: missing heatmap variable or x/y range</div>`;
+
+  // Get matrix from scope
+  const matVal = scope[heatmapVar];
+  if (!matVal) return `<div class="out-error">Plot: variable '${heatmapVar}' not found</div>`;
+  let data: number[][];
+  if (matVal.toArray) data = matVal.toArray();
+  else if (Array.isArray(matVal)) data = matVal;
+  else return `<div class="out-error">Plot: '${heatmapVar}' is not a matrix</div>`;
+
+  const nRows = data.length;
+  const nCols = Array.isArray(data[0]) ? data[0].length : 1;
+
+  // Find min/max
+  let vmin = Infinity, vmax = -Infinity;
+  for (const row of data) {
+    if (Array.isArray(row)) {
+      for (const v of row) { if (v < vmin) vmin = v; if (v > vmax) vmax = v; }
+    } else {
+      if ((row as any) < vmin) vmin = row as any; if ((row as any) > vmax) vmax = row as any;
+    }
+  }
+
+  // SVG dimensions
+  const margin = { top: 30, right: 80, bottom: 50, left: 50 };
+  const plotW = 420, plotH = 280;
+  const svgW = plotW + margin.left + margin.right;
+  const svgH = plotH + margin.top + margin.bottom;
+
+  const xMin = xRange[0], xMax = xRange[xRange.length - 1];
+  const yMin = yRange[0], yMax = yRange[yRange.length - 1];
+  const cellW = plotW / nCols;
+  const cellH = plotH / nRows;
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" style="font-family:sans-serif;font-size:11px;display:block;margin:8px 0;">`;
+  svg += `<rect width="${svgW}" height="${svgH}" fill="#fff"/>`;
+
+  // Heatmap cells
+  for (let ri = 0; ri < nRows; ri++) {
+    for (let ci = 0; ci < nCols; ci++) {
+      const v = Array.isArray(data[ri]) ? data[ri][ci] : data[ri];
+      const t = vmax > vmin ? (v - vmin) / (vmax - vmin) : 0.5;
+      const color = heatColor(t);
+      const x = margin.left + ci * cellW;
+      const y = margin.top + ri * cellH;
+      svg += `<rect x="${x}" y="${y}" width="${cellW}" height="${cellH}" fill="${color}" stroke="${showMesh ? '#666' : 'none'}" stroke-width="${showMesh ? 0.5 : 0}"/>`;
+    }
+  }
+
+  // Mesh overlay: node grid
+  if (showMesh) {
+    // Vertical lines
+    for (let ci = 0; ci <= nCols; ci++) {
+      const x = margin.left + ci * cellW;
+      svg += `<line x1="${x}" y1="${margin.top}" x2="${x}" y2="${margin.top + plotH}" stroke="#999" stroke-width="0.3"/>`;
+    }
+    // Horizontal lines
+    for (let ri = 0; ri <= nRows; ri++) {
+      const y = margin.top + ri * cellH;
+      svg += `<line x1="${margin.left}" y1="${y}" x2="${margin.left + plotW}" y2="${y}" stroke="#999" stroke-width="0.3"/>`;
+    }
+  }
+
+  // X axis labels
+  for (let ci = 0; ci <= nCols; ci++) {
+    const x = margin.left + ci * cellW;
+    const val = xMin + (xMax - xMin) * ci / nCols;
+    svg += `<text x="${x}" y="${margin.top + plotH + 16}" text-anchor="middle" fill="#333">${val.toFixed(1)}</text>`;
+  }
+  // Y axis labels
+  for (let ri = 0; ri <= nRows; ri++) {
+    const y = margin.top + ri * cellH;
+    const val = yMin + (yMax - yMin) * ri / nRows;
+    svg += `<text x="${margin.left - 8}" y="${y + 4}" text-anchor="end" fill="#333">${val.toFixed(1)}</text>`;
+  }
+
+  // Colorbar
+  if (colorbarLabel) {
+    const cbX = margin.left + plotW + 12;
+    const cbW = 14, cbH = plotH;
+    const nSteps = 50;
+    for (let s = 0; s < nSteps; s++) {
+      const t = 1 - s / nSteps;
+      const cy = margin.top + s * (cbH / nSteps);
+      svg += `<rect x="${cbX}" y="${cy}" width="${cbW}" height="${cbH / nSteps + 0.5}" fill="${heatColor(t)}"/>`;
+    }
+    svg += `<rect x="${cbX}" y="${margin.top}" width="${cbW}" height="${cbH}" fill="none" stroke="#666" stroke-width="0.5"/>`;
+    svg += `<text x="${cbX + cbW + 4}" y="${margin.top + 4}" fill="#333" font-size="10">${fmtNum(vmax)}</text>`;
+    svg += `<text x="${cbX + cbW + 4}" y="${margin.top + cbH}" fill="#333" font-size="10">${fmtNum(vmin)}</text>`;
+    svg += `<text x="${cbX + cbW / 2}" y="${margin.top - 8}" text-anchor="middle" fill="#333" font-size="10">${escHtml(colorbarLabel)}</text>`;
+  }
+
+  // Title
+  if (titleText) {
+    const tx = margin.left + plotW / 2;
+    const ty = margin.top + plotH + 38;
+    svg += `<text x="${tx}" y="${ty}" text-anchor="middle" fill="#333" font-size="12" font-weight="bold">${escHtml(titleText)}</text>`;
+  }
+
+  svg += `</svg>`;
+  return svg;
+}
+
+/** Heatmap color scale: blue → cyan → green → yellow → red */
+function heatColor(t: number): string {
+  t = Math.max(0, Math.min(1, t));
+  let r: number, g: number, b: number;
+  if (t < 0.25) {
+    const s = t / 0.25;
+    r = 0; g = Math.round(255 * s); b = 255;
+  } else if (t < 0.5) {
+    const s = (t - 0.25) / 0.25;
+    r = 0; g = 255; b = Math.round(255 * (1 - s));
+  } else if (t < 0.75) {
+    const s = (t - 0.5) / 0.25;
+    r = Math.round(255 * s); g = 255; b = 0;
+  } else {
+    const s = (t - 0.75) / 0.25;
+    r = 255; g = Math.round(255 * (1 - s)); b = 0;
+  }
+  return `rgb(${r},${g},${b})`;
 }
 
 /** Renderiza celdas @{cells} */

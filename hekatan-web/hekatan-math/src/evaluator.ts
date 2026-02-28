@@ -5,6 +5,8 @@
  * Supports: variables, functions, units, cell arrays, vectors, matrices
  */
 
+import { eigenSolver } from "./wasm/eigenSolver.js";
+
 // ─── Cell Array type (vector of matrices/vectors/scalars) ─
 export type HVal = number | number[] | number[][];
 export interface CellArray {
@@ -641,7 +643,12 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
       if (node.name === "det" && node.args.length === 1) {
         const m = evaluate(node.args[0], env);
         if (Array.isArray(m) && Array.isArray(m[0])) {
-          return matDet(m as number[][]);
+          const mat = m as number[][];
+          if (mat.length >= 50 && eigenSolver.ready) {
+            const d = eigenSolver.detSync(mat);
+            if (d !== null) return d;
+          }
+          return matDet(mat);
         }
         return NaN;
       }
@@ -669,17 +676,31 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
       }
       if (node.name === "inv" || node.name === "inverse") {
         const m = evaluate(node.args[0], env);
-        if (is2D(m)) return matInverse(toMat(m));
+        if (is2D(m)) {
+          const mat = toMat(m);
+          // Large matrices: use Eigen WASM
+          if (mat.length >= 50 && eigenSolver.ready) {
+            const result = eigenSolver.inverseSync(mat);
+            if (result) return result;
+          }
+          return matInverse(mat);
+        }
         return NaN;
       }
       if (node.name === "lusolve" || node.name === "solve") {
         const A = evaluate(node.args[0], env);
         const b = evaluate(node.args[1], env);
         if (is2D(A) && Array.isArray(b)) {
-          // b can be Nx1 matrix or 1D vector
+          const mat = toMat(A);
           const bVec = is2D(b) ? (b as number[][]).map(r => r[0]) : b as number[];
-          const x = gaussianSolve(toMat(A), bVec);
-          // Return as column vector (Nx1 matrix)
+          // Large matrices: use Eigen WASM (SparseLU) if loaded
+          if (mat.length >= 50 && eigenSolver.ready) {
+            const { rows, cols, vals } = eigenSolver.denseToSparse(mat);
+            const x = eigenSolver.sparseSolveSync(mat.length, rows, cols, vals, bVec);
+            if (x) return x.map(v => [v]);
+          }
+          // Fallback: JS Gaussian elimination
+          const x = gaussianSolve(mat, bVec);
           return x.map(v => [v]);
         }
         return NaN;

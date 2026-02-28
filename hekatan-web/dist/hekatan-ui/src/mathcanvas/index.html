@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hekatan Math Editor</title>
+  <script type="module" crossorigin src="/assets/mathcanvas-C5MtfTzE.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
+  <link rel="modulepreload" crossorigin href="/assets/evaluator-CgBoaY4m.js">
+  <link rel="stylesheet" crossorigin href="/assets/mathcanvas-DJnDAy55.css">
+</head>
+<body>
+  <!-- Top bar: tabs + dropdown + autorun -->
+  <div class="top-bar">
+    <button id="tabCanvas" class="tab-btn active">MathCanvas</button>
+    <button id="tabCode" class="tab-btn">Code</button>
+    <button id="btnRun" class="tab-btn run-btn" title="Evaluate (F5)">&#9654;</button>
+    <button id="btnCad" class="tab-btn cad-btn" disabled title="CAD Editor">CAD</button>
+    <select id="exampleSelect" class="example-select">
+      <option value="">-- Ejemplo --</option>
+    </select>
+    <div class="spacer"></div>
+    <select id="themeSelect" class="theme-select">
+      <option value="calcpad">Tema: Calcpad</option>
+      <option value="hekatan">Tema: Hekatan</option>
+    </select>
+    <label class="auto-toggle">
+      <input type="checkbox" id="chkAutoRun" checked> AutoRun
+    </label>
+    <span class="app-title">Hekatan Math Editor v1.0</span>
+  </div>
+
+  <!-- Mode: Code (textarea + output) -->
+  <div class="split-layout" id="codeMode" style="display:none;">
+    <div class="editor-panel">
+      <textarea id="codeInput" spellcheck="false" wrap="off"></textarea>
+    </div>
+    <div class="splitter" id="splitter"></div>
+    <div class="output-panel">
+      <div class="output-header">Output</div>
+      <div id="output" class="output-content"></div>
+    </div>
+  </div>
+
+  <!-- Mode: MathCanvas (WYSIWYG canvas editor like MathCAD) -->
+  <div class="canvas-layout" id="canvasMode">
+    <div class="canvas-container">
+      <canvas id="mathCanvas"></canvas>
+    </div>
+  </div>
+
+</body>
+</html>

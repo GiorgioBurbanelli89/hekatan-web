@@ -324,7 +324,6 @@ h6 { font-size: 1.0em; }
 
 /* ─── Book-style chapter heading (h1 in output) ─── */
 .output-content h1.chapter-heading {
-  text-align: right;
   padding: 0.4em 0.3em;
   margin: 0.8em 0 0.6em 0;
   font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
@@ -432,9 +431,13 @@ sup.unit {
   font-size: 6pt;
 }
 
-/* ─── Matrix (from template.html) ─── */
+/* ─── Matrix (from template.html) — square brackets [ ] ─── */
 .matrix {
   display: inline-table;
+  border-left: solid 1.5pt black;
+  border-right: solid 1.5pt black;
+  border-radius: 2pt;
+  padding: 1pt 2pt;
 }
 
 .matrix .tr {
@@ -450,30 +453,10 @@ sup.unit {
   text-align: center;
 }
 
+/* Hide empty bracket cells — brackets done via border on .matrix */
 .matrix .td:first-child,
 .matrix .td:last-child {
-  width: 0.75pt;
-  min-width: 0.75pt;
-  max-width: 0.75pt;
-  padding: 0 1pt 0 1pt;
-}
-
-.matrix .td:first-child {
-  border-left: solid 1pt black;
-}
-
-.matrix .td:last-child {
-  border-right: solid 1pt black;
-}
-
-.matrix .tr:first-child .td:first-child,
-.matrix .tr:first-child .td:last-child {
-  border-top: solid 1pt black;
-}
-
-.matrix .tr:last-child .td:first-child,
-.matrix .tr:last-child .td:last-child {
-  border-bottom: solid 1pt black;
+  display: none;
 }
 
 /* ─── Fractions / Division (from template.html) ─── */
@@ -646,15 +629,15 @@ sup.unit {
    ═══════════════════════════════════════════════════════════ */
 
 /* ─── Output line wrappers ─── */
-.out-line { margin: 0.05em 0; line-height: 120%; white-space: nowrap; }
+.out-line { margin: 0.05em 0; line-height: 120%; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; }
 .out-empty { height: 1em; }
 .out-comment { color: #444; margin: 0.05em 0; line-height: 120%; }
 .out-error { color: Crimson; background-color: #FEE; font-size: 0.88em; margin: 2px 0; padding: 2px 4px; border-radius: 3px; }
 
-/* ─── Alignment classes ─── */
-.align-left { text-align: left; }
-.align-center { text-align: center; }
-.align-right { text-align: right; }
+/* ─── Alignment classes (high specificity to override heading defaults) ─── */
+.align-left, .output-content .align-left { text-align: left; }
+.align-center, .output-content .align-center { text-align: center; }
+.align-right, .output-content .align-right { text-align: right; }
 
 /* ─── Inline equation inside text (@{eq}...@{end eq} within text) ─── */
 .inline-eq {

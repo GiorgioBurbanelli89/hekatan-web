@@ -285,6 +285,20 @@ wc = Z[ndof * (jc - 1) + 1] * 1000
 
 > Center deflection w_center [mm]
 
+// Prepare heatmap data: transpose so rows=y, cols=x
+@{hide}
+WzT = transpose(Wz)
+@{show}
+
+@{plot}
+x = 0 : 6
+y = 0 : 4
+heatmap WzT
+mesh
+colorbar "W [mm]"
+text 3 -0.5 "Deflection Contour"
+@{end plot}
+
 ## 10. Bending Moments
 
 @{hide}
@@ -330,12 +344,41 @@ for e = 1:ne
   My_e[e] = MV[2]
   Mxy_e[e] = MV[3]
 end
+
+// Reshape moment vectors to 2D grids for heatmap (rows=y=nb, cols=x=na)
+Mx_grid = zeros(nb, na)
+My_grid = zeros(nb, na)
+for ia = 1:na
+  for ib = 1:nb
+    e = ib + nb * (ia - 1)
+    Mx_grid[ib, ia] = Mx_e[e]
+    My_grid[ib, ia] = My_e[e]
+  end
+end
 @{show}
 
 > Bending moments at element centers [kNm/m]
 > Mx:
-transpose(Mx_e)
+row(transpose(Mx_e))
 > My:
-transpose(My_e)
+row(transpose(My_e))
 > Mxy:
-transpose(Mxy_e)
+row(transpose(Mxy_e))
+
+@{plot}
+x = 0 : 6
+y = 0 : 4
+heatmap Mx_grid
+mesh
+colorbar "Mx [kNm/m]"
+text 2 -0.5 "Bending Moment Mx"
+@{end plot}
+
+@{plot}
+x = 0 : 6
+y = 0 : 4
+heatmap My_grid
+mesh
+colorbar "My [kNm/m]"
+text 2 -0.5 "Bending Moment My"
+@{end plot}
