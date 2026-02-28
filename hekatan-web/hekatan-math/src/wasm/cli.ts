@@ -90,8 +90,51 @@ function testArithmetic() {
   check("100 % 7", evalExpr("100 % 7"), 2);
 }
 
-function testFunctions() {
-  console.log("\n═══ Math Functions ═══");
+function testComparisons() {
+  console.log("\n═══ Comparison & Logical Operators ═══");
+  check("5 == 5", evalExpr("5 == 5"), 1);
+  check("5 == 3", evalExpr("5 == 3"), 0);
+  check("5 != 3", evalExpr("5 != 3"), 1);
+  check("5 != 5", evalExpr("5 != 5"), 0);
+  check("3 < 5", evalExpr("3 < 5"), 1);
+  check("5 < 3", evalExpr("5 < 3"), 0);
+  check("5 > 3", evalExpr("5 > 3"), 1);
+  check("3 > 5", evalExpr("3 > 5"), 0);
+  check("3 <= 5", evalExpr("3 <= 5"), 1);
+  check("5 <= 5", evalExpr("5 <= 5"), 1);
+  check("5 >= 3", evalExpr("5 >= 3"), 1);
+  check("5 >= 5", evalExpr("5 >= 5"), 1);
+  // Logical
+  check("1 && 1", evalExpr("1 && 1"), 1);
+  check("1 && 0", evalExpr("1 && 0"), 0);
+  check("0 || 1", evalExpr("0 || 1"), 1);
+  check("0 || 0", evalExpr("0 || 0"), 0);
+  check("!0", evalExpr("!0"), 1);
+  check("!1", evalExpr("!1"), 0);
+}
+
+function testConditional() {
+  console.log("\n═══ Ternary / Conditional ═══");
+  check("5 > 3 ? 1 : 0", evalExpr("5 > 3 ? 1 : 0"), 1);
+  check("2 > 5 ? 1 : 0", evalExpr("2 > 5 ? 1 : 0"), 0);
+  // Ternary with variable
+  const env = new HekatanEnvironment();
+  evaluate(parseExpression("x = 5"), env);
+  check("x > 3 ? 100 : 0", evaluate(parseExpression("x > 3 ? 100 : 0"), env), 100);
+  check("x < 3 ? 100 : 0", evaluate(parseExpression("x < 3 ? 100 : 0"), env), 0);
+}
+
+function testConstants() {
+  console.log("\n═══ Constants ═══");
+  checkClose("pi", evalExpr("pi"), Math.PI);
+  checkClose("e", evalExpr("e"), Math.E);
+  check("g (gravity)", evalExpr("g"), 9.80665);
+  check("true", evalExpr("true"), 1);
+  check("false", evalExpr("false"), 0);
+}
+
+function testTrig() {
+  console.log("\n═══ Trigonometric Functions ═══");
   check("sin(0)", evalExpr("sin(0)"), 0);
   checkClose("sin(pi/2)", evalExpr("sin(pi/2)"), 1);
   checkClose("cos(0)", evalExpr("cos(0)"), 1);
@@ -101,20 +144,6 @@ function testFunctions() {
   checkClose("acos(0)", evalExpr("acos(0)"), Math.PI / 2);
   checkClose("atan(1)", evalExpr("atan(1)"), Math.PI / 4);
   checkClose("atan2(1, 1)", evalExpr("atan2(1; 1)"), Math.PI / 4);
-  check("sqrt(144)", evalExpr("sqrt(144)"), 12);
-  check("cbrt(27)", evalExpr("cbrt(27)"), 3);
-  check("abs(-7)", evalExpr("abs(-7)"), 7);
-  checkClose("exp(1)", evalExpr("exp(1)"), Math.E);
-  checkClose("ln(e)", evalExpr("ln(e)"), 1);
-  checkClose("log(100)", evalExpr("log(100)"), 2);
-  check("floor(3.7)", evalExpr("floor(3.7)"), 3);
-  check("ceil(3.2)", evalExpr("ceil(3.2)"), 4);
-  check("round(3.5)", evalExpr("round(3.5)"), 4);
-  check("min(3; 7; 1; 5)", evalExpr("min(3; 7; 1; 5)"), 1);
-  check("max(3; 7; 1; 5)", evalExpr("max(3; 7; 1; 5)"), 7);
-  checkClose("hypot(3; 4)", evalExpr("hypot(3; 4)"), 5);
-  check("sign(-5)", evalExpr("sign(-5)"), -1);
-  check("fact(5)", evalExpr("fact(5)"), 120);
 }
 
 function testHyperbolic() {
@@ -122,42 +151,106 @@ function testHyperbolic() {
   checkClose("sinh(1)", evalExpr("sinh(1)"), Math.sinh(1));
   checkClose("cosh(1)", evalExpr("cosh(1)"), Math.cosh(1));
   checkClose("tanh(1)", evalExpr("tanh(1)"), Math.tanh(1));
+  checkClose("asinh(1)", evalExpr("asinh(1)"), Math.asinh(1));
+  checkClose("acosh(2)", evalExpr("acosh(2)"), Math.acosh(2));
+  checkClose("atanh(0.5)", evalExpr("atanh(0.5)"), Math.atanh(0.5));
+}
+
+function testExpLog() {
+  console.log("\n═══ Exponential & Logarithmic ═══");
+  checkClose("exp(1)", evalExpr("exp(1)"), Math.E);
+  checkClose("ln(e)", evalExpr("ln(e)"), 1);
+  checkClose("log(100)", evalExpr("log(100)"), 2);
+  checkClose("log10(1000)", evalExpr("log10(1000)"), 3);
+  checkClose("log2(8)", evalExpr("log2(8)"), 3);
+  check("sqrt(144)", evalExpr("sqrt(144)"), 12);
+  check("cbrt(27)", evalExpr("cbrt(27)"), 3);
+  checkClose("pow(2; 10)", evalExpr("pow(2; 10)"), 1024);
+}
+
+function testRounding() {
+  console.log("\n═══ Rounding & Absolute ═══");
+  check("abs(-7)", evalExpr("abs(-7)"), 7);
+  check("abs(7)", evalExpr("abs(7)"), 7);
+  check("sign(-5)", evalExpr("sign(-5)"), -1);
+  check("sign(5)", evalExpr("sign(5)"), 1);
+  check("sign(0)", evalExpr("sign(0)"), 0);
+  check("sgn(-3)", evalExpr("sgn(-3)"), -1);
+  check("floor(3.7)", evalExpr("floor(3.7)"), 3);
+  check("floor(-3.2)", evalExpr("floor(-3.2)"), -4);
+  check("ceil(3.2)", evalExpr("ceil(3.2)"), 4);
+  check("ceil(-3.7)", evalExpr("ceil(-3.7)"), -3);
+  check("round(3.5)", evalExpr("round(3.5)"), 4);
+  check("round(3.4)", evalExpr("round(3.4)"), 3);
+  check("trunc(3.7)", evalExpr("trunc(3.7)"), 3);
+  check("trunc(-3.7)", evalExpr("trunc(-3.7)"), -3);
+}
+
+function testAngleConversion() {
+  console.log("\n═══ Angle Conversion ═══");
+  checkClose("rad(180)", evalExpr("rad(180)"), Math.PI);
+  checkClose("rad(90)", evalExpr("rad(90)"), Math.PI / 2);
+  checkClose("deg(pi)", evalExpr("deg(pi)"), 180);
+  checkClose("deg(pi/2)", evalExpr("deg(pi/2)"), 90);
+}
+
+function testCombinatorics() {
+  console.log("\n═══ Combinatorics ═══");
+  check("fact(0)", evalExpr("fact(0)"), 1);
+  check("fact(1)", evalExpr("fact(1)"), 1);
+  check("fact(5)", evalExpr("fact(5)"), 120);
+  check("fact(10)", evalExpr("fact(10)"), 3628800);
+  check("comb(5; 2)", evalExpr("comb(5; 2)"), 10);
+  check("comb(10; 3)", evalExpr("comb(10; 3)"), 120);
+  check("comb(5; 0)", evalExpr("comb(5; 0)"), 1);
+  check("comb(5; 5)", evalExpr("comb(5; 5)"), 1);
+  check("perm(5; 2)", evalExpr("perm(5; 2)"), 20);
+  check("perm(10; 3)", evalExpr("perm(10; 3)"), 720);
+}
+
+function testInterpolation() {
+  console.log("\n═══ Interpolation ═══");
+  check("lerp(0; 10; 0)", evalExpr("lerp(0; 10; 0)"), 0);
+  check("lerp(0; 10; 1)", evalExpr("lerp(0; 10; 1)"), 10);
+  check("lerp(0; 10; 0.5)", evalExpr("lerp(0; 10; 0.5)"), 5);
+  check("lerp(0; 10; 0.25)", evalExpr("lerp(0; 10; 0.25)"), 2.5);
+  check("lerp(-10; 10; 0.5)", evalExpr("lerp(-10; 10; 0.5)"), 0);
+}
+
+function testAggregation() {
+  console.log("\n═══ Aggregation ═══");
+  check("min(3; 7; 1; 5)", evalExpr("min(3; 7; 1; 5)"), 1);
+  check("max(3; 7; 1; 5)", evalExpr("max(3; 7; 1; 5)"), 7);
+  checkClose("hypot(3; 4)", evalExpr("hypot(3; 4)"), 5);
+  checkClose("hypot(5; 12)", evalExpr("hypot(5; 12)"), 13);
 }
 
 function testVariables() {
   console.log("\n═══ Variables & Assignment ═══");
   const env = new HekatanEnvironment();
-  const ast1 = parseExpression("x = 5");
-  const r1 = evaluate(ast1, env);
-  check("x = 5", r1, 5);
-
-  const ast2 = parseExpression("y = x^2 + 3*x - 1");
-  const r2 = evaluate(ast2, env);
-  check("y = x^2 + 3*x - 1", r2, 39);
-
-  const ast3 = parseExpression("z = sqrt(x*y)");
-  const r3 = evaluate(ast3, env);
-  checkClose("z = sqrt(x*y)", r3 as number, Math.sqrt(5 * 39));
+  check("x = 5", evaluate(parseExpression("x = 5"), env), 5);
+  check("y = x^2 + 3*x - 1", evaluate(parseExpression("y = x^2 + 3*x - 1"), env), 39);
+  checkClose("z = sqrt(x*y)", evaluate(parseExpression("z = sqrt(x*y)"), env) as number, Math.sqrt(5 * 39));
+  // Overwrite variable
+  check("x = 10", evaluate(parseExpression("x = 10"), env), 10);
+  check("x*2", evaluate(parseExpression("x*2"), env), 20);
 }
 
 function testUserFunctions() {
   console.log("\n═══ User Functions ═══");
   const env = new HekatanEnvironment();
-  // Register function manually (function definition is in mathEngine.ts, not evaluator)
-  env.userFunctions.set("f", {
-    params: ["x"],
-    body: parseExpression("x^2 + 1"),
-  });
+  env.userFunctions.set("f", { params: ["x"], body: parseExpression("x^2 + 1") });
   check("f(3)", evaluate(parseExpression("f(3)"), env), 10);
   check("f(0)", evaluate(parseExpression("f(0)"), env), 1);
   check("f(-2)", evaluate(parseExpression("f(-2)"), env), 5);
 
   // Multi-arg function
-  env.userFunctions.set("g", {
-    params: ["x", "y"],
-    body: parseExpression("x*y + x + y"),
-  });
+  env.userFunctions.set("g", { params: ["x", "y"], body: parseExpression("x*y + x + y") });
   check("g(2; 3)", evaluate(parseExpression("g(2; 3)"), env), 11);
+
+  // Composition
+  env.userFunctions.set("h", { params: ["x"], body: parseExpression("2*x + 1") });
+  check("f(h(2))", evaluate(parseExpression("f(h(2))"), env), 26); // h(2)=5, f(5)=26
 }
 
 function testVectors() {
@@ -165,12 +258,47 @@ function testVectors() {
   const env = new HekatanEnvironment();
   const v = evaluate(parseExpression("v = [1; 2; 3]"), env);
   check("v = [1;2;3]", Array.isArray(v), true);
+  check("len(v)", evaluate(parseExpression("len(v)"), env), 3);
+  check("sum(v)", evaluate(parseExpression("sum(v)"), env), 6);
 
-  const len = evaluate(parseExpression("len(v)"), env);
-  check("len(v)", len, 3);
+  // Vector indexing (1-based)
+  check("v[1]", evaluate(parseExpression("v[1]"), env), 1);
+  check("v[2]", evaluate(parseExpression("v[2]"), env), 2);
+  check("v[3]", evaluate(parseExpression("v[3]"), env), 3);
 
-  const s = evaluate(parseExpression("sum(v)"), env);
-  check("sum(v)", s, 6);
+  // Vector arithmetic
+  evaluate(parseExpression("w = [4; 5; 6]"), env);
+  const vw = evaluate(parseExpression("v + w"), env) as number[];
+  check("v + w", vw, [5, 7, 9]);
+
+  // Scalar * vector
+  const sv = evaluate(parseExpression("2 * v"), env) as number[];
+  check("2 * v", sv, [2, 4, 6]);
+}
+
+function testVectorCreation() {
+  console.log("\n═══ Vector Creation Functions ═══");
+  const env = new HekatanEnvironment();
+
+  // zeros
+  const z = evaluate(parseExpression("zeros(4)"), env) as number[];
+  check("zeros(4)", z, [0, 0, 0, 0]);
+
+  // ones
+  const o = evaluate(parseExpression("ones(3)"), env) as number[];
+  check("ones(3)", o, [1, 1, 1]);
+
+  // vec
+  const vc = evaluate(parseExpression("vec(1; 2; 3)"), env) as number[];
+  check("vec(1;2;3)", vc, [1, 2, 3]);
+
+  // col → Nx1 matrix
+  const c = evaluate(parseExpression("col(1; 2; 3)"), env) as number[][];
+  check("col(1;2;3)", c, [[1], [2], [3]]);
+
+  // row → 1×N matrix
+  const r = evaluate(parseExpression("row(1; 2; 3)"), env) as number[][];
+  check("row(1;2;3)", r, [[1, 2, 3]]);
 }
 
 function testMatrices() {
@@ -191,6 +319,69 @@ function testMatrices() {
   check("identity(3)[0][0]", (I as any)[0][0], 1);
   check("identity(3)[0][1]", (I as any)[0][1], 0);
   check("identity(3)[2][2]", (I as any)[2][2], 1);
+
+  // eye alias
+  const I2 = evaluate(parseExpression("eye(2)"), env);
+  check("eye(2)", I2, [[1, 0], [0, 1]]);
+
+  // zeros matrix
+  const Z = evaluate(parseExpression("zeros(2; 3)"), env);
+  check("zeros(2,3)", Z, [[0, 0, 0], [0, 0, 0]]);
+
+  // ones matrix
+  const O = evaluate(parseExpression("ones(2; 2)"), env);
+  check("ones(2,2)", O, [[1, 1], [1, 1]]);
+}
+
+function testMatrixArithmetic() {
+  console.log("\n═══ Matrix Arithmetic ═══");
+  const env = new HekatanEnvironment();
+  evaluate(parseExpression("A = [[1, 2], [3, 4]]"), env);
+  evaluate(parseExpression("B = [[5, 6], [7, 8]]"), env);
+
+  // Matrix multiply
+  const C = evaluate(parseExpression("A * B"), env) as number[][];
+  check("(A*B)[0][0]", C[0][0], 19);
+  check("(A*B)[0][1]", C[0][1], 22);
+  check("(A*B)[1][0]", C[1][0], 43);
+  check("(A*B)[1][1]", C[1][1], 50);
+
+  // Matrix add
+  const D = evaluate(parseExpression("A + B"), env) as number[][];
+  check("(A+B)[0][0]", D[0][0], 6);
+  check("(A+B)[1][1]", D[1][1], 12);
+
+  // Matrix subtract
+  const E = evaluate(parseExpression("B - A"), env) as number[][];
+  check("(B-A)[0][0]", E[0][0], 4);
+
+  // Scalar * matrix
+  const F = evaluate(parseExpression("3 * A"), env) as number[][];
+  check("(3*A)[0][0]", F[0][0], 3);
+  check("(3*A)[1][1]", F[1][1], 12);
+
+  // Matrix * vector
+  const v = evaluate(parseExpression("A * [1; 0]"), env) as number[];
+  check("A*[1;0]", v, [1, 3]);
+}
+
+function testMatrixIndexing() {
+  console.log("\n═══ Matrix Indexing (1-based) ═══");
+  const env = new HekatanEnvironment();
+  evaluate(parseExpression("M = [[10, 20, 30], [40, 50, 60], [70, 80, 90]]"), env);
+
+  // Single element
+  check("M[1,1]", evaluate(parseExpression("M[1;1]"), env), 10);
+  check("M[2,3]", evaluate(parseExpression("M[2;3]"), env), 60);
+  check("M[3,3]", evaluate(parseExpression("M[3;3]"), env), 90);
+
+  // Row extraction
+  const row1 = evaluate(parseExpression("M[1]"), env);
+  check("M[1] (row)", row1, [10, 20, 30]);
+
+  // Sub-matrix range
+  const sub = evaluate(parseExpression("M[1:2; 1:2]"), env);
+  check("M[1:2,1:2]", sub, [[10, 20], [40, 50]]);
 }
 
 function testLusolve() {
@@ -215,39 +406,173 @@ function testInverse() {
   checkClose("inv(A)[0][1]", inv[0][1], 1);
   checkClose("inv(A)[1][0]", inv[1][0], 1.5);
   checkClose("inv(A)[1][1]", inv[1][1], -0.5);
+
+  // A * inv(A) ≈ I
+  const AI = evaluate(parseExpression("A * inv(A)"), env) as number[][];
+  checkClose("A*inv(A)[0][0]", AI[0][0], 1);
+  checkClose("A*inv(A)[0][1]", AI[0][1], 0);
+  checkClose("A*inv(A)[1][0]", AI[1][0], 0);
+  checkClose("A*inv(A)[1][1]", AI[1][1], 1);
+}
+
+function testDerivatives() {
+  console.log("\n═══ Numerical Derivatives ═══");
+  const env = new HekatanEnvironment();
+
+  // f(x) = x^2 → f'(x) = 2x
+  env.userFunctions.set("f", { params: ["x"], body: parseExpression("x^2") });
+  checkClose("f'(3) = 6", evaluate(parseExpression("nderiv(f; 3)"), env) as number, 6);
+  checkClose("f'(0) = 0", evaluate(parseExpression("nderiv(f; 0)"), env) as number, 0);
+  checkClose("f'(-2) = -4", evaluate(parseExpression("nderiv(f; -2)"), env) as number, -4);
+
+  // g(x) = sin(x) → g'(x) = cos(x)
+  env.userFunctions.set("g2", { params: ["x"], body: parseExpression("sin(x)") });
+  checkClose("sin'(0) = 1", evaluate(parseExpression("nderiv(g2; 0)"), env) as number, 1);
+  checkClose("sin'(pi/2) = 0", evaluate(parseExpression("nderiv(g2; pi/2)"), env) as number, 0, 1e-3);
+
+  // f''(x) = 2 (second derivative of x^2)
+  checkClose("f''(3) = 2", evaluate(parseExpression("nderiv(f; 3; 2)"), env) as number, 2, 1e-2);
+
+  // h(x) = e^x → h'(x) = e^x
+  env.userFunctions.set("h", { params: ["x"], body: parseExpression("exp(x)") });
+  checkClose("exp'(0) = 1", evaluate(parseExpression("nderiv(h; 0)"), env) as number, 1);
+  checkClose("exp'(1) = e", evaluate(parseExpression("nderiv(h; 1)"), env) as number, Math.E, 1e-3);
+}
+
+function testSummation() {
+  console.log("\n═══ Numerical Summation ═══");
+  const env = new HekatanEnvironment();
+
+  // Σ_{i=1}^{10} i = 55
+  env.userFunctions.set("id", { params: ["i"], body: parseExpression("i") });
+  check("Σ i, 1..10 = 55", evaluate(parseExpression("summation(id; 1; 10)"), env), 55);
+
+  // Σ_{i=1}^{5} i^2 = 1+4+9+16+25 = 55
+  env.userFunctions.set("sq", { params: ["i"], body: parseExpression("i^2") });
+  check("Σ i^2, 1..5 = 55", evaluate(parseExpression("summation(sq; 1; 5)"), env), 55);
+
+  // Σ_{i=0}^{3} 2^i = 1+2+4+8 = 15
+  env.userFunctions.set("p2", { params: ["i"], body: parseExpression("2^i") });
+  check("Σ 2^i, 0..3 = 15", evaluate(parseExpression("summation(p2; 0; 3)"), env), 15);
+}
+
+function testProduct() {
+  console.log("\n═══ Numerical Product ═══");
+  const env = new HekatanEnvironment();
+
+  // Π_{i=1}^{5} i = 5! = 120
+  env.userFunctions.set("id", { params: ["i"], body: parseExpression("i") });
+  check("Π i, 1..5 = 120", evaluate(parseExpression("nproduct(id; 1; 5)"), env), 120);
+
+  // Π_{i=1}^{4} 2 = 2^4 = 16
+  env.userFunctions.set("two", { params: ["i"], body: parseExpression("2") });
+  check("Π 2, 1..4 = 16", evaluate(parseExpression("nproduct(two; 1; 4)"), env), 16);
+}
+
+function testODE() {
+  console.log("\n═══ ODE Solver (Runge-Kutta 4) ═══");
+  const env = new HekatanEnvironment();
+
+  // y' = y, y(0)=1 → y(t) = e^t → y(1) = e
+  env.userFunctions.set("ode1", { params: ["t", "y"], body: parseExpression("y") });
+  const r1 = evaluate(parseExpression("odesolve(ode1; 1; 0; 1)"), env) as number;
+  checkClose("y'=y, y(0)=1, y(1)=e", r1, Math.E, 1e-6);
+
+  // y' = -2*y, y(0)=1 → y(t) = e^(-2t) → y(1) = e^(-2) ≈ 0.13534
+  env.userFunctions.set("ode2", { params: ["t", "y"], body: parseExpression("-2*y") });
+  const r2 = evaluate(parseExpression("odesolve(ode2; 1; 0; 1)"), env) as number;
+  checkClose("y'=-2y, y(1)=e^-2", r2, Math.exp(-2), 1e-6);
+
+  // y' = cos(t), y(0)=0 → y(t) = sin(t) → y(pi/2) = 1
+  env.userFunctions.set("ode3", { params: ["t", "y"], body: parseExpression("cos(t)") });
+  const r3 = evaluate(parseExpression("odesolve(ode3; 0; 0; pi/2)"), env) as number;
+  checkClose("y'=cos(t), y(pi/2)=1", r3, 1, 1e-6);
+
+  // y' = t, y(0)=0 → y(t) = t²/2 → y(2) = 2
+  env.userFunctions.set("ode4", { params: ["t", "y"], body: parseExpression("t") });
+  const r4 = evaluate(parseExpression("odesolve(ode4; 0; 0; 2)"), env) as number;
+  checkClose("y'=t, y(2)=2", r4, 2, 1e-6);
+}
+
+function testNsolve() {
+  console.log("\n═══ Numerical Root Finding (nsolve) ═══");
+  const env = new HekatanEnvironment();
+
+  // x^2 - 4 = 0 → x = 2 (starting from x0=1)
+  env.userFunctions.set("f1", { params: ["x"], body: parseExpression("x^2 - 4") });
+  checkClose("x^2-4=0 → x=2", evaluate(parseExpression("nsolve(f1; 1)"), env) as number, 2, 1e-8);
+
+  // x^2 - 4 = 0 → x = -2 (starting from x0=-1)
+  checkClose("x^2-4=0 → x=-2", evaluate(parseExpression("nsolve(f1; -1)"), env) as number, -2, 1e-8);
+
+  // sin(x) = 0 → x = pi (starting from x0=3)
+  env.userFunctions.set("f2", { params: ["x"], body: parseExpression("sin(x)") });
+  checkClose("sin(x)=0 → x=pi", evaluate(parseExpression("nsolve(f2; 3)"), env) as number, Math.PI, 1e-8);
+
+  // e^x - 2 = 0 → x = ln(2) (starting from x0=1)
+  env.userFunctions.set("f3", { params: ["x"], body: parseExpression("exp(x) - 2") });
+  checkClose("e^x-2=0 → x=ln2", evaluate(parseExpression("nsolve(f3; 1)"), env) as number, Math.log(2), 1e-8);
+
+  // x^3 - x - 1 = 0 → x ≈ 1.3247 (real root)
+  env.userFunctions.set("f4", { params: ["x"], body: parseExpression("x^3 - x - 1") });
+  checkClose("x^3-x-1=0", evaluate(parseExpression("nsolve(f4; 1.5)"), env) as number, 1.3247179572, 1e-6);
 }
 
 function testIntegrals() {
   console.log("\n═══ Numerical Integration (Gauss-Legendre) ═══");
   const env = new HekatanEnvironment();
 
-  // Register functions (function def is in mathEngine, not evaluator)
+  // Single integrals
   env.userFunctions.set("f", { params: ["x"], body: parseExpression("x^2") });
-  const r1 = evaluate(parseExpression("integral(f; 0; 1)"), env) as number;
-  checkClose("∫₀¹ x² dx = 1/3", r1, 1 / 3);
+  checkClose("∫₀¹ x² dx = 1/3", evaluate(parseExpression("integral(f; 0; 1)"), env) as number, 1 / 3);
 
   env.userFunctions.set("g", { params: ["x"], body: parseExpression("sin(x)") });
-  const r2 = evaluate(parseExpression("integral(g; 0; pi)"), env) as number;
-  checkClose("∫₀^π sin(x) dx = 2", r2, 2);
+  checkClose("∫₀^π sin(x) dx = 2", evaluate(parseExpression("integral(g; 0; pi)"), env) as number, 2);
 
   env.userFunctions.set("h", { params: ["x"], body: parseExpression("1/x") });
-  const r3 = evaluate(parseExpression("integral(h; 1; e)"), env) as number;
-  checkClose("∫₁^e 1/x dx = 1", r3, 1);
+  checkClose("∫₁^e 1/x dx = 1", evaluate(parseExpression("integral(h; 1; e)"), env) as number, 1);
 
   env.userFunctions.set("k", { params: ["x"], body: parseExpression("exp(x)") });
-  const r4 = evaluate(parseExpression("integral(k; 0; 1)"), env) as number;
-  checkClose("∫₀¹ eˣ dx = e-1", r4, Math.E - 1);
+  checkClose("∫₀¹ eˣ dx = e-1", evaluate(parseExpression("integral(k; 0; 1)"), env) as number, Math.E - 1);
+
+  // ∫₀¹ x³ dx = 1/4
+  env.userFunctions.set("x3", { params: ["x"], body: parseExpression("x^3") });
+  checkClose("∫₀¹ x³ dx = 1/4", evaluate(parseExpression("integral(x3; 0; 1)"), env) as number, 0.25);
 
   // Double integral
   env.userFunctions.set("p", { params: ["x", "y"], body: parseExpression("x*y") });
-  const r5 = evaluate(parseExpression("integral2(p; 0; 1; 0; 1)"), env) as number;
-  checkClose("∫∫ x·y dA [0,1]² = 1/4", r5, 0.25);
+  checkClose("∫∫ x·y dA [0,1]² = 1/4", evaluate(parseExpression("integral2(p; 0; 1; 0; 1)"), env) as number, 0.25);
+
+  // ∫∫ 1 dA [0,2]×[0,3] = 6 (area)
+  env.userFunctions.set("one", { params: ["x", "y"], body: parseExpression("1") });
+  checkClose("∫∫ 1 dA [0,2]×[0,3] = 6", evaluate(parseExpression("integral2(one; 0; 2; 0; 3)"), env) as number, 6);
+
+  // Triple integral: ∫∫∫ 1 dV [0,1]³ = 1 (volume of unit cube)
+  env.userFunctions.set("one3", { params: ["x", "y", "z"], body: parseExpression("1") });
+  checkClose("∫∫∫ 1 dV [0,1]³ = 1", evaluate(parseExpression("integral3(one3; 0; 1; 0; 1; 0; 1)"), env) as number, 1);
+
+  // Triple integral: ∫∫∫ xyz dV [0,1]³ = 1/8
+  env.userFunctions.set("xyz", { params: ["x", "y", "z"], body: parseExpression("x*y*z") });
+  checkClose("∫∫∫ xyz dV = 1/8", evaluate(parseExpression("integral3(xyz; 0; 1; 0; 1; 0; 1)"), env) as number, 0.125);
 }
+
+function testCellArrays() {
+  console.log("\n═══ Cell Arrays ═══");
+  const env = new HekatanEnvironment();
+
+  // Create cell array
+  const ca = evaluate(parseExpression("{1; 2; 3}"), env);
+  check("cell array created", (ca as any).__cell, true);
+  check("cell elements count", (ca as any).elements.length, 3);
+
+  // Cell array with mixed types
+  evaluate(parseExpression("C = {10; 20; 30}"), env);
+}
+
+// ─── WASM Tests ──────────────────────────────────────────
 
 async function testEigenWASM() {
   console.log("\n═══ Eigen WASM — Dense Solve ═══");
-
-  // 3×3 system
   const A = [[2, 1, -1], [-3, -1, 2], [-2, 1, 2]];
   const b = [8, -11, -3];
   const x = await eigenSolver.denseSolve(A, b);
@@ -258,13 +583,7 @@ async function testEigenWASM() {
 
 async function testEigenSparse() {
   console.log("\n═══ Eigen WASM — Sparse Solve ═══");
-
-  // Simple 3×3 sparse: diag(2,3,4) · x = [6, 12, 20]
-  const rows = [0, 1, 2];
-  const cols = [0, 1, 2];
-  const vals = [2, 3, 4];
-  const b = [6, 12, 20];
-
+  const rows = [0, 1, 2], cols = [0, 1, 2], vals = [2, 3, 4], b = [6, 12, 20];
   const xLU = await eigenSolver.sparseSolve(3, rows, cols, vals, b);
   check("SparseLU [3;4;5]", xLU.map(v => Math.round(v)), [3, 4, 5]);
 
@@ -274,33 +593,33 @@ async function testEigenSparse() {
   // Larger banded system
   const n = 500;
   const sp = bandedSparse(n, 5);
-  const { result: x500, ms } = await timeAsync(() =>
-    eigenSolver.sparseSolve(n, sp.rows, sp.cols, sp.vals, sp.b)
-  );
+  const { ms } = await timeAsync(() => eigenSolver.sparseSolve(n, sp.rows, sp.cols, sp.vals, sp.b));
   console.log(`${OK} Sparse 500×500: solved in ${ms.toFixed(1)} ms`);
   passed++;
 }
 
 async function testEigenvalues() {
   console.log("\n═══ Eigen WASM — Eigenvalues ═══");
-
-  // Symmetric 2×2: eigenvalues of [[2,1],[1,2]] are 3 and 1
-  const { real, imag } = await eigenSolver.eigenvalues([[2, 1], [1, 2]]);
+  const { real } = await eigenSolver.eigenvalues([[2, 1], [1, 2]]);
   const sorted = [...real].sort((a, b) => a - b);
   checkClose("eigenvalue 1", sorted[0], 1);
   checkClose("eigenvalue 2", sorted[1], 3);
 
-  // 3×3 identity: eigenvalues = [1, 1, 1]
   const ev3 = await eigenSolver.eigenvalues([[1, 0, 0], [0, 1, 0], [0, 0, 1]]);
   checkClose("identity eig[0]", ev3.real[0], 1);
   checkClose("identity eig[1]", ev3.real[1], 1);
   checkClose("identity eig[2]", ev3.real[2], 1);
+
+  // Symmetric 3×3
+  const { real: r3 } = await eigenSolver.eigenvalues([[2, -1, 0], [-1, 2, -1], [0, -1, 2]]);
+  const s3 = [...r3].sort((a, b) => a - b);
+  checkClose("tridiag eig[0] ≈ 0.586", s3[0], 2 - Math.sqrt(2), 1e-4);
+  checkClose("tridiag eig[1] = 2", s3[1], 2, 1e-4);
+  checkClose("tridiag eig[2] ≈ 3.414", s3[2], 2 + Math.sqrt(2), 1e-4);
 }
 
 async function testEigenDecompose() {
   console.log("\n═══ Eigen WASM — Eigenvectors ═══");
-
-  // [[2,1],[1,2]] → eigenvectors should be [1,1]/√2 and [1,-1]/√2
   const { real, vectors } = await eigenSolver.eigenDecompose([[2, 1], [1, 2]]);
   console.log(`${OK} Eigenvalues: [${real.map(v => v.toFixed(4)).join(", ")}]`);
   passed++;
@@ -312,8 +631,6 @@ async function testEigenDecompose() {
 
 async function testSVD() {
   console.log("\n═══ Eigen WASM — SVD ═══");
-
-  // SVD of [[3, 2, 2], [2, 3, -2]]
   const { U, S, V } = await eigenSolver.svd([[3, 2, 2], [2, 3, -2]]);
   console.log(`${OK} Singular values: [${S.map(v => v.toFixed(4)).join(", ")}]`);
   passed++;
@@ -321,16 +638,12 @@ async function testSVD() {
   check("V rows", V.length, 3);
 
   // Verify: A ≈ U · diag(S) · V^T
-  const k = S.length;
-  const m = U.length, n = V.length;
+  const k = S.length, m = U.length, n = V.length;
   const A_recon: number[][] = Array.from({ length: m }, () => new Array(n).fill(0));
-  for (let i = 0; i < m; i++) {
-    for (let j = 0; j < n; j++) {
-      for (let l = 0; l < k; l++) {
+  for (let i = 0; i < m; i++)
+    for (let j = 0; j < n; j++)
+      for (let l = 0; l < k; l++)
         A_recon[i][j] += U[i][l] * S[l] * V[j][l];
-      }
-    }
-  }
   const orig = [[3, 2, 2], [2, 3, -2]];
   let maxErr = 0;
   for (let i = 0; i < m; i++)
@@ -342,17 +655,14 @@ async function testSVD() {
 
 async function testDet() {
   console.log("\n═══ Eigen WASM — Determinant ═══");
-
-  const d1 = await eigenSolver.det([[1, 2], [3, 4]]);
-  checkClose("det([[1,2],[3,4]])", d1, -2);
-
-  const d2 = await eigenSolver.det([[1, 0, 0], [0, 2, 0], [0, 0, 3]]);
-  checkClose("det(diag(1,2,3))", d2, 6);
+  checkClose("det([[1,2],[3,4]])", await eigenSolver.det([[1, 2], [3, 4]]), -2);
+  checkClose("det(diag(1,2,3))", await eigenSolver.det([[1, 0, 0], [0, 2, 0], [0, 0, 3]]), 6);
+  // Singular matrix → det ≈ 0
+  checkClose("det(singular)", await eigenSolver.det([[1, 2], [2, 4]]), 0);
 }
 
 async function testInverseWASM() {
   console.log("\n═══ Eigen WASM — Inverse ═══");
-
   const inv = await eigenSolver.inverse([[1, 2], [3, 4]]);
   checkClose("inv[0][0]", inv[0][0], -2);
   checkClose("inv[0][1]", inv[0][1], 1);
@@ -362,16 +672,14 @@ async function testInverseWASM() {
 
 async function testMultiply() {
   console.log("\n═══ Eigen WASM — Multiply ═══");
-
-  const C = await eigenSolver.multiply(
-    [[1, 2], [3, 4]],
-    [[5, 6], [7, 8]]
-  );
+  const C = await eigenSolver.multiply([[1, 2], [3, 4]], [[5, 6], [7, 8]]);
   check("(A·B)[0][0]", C[0][0], 19);
   check("(A·B)[0][1]", C[0][1], 22);
   check("(A·B)[1][0]", C[1][0], 43);
   check("(A·B)[1][1]", C[1][1], 50);
 }
+
+// ─── Benchmark ───────────────────────────────────────────
 
 async function testBenchmark() {
   console.log("\n══════════════════════════════════════════════");
@@ -400,7 +708,6 @@ async function testBenchmark() {
   }
 
   const sizes = [10, 50, 100, 200, 500, 1000, 2000, 5000];
-
   console.log("\n  N       | JS Dense (ms) | WASM Sparse (ms) | Speedup");
   console.log("  --------+---------------+------------------+--------");
 
@@ -426,6 +733,8 @@ async function testBenchmark() {
   }
 }
 
+// ─── CLI commands ────────────────────────────────────────
+
 async function cmdExpr(expr: string) {
   console.log(`\n═══ Evaluate: ${expr} ═══`);
   const env = new HekatanEnvironment();
@@ -446,10 +755,7 @@ async function cmdExpr(expr: string) {
 async function cmdFile(path: string) {
   console.log(`\n═══ File: ${path} ═══`);
   const fs = await import("node:fs");
-  if (!fs.existsSync(path)) {
-    console.error(`  File not found: ${path}`);
-    process.exit(1);
-  }
+  if (!fs.existsSync(path)) { console.error(`  File not found: ${path}`); process.exit(1); }
   const code = fs.readFileSync(path, "utf-8");
   const env = new HekatanEnvironment();
   let lineNum = 0;
@@ -478,9 +784,9 @@ async function main() {
   const args = process.argv.slice(2);
   const cmd = args[0] || "all";
 
-  console.log("╔════════════════════════════════════════════════╗");
-  console.log("║   Hekatan Math CLI — Test All Solvers          ║");
-  console.log("╚════════════════════════════════════════════════╝");
+  console.log("╔══════════════════════════════════════════════════════╗");
+  console.log("║   Hekatan Math CLI — Complete Solver Test Suite      ║");
+  console.log("╚══════════════════════════════════════════════════════╝");
 
   // Init WASM
   const t0 = performance.now();
@@ -488,19 +794,45 @@ async function main() {
   console.log(`  Eigen WASM loaded in ${(performance.now() - t0).toFixed(0)} ms (229 KB)\n`);
 
   if (cmd === "all" || cmd === "test") {
-    // ── JS Evaluator Tests ──
+    // ── Basic ──
     testArithmetic();
-    testFunctions();
+    testComparisons();
+    testConditional();
+    testConstants();
+
+    // ── Functions ──
+    testTrig();
     testHyperbolic();
+    testExpLog();
+    testRounding();
+    testAngleConversion();
+    testCombinatorics();
+    testInterpolation();
+    testAggregation();
+
+    // ── Variables & Functions ──
     testVariables();
     testUserFunctions();
+
+    // ── Vectors & Matrices ──
     testVectors();
+    testVectorCreation();
     testMatrices();
+    testMatrixArithmetic();
+    testMatrixIndexing();
     testLusolve();
     testInverse();
-    testIntegrals();
 
-    // ── WASM Tests ──
+    // ── Calculus & Analysis ──
+    testDerivatives();
+    testSummation();
+    testProduct();
+    testODE();
+    testNsolve();
+    testIntegrals();
+    testCellArrays();
+
+    // ── WASM ──
     await testEigenWASM();
     await testEigenSparse();
     await testEigenvalues();

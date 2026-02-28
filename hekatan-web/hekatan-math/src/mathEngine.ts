@@ -102,6 +102,80 @@ math.import({
     }
     return hx * hy * hz * sum;
   },
+  // nderiv(f, x)       — numerical first derivative  f'(x)
+  // nderiv(f, x, 2)    — numerical second derivative f''(x)
+  nderiv: function (f: any, x: number, order?: number) {
+    if (typeof f !== "function") throw new Error("nderiv: first arg must be a function");
+    const n = order ? Math.round(order) : 1;
+    const h = 1e-6;
+    if (n === 1) return (f(x + h) - f(x - h)) / (2 * h);
+    if (n === 2) return (f(x + h) - 2 * f(x) + f(x - h)) / (h * h);
+    // Higher order via finite differences
+    const h2 = Math.pow(1e-3, 1 / n);
+    let coeffs = [1];
+    for (let o = 0; o < n; o++) {
+      const next = [coeffs[0]];
+      for (let i = 1; i < coeffs.length; i++) next.push(coeffs[i] - coeffs[i - 1]);
+      next.push(-coeffs[coeffs.length - 1]);
+      coeffs = next;
+    }
+    let result = 0;
+    for (let i = 0; i < coeffs.length; i++) {
+      result += coeffs[i] * f(x + (n / 2 - i) * h2);
+    }
+    return result / Math.pow(h2, n);
+  },
+
+  // summation(f, a, b) — Σ_{i=a}^{b} f(i)
+  summation: function (f: any, a: number, b: number) {
+    if (typeof f !== "function") throw new Error("summation: first arg must be a function");
+    let sum = 0;
+    for (let i = Math.round(a); i <= Math.round(b); i++) sum += Number(f(i));
+    return sum;
+  },
+
+  // nproduct(f, a, b) — Π_{i=a}^{b} f(i)
+  nproduct: function (f: any, a: number, b: number) {
+    if (typeof f !== "function") throw new Error("nproduct: first arg must be a function");
+    let prod = 1;
+    for (let i = Math.round(a); i <= Math.round(b); i++) prod *= Number(f(i));
+    return prod;
+  },
+
+  // odesolve(f, y0, t0, tf)        — solve y' = f(t,y) with RK4
+  // odesolve(f, y0, t0, tf, steps)
+  odesolve: function (f: any, y0: number, t0: number, tf: number, steps?: number) {
+    if (typeof f !== "function") throw new Error("odesolve: first arg must be f(t,y)");
+    const N = steps ? Math.round(steps) : 1000;
+    const h = (tf - t0) / N;
+    let y = y0, t = t0;
+    for (let i = 0; i < N; i++) {
+      const k1 = Number(f(t, y));
+      const k2 = Number(f(t + h / 2, y + h * k1 / 2));
+      const k3 = Number(f(t + h / 2, y + h * k2 / 2));
+      const k4 = Number(f(t + h, y + h * k3));
+      y += (h / 6) * (k1 + 2 * k2 + 2 * k3 + k4);
+      t += h;
+    }
+    return y;
+  },
+
+  // nsolve(f, x0) — numerical root finding: find x where f(x) = 0
+  // Uses Newton-Raphson with central difference derivative
+  nsolve: function (f: any, x0: number, tol?: number) {
+    if (typeof f !== "function") throw new Error("nsolve: first arg must be a function");
+    const eps = tol || 1e-12;
+    const h = 1e-8;
+    let x = x0;
+    for (let iter = 0; iter < 200; iter++) {
+      const fx = Number(f(x));
+      if (Math.abs(fx) < eps) return x;
+      const fp = (Number(f(x + h)) - Number(f(x - h))) / (2 * h);
+      if (Math.abs(fp) < 1e-15) break;
+      x -= fx / fp;
+    }
+    return x;
+  },
 }, { override: false });
 
 // ─── Tipos ──────────────────────────────────────────────

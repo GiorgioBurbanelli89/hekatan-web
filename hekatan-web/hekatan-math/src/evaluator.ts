@@ -101,7 +101,7 @@ function tokenize(expr: string): Token[] {
       case "|": tokens.push({ type: "pipe", value: ch }); break;
       case ":": tokens.push({ type: "colon", value: ch }); break;
       case "+": case "-": case "*": case "/": case "^": case "%":
-      case "<": case ">": case "!":
+      case "<": case ">": case "!": case "?":
         tokens.push({ type: "op", value: ch }); break;
       default:
         i++; continue; // skip unknown
@@ -139,13 +139,13 @@ class Parser {
       const saved = this.pos;
       const name = this.advance().value;
 
-      // indexed assignment: A[i] = expr
+      // indexed assignment: A[i] = expr  or  A[i:j] = expr
       if (this.peek().type === "lbracket") {
         this.advance();
-        const indices: ASTNode[] = [this.parseExpr()];
+        const indices: ASTNode[] = [this.parseIndexSlot()];
         while (this.peek().type === "semicolon" || this.peek().type === "comma") {
           this.advance();
-          indices.push(this.parseExpr());
+          indices.push(this.parseIndexSlot());
         }
         this.expect("rbracket");
         if (this.peek().type === "assign") {
@@ -166,7 +166,18 @@ class Parser {
     return this.parseExpr();
   }
 
-  private parseExpr(): ASTNode { return this.parseOr(); }
+  private parseExpr(): ASTNode {
+    const node = this.parseOr();
+    // Ternary: condition ? ifTrue : ifFalse
+    if (this.peek().value === "?") {
+      this.advance();
+      const ifTrue = this.parseExpr();
+      this.expect("colon");
+      const ifFalse = this.parseExpr();
+      return { type: "conditional", cond: node, ifTrue, ifFalse };
+    }
+    return node;
+  }
 
   private parseOr(): ASTNode {
     let left = this.parseAnd();
@@ -704,6 +715,155 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
           return x.map(v => [v]);
         }
         return NaN;
+      }
+
+      // ─── Numerical Derivative (central difference) ────────
+      // nderiv(f, x)     — f'(x)   first derivative
+      // nderiv(f, x, 2)  — f''(x)  second derivative
+      if (node.name === "nderiv" || node.name === "deriv" || node.name === "diff") {
+        if (node.args.length < 2) throw new Error("nderiv(f, x) requires 2 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("nderiv: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn || fn.params.length < 1) throw new Error(`nderiv: '${fnName}' is not a function`);
+        const x = evaluate(node.args[1], env) as number;
+        const order = node.args[2] ? Math.round(evaluate(node.args[2], env) as number) : 1;
+        const h = 1e-6;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        const evalF = (xv: number) => {
+          childEnv.setVar(fn.params[0], xv);
+          return evaluate(fn.body, childEnv) as number;
+        };
+        if (order === 1) {
+          // Central difference: f'(x) ≈ (f(x+h) - f(x-h)) / 2h
+          return (evalF(x + h) - evalF(x - h)) / (2 * h);
+        } else if (order === 2) {
+          // Second derivative: f''(x) ≈ (f(x+h) - 2f(x) + f(x-h)) / h²
+          return (evalF(x + h) - 2 * evalF(x) + evalF(x - h)) / (h * h);
+        } else {
+          // Higher order via recursive central diff
+          const h2 = Math.pow(1e-3, 1 / order);
+          let coeffs = [1];
+          for (let o = 0; o < order; o++) {
+            const next = [coeffs[0]];
+            for (let i = 1; i < coeffs.length; i++) next.push(coeffs[i] - coeffs[i - 1]);
+            next.push(-coeffs[coeffs.length - 1]);
+            coeffs = next;
+          }
+          let result = 0;
+          for (let i = 0; i < coeffs.length; i++) {
+            result += coeffs[i] * evalF(x + (order / 2 - i) * h2);
+          }
+          return result / Math.pow(h2, order);
+        }
+      }
+
+      // ─── Numerical Summation ───────────────────────────────
+      // summation(f, a, b)  — Σ_{i=a}^{b} f(i)
+      if (node.name === "summation" || node.name === "nsum") {
+        if (node.args.length < 3) throw new Error("summation(f, a, b) requires 3 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("summation: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn || fn.params.length < 1) throw new Error(`summation: '${fnName}' is not a function`);
+        const a = Math.round(evaluate(node.args[1], env) as number);
+        const b = Math.round(evaluate(node.args[2], env) as number);
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        let sum = 0;
+        for (let i = a; i <= b; i++) {
+          childEnv.setVar(fn.params[0], i);
+          sum += evaluate(fn.body, childEnv) as number;
+        }
+        return sum;
+      }
+
+      // ─── Numerical Product ─────────────────────────────────
+      // nproduct(f, a, b)  — Π_{i=a}^{b} f(i)
+      if (node.name === "nproduct" || node.name === "nprod") {
+        if (node.args.length < 3) throw new Error("nproduct(f, a, b) requires 3 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("nproduct: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn || fn.params.length < 1) throw new Error(`nproduct: '${fnName}' is not a function`);
+        const a = Math.round(evaluate(node.args[1], env) as number);
+        const b = Math.round(evaluate(node.args[2], env) as number);
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        let prod = 1;
+        for (let i = a; i <= b; i++) {
+          childEnv.setVar(fn.params[0], i);
+          prod *= evaluate(fn.body, childEnv) as number;
+        }
+        return prod;
+      }
+
+      // ─── ODE Solver (Runge-Kutta 4th order) ────────────────
+      // odesolve(f, y0, t0, tf)        — solve y' = f(t,y) from t0 to tf
+      // odesolve(f, y0, t0, tf, steps) — with N steps (default: 1000)
+      // Returns y(tf)
+      if (node.name === "odesolve" || node.name === "rk4") {
+        if (node.args.length < 4) throw new Error("odesolve(f, y0, t0, tf) requires 4 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("odesolve: first arg must be a function name f(t,y)");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn || fn.params.length < 2) throw new Error(`odesolve: '${fnName}' must be f(t,y)`);
+        let y = evaluate(node.args[1], env) as number;
+        const t0 = evaluate(node.args[2], env) as number;
+        const tf = evaluate(node.args[3], env) as number;
+        const steps = node.args[4] ? Math.round(evaluate(node.args[4], env) as number) : 1000;
+        const h = (tf - t0) / steps;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        const evalF = (t: number, yv: number) => {
+          childEnv.setVar(fn.params[0], t);
+          childEnv.setVar(fn.params[1], yv);
+          return evaluate(fn.body, childEnv) as number;
+        };
+        let t = t0;
+        for (let i = 0; i < steps; i++) {
+          const k1 = evalF(t, y);
+          const k2 = evalF(t + h / 2, y + h * k1 / 2);
+          const k3 = evalF(t + h / 2, y + h * k2 / 2);
+          const k4 = evalF(t + h, y + h * k3);
+          y += (h / 6) * (k1 + 2 * k2 + 2 * k3 + k4);
+          t += h;
+        }
+        return y;
+      }
+
+      // ─── Numerical Root Finding (Newton-Raphson) ──────────
+      // nsolve(f, x0)       — find x where f(x) = 0, starting from x0
+      // nsolve(f, x0, tol)  — with tolerance (default: 1e-12)
+      if (node.name === "nsolve") {
+        if (node.args.length < 2) throw new Error("nsolve(f, x0) requires 2 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("nsolve: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn || fn.params.length < 1) throw new Error(`nsolve: '${fnName}' is not a function`);
+        let x = evaluate(node.args[1], env) as number;
+        const tol = node.args[2] ? (evaluate(node.args[2], env) as number) : 1e-12;
+        const h = 1e-8;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        const evalF = (xv: number) => {
+          childEnv.setVar(fn.params[0], xv);
+          return evaluate(fn.body, childEnv) as number;
+        };
+        for (let iter = 0; iter < 200; iter++) {
+          const fx = evalF(x);
+          if (Math.abs(fx) < tol) return x;
+          const fp = (evalF(x + h) - evalF(x - h)) / (2 * h);
+          if (Math.abs(fp) < 1e-15) break;
+          x -= fx / fp;
+        }
+        return x;
       }
 
       // ─── Numerical Integration (Gauss-Legendre) ───────────
