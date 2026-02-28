@@ -6,6 +6,7 @@
  */
 import { HekatanEvaluator, math } from "hekatan-math/mathEngine.js";
 import type { LineResult, CellResult } from "hekatan-math/mathEngine.js";
+import { renderEquationText } from "hekatan-math/renderer.js";
 import { MathEditor } from "hekatan-math/matheditor/MathEditor.js";
 import { CadEngine } from "hekatan-math/matheditor/CadEngine.js";
 import { execCommands } from "hekatan-math/matheditor/CadCli.js";
@@ -20,6 +21,39 @@ import { Color as THREEColor } from "three";
 
 // ─── Ejemplos ───────────────────────────────────────────
 const EXAMPLES: Record<string, { name: string; code: string }> = {
+  texto: {
+    name: "Texto y Ecuaciones",
+    code: `@{config eq:$, text:"}
+# Mecanica de Materiales
+
+@{text}
+En mecanica de materiales, la letra griega sigma
+representa el esfuerzo. La relacion esfuerzo-deformacion
+esta dada por la Ley de Hooke $sigma = E*epsilon$
+donde sigma es el esfuerzo y epsilon la deformacion.
+
+Nota: sin comillas, sigma se convierte en simbolo griego.
+Con comillas, "sigma" permanece como texto literal.
+Igual para: "epsilon", "delta", "alpha", "theta".
+
+La deflexion maxima de una viga simplemente apoyada es
+$delta_max = P*L^3/(48*E*I)$ donde delta_max es la
+deflexion en el centro del claro.
+@{end text}
+@{end config}
+
+---
+
+## Calculo Numerico
+
+E = 200000
+I = 500
+L = 6000
+P = 10
+
+delta = P*L^3/(48*E*I)
+`,
+  },
   basico: {
     name: "Basico",
     code: `# Hekatan Math Editor
@@ -1016,6 +1050,7 @@ fit
 
 // ─── DOM ────────────────────────────────────────────────
 const codeInput = document.getElementById("codeInput") as HTMLTextAreaElement;
+const syntaxLayer = document.getElementById("syntaxLayer") as HTMLDivElement;
 const output = document.getElementById("output") as HTMLDivElement;
 const exampleSelect = document.getElementById("exampleSelect") as HTMLSelectElement;
 const chkAutoRun = document.getElementById("chkAutoRun") as HTMLInputElement;
@@ -1027,6 +1062,7 @@ const themeSelect = document.getElementById("themeSelect") as HTMLSelectElement;
 const canvasContainer = document.getElementById("canvasContainer") as HTMLDivElement;
 const mathCanvasEl = document.getElementById("mathCanvas") as HTMLCanvasElement;
 const editorHeader = document.getElementById("editorHeader") as HTMLDivElement;
+const foldGutter = document.getElementById("foldGutter") as HTMLDivElement;
 
 // ─── MathEditor (WYSIWYG canvas) ────────────────────────
 const editor = new MathEditor(mathCanvasEl);
@@ -1718,15 +1754,18 @@ function setMode(mode: "code" | "canvas") {
     if (mode === "code") {
       // Code mode: show textarea, hide canvas (output always visible)
       codeInput.style.display = "";
+      if (syntaxLayer) syntaxLayer.style.display = "";
       canvasContainer.style.display = "none";
       // Sync from canvas → code
       if (wasCanvas) {
-        codeInput.value = editor.toHekatan();
+        setCodeContent(editor.toHekatan());
       }
+      updateSyntax();
       runCode();
     } else {
       // MathCanvas mode: show canvas, hide textarea (output always visible)
       codeInput.style.display = "none";
+      if (syntaxLayer) syntaxLayer.style.display = "none";
       canvasContainer.style.display = "";
       // Sync code → canvas
       editor.loadFromText(codeInput.value);
@@ -1749,7 +1788,7 @@ tabCode.addEventListener("click", () => setMode("code"));
 tabCanvas.addEventListener("click", () => setMode("canvas"));
 btnRun.addEventListener("click", () => {
   if (currentMode === "canvas") {
-    codeInput.value = editor.toHekatan();
+    setCodeContent(editor.toHekatan());
   }
   runCode();
 });
@@ -1759,7 +1798,7 @@ editor.onContentChanged = (code: string) => {
   if (_isSyncingModes) return;
   try {
     _isSyncingModes = true;
-    codeInput.value = code;
+    setCodeContent(code);
     // Auto-run if enabled
     if (chkAutoRun.checked) {
       runCode();
@@ -1773,8 +1812,9 @@ editor.onContentChanged = (code: string) => {
 exampleSelect.addEventListener("change", () => {
   const ex = EXAMPLES[exampleSelect.value];
   if (!ex) return;
-  codeInput.value = ex.code;
+  setCodeContent(ex.code);
   editor.loadFromText(ex.code);
+  updateSyntax();
   runCode(); // Always update output
   if (currentMode === "canvas") {
     mathCanvasEl.focus();
@@ -1791,7 +1831,7 @@ chkAutoRun.addEventListener("change", () => {
 
 editor.onExecute = (code: string) => {
   // F5 / Ctrl+Enter: switch to code mode to see results
-  codeInput.value = code;
+  setCodeContent(code);
   setMode("code");
   runCode();
 };
@@ -1808,8 +1848,168 @@ const evaluator = new HekatanEvaluator();
 // Track active 3D scenes for cleanup
 let active3DScenes: Draw3DScene[] = [];
 
+// ─── Code Folding (AvalonEdit-style +/- collapse) ─────────
+let fullSourceLines: string[] = [];
+let foldRanges: Map<number, number> = new Map(); // srcStart → srcEnd
+let viewToSourceMap: number[] = [];
+let prevViewLineCount = 0;
+
+/** Find matching `end` for a foldable block at startIdx.
+ *  Supports: for/if/while...end  AND  @{tag}...@{end tag} */
+function findFoldEnd(lines: string[], startIdx: number): number {
+  const startTrim = lines[startIdx].trim();
+  // @{tag} blocks → find matching @{end tag}
+  const atMatch = startTrim.match(/^@\{(\w+)/);
+  if (atMatch && !/^@\{end\b/.test(startTrim)) {
+    const tag = atMatch[1].toLowerCase();
+    for (let i = startIdx + 1; i < lines.length; i++) {
+      const t = lines[i].trim().toLowerCase();
+      if (t.startsWith(`@{end ${tag}`) || t === `@{end ${tag}}`) return i;
+    }
+    return -1;
+  }
+  // for/if/while blocks → find matching end
+  let depth = 0;
+  for (let i = startIdx; i < lines.length; i++) {
+    const t = lines[i].trim().toLowerCase();
+    if (/^(for|if|while)\b/.test(t)) depth++;
+    if (/^end\b/.test(t)) { depth--; if (depth === 0) return i; }
+  }
+  return -1;
+}
+
+/** Build the visible textarea view from fullSourceLines + folds */
+function buildFoldView(): { viewLines: string[], mapping: number[] } {
+  const viewLines: string[] = [];
+  const mapping: number[] = [];
+  let i = 0;
+  while (i < fullSourceLines.length) {
+    if (foldRanges.has(i)) {
+      viewLines.push(fullSourceLines[i] + "  \u22EF"); // ⋯
+      mapping.push(i);
+      i = foldRanges.get(i)! + 1;
+    } else {
+      viewLines.push(fullSourceLines[i]);
+      mapping.push(i);
+      i++;
+    }
+  }
+  return { viewLines, mapping };
+}
+
+/** Refresh textarea content to reflect current fold state */
+function refreshFoldView() {
+  const sel = codeInput.selectionStart;
+  const { viewLines, mapping } = buildFoldView();
+  viewToSourceMap = mapping;
+  codeInput.value = viewLines.join("\n");
+  codeInput.selectionStart = codeInput.selectionEnd = Math.min(sel, codeInput.value.length);
+  prevViewLineCount = viewLines.length;
+  updateSyntax();
+  updateFoldGutter();
+}
+
+/** Toggle fold/unfold on a view line */
+function toggleFold(viewLineIdx: number) {
+  const srcLine = viewToSourceMap[viewLineIdx];
+  if (srcLine === undefined) return;
+  if (foldRanges.has(srcLine)) {
+    foldRanges.delete(srcLine);
+  } else {
+    const endLine = findFoldEnd(fullSourceLines, srcLine);
+    if (endLine > srcLine) foldRanges.set(srcLine, endLine);
+  }
+  refreshFoldView();
+  if (chkAutoRun.checked) {
+    if (autoRunTimer) clearTimeout(autoRunTimer);
+    autoRunTimer = window.setTimeout(runCode, 400);
+  }
+}
+
+/** Render fold markers in the gutter */
+function updateFoldGutter() {
+  if (!foldGutter) return;
+  const lines = codeInput.value.split("\n");
+  const markers: string[] = [];
+  for (let v = 0; v < lines.length; v++) {
+    const srcIdx = viewToSourceMap[v] ?? v;
+    const trimmed = (fullSourceLines[srcIdx] ?? lines[v] ?? "").trim().toLowerCase();
+    const isFoldable = /^(for|if|while)\b/.test(trimmed) ||
+      (/^@\{\w+/.test(trimmed) && !/^@\{end\b/.test(trimmed) && !/^@\{config\b/.test(trimmed));
+    if (isFoldable) {
+      const folded = foldRanges.has(srcIdx);
+      markers.push(`<span class="fold-marker fold-active" data-v="${v}">${folded ? "+" : "\u2212"}</span>`);
+    } else {
+      markers.push(`<span class="fold-marker fold-empty">\u00A0</span>`);
+    }
+  }
+  foldGutter.innerHTML = `<div class="fold-inner">${markers.join("")}</div>`;
+  syncFoldGutterScroll();
+}
+
+/** Sync fold gutter scroll position with textarea */
+function syncFoldGutterScroll() {
+  if (!foldGutter) return;
+  const inner = foldGutter.querySelector(".fold-inner") as HTMLElement;
+  if (inner) inner.style.marginTop = `-${codeInput.scrollTop}px`;
+}
+
+/** Set code content and reset all folds */
+function setCodeContent(code: string) {
+  codeInput.value = code;
+  fullSourceLines = code.split("\n");
+  foldRanges.clear();
+  viewToSourceMap = fullSourceLines.map((_, i) => i);
+  prevViewLineCount = fullSourceLines.length;
+  updateFoldGutter();
+}
+
+/** Sync textarea edits back to fullSourceLines */
+function syncFromTextarea() {
+  const newLines = codeInput.value.split("\n");
+  if (foldRanges.size === 0) {
+    fullSourceLines = newLines;
+    viewToSourceMap = newLines.map((_, i) => i);
+    prevViewLineCount = newLines.length;
+    return;
+  }
+  if (newLines.length !== prevViewLineCount) {
+    // Line count changed while folds active → unfold all
+    fullSourceLines = newLines.map(l => l.endsWith("  \u22EF") ? l.slice(0, -3) : l);
+    foldRanges.clear();
+    viewToSourceMap = fullSourceLines.map((_, i) => i);
+    prevViewLineCount = newLines.length;
+  } else {
+    // Same line count → sync changed lines through mapping
+    for (let v = 0; v < newLines.length; v++) {
+      const s = viewToSourceMap[v];
+      if (s !== undefined) {
+        let line = newLines[v];
+        // Strip fold marker if editing a folded line
+        if (foldRanges.has(s) && line.endsWith("  \u22EF")) line = line.slice(0, -3);
+        fullSourceLines[s] = line;
+      }
+    }
+  }
+  updateFoldGutter();
+}
+
+/** Get the full unfolded source for evaluation */
+function getFullSource(): string {
+  if (foldRanges.size === 0 || fullSourceLines.length === 0) return codeInput.value;
+  return fullSourceLines.join("\n");
+}
+
+// Fold gutter click handler
+foldGutter?.addEventListener("click", (e) => {
+  const el = (e.target as HTMLElement).closest(".fold-marker:not(.fold-empty)") as HTMLElement;
+  if (!el) return;
+  const v = parseInt(el.dataset.v || "0", 10);
+  toggleFold(v);
+});
+
 function runCode() {
-  const code = codeInput.value;
+  const code = getFullSource();
   if (!code.trim()) { output.innerHTML = `<div class="output-pages-wrapper"><div class="output-page"></div></div>`; return; }
 
   // Cleanup previous 3D scenes
@@ -2168,9 +2368,8 @@ function syncZoom() {
   if (wrapper) {
     const a4Wpx = 210 * 96 / 25.4;            // 794px = A4 width
     const vRulerW = 18, sbW = 10, sbMargin = 2; // same as MathEditor constants
-    // Use canvas width if visible, else use codeInput/editorPanel width
-    let panelW = mathCanvasEl.clientWidth;
-    if (!panelW) panelW = codeInput.clientWidth || output.clientWidth;
+    // Use output panel width for scale calculation
+    const panelW = output.clientWidth || mathCanvasEl.clientWidth || codeInput.clientWidth;
     const availW = panelW - sbW - sbMargin - vRulerW;
     const scale = Math.min((availW - 20) / a4Wpx, 1);
     wrapper.style.zoom = `${scale * zoom}`;
@@ -2242,15 +2441,138 @@ codeInput.addEventListener("keydown", (e) => {
     const end = codeInput.selectionEnd;
     codeInput.value = codeInput.value.substring(0, s) + "  " + codeInput.value.substring(end);
     codeInput.selectionStart = codeInput.selectionEnd = s + 2;
+    syncFromTextarea();
+    updateSyntax();
   }
 });
 
 // AutoRun on input (Calculate mode)
 let autoRunTimer: number | null = null;
 codeInput.addEventListener("input", () => {
+  syncFromTextarea();
+  updateSyntax();
+  updateFoldGutter();
   if (!chkAutoRun.checked) return;
   if (autoRunTimer) clearTimeout(autoRunTimer);
   autoRunTimer = window.setTimeout(runCode, 400);
+});
+
+// ─── Syntax Highlighting ────────────────────────────────
+const SYN_FUNCTIONS = /\b(sin|cos|tan|asin|acos|atan|atan2|sqrt|cbrt|ln|log|exp|abs|round|floor|ceiling|min|max|mod|gcd|lcm|sum|product|integral|transpose|lsolve|det|inv|identity|matrix)\b/g;
+const SYN_NUMBERS = /\b(\d+\.?\d*([eE][+-]?\d+)?)\b/g;
+
+function synEsc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function synHl(text: string, cls: string): string {
+  return `<span class="${cls}">${synEsc(text)}</span>`;
+}
+function synLine(line: string): string {
+  return synEsc(line)
+    .replace(SYN_NUMBERS, '<span class="syn-number">$1</span>')
+    .replace(/\b(sin|cos|tan|asin|acos|atan|atan2|sqrt|cbrt|ln|log|exp|abs|round|floor|ceiling|min|max|mod|gcd|lcm|sum|product|integral|transpose|lsolve|det|inv|identity|matrix)\b/g,
+      '<span class="syn-function">$1</span>');
+}
+/** Split line at // and dim the comment part */
+function synWithInlineComment(line: string, mainFn: (s: string) => string): string {
+  const idx = line.indexOf("//");
+  if (idx < 0) return mainFn(line);
+  const codePart = line.slice(0, idx);
+  const commentPart = line.slice(idx);
+  return mainFn(codePart) + `<span class="syn-dim">${synEsc(commentPart)}</span>`;
+}
+function updateSyntax() {
+  if (!syntaxLayer) return;
+  const text = codeInput.value;
+  const lines = text.split("\n");
+  let inBlock = false;
+  const parts: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trimStart();
+    if (/^@\{(?!end)/.test(trimmed)) inBlock = true;
+    if (/^@\{end\s/.test(trimmed)) { parts.push(synHl(line, "syn-block")); inBlock = false; continue; }
+    if (/^@\{/.test(trimmed)) { parts.push(synHl(line, "syn-block")); continue; }
+    if (inBlock) { parts.push(synEsc(line)); continue; }
+    if (/^#{1,6}\s/.test(trimmed)) {
+      parts.push(synWithInlineComment(line, s => synHl(s, "syn-heading"))); continue;
+    }
+    if (trimmed.startsWith("//")) { parts.push(synHl(line, "syn-dim")); continue; }
+    if (trimmed.startsWith(">")) {
+      parts.push(synWithInlineComment(line, s => synHl(s, "syn-comment"))); continue;
+    }
+    if (trimmed.startsWith("'")) {
+      parts.push(synWithInlineComment(line, s => synHl(s, "syn-comment"))); continue;
+    }
+    if (/^(for|next|end(\s+(for|if|while))?|end|if|else(\s+if)?|repeat|loop|break|continue|while|do)\b/i.test(trimmed)) {
+      parts.push(synWithInlineComment(line, s => synHl(s, "syn-keyword"))); continue;
+    }
+    parts.push(synWithInlineComment(line, synLine));
+  }
+  syntaxLayer.innerHTML = parts.join("\n");
+  syntaxLayer.scrollTop = codeInput.scrollTop;
+  syntaxLayer.scrollLeft = codeInput.scrollLeft;
+}
+codeInput.addEventListener("scroll", () => {
+  if (syntaxLayer) {
+    syntaxLayer.scrollTop = codeInput.scrollTop;
+    syntaxLayer.scrollLeft = codeInput.scrollLeft;
+  }
+  syncFoldGutterScroll();
+});
+
+// ─── Menu & Toolbar Actions ─────────────────────────────
+function insertAtCursor(text: string) {
+  const s = codeInput.selectionStart;
+  const e = codeInput.selectionEnd;
+  const val = codeInput.value;
+  const insert = text.replace(/\\n/g, "\n");
+  codeInput.value = val.substring(0, s) + insert + val.substring(e);
+  codeInput.selectionStart = codeInput.selectionEnd = s + insert.length;
+  codeInput.focus();
+  syncFromTextarea();
+  updateSyntax();
+  if (chkAutoRun.checked) {
+    if (autoRunTimer) clearTimeout(autoRunTimer);
+    autoRunTimer = window.setTimeout(runCode, 400);
+  }
+}
+
+// Menu dropdown buttons
+document.querySelectorAll<HTMLButtonElement>(".menu-dropdown button[data-action]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const action = btn.dataset.action;
+    switch (action) {
+      case "new": setCodeContent(""); updateSyntax(); runCode(); break;
+      case "save": {
+        const blob = new Blob([getFullSource()], { type: "text/plain" });
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+        a.download = "document.hcalc"; a.click(); break;
+      }
+      case "open": {
+        const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".hcalc,.txt";
+        inp.onchange = () => { if (inp.files?.[0]) inp.files[0].text().then(t => { setCodeContent(t); updateSyntax(); runCode(); }); };
+        inp.click(); break;
+      }
+      case "export-html": {
+        const blob = new Blob([output.innerHTML], { type: "text/html" });
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+        a.download = "output.html"; a.click(); break;
+      }
+      case "print": window.print(); break;
+      case "undo": document.execCommand("undo"); updateSyntax(); break;
+      case "redo": document.execCommand("redo"); updateSyntax(); break;
+      case "find": /* TODO */ break;
+      case "selectall": codeInput.select(); break;
+    }
+  });
+});
+
+// Insert buttons (menu submenus + toolbar fmt-btn)
+document.querySelectorAll<HTMLButtonElement>("[data-insert]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const text = btn.dataset.insert || "";
+    insertAtCursor(text);
+  });
 });
 
 // ─── HTML escaping ──────────────────────────────────────
@@ -2267,10 +2589,29 @@ function renderResults(results: LineResult[], sourceCode: string): string {
   let inColumns = false;
   let columnCount = 0;
   let columnItems: string[] = [];
+  let currentAlign: "left" | "center" | "right" = "left"; // default alignment
   const sourceLines = sourceCode.split("\n");
+  _renderSourceLines = sourceLines; // Store for integral notation lookup
+  // Reset render-time config (will be re-applied from directives)
+  evaluator.eqDelimiter = "";
+  evaluator.textDelimiter = "";
 
   for (const r of results) {
-    const srcLine = sourceLines[r.lineIndex]?.trim() ?? "";
+    let srcLine = sourceLines[r.lineIndex]?.trim() ?? "";
+    // Strip inline // comments from source line for rendering
+    const cmtIdx = srcLine.indexOf("//");
+    if (cmtIdx >= 0) srcLine = srcLine.slice(0, cmtIdx).trim();
+
+    // Detect alignment from @{text:...} and @{eq:...} directives
+    if (r.type === "directive" && r.display && /^(text|eq):/.test(r.display)) {
+      const align = r.display.split(":")[1];
+      if (align === "end") {
+        currentAlign = "left";
+      } else {
+        currentAlign = align as "left" | "center" | "right";
+      }
+      continue;
+    }
 
     // Detect @{columns N} start
     const colMatch = srcLine.match(/^@\{columns\s+(\d+)\}/i);
@@ -2282,7 +2623,7 @@ function renderResults(results: LineResult[], sourceCode: string): string {
     }
 
     // Empty line or heading/comment exits columns mode
-    if (inColumns && (r.type === "empty" || r.type === "heading" || r.type === "comment")) {
+    if (inColumns && (r.type === "empty" || r.type === "heading" || r.type === "comment" || r.type === "hrule")) {
       if (columnItems.length > 0) {
         html.push(renderColumnsGrid(columnItems, columnCount));
         columnItems = [];
@@ -2322,25 +2663,45 @@ function renderResults(results: LineResult[], sourceCode: string): string {
             if (secMatch) {
               html.push(`<h${level} class="section-heading"><span class="section-num">${escHtml(secMatch[1])}</span><span class="section-title">${escHtml(secMatch[2])}</span></h${level}>`);
             } else {
-              html.push(`<h${level}>${escHtml(headText)}</h${level}>`);
+              html.push(`<h${level} class="align-${currentAlign}">${escHtml(headText)}</h${level}>`);
             }
           } else {
-            html.push(`<h${level}>${escHtml(headText)}</h${level}>`);
+            html.push(`<h${level} class="align-${currentAlign}">${escHtml(headText)}</h${level}>`);
           }
         }
         break;
       }
       case "comment":
-        html.push(`<p class="out-comment">${renderCommentMath(r.display!)}</p>`);
+        html.push(`<p class="out-comment align-${currentAlign}">${renderCommentMath(r.display!)}</p>`);
         break;
       case "empty":
         html.push(`<div class="out-empty"></div>`);
         break;
+      case "hrule":
+        html.push(`<hr class="out-hrule">`);
+        break;
+      case "eqline": {
+        // Equation line inside @{text} > @{eq} block
+        const eqLine = r.display!;
+        const numMatch = eqLine.match(/\((\d+(?:\.\d+)?[a-z]?)\)\s*$/);
+        let eqText = eqLine;
+        let eqNum = "";
+        if (numMatch) {
+          eqText = eqLine.slice(0, numMatch.index).trim();
+          eqNum = numMatch[1];
+        }
+        let eqHtml = `<p class="eq align-${currentAlign}" style="line-height:2.2;margin:4px 0;">`;
+        eqHtml += renderEquationText(eqText);
+        if (eqNum) eqHtml += `<span style="float:right;font-style:normal;margin-left:24px">(${eqNum})</span>`;
+        eqHtml += `</p>`;
+        html.push(eqHtml);
+        break;
+      }
       case "assignment":
-        html.push(`<p class="eq out-line">${renderLineEq(r, srcLine)}</p>`);
+        html.push(`<p class="eq out-line align-${currentAlign}">${renderLineEq(r, srcLine)}</p>`);
         break;
       case "expression":
-        html.push(`<p class="eq out-line">${renderExprResult(r)}</p>`);
+        html.push(`<p class="eq out-line align-${currentAlign}">${renderExprResult(r)}</p>`);
         break;
       case "cells":
         html.push(renderCells(r));
@@ -2414,6 +2775,18 @@ function renderResults(results: LineResult[], sourceCode: string): string {
         // Detect @{pagebreak} → insert page break marker
         if (/^@\{pagebreak/i.test(srcLine)) {
           html.push(`<!--PAGEBREAK-->`);
+        }
+        // Apply/reset config delimiters for rendering
+        const disp = r.display || "";
+        if (disp === "config:end") {
+          evaluator.eqDelimiter = "";
+          evaluator.textDelimiter = "";
+        } else if (disp.startsWith("config:")) {
+          const cfgBody = disp.slice(7); // after "config:"
+          const eqM = cfgBody.match(/eq=(.)/);
+          if (eqM) evaluator.eqDelimiter = eqM[1];
+          const txM = cfgBody.match(/text=(.)/);
+          if (txM) evaluator.textDelimiter = txM[1];
         }
         break;
       }
@@ -2692,6 +3065,66 @@ function renderColumnsGrid(items: string[], cols: number): string {
 // ═══════════════════════════════════════════════════════════
 
 /** Renderiza una linea de asignacion: var = expr = valor */
+// Source lines stored during renderResults for integral notation lookup
+let _renderSourceLines: string[] = [];
+
+/** Build ∫ HTML for integral/integral2/integral3 calls */
+function buildIntegralHTML(intName: string, fnName: string, exprText: string): string | null {
+  // Find function definition in source: f(x) = expr or f(x,y) = expr
+  const fnDefRe = new RegExp(`^${fnName}\\(([^)]+)\\)\\s*=\\s*(.+)$`);
+  let params: string[] = [];
+  let bodyText = "";
+  for (const line of _renderSourceLines) {
+    const stripped = line.trim().replace(/\/\/.*$/, "").trim();
+    const m = stripped.match(fnDefRe);
+    if (m) {
+      params = m[1].split(",").map(s => s.trim());
+      bodyText = m[2].trim();
+      break;
+    }
+  }
+  if (!bodyText) return null;
+
+  // Parse bounds from exprText: integral(f, a, b) or integral2(f, xa, xb, ya, yb) etc.
+  // Remove "integralN(fnName," prefix and trailing ")"
+  const argsStr = exprText.replace(/^integral[23]?\s*\(\s*\w+\s*,\s*/, "").replace(/\)\s*$/, "");
+  const bounds = splitArgs(argsStr);
+
+  const bodyHtml = renderMathExpr(bodyText);
+
+  // Helper: build one ∫ symbol with limits
+  const intSym = (lo: string, hi: string) =>
+    `<span class="dvr"><small>${renderMathExpr(hi)}</small><span class="nary"><em>∫</em></span><small>${renderMathExpr(lo)}</small></span>`;
+
+  if (intName === "integral" && bounds.length >= 2) {
+    const dv = params[0] || "x";
+    return `${intSym(bounds[0], bounds[1])} (${bodyHtml}) <i>d${dv}</i>`;
+  }
+  if (intName === "integral2" && bounds.length >= 4) {
+    const dx = params[0] || "x", dy = params[1] || "y";
+    return `${intSym(bounds[0], bounds[1])} ${intSym(bounds[2], bounds[3])} (${bodyHtml}) <i>d${dy}</i> <i>d${dx}</i>`;
+  }
+  if (intName === "integral3" && bounds.length >= 6) {
+    const dx = params[0] || "x", dy = params[1] || "y", dz = params[2] || "z";
+    return `${intSym(bounds[0], bounds[1])} ${intSym(bounds[2], bounds[3])} ${intSym(bounds[4], bounds[5])} (${bodyHtml}) <i>d${dz}</i> <i>d${dy}</i> <i>d${dx}</i>`;
+  }
+  return null;
+}
+
+/** Split function arguments respecting parentheses */
+function splitArgs(s: string): string[] {
+  const args: string[] = [];
+  let depth = 0, start = 0;
+  for (let i = 0; i <= s.length; i++) {
+    if (i === s.length || (s[i] === "," && depth === 0)) {
+      args.push(s.slice(start, i).trim());
+      start = i + 1;
+    } else if (s[i] === "(") depth++;
+    else if (s[i] === ")") depth--;
+  }
+  return args;
+}
+
 function renderLineEq(r: LineResult, srcLine: string): string {
   const varName = r.varName ?? "";
   const value = r.value;
@@ -2702,6 +3135,34 @@ function renderLineEq(r: LineResult, srcLine: string): string {
 
   // Nombre de variable con <var> y subindices
   const nameHTML = renderVarName(varName);
+
+  // ─── hideExpr: ocultar expresion/funcion, mostrar solo var = resultado ───
+  if (r.hideExpr && value !== undefined && typeof value !== "function") {
+    if (evaluator.isMatrix(value)) {
+      return `${nameHTML} = ${renderMatrixHTML(value)}`;
+    }
+    if (evaluator.isCellArray(value)) {
+      return `${nameHTML} = ${renderCellArrayHTML(value, varName)}`;
+    }
+    return `${nameHTML} = ${renderValueSpan(value)}`;
+  }
+
+  // ─── Render lusolve equation: {F} = [K]{u} ───
+  if (r.lsolveData) {
+    return renderLsolveEquation(r.lsolveData, varName);
+  }
+
+  // ─── Render integral() calls with ∫ notation ───
+  if (typeof value === "number" && exprText) {
+    const intMatch = exprText.match(/^(integral[23]?)\s*\(\s*(\w+)\s*,/);
+    if (intMatch) {
+      const intHtml = buildIntegralHTML(intMatch[1], intMatch[2], exprText);
+      if (intHtml) {
+        const valueHTML = renderValueSpan(value);
+        return `${nameHTML} = ${intHtml} = ${valueHTML}`;
+      }
+    }
+  }
 
   // Si es una funcion definida, solo mostrar la definicion
   if (typeof value === "function" || value === undefined) {
@@ -2744,9 +3205,11 @@ function renderLineEq(r: LineResult, srcLine: string): string {
   }
 
   // Procedimiento: nombre = expr simbolica = expr con valores = resultado
-  const substituted = substituteValues(exprText, scope);
-  if (substituted && substituted !== fmtNum(value)) {
-    return `${nameHTML} = ${renderMathExpr(exprText)} = ${renderMathExpr(substituted)} = ${valueHTML}`;
+  if (chkSubstitute?.checked !== false) {
+    const substituted = substituteValues(exprText, scope);
+    if (substituted && substituted !== fmtNum(value)) {
+      return `${nameHTML} = ${renderMathExpr(exprText)} = ${renderMathExpr(substituted)} = ${valueHTML}`;
+    }
   }
   return `${nameHTML} = ${renderMathExpr(exprText)} = ${valueHTML}`;
 }
@@ -2770,9 +3233,11 @@ function renderCells(r: LineResult): string {
         return `<span class="eq">${nameHTML} = ${valueHTML}</span>`;
       }
       // Procedimiento: nombre = simbolico = con valores = resultado
-      const substituted = substituteValues(c.expr, scope);
-      if (substituted && substituted !== fmtNum(c.value)) {
-        return `<span class="eq">${nameHTML} = ${exprHTML} = ${renderMathExpr(substituted)} = ${valueHTML}</span>`;
+      if (chkSubstitute?.checked !== false) {
+        const substituted = substituteValues(c.expr, scope);
+        if (substituted && substituted !== fmtNum(c.value)) {
+          return `<span class="eq">${nameHTML} = ${exprHTML} = ${renderMathExpr(substituted)} = ${valueHTML}</span>`;
+        }
       }
       return `<span class="eq">${nameHTML} = ${exprHTML} = ${valueHTML}</span>`;
     }
@@ -2935,13 +3400,33 @@ function renderMathExpr(expr: string): string {
     return `[<var>${greekify(name)}</var>]<sub>${greekify(idx)}</sub>`;
   });
 
+  // 0b. Array indexing: v[n] → v_[n] with faded brackets (distinct from v_n plain subscript)
+  //     K[i,j] → K_[i,j]   Ke[1,1] → Ke_[1,1]
+  result = result.replace(/\b([a-zA-Z_]\w*)\[([^\]]+)\]/g, (_, name: string, idx: string) => {
+    const idxParts = idx.split(',').map((p: string) => `<i>${greekify(p.trim())}</i>`).join(',');
+    return `<var>${greekify(name)}</var><sub><span class="idx-br">[</span>${idxParts}<span class="idx-br">]</span></sub>`;
+  });
+
   // 1. sqrt(expr) -> radical con clase .r0 + .o0 (SVG)
   result = result.replace(/sqrt\(([^)]+)\)/g, (_, inner) => {
     return `<span class="radical-wrap"><span class="r0"></span><span class="o0">${renderMathExpr(inner)}</span></span>`;
   });
 
-  // 2. (a+b)/(c-d) -> fraccion con .dvc / .dvl
+  // 2. Fracciones -> .dvc / .dvl
+  // 2a. (expr)/(expr) -> fraccion con ambos en parentesis
   result = result.replace(/\(([^)]+)\)\s*\/\s*\(([^)]+)\)/g, (_, num, den) => {
+    return `<span class="dvc"><span class="dvl">${renderMathExpr(num)}</span><span>${renderMathExpr(den)}</span></span>`;
+  });
+  // 2b. expr/(expr) -> fraccion cuando solo denominador en parentesis (e.g. P*L^3/(48*E*I))
+  result = result.replace(/^(.+)\/\(([^)]+)\)$/, (_, num, den) => {
+    return `<span class="dvc"><span class="dvl">${renderMathExpr(num)}</span><span>${renderMathExpr(den)}</span></span>`;
+  });
+  // 2c. (expr)/token -> fraccion con numerador en parentesis, denominador simple (e.g. (11600*5.08)/100)
+  result = result.replace(/\(([^)]+)\)\s*\/\s*([a-zA-Z_]\w*|\d+(?:\.\d+)?)/g, (_, num, den) => {
+    return `<span class="dvc"><span class="dvl">${renderMathExpr(num)}</span><span>${renderMathExpr(den)}</span></span>`;
+  });
+  // 2d. expr/token -> fraccion general (e.g. G_s*J_t/L, 4*E*I/L)
+  result = result.replace(/^(.+)\/([a-zA-Z_]\w*|\d+(?:\.\d+)?)$/, (_, num, den) => {
     return `<span class="dvc"><span class="dvl">${renderMathExpr(num)}</span><span>${renderMathExpr(den)}</span></span>`;
   });
 
@@ -2984,6 +3469,56 @@ function renderMathExpr(expr: string): string {
 
 /** Renderiza texto de comentario con formato math (subscripts, superscripts, griego) */
 function renderCommentMath(text: string): string {
+  // --- Text delimiter: "..." becomes literal (no Greek, no subscripts, etc.) ---
+  const tDelim = evaluator.textDelimiter;
+  if (tDelim && text.includes(tDelim)) {
+    const tEsc = tDelim.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const tRe = new RegExp(`(${tEsc}[^${tEsc}]*${tEsc})`, "g");
+    const tParts = text.split(tRe);
+    return tParts.map(part => {
+      if (part.startsWith(tDelim) && part.endsWith(tDelim) && part.length >= 2) {
+        // Literal text — just escape HTML, no processing
+        const inner = part.slice(tDelim.length, -tDelim.length);
+        return escHtml(inner);
+      }
+      return renderCommentMathInner(part);
+    }).join("");
+  }
+  return renderCommentMathInner(text);
+}
+
+/** Procesa inline @{eq} y $...$ despues de extraer texto literal */
+function renderCommentMathInner(text: string): string {
+  // Inline @{eq}...@{end eq} mixed with text on the same line
+  if (text.includes("@{eq}") && text.includes("@{end")) {
+    const parts = text.split(/(@\{eq\}.*?@\{end\s+eq\})/gi);
+    return parts.map(part => {
+      const m = part.match(/^@\{eq\}(.*?)@\{end\s+eq\}$/i);
+      if (m) {
+        return `<span class="inline-eq">${renderEquationText(m[1].trim())}</span>`;
+      }
+      return renderCommentMathPlain(part);
+    }).join("");
+  }
+  // $...$ inline equations (when eq delimiter is configured)
+  const delim = evaluator.eqDelimiter;
+  if (delim && text.includes(delim)) {
+    const escaped = delim.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(${escaped}[^${escaped}]+${escaped})`, "g");
+    const parts = text.split(re);
+    return parts.map(part => {
+      if (part.startsWith(delim) && part.endsWith(delim) && part.length > 2) {
+        const eq = part.slice(delim.length, -delim.length).trim();
+        return `<span class="inline-eq">${renderEquationText(eq)}</span>`;
+      }
+      return renderCommentMathPlain(part);
+    }).join("");
+  }
+  return renderCommentMathPlain(text);
+}
+
+/** Procesamiento basico de texto comentario (sin inline @{eq}) */
+function renderCommentMathPlain(text: string): string {
   let result = escHtml(text);
 
   // Cell/matrix bracket notation in comments:
@@ -3078,12 +3613,53 @@ function renderMatrixHTML(m: any): string {
   return html;
 }
 
+/** Renderiza un vector como columna (siempre vertical) */
+function renderColumnVector(v: any): string {
+  if (!v || !v.toArray) return renderValueSpan(v);
+  const arr = v.toArray() as any[];
+  // Si es 2D (Nx1 o NxM), usar renderMatrixHTML directamente
+  if (Array.isArray(arr[0])) return renderMatrixHTML(v);
+  // 1D: forzar columna vertical
+  const n = arr.length;
+  let html = `<span class="matrix" style="--mat-cols:1">`;
+  for (const val of arr) {
+    html += `<span class="tr"><span class="td"></span><span class="td">${fmtNum(val)}</span><span class="td"></span></span>`;
+  }
+  html += `</span>`;
+  return html;
+}
+
+/** Renderiza ecuacion matricial {F} = [K]{u} para lusolve */
+function renderLsolveEquation(data: { K: any; F: any; Z: any }, varName: string): string {
+  const kArr = data.K.toArray ? data.K.toArray() : data.K;
+  const n = Array.isArray(kArr) ? kArr.length : 0;
+  const nameHTML = renderVarName(varName);
+  // Limite de tamano: solo mostrar ecuacion completa para sistemas pequenos
+  if (n > 12 || n === 0) {
+    return `${nameHTML} = ${renderColumnVector(data.Z)}`;
+  }
+  // Vector simbolico de incognitas: {u₁, u₂, u₃, ...}
+  let symHTML = `<span class="lsolve-sym-vec">`;
+  for (let i = 0; i < n; i++) {
+    symHTML += `<span class="tr"><span class="td"></span><span class="td">${renderVarName(varName)}<sub>${i + 1}</sub></span><span class="td"></span></span>`;
+  }
+  symHTML += `</span>`;
+  const fHTML = renderColumnVector(data.F);
+  const kHTML = renderMatrixHTML(data.K);
+  const zHTML = renderColumnVector(data.Z);
+  // Ecuacion: {F} = [K] · {var} → var = [Z]
+  return `<span class="lsolve-eq-wrap">${fHTML}<span class="lsolve-sign">=</span>${kHTML}<span class="lsolve-sign">&middot;</span>${symHTML}</span><br>${nameHTML} = ${zHTML}`;
+}
+
 /** Formatea un numero */
 function fmtNum(v: any): string {
   if (typeof v === "number") {
+    const dec = parseInt(decimalsInput?.value ?? "2", 10);
+    const zeroSmall = chkZeroSmall?.checked ?? true;
+    if (zeroSmall && Math.abs(v) < 1e-12) return "0";
     if (Number.isInteger(v)) return String(v);
-    if (Math.abs(v) < 0.001 || Math.abs(v) > 1e6) return v.toPrecision(6);
-    return (Math.round(v * 10000) / 10000).toString();
+    if (Math.abs(v) < 0.001 || Math.abs(v) > 1e6) return v.toPrecision(Math.max(dec, 2));
+    return v.toFixed(dec);
   }
   return escHtml(String(v));
 }
@@ -3713,7 +4289,7 @@ splitter.addEventListener("mousedown", (e) => {
         case "new":
         case "blank": {
           editor.loadFromText("");
-          codeInput.value = "";
+          setCodeContent("");
           exampleSelect.value = "";
           if (currentMode === "canvas") {
             mathCanvasEl.focus();
@@ -3746,7 +4322,7 @@ splitter.addEventListener("mousedown", (e) => {
             if (match) {
               const mex = EXAMPLES[match];
               exampleSelect.value = match;
-              codeInput.value = mex.code;
+              setCodeContent(mex.code);
               editor.loadFromText(mex.code);
               runCode();
               if (currentMode === "canvas") mathCanvasEl.focus();
@@ -3757,7 +4333,7 @@ splitter.addEventListener("mousedown", (e) => {
             break;
           }
           exampleSelect.value = name;
-          codeInput.value = ex.code;
+          setCodeContent(ex.code);
           editor.loadFromText(ex.code);
           runCode();
           if (currentMode === "canvas") mathCanvasEl.focus();
@@ -3815,7 +4391,7 @@ splitter.addEventListener("mousedown", (e) => {
 
         case "run": {
           if (currentMode === "canvas") {
-            codeInput.value = editor.toHekatan();
+            setCodeContent(editor.toHekatan());
           }
           runCode();
           dbgPrint("ok", "Codigo ejecutado");
@@ -3864,16 +4440,118 @@ splitter.addEventListener("mousedown", (e) => {
   (window as any).__editor = editor;
 }
 
+// ═══════════════════════════════════════════════════════════
+// KEYPAD BAR — Greek, Operators, Functions, Blocks
+// ═══════════════════════════════════════════════════════════
+const keypadContent = document.getElementById("keypadContent") as HTMLDivElement;
+
+const KEYPAD_DATA: Record<string, { label: string; insert: string }[]> = {
+  greek: [
+    { label: "\u03B1", insert: "alpha" }, { label: "\u03B2", insert: "beta" },
+    { label: "\u03B3", insert: "gamma" }, { label: "\u03B4", insert: "delta" },
+    { label: "\u03B5", insert: "epsilon" }, { label: "\u03B6", insert: "zeta" },
+    { label: "\u03B7", insert: "eta" }, { label: "\u03B8", insert: "theta" },
+    { label: "\u03BB", insert: "lambda" }, { label: "\u03BC", insert: "mu" },
+    { label: "\u03BD", insert: "nu" }, { label: "\u03BE", insert: "xi" },
+    { label: "\u03C0", insert: "pi" }, { label: "\u03C1", insert: "rho" },
+    { label: "\u03C3", insert: "sigma" }, { label: "\u03C4", insert: "tau" },
+    { label: "\u03C6", insert: "phi" }, { label: "\u03C8", insert: "psi" },
+    { label: "\u03C9", insert: "omega" },
+    { label: "\u0393", insert: "Gamma" }, { label: "\u0394", insert: "Delta" },
+    { label: "\u0398", insert: "Theta" }, { label: "\u039B", insert: "Lambda" },
+    { label: "\u03A3", insert: "Sigma" }, { label: "\u03A6", insert: "Phi" },
+    { label: "\u03A8", insert: "Psi" }, { label: "\u03A9", insert: "Omega" },
+  ],
+  operators: [
+    { label: "+", insert: " + " }, { label: "\u2212", insert: " - " },
+    { label: "\u00D7", insert: "*" }, { label: "\u00F7", insert: "/" },
+    { label: "^", insert: "^" }, { label: "!", insert: "!" },
+    { label: "\u221A", insert: "sqrt(" }, { label: "\u221B", insert: "cbrt(" },
+    { label: "\u2261", insert: " == " }, { label: "\u2260", insert: " != " },
+    { label: "<", insert: " < " }, { label: ">", insert: " > " },
+    { label: "\u2264", insert: " <= " }, { label: "\u2265", insert: " >= " },
+    { label: "\u2227", insert: " && " }, { label: "\u2228", insert: " || " },
+    { label: "\u2211", insert: "sum(" }, { label: "\u220F", insert: "product(" },
+    { label: "\u222B", insert: "integral(" },
+  ],
+  functions: [
+    { label: "sin", insert: "sin(" }, { label: "cos", insert: "cos(" },
+    { label: "tan", insert: "tan(" }, { label: "asin", insert: "asin(" },
+    { label: "acos", insert: "acos(" }, { label: "atan", insert: "atan(" },
+    { label: "ln", insert: "ln(" }, { label: "log", insert: "log(" },
+    { label: "exp", insert: "exp(" }, { label: "abs", insert: "abs(" },
+    { label: "sqrt", insert: "sqrt(" }, { label: "cbrt", insert: "cbrt(" },
+    { label: "round", insert: "round(" }, { label: "floor", insert: "floor(" },
+    { label: "ceil", insert: "ceiling(" }, { label: "min", insert: "min(" },
+    { label: "max", insert: "max(" }, { label: "mod", insert: "mod(" },
+    { label: "det", insert: "det(" }, { label: "inv", insert: "inv(" },
+    { label: "transp", insert: "transpose(" }, { label: "lsolve", insert: "lsolve(" },
+  ],
+  blocks: [
+    { label: "@{eq}", insert: "@{eq}\\n\\n@{end eq}" },
+    { label: "@{text}", insert: "@{text}\\n\\n@{end text}" },
+    { label: "@{draw}", insert: "@{draw 500 400}\\n\\n@{end draw}" },
+    { label: "@{three}", insert: "@{three 600 400}\\n\\n@{end three}" },
+    { label: "@{config}", insert: "@{config eq:$, text:\"}\\n\\n@{end config}" },
+    { label: "@{columns}", insert: "@{columns 2}\\n\\n@{end columns}" },
+    { label: "for", insert: "for i = 1 to 10\\n\\nnext" },
+    { label: "if", insert: "if x > 0\\n\\nelse\\n\\nend if" },
+    { label: "@{pagebreak}", insert: "@{pagebreak}" },
+    { label: "---", insert: "\\n---\\n" },
+  ],
+};
+
+function renderKeypad(tabName: string) {
+  keypadContent.innerHTML = "";
+  const items = KEYPAD_DATA[tabName] || [];
+  for (const item of items) {
+    const btn = document.createElement("button");
+    btn.className = item.label.length > 3 ? "key-btn wide" : "key-btn";
+    btn.textContent = item.label;
+    btn.dataset.insert = item.insert;
+    btn.title = item.insert.replace(/\\n/g, "\u21B5");
+    btn.addEventListener("click", () => insertAtCursor(item.insert));
+    keypadContent.appendChild(btn);
+  }
+}
+
+// Tab switching
+document.querySelectorAll<HTMLButtonElement>(".keypad-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".keypad-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    renderKeypad(tab.dataset.tab!);
+  });
+});
+
+// Initial keypad
+renderKeypad("greek");
+
+// ═══════════════════════════════════════════════════════════
+// STATUS BAR — Decimals, Substitute, Zero small, Plot options
+// ═══════════════════════════════════════════════════════════
+const decimalsInput = document.getElementById("decimalsInput") as HTMLInputElement;
+const chkSubstitute = document.getElementById("chkSubstitute") as HTMLInputElement;
+const chkZeroSmall = document.getElementById("chkZeroSmall") as HTMLInputElement;
+const chkAdaptive = document.getElementById("chkAdaptive") as HTMLInputElement;
+const chkShadows = document.getElementById("chkShadows") as HTMLInputElement;
+
+// Re-run on status bar changes
+decimalsInput.addEventListener("change", () => { if (chkAutoRun.checked) runCode(); });
+chkSubstitute.addEventListener("change", () => { if (chkAutoRun.checked) runCode(); });
+chkZeroSmall.addEventListener("change", () => { if (chkAutoRun.checked) runCode(); });
+
 // ─── Init ───────────────────────────────────────────────
-// Load default example: Ej 5.1 - Grid Frame
-const defaultEx = EXAMPLES["gridframe"];
+// Load default example: Texto y Ecuaciones
+const defaultEx = EXAMPLES["texto"];
 if (defaultEx) {
-  exampleSelect.value = "gridframe";
-  codeInput.value = defaultEx.code;
+  exampleSelect.value = "texto";
+  setCodeContent(defaultEx.code);
   editor.loadFromText(defaultEx.code);
 } else {
   exampleSelect.value = "";
-  codeInput.value = "";
+  setCodeContent("");
   editor.loadFromText("");
 }
-setMode("canvas");
+updateSyntax();
+setMode("code");

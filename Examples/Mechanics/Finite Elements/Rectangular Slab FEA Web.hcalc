@@ -1,0 +1,341 @@
+# Finite Element Analysis - Rectangular Slab
+> Simply supported rectangular slab under uniform load
+> Hermite plate bending element (16 DOF per element)
+
+## 1. Input Data
+
+a = 6
+> Slab dimension X [m]
+b = 4
+> Slab dimension Y [m]
+t = 0.1
+> Thickness [m]
+q = 10
+> Uniform load [kN/m2]
+E = 35000000
+> Modulus of elasticity [kN/m2] (35000 MPa)
+nu = 0.15
+> Poisson's ratio
+
+## 2. Finite Element Mesh
+
+na = 2
+> Elements along a
+nb = 3
+> Elements along b
+ne = na * nb
+> Total elements
+nj = (na + 1) * (nb + 1)
+> Total joints
+a1 = a / na
+> Element width [m]
+b1 = b / nb
+> Element height [m]
+ndof = 4
+> DOFs per node (w, theta_x, theta_y, psi)
+ntot = ndof * nj
+> Total DOFs
+ns = 2 * (na + nb)
+> Supported joints count
+
+@{hide}
+// --- Generate node coordinates ---
+xj = zeros(nj, 1)
+yj = zeros(nj, 1)
+xv = 0
+yv = 0
+for j = 1:nj
+  xj[j] = xv
+  yj[j] = yv
+  yv = yv + b1
+  if yv > b
+    yv = 0
+    xv = xv + a1
+  end
+end
+
+// --- Element connectivity (4 nodes per element) ---
+ej = zeros(ne, 4)
+for ia = 1:na
+  for ib = 1:nb
+    e = ib + nb * (ia - 1)
+    j = e + ia - 1
+    ej[e,1] = j
+    ej[e,2] = j + nb + 1
+    ej[e,3] = j + nb + 2
+    ej[e,4] = j + 1
+  end
+end
+
+// --- Supported joints (all boundary nodes) ---
+sj = zeros(ns, 1)
+is_idx = 0
+for i = 1:na + 1
+  j = (nb + 1) * i - nb
+  is_idx = is_idx + 1
+  sj[is_idx] = j
+end
+for i = 1:na + 1
+  j = (nb + 1) * i
+  is_idx = is_idx + 1
+  sj[is_idx] = j
+end
+for i = 2:nb
+  is_idx = is_idx + 1
+  sj[is_idx] = i
+end
+for i = 2:nb
+  j = na * (nb + 1) + i
+  is_idx = is_idx + 1
+  sj[is_idx] = j
+end
+@{show}
+
+## 3. Shape Functions (Hermite Cubic)
+
+@{eq}
+Phi_1(s) = 1 - 3s^2 + 2s^3
+Phi_2(s,L) = sL(1-s)^2
+Phi_3(s) = 3s^2 - 2s^3
+Phi_4(s,L) = s^2*L(s-1)
+@{end eq}
+
+phi1(s) = 1 - 3*s^2 + 2*s^3
+phi2(s, h) = s*h*(1 - s)^2
+phi3(s) = 3*s^2 - 2*s^3
+phi4(s, h) = s^2*h*(s - 1)
+
+// First derivatives (wrt physical coordinate)
+dphi1(s, h) = -6*s*(1 - s)/h
+dphi2(s) = 1 - 4*s + 3*s^2
+dphi3(s, h) = 6*s*(1 - s)/h
+dphi4(s) = -s*(2 - 3*s)
+
+// Second derivatives
+ddphi1(s, h) = -6*(1 - 2*s)/h^2
+ddphi2(s, h) = -2*(2 - 3*s)/h
+ddphi3(s, h) = 6*(1 - 2*s)/h^2
+ddphi4(s, h) = -2*(1 - 3*s)/h
+
+## 4. Constitutive Matrix
+
+@{eq}
+D = E*t^3/(12(1-nu^2)) * [1, nu, 0; nu, 1, 0; 0, 0, (1-nu)/2]
+@{end eq}
+
+Dc = E*t^3/(12*(1 - nu^2))
+D = Dc * [[1, nu, 0], [nu, 1, 0], [0, 0, (1 - nu)/2]]
+
+## 5. Element Stiffness Matrix (Gauss 3x3)
+
+@{hide}
+// DOF-to-shape-function mapping
+// For each of 16 DOFs: which phi index for xi, which for eta
+// Nodes: 1(phi1,phi1), 2(phi3,phi1), 3(phi3,phi3), 4(phi1,phi3)
+// DOF types: w(odd), theta(even)
+ia_map = [1, 2, 1, 2, 3, 4, 3, 4, 3, 4, 3, 4, 1, 2, 1, 2]
+jb_map = [1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4, 3, 3, 4, 4]
+
+// Gauss 3-point rule on [0,1]
+gp = [(1 - sqrt(3/5))/2, 0.5, (1 + sqrt(3/5))/2]
+gw = [5/18, 8/18, 5/18]
+
+// Compute element stiffness matrix
+Ke = zeros(16, 16)
+Fe = zeros(16, 1)
+
+for gi = 1:3
+  for gj = 1:3
+    xi = gp[gi]
+    eta = gp[gj]
+    wt = gw[gi] * gw[gj]
+
+    // Precompute phi values at Gauss point
+    pva = [phi1(xi), phi2(xi, a1), phi3(xi), phi4(xi, a1)]
+    dva = [dphi1(xi, a1), dphi2(xi), dphi3(xi, a1), dphi4(xi)]
+    ddva = [ddphi1(xi, a1), ddphi2(xi, a1), ddphi3(xi, a1), ddphi4(xi, a1)]
+
+    pvb = [phi1(eta), phi2(eta, b1), phi3(eta), phi4(eta, b1)]
+    dvb = [dphi1(eta, b1), dphi2(eta), dphi3(eta, b1), dphi4(eta)]
+    ddvb = [ddphi1(eta, b1), ddphi2(eta, b1), ddphi3(eta, b1), ddphi4(eta, b1)]
+
+    // Build B matrix (3 x 16)
+    B = zeros(3, 16)
+    for k = 1:16
+      ia = ia_map[k]
+      jb = jb_map[k]
+      B[1,k] = ddva[ia] * pvb[jb]
+      B[2,k] = pva[ia] * ddvb[jb]
+      B[3,k] = 2 * dva[ia] * dvb[jb]
+    end
+
+    // Accumulate stiffness: Ke += wt * a1 * b1 * B' * D * B
+    BtDB = transpose(B) * D * B
+    Ke = Ke + wt * a1 * b1 * BtDB
+
+    // Accumulate load vector
+    for k = 1:16
+      ia = ia_map[k]
+      jb = jb_map[k]
+      Fe[k] = Fe[k] + wt * a1 * b1 * q * pva[ia] * pvb[jb]
+    end
+  end
+end
+@{show}
+
+> Element stiffness Ke diagonal check (kN/m):
+Ke[1,1]
+Ke[2,2]
+Ke[3,3]
+Ke[4,4]
+
+> Element load vector Fe (kN):
+transpose(Fe)
+
+## 6. Global Assembly
+
+@{hide}
+K = zeros(ntot, ntot)
+F = zeros(ntot, 1)
+
+for e = 1:ne
+  for i = 1:4
+    for j = 1:4
+      j1 = ej[e, i]
+      j2 = ej[e, j]
+      for r = 1:ndof
+        for s = 1:ndof
+          gi_d = ndof * (j1 - 1) + r
+          gj_d = ndof * (j2 - 1) + s
+          li = ndof * (i - 1) + r
+          lj = ndof * (j - 1) + s
+          K[gi_d, gj_d] = K[gi_d, gj_d] + Ke[li, lj]
+        end
+      end
+    end
+  end
+
+  // Assemble load vector
+  for i = 1:4
+    j1 = ej[e, i]
+    for r = 1:ndof
+      gi_d = ndof * (j1 - 1) + r
+      li = ndof * (i - 1) + r
+      F[gi_d] = F[gi_d] + Fe[li]
+    end
+  end
+end
+@{show}
+
+## 7. Boundary Conditions (Penalty Method)
+
+@{hide}
+ks = 1e20
+
+for i = 1:ns
+  j = sj[i]
+  // Fix w (vertical displacement)
+  gi_d = ndof * (j - 1) + 1
+  K[gi_d, gi_d] = K[gi_d, gi_d] + ks
+
+  // Fix theta_y on edges y=0 and y=b
+  if yj[j] == 0
+    gi_d = ndof * (j - 1) + 2
+    K[gi_d, gi_d] = K[gi_d, gi_d] + ks
+  end
+  if yj[j] == b
+    gi_d = ndof * (j - 1) + 2
+    K[gi_d, gi_d] = K[gi_d, gi_d] + ks
+  end
+
+  // Fix theta_x on edges x=0 and x=a
+  if xj[j] == 0
+    gi_d = ndof * (j - 1) + 3
+    K[gi_d, gi_d] = K[gi_d, gi_d] + ks
+  end
+  if xj[j] == a
+    gi_d = ndof * (j - 1) + 3
+    K[gi_d, gi_d] = K[gi_d, gi_d] + ks
+  end
+end
+@{show}
+
+## 8. Solution
+
+Z = lusolve(K, F)
+
+## 9. Results - Joint Displacements
+
+@{hide}
+Wz = zeros(na + 1, nb + 1)
+for i = 1:na + 1
+  for k = 1:nb + 1
+    j = (i - 1) * (nb + 1) + k
+    Wz[i, k] = round(Z[ndof * (j - 1) + 1] * 1000 * 1000) / 1000
+  end
+end
+@{show}
+
+> Vertical displacements W_z [mm]
+transpose(Wz)
+
+// Center node
+jc = (na / 2) * (nb + 1) + floor(nb / 2) + 1
+wc = Z[ndof * (jc - 1) + 1] * 1000
+
+> Center deflection w_center [mm]
+
+## 10. Bending Moments
+
+@{hide}
+// Compute moments at element centers using B matrix at (0.5, 0.5)
+xi_c = 0.5
+eta_c = 0.5
+
+pva_c = [phi1(xi_c), phi2(xi_c, a1), phi3(xi_c), phi4(xi_c, a1)]
+dva_c = [dphi1(xi_c, a1), dphi2(xi_c), dphi3(xi_c, a1), dphi4(xi_c)]
+ddva_c = [ddphi1(xi_c, a1), ddphi2(xi_c, a1), ddphi3(xi_c, a1), ddphi4(xi_c, a1)]
+
+pvb_c = [phi1(eta_c), phi2(eta_c, b1), phi3(eta_c), phi4(eta_c, b1)]
+dvb_c = [dphi1(eta_c, b1), dphi2(eta_c), dphi3(eta_c, b1), dphi4(eta_c)]
+ddvb_c = [ddphi1(eta_c, b1), ddphi2(eta_c, b1), ddphi3(eta_c, b1), ddphi4(eta_c, b1)]
+
+Bc = zeros(3, 16)
+for k = 1:16
+  ia = ia_map[k]
+  jb = jb_map[k]
+  Bc[1,k] = ddva_c[ia] * pvb_c[jb]
+  Bc[2,k] = pva_c[ia] * ddvb_c[jb]
+  Bc[3,k] = 2 * dva_c[ia] * dvb_c[jb]
+end
+
+// Compute moments for each element at center
+Mx_e = zeros(ne, 1)
+My_e = zeros(ne, 1)
+Mxy_e = zeros(ne, 1)
+
+for e = 1:ne
+  // Extract element displacement vector (16 x 1)
+  Ze = zeros(16, 1)
+  for i = 1:4
+    jn = ej[e, i]
+    for r = 1:ndof
+      Ze[ndof * (i - 1) + r] = Z[ndof * (jn - 1) + r]
+    end
+  end
+
+  // M = -D * B * Ze (moments at center)
+  MV = -1 * D * Bc * Ze
+  Mx_e[e] = MV[1]
+  My_e[e] = MV[2]
+  Mxy_e[e] = MV[3]
+end
+@{show}
+
+> Bending moments at element centers [kNm/m]
+> Mx:
+transpose(Mx_e)
+> My:
+transpose(My_e)
+> Mxy:
+transpose(Mxy_e)

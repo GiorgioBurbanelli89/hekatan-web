@@ -1,7 +1,7 @@
 /**
  * Hekatan Parser — Parses .hcalc text → HTML output
  *
- * Supports: variables, expressions, #for/#if/#while/#repeat,
+ * Supports: variables, expressions, for/if/while/repeat (also legacy #for/#if),
  * @{plot}/@{eq}/@{svg}/@{three}/@{plotly} directive blocks,
  * comments, markdown, user functions
  */
@@ -12,18 +12,25 @@ const BLOCK_OPEN_RE = /^@\{(plot|plotly|svg|three|eq)\b\s*([^}]*)\}\s*$/i;
 const BLOCK_CLOSE_RE = /^@\{end\s+(plot|plotly|svg|three|eq)\}\s*$/i;
 
 // ─── Main parse function ─────────────────────────────────
-export function parse(source: string): { html: string; env: HekatanEnvironment } {
-  const env = new HekatanEnvironment();
+export function parse(source: string, existingEnv?: HekatanEnvironment, compact?: boolean): { html: string; env: HekatanEnvironment } {
+  const env = existingEnv ?? new HekatanEnvironment();
   const lines = source.split("\n");
   let html = "";
   let i = 0;
 
   while (i < lines.length) {
     const line = lines[i];
-    const trimmed = line.trim();
+    let trimmed = line.trim();
 
     // Empty line
     if (!trimmed) { html += '<div class="spacer"></div>'; i++; continue; }
+
+    // Code comment: // (full-line or inline — invisible in output)
+    if (trimmed.startsWith("//")) { i++; continue; }
+    if (trimmed.includes("//")) {
+      trimmed = trimmed.slice(0, trimmed.indexOf("//")).trim();
+      if (!trimmed) { i++; continue; }
+    }
 
     // Directive block @{plot} ... @{end plot}
     const blockMatch = trimmed.match(BLOCK_OPEN_RE);
@@ -42,23 +49,23 @@ export function parse(source: string): { html: string; env: HekatanEnvironment }
       continue;
     }
 
-    // Control flow: #for
-    if (/^#for\s+/i.test(trimmed)) {
+    // Control flow: for / #for (Hekatan supports both)
+    if (/^#?for\s+/i.test(trimmed)) {
       const result = parseFor(lines, i, env);
       html += result.html; i = result.nextLine; continue;
     }
-    // #if
-    if (/^#if\s+/i.test(trimmed)) {
+    // if / #if
+    if (/^#?if\s+/i.test(trimmed)) {
       const result = parseIf(lines, i, env);
       html += result.html; i = result.nextLine; continue;
     }
-    // #while
-    if (/^#while\s+/i.test(trimmed)) {
+    // while / #while
+    if (/^#?while\s+/i.test(trimmed)) {
       const result = parseWhile(lines, i, env);
       html += result.html; i = result.nextLine; continue;
     }
-    // #repeat
-    if (/^#repeat\s*$/i.test(trimmed)) {
+    // repeat / #repeat
+    if (/^#?repeat\s*$/i.test(trimmed)) {
       const result = parseRepeat(lines, i, env);
       html += result.html; i = result.nextLine; continue;
     }
@@ -126,7 +133,7 @@ export function parse(source: string): { html: string; env: HekatanEnvironment }
     }
 
     // Expression / assignment line
-    html += parseLine(trimmed, env);
+    html += parseLine(trimmed, env, compact);
     i++;
   }
 
@@ -134,7 +141,56 @@ export function parse(source: string): { html: string; env: HekatanEnvironment }
 }
 
 // ─── Parse single line ───────────────────────────────────
-function parseLine(line: string, env: HekatanEnvironment): string {
+// ─── Render integral() as ∫ notation ──────────────────────
+function renderIntegralNotation(callNode: any, env: HekatanEnvironment): string | null {
+  const fnName = callNode.name as string;
+  const args = callNode.args as any[];
+  if (!args || args.length < 3) return null;
+
+  // First arg is the function reference
+  const fnRef = args[0];
+  const fnKey = fnRef.type === "var" ? fnRef.name : null;
+  if (!fnKey) return null;
+
+  const userFn = env.userFunctions.get(fnKey);
+  if (!userFn) return null;
+
+  const bodyHtml = renderNode(userFn.body);
+  const params = userFn.params; // e.g. ["x"] or ["x","y"] or ["x","y","z"]
+
+  // Helper: build one ∫ symbol with limits
+  const intSym = (lo: string, hi: string) =>
+    `<span class="dvr"><small>${hi}</small><span class="nary"><em>∫</em></span><small>${lo}</small></span>`;
+
+  if (/^(integral|integrate)$/.test(fnName) && args.length >= 3) {
+    // integral(f, a, b)
+    const lo = renderNode(args[1]);
+    const hi = renderNode(args[2]);
+    const dv = params[0] || "x";
+    return `${intSym(lo, hi)} (${bodyHtml}) <i>d${dv}</i>`;
+  }
+
+  if (/^(integral2|integrate2|dblintegral)$/.test(fnName) && args.length >= 5) {
+    // integral2(f, xa, xb, ya, yb)
+    const xlo = renderNode(args[1]), xhi = renderNode(args[2]);
+    const ylo = renderNode(args[3]), yhi = renderNode(args[4]);
+    const dx = params[0] || "x", dy = params[1] || "y";
+    return `${intSym(xlo, xhi)} ${intSym(ylo, yhi)} (${bodyHtml}) <i>d${dy}</i> <i>d${dx}</i>`;
+  }
+
+  if (/^(integral3|integrate3|tplintegral)$/.test(fnName) && args.length >= 7) {
+    // integral3(f, xa, xb, ya, yb, za, zb)
+    const xlo = renderNode(args[1]), xhi = renderNode(args[2]);
+    const ylo = renderNode(args[3]), yhi = renderNode(args[4]);
+    const zlo = renderNode(args[5]), zhi = renderNode(args[6]);
+    const dx = params[0] || "x", dy = params[1] || "y", dz = params[2] || "z";
+    return `${intSym(xlo, xhi)} ${intSym(ylo, yhi)} ${intSym(zlo, zhi)} (${bodyHtml}) <i>d${dz}</i> <i>d${dy}</i> <i>d${dx}</i>`;
+  }
+
+  return null;
+}
+
+function parseLine(line: string, env: HekatanEnvironment, compact?: boolean): string {
   try {
     const ast = parseExpression(line);
     const val = evaluate(ast, env);
@@ -146,10 +202,28 @@ function parseLine(line: string, env: HekatanEnvironment): string {
         const idxStr = ast.indices.map(n => renderNode(n)).join(",");
         lhs += `<sub>${idxStr}</sub>`;
       }
+      // Compact mode (inside loops): show only name = value (MATLAB style)
+      if (compact) {
+        return `<div class="line assign">${lhs} = ${valHtml}</div>`;
+      }
+      // Render integral() calls with ∫ notation instead of function name
+      const callExpr = ast.expr as any;
+      if (callExpr.type === "call" &&
+          /^(integral[23]?|integrate[23]?|dblintegral|tplintegral)$/.test(callExpr.name)) {
+        const intHtml = renderIntegralNotation(callExpr, env);
+        if (intHtml) {
+          return `<div class="line assign eq">${lhs} = ${intHtml} = ${valHtml}</div>`;
+        }
+        // fallback: just show result
+        return `<div class="line assign">${lhs} = ${valHtml}</div>`;
+      }
       return `<div class="line assign">${lhs} = ${renderNode(ast.expr)} = ${valHtml}</div>`;
     }
 
     // Expression result
+    if (compact) {
+      return `<div class="line expr">${renderValue(val)}</div>`;
+    }
     return `<div class="line expr">${renderNode(ast)} = ${renderValue(val)}</div>`;
   } catch (e: any) {
     return `<div class="line error">${renderInlineText(line)} <span class="err">← ${e.message}</span></div>`;
@@ -693,26 +767,26 @@ function animate(){requestAnimationFrame(animate);controls.update();renderer.ren
 })();</script>`;
 }
 
-// ─── Control flow: #for ──────────────────────────────────
+// ─── Control flow: for / #for ────────────────────────────
 function parseFor(lines: string[], startIdx: number, env: HekatanEnvironment): { html: string; nextLine: number } {
   const header = lines[startIdx].trim();
-  // #for i = 1 to 10 : 2
-  const m = header.match(/^#for\s+(\w+)\s*=\s*(.*?)\s+to\s+(.*?)(?:\s*:\s*(.+))?\s*$/i);
-  if (!m) return { html: `<div class="error">Invalid #for: ${header}</div>`, nextLine: startIdx + 1 };
+  // for i = 1 to 10 : 2  OR  #for i = 1 to 10 : 2
+  const m = header.match(/^#?for\s+(\w+)\s*=\s*(.*?)\s+to\s+(.*?)(?:\s*:\s*(.+))?\s*$/i);
+  if (!m) return { html: `<div class="error">Invalid for: ${header}</div>`, nextLine: startIdx + 1 };
 
   const varName = m[1];
   const startVal = evalNum(m[2], env);
   const endVal = evalNum(m[3], env);
   const step = m[4] ? evalNum(m[4], env) : 1;
 
-  // Collect body until #next
+  // Collect body until next / #next
   const body: string[] = [];
   let i = startIdx + 1;
   let depth = 1;
   while (i < lines.length) {
     const t = lines[i].trim();
-    if (/^#for\s+/i.test(t)) depth++;
-    if (/^#next\s*$/i.test(t)) { depth--; if (depth === 0) { i++; break; } }
+    if (/^#?for\s+/i.test(t)) depth++;
+    if (/^#?next\s*$/i.test(t)) { depth--; if (depth === 0) { i++; break; } }
     body.push(lines[i]);
     i++;
   }
@@ -720,35 +794,35 @@ function parseFor(lines: string[], startIdx: number, env: HekatanEnvironment): {
   let html = "";
   for (let v = startVal; step > 0 ? v <= endVal : v >= endVal; v += step) {
     env.setVar(varName, v);
-    const result = parse(body.join("\n"));
+    const result = parse(body.join("\n"), env, true);  // compact=true (MATLAB style)
     html += result.html;
   }
   return { html, nextLine: i };
 }
 
-// ─── Control flow: #if ───────────────────────────────────
+// ─── Control flow: if / #if ─────────────────────────────
 function parseIf(lines: string[], startIdx: number, env: HekatanEnvironment): { html: string; nextLine: number } {
   const branches: { cond: string | null; body: string[] }[] = [];
   let current: { cond: string | null; body: string[] } = {
-    cond: lines[startIdx].trim().replace(/^#if\s+/i, ""), body: []
+    cond: lines[startIdx].trim().replace(/^#?if\s+/i, ""), body: []
   };
   let i = startIdx + 1;
   let depth = 1;
 
   while (i < lines.length) {
     const t = lines[i].trim();
-    if (/^#if\s+/i.test(t)) { depth++; current.body.push(lines[i]); i++; continue; }
-    if (/^#end\s+if\s*$/i.test(t)) {
+    if (/^#?if\s+/i.test(t)) { depth++; current.body.push(lines[i]); i++; continue; }
+    if (/^#?end\s+if\s*$/i.test(t)) {
       depth--;
       if (depth === 0) { branches.push(current); i++; break; }
       current.body.push(lines[i]); i++; continue;
     }
-    if (depth === 1 && /^#else\s+if\s+/i.test(t)) {
+    if (depth === 1 && /^#?else\s+if\s+/i.test(t)) {
       branches.push(current);
-      current = { cond: t.replace(/^#else\s+if\s+/i, ""), body: [] };
+      current = { cond: t.replace(/^#?else\s+if\s+/i, ""), body: [] };
       i++; continue;
     }
-    if (depth === 1 && /^#else\s*$/i.test(t)) {
+    if (depth === 1 && /^#?else\s*$/i.test(t)) {
       branches.push(current);
       current = { cond: null, body: [] };
       i++; continue;
@@ -759,23 +833,23 @@ function parseIf(lines: string[], startIdx: number, env: HekatanEnvironment): { 
 
   for (const branch of branches) {
     if (branch.cond === null || evalNum(branch.cond, env)) {
-      const result = parse(branch.body.join("\n"));
+      const result = parse(branch.body.join("\n"), env);
       return { html: result.html, nextLine: i };
     }
   }
   return { html: "", nextLine: i };
 }
 
-// ─── Control flow: #while ────────────────────────────────
+// ─── Control flow: while / #while ────────────────────────
 function parseWhile(lines: string[], startIdx: number, env: HekatanEnvironment): { html: string; nextLine: number } {
-  const cond = lines[startIdx].trim().replace(/^#while\s+/i, "");
+  const cond = lines[startIdx].trim().replace(/^#?while\s+/i, "");
   const body: string[] = [];
   let i = startIdx + 1;
   let depth = 1;
   while (i < lines.length) {
     const t = lines[i].trim();
-    if (/^#while\s+/i.test(t)) depth++;
-    if (/^#loop\s*$/i.test(t)) { depth--; if (depth === 0) { i++; break; } }
+    if (/^#?while\s+/i.test(t)) depth++;
+    if (/^#?loop\s*$/i.test(t)) { depth--; if (depth === 0) { i++; break; } }
     body.push(lines[i]);
     i++;
   }
@@ -783,14 +857,14 @@ function parseWhile(lines: string[], startIdx: number, env: HekatanEnvironment):
   let html = "";
   let guard = 0;
   while (evalNum(cond, env) && guard < 10000) {
-    const result = parse(body.join("\n"));
+    const result = parse(body.join("\n"), env);
     html += result.html;
     guard++;
   }
   return { html, nextLine: i };
 }
 
-// ─── Control flow: #repeat ───────────────────────────────
+// ─── Control flow: repeat / #repeat ─────────────────────
 function parseRepeat(lines: string[], startIdx: number, env: HekatanEnvironment): { html: string; nextLine: number } {
   const body: string[] = [];
   let i = startIdx + 1;
@@ -798,10 +872,10 @@ function parseRepeat(lines: string[], startIdx: number, env: HekatanEnvironment)
   let depth = 1;
   while (i < lines.length) {
     const t = lines[i].trim();
-    if (/^#repeat\s*$/i.test(t)) depth++;
-    if (/^#until\s+/i.test(t)) {
+    if (/^#?repeat\s*$/i.test(t)) depth++;
+    if (/^#?until\s+/i.test(t)) {
       depth--;
-      if (depth === 0) { untilCond = t.replace(/^#until\s+/i, ""); i++; break; }
+      if (depth === 0) { untilCond = t.replace(/^#?until\s+/i, ""); i++; break; }
     }
     body.push(lines[i]);
     i++;
@@ -810,7 +884,7 @@ function parseRepeat(lines: string[], startIdx: number, env: HekatanEnvironment)
   let html = "";
   let guard = 0;
   do {
-    const result = parse(body.join("\n"));
+    const result = parse(body.join("\n"), env);
     html += result.html;
     guard++;
   } while (!evalNum(untilCond, env) && guard < 10000);

@@ -3,53 +3,229 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hekatan Calc - Editor</title>
-  <script type="module" crossorigin src="/assets/hekatanEditor-CyxMqWOy.js"></script>
+  <title>Hekatan Calc 1.0.0</title>
+  <script type="module" crossorigin src="/assets/hekatanEditor-BFOZh1nV.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
-  <link rel="modulepreload" crossorigin href="/assets/evaluator-C8FPjifL.js">
-  <link rel="stylesheet" crossorigin href="/assets/hekatanEditor-CcxHnrdL.css">
+  <link rel="modulepreload" crossorigin href="/assets/renderer-CewHCcgS.js">
+  <link rel="stylesheet" crossorigin href="/assets/hekatanEditor-DDiiAvb6.css">
 </head>
 <body>
-  <div class="app-header">
-    <h1>Hekatan Calc</h1>
-    <span class="subtitle">Editor Web — Parser, Renderer, Plot, Ecuaciones, 3D</span>
-    <a href="/editor/index.html">CAS Simbolico</a>
+  <!-- ═══ Menu Bar ═══ -->
+  <div class="menu-bar">
+    <div class="menu-items">
+      <div class="menu-item" data-menu="file">
+        <span class="menu-label">File</span>
+        <div class="menu-dropdown">
+          <button data-action="new">New</button>
+          <button data-action="open">Open...</button>
+          <hr>
+          <button data-action="save">Save</button>
+          <button data-action="saveas">Save As...</button>
+          <hr>
+          <button data-action="export-html">Export HTML...</button>
+        </div>
+      </div>
+      <div class="menu-item" data-menu="edit">
+        <span class="menu-label">Edit</span>
+        <div class="menu-dropdown">
+          <button data-action="undo">Undo <span class="shortcut">Ctrl+Z</span></button>
+          <button data-action="redo">Redo <span class="shortcut">Ctrl+Y</span></button>
+          <hr>
+          <button data-action="cut">Cut <span class="shortcut">Ctrl+X</span></button>
+          <button data-action="copy">Copy <span class="shortcut">Ctrl+C</span></button>
+          <button data-action="paste">Paste <span class="shortcut">Ctrl+V</span></button>
+          <hr>
+          <button data-action="comment">Comment Lines <span class="shortcut">Ctrl+Q</span></button>
+          <button data-action="uncomment">Uncomment Lines <span class="shortcut">Ctrl+Shift+Q</span></button>
+          <hr>
+          <button data-action="selectall">Select All <span class="shortcut">Ctrl+A</span></button>
+        </div>
+      </div>
+      <div class="menu-item" data-menu="insert">
+        <span class="menu-label">Insert</span>
+        <div class="menu-dropdown insert-menu">
+          <div class="submenu-item">
+            <span>Hekatan Calc</span>
+            <div class="submenu">
+              <button data-insert="@{eq}\n\n@{end eq}">@{eq} - Equation Block</button>
+              <button data-insert="@{table}\n\n@{end table}">@{table} - Table Block</button>
+              <button data-insert="@{function}\n\n@{end function}">@{function} - Function Block</button>
+              <hr>
+              <button data-insert="@{plot}\n\n@{end plot}">@{plot} - Plot</button>
+              <button data-insert="@{svg}\n\n@{end svg}">@{svg} - SVG Graphics</button>
+              <button data-insert="@{three}\n\n@{end three}">@{three} - Three.js 3D</button>
+              <button data-insert="@{draw}\n\n@{end draw}">@{draw} - CAD Drawing</button>
+              <hr>
+              <button data-insert="@{html}\n\n@{end html}">@{html} - HTML Block</button>
+              <button data-insert="@{css}\n\n@{end css}">@{css} - CSS Block</button>
+              <button data-insert="@{markdown}\n\n@{end markdown}">@{markdown} - Markdown</button>
+              <hr>
+              <button data-insert="@{columns 2}\n\n@{end columns}">@{columns 2} - Two Columns</button>
+              <button data-insert="@{pagebreak}">@{pagebreak} - Page Break</button>
+            </div>
+          </div>
+          <div class="submenu-item">
+            <span>External Languages</span>
+            <div class="submenu">
+              <button data-insert="@{python}\n\n@{end python}">@{python}</button>
+              <button data-insert="@{bash}\n\n@{end bash}">@{bash}</button>
+              <button data-insert="@{js}\n\n@{end js}">@{js}</button>
+              <button data-insert="@{powershell}\n\n@{end powershell}">@{powershell}</button>
+              <button data-insert="@{octave}\n\n@{end octave}">@{octave}</button>
+              <button data-insert="@{rust}\n\n@{end rust}">@{rust}</button>
+              <button data-insert="@{fortran}\n\n@{end fortran}">@{fortran}</button>
+            </div>
+          </div>
+          <hr>
+          <div class="submenu-item">
+            <span>Constants</span>
+            <div class="submenu">
+              <button data-insert="pi">pi - 3.14159...</button>
+              <button data-insert="e">e - 2.71828...</button>
+              <hr>
+              <button data-insert="g = 9.80665">g - Gravitational Acceleration</button>
+              <button data-insert="c = 299792458">c - Speed of Light</button>
+            </div>
+          </div>
+          <div class="submenu-item">
+            <span>Functions</span>
+            <div class="submenu">
+              <button data-insert="sin(x)">sin(x)</button>
+              <button data-insert="cos(x)">cos(x)</button>
+              <button data-insert="tan(x)">tan(x)</button>
+              <hr>
+              <button data-insert="sqrt(x)">sqrt(x)</button>
+              <button data-insert="ln(x)">ln(x)</button>
+              <button data-insert="log(x)">log(x)</button>
+              <button data-insert="exp(x)">exp(x)</button>
+              <hr>
+              <button data-insert="abs(x)">abs(x)</button>
+              <button data-insert="round(x)">round(x)</button>
+              <button data-insert="floor(x)">floor(x)</button>
+              <button data-insert="ceiling(x)">ceiling(x)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="menu-title">Hekatan Calc 1.0.0</span>
   </div>
 
-  <div class="main-layout">
-    <div class="sidebar">
-      <h3>Ejemplos</h3>
-      <ul class="example-list" id="exampleList"></ul>
-    </div>
+  <!-- ═══ Toolbar ═══ -->
+  <div class="toolbar">
+    <button class="tool-btn primary" id="btnRun" title="Calculate (F5)">&#9654; Calculate</button>
+    <button class="tool-btn" id="btnPrint" title="Print">&#128424;</button>
+    <div class="toolbar-sep"></div>
 
-    <div class="editor-area">
-      <div class="toolbar">
-        <button class="primary" id="btnRun">&#9654; Ejecutar</button>
-        <span class="status" id="statusText">Listo</span>
+    <!-- Format buttons -->
+    <button class="fmt-btn" data-insert="# " title="Heading 1">H1</button>
+    <button class="fmt-btn" data-insert="## " title="Heading 2">H2</button>
+    <button class="fmt-btn" data-insert="### " title="Heading 3">H3</button>
+    <button class="fmt-btn" data-insert="#### " title="Heading 4">H4</button>
+    <div class="toolbar-sep"></div>
+    <button class="fmt-btn" data-wrap="**" title="Bold"><b>B</b></button>
+    <button class="fmt-btn" data-wrap="*" title="Italic"><i>I</i></button>
+    <button class="fmt-btn" data-wrap="~~" title="Strikethrough"><s>S</s></button>
+    <div class="toolbar-sep"></div>
+    <button class="fmt-btn" data-insert="@{eq}\n\n@{end eq}" title="Equation block">&#8721;</button>
+    <button class="fmt-btn" data-insert="@{plot}\n\n@{end plot}" title="Plot block">&#128200;</button>
+    <button class="fmt-btn" data-insert="@{svg}\n\n@{end svg}" title="SVG block">&#9998;</button>
+    <button class="fmt-btn" data-insert="@{three}\n\n@{end three}" title="3D block">&#9830;</button>
+
+    <div class="toolbar-spacer"></div>
+
+    <!-- Examples dropdown -->
+    <select id="exampleSelect">
+      <option value="">-- Ejemplo --</option>
+    </select>
+
+    <!-- AutoRun (siempre activo) -->
+    <label class="chk-label" title="Auto-calculate on change">
+      <input type="checkbox" id="chkAutoRun" checked disabled> AutoRun
+    </label>
+
+    <span class="status" id="statusText">Listo</span>
+  </div>
+
+  <!-- ═══ Main Content ═══ -->
+  <div class="main-content">
+    <!-- Left: Code panel -->
+    <div class="panel-frame" id="inputFrame">
+      <div class="panel-header">Code</div>
+      <!-- Find & Replace bar -->
+      <div class="find-bar" id="findBar">
+        <div class="find-row">
+          <input type="text" id="findInput" placeholder="Buscar..." spellcheck="false">
+          <button class="find-btn" id="findPrev" title="Anterior (Shift+Enter)">&#9650;</button>
+          <button class="find-btn" id="findNext" title="Siguiente (Enter)">&#9660;</button>
+          <span class="find-count" id="findCount"></span>
+          <label><input type="checkbox" id="findCase"> Aa</label>
+          <label><input type="checkbox" id="findRegex"> .*</label>
+          <button class="find-close" id="findClose" title="Cerrar (Esc)">&times;</button>
+        </div>
+        <div class="find-row" id="replaceRow">
+          <input type="text" id="replaceInput" placeholder="Reemplazar..." spellcheck="false">
+          <button class="find-btn" id="replaceOne" title="Reemplazar">1</button>
+          <button class="find-btn" id="replaceAll" title="Reemplazar todo">*</button>
+        </div>
       </div>
-
-      <div class="split-pane">
-        <div class="code-panel">
+      <div class="code-editor-wrap">
+        <div class="line-numbers" id="lineNumbers"></div>
+        <div style="position:relative;flex:1;display:flex;overflow:hidden;">
+          <div class="syntax-layer" id="syntaxLayer"></div>
           <textarea id="codeInput" spellcheck="false" placeholder="Escribe codigo Hekatan aqui...
-' Comentarios con apostrofe
-' ## Markdown con '# titulo
+# Heading con markdown
+> Texto descriptivo
 a = 3
 b = 4
-c = sqrt(a^2 + b^2)
-
-@{plot}
-x = -5 : 5
-y = sin(x)
-@{end plot}
-
-@{eq}
-∫_0^1 x^2 dx = 1/3
-@{end eq}
-"></textarea>
+c = sqrt(a^2 + b^2)"></textarea>
         </div>
-        <div class="output-panel" id="output"></div>
+        <!-- Auto-complete popup -->
+        <div class="autocomplete-popup" id="acPopup"></div>
       </div>
     </div>
+
+    <!-- Splitter -->
+    <div class="splitter" id="splitter"></div>
+
+    <!-- Right: Output panel with rulers -->
+    <div class="panel-frame" id="outputFrame">
+      <div class="panel-header">Output</div>
+      <div class="output-with-rulers">
+        <div class="ruler-corner"></div>
+        <canvas class="ruler-h" id="rulerH" height="18"></canvas>
+        <canvas class="ruler-v" id="rulerV" width="18"></canvas>
+        <div class="output-scroll" id="output"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Keypad Tabs ═══ -->
+  <div class="keypad-bar" id="keypadBar">
+    <div class="keypad-tabs">
+      <button class="keypad-tab active" data-tab="greek">Greek</button>
+      <button class="keypad-tab" data-tab="operators">Operators</button>
+      <button class="keypad-tab" data-tab="functions">Functions</button>
+      <button class="keypad-tab" data-tab="blocks">Blocks</button>
+    </div>
+    <div class="keypad-content" id="keypadContent">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- ═══ Status Bar ═══ -->
+  <div class="status-bar">
+    <span class="sb-label">Decimals:</span>
+    <input type="number" id="decimalsInput" value="2" min="0" max="15" class="sb-input">
+    <div class="sb-sep"></div>
+    <label class="sb-chk"><input type="checkbox" id="chkSubstitute" checked> Substitute</label>
+    <label class="sb-chk"><input type="checkbox" id="chkZeroSmall" checked> Zero small</label>
+    <div class="sb-sep"></div>
+    <span class="sb-label">Plot:</span>
+    <label class="sb-chk"><input type="checkbox" id="chkAdaptive" checked> Adaptive</label>
+    <label class="sb-chk"><input type="checkbox" id="chkShadows"> Shadows</label>
+    <div class="sb-spacer"></div>
+    <span class="sb-version">Hekatan Calc 1.0.0</span>
   </div>
 
 </body>

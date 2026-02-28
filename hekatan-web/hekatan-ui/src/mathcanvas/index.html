@@ -7,16 +7,109 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <!-- Top bar: tabs + dropdown + autorun -->
-  <div class="top-bar">
-    <button id="tabCanvas" class="tab-btn active">MathCanvas</button>
-    <button id="tabCode" class="tab-btn">Code</button>
-    <button id="btnRun" class="tab-btn run-btn" title="Evaluate (F5)">&#9654;</button>
+  <!-- ═══ Menu Bar ═══ -->
+  <div class="menu-bar">
+    <div class="menu-items">
+      <div class="menu-item" data-menu="file">
+        <span class="menu-label">File</span>
+        <div class="menu-dropdown">
+          <button data-action="new">New</button>
+          <button data-action="open">Open...</button>
+          <hr>
+          <button data-action="save">Save</button>
+          <button data-action="saveas">Save As...</button>
+          <hr>
+          <button data-action="export-html">Export HTML...</button>
+          <button data-action="print">Print...</button>
+        </div>
+      </div>
+      <div class="menu-item" data-menu="edit">
+        <span class="menu-label">Edit</span>
+        <div class="menu-dropdown">
+          <button data-action="undo">Undo <span class="shortcut">Ctrl+Z</span></button>
+          <button data-action="redo">Redo <span class="shortcut">Ctrl+Y</span></button>
+          <hr>
+          <button data-action="find">Find &amp; Replace <span class="shortcut">Ctrl+F</span></button>
+          <hr>
+          <button data-action="selectall">Select All <span class="shortcut">Ctrl+A</span></button>
+        </div>
+      </div>
+      <div class="menu-item" data-menu="insert">
+        <span class="menu-label">Insert</span>
+        <div class="menu-dropdown insert-menu">
+          <div class="submenu-item">
+            <span>Bloques</span>
+            <div class="submenu">
+              <button data-insert="@{text}\n\n@{end text}">@{text} - Text Block</button>
+              <button data-insert="@{eq}\n\n@{end eq}">@{eq} - Equation Block</button>
+              <button data-insert="@{config eq:$, text:&quot;}\n\n@{end config}">@{config} - Configuration</button>
+              <hr>
+              <button data-insert="@{draw 500 400}\n\n@{end draw}">@{draw} - CAD 2D</button>
+              <button data-insert="@{three 600 400}\n\n@{end three}">@{three} - 3D Scene</button>
+              <hr>
+              <button data-insert="@{columns 2}\n\n@{end columns}">@{columns 2} - Two Columns</button>
+              <button data-insert="@{pagebreak}">@{pagebreak} - Page Break</button>
+              <button data-insert="\n---\n">--- Horizontal Rule</button>
+            </div>
+          </div>
+          <div class="submenu-item">
+            <span>Funciones</span>
+            <div class="submenu">
+              <button data-insert="sqrt(x)">sqrt(x)</button>
+              <button data-insert="sin(x)">sin(x)</button>
+              <button data-insert="cos(x)">cos(x)</button>
+              <button data-insert="tan(x)">tan(x)</button>
+              <button data-insert="atan(x)">atan(x)</button>
+              <hr>
+              <button data-insert="ln(x)">ln(x)</button>
+              <button data-insert="log(x)">log(x)</button>
+              <button data-insert="exp(x)">exp(x)</button>
+              <hr>
+              <button data-insert="det(M)">det(M)</button>
+              <button data-insert="transpose(M)">transpose(M)</button>
+              <button data-insert="lsolve(K, F)">lsolve(K, F)</button>
+            </div>
+          </div>
+          <div class="submenu-item">
+            <span>Constantes</span>
+            <div class="submenu">
+              <button data-insert="pi">pi - 3.14159...</button>
+              <button data-insert="e">e - 2.71828...</button>
+              <hr>
+              <button data-insert="g = 9.80665">g - Gravedad</button>
+              <button data-insert="c = 299792458">c - Vel. Luz</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="menu-title">Hekatan Math Editor v1.0</span>
+  </div>
+
+  <!-- ═══ Toolbar ═══ -->
+  <div class="toolbar">
+    <button id="tabCanvas" class="tab-btn">MathCanvas</button>
+    <button id="tabCode" class="tab-btn active">Code</button>
+    <button id="btnRun" class="tool-btn primary" title="Calculate (F5)">&#9654; Calculate</button>
     <button id="btnCad" class="tab-btn cad-btn" disabled title="CAD Editor">CAD</button>
+    <div class="toolbar-sep"></div>
+
+    <!-- Format buttons -->
+    <button class="fmt-btn" data-insert="# " title="Heading 1">H1</button>
+    <button class="fmt-btn" data-insert="## " title="Heading 2">H2</button>
+    <button class="fmt-btn" data-insert="### " title="Heading 3">H3</button>
+    <button class="fmt-btn" data-insert="> " title="Description text">&#62;</button>
+    <div class="toolbar-sep"></div>
+    <button class="fmt-btn" data-insert="@{eq}\n\n@{end eq}" title="Equation block">&#8721;</button>
+    <button class="fmt-btn" data-insert="@{text}\n\n@{end text}" title="Text block">T</button>
+    <button class="fmt-btn" data-insert="@{draw 500 400}\n\n@{end draw}" title="CAD 2D">&#9998;</button>
+    <button class="fmt-btn" data-insert="@{three 600 400}\n\n@{end three}" title="3D Scene">&#9830;</button>
+
+    <div class="toolbar-spacer"></div>
+
     <select id="exampleSelect" class="example-select">
       <option value="">-- Ejemplo --</option>
     </select>
-    <div class="spacer"></div>
     <select id="themeSelect" class="theme-select">
       <option value="calcpad">Tema: Calcpad</option>
       <option value="hekatan">Tema: Hekatan</option>
@@ -24,15 +117,18 @@
     <label class="auto-toggle">
       <input type="checkbox" id="chkAutoRun" checked> AutoRun
     </label>
-    <span class="app-title">Hekatan Math Editor v1.0</span>
   </div>
 
-  <!-- Split layout: editor (left) + output (right) — always visible -->
+  <!-- ═══ Main Content ═══ -->
   <div class="split-layout" id="splitLayout">
     <div class="editor-panel" id="editorPanel">
-      <div class="editor-header" id="editorHeader">MathCanvas</div>
-      <!-- Code editor (visible in Code mode) -->
-      <textarea id="codeInput" spellcheck="false" wrap="off"></textarea>
+      <div class="editor-header" id="editorHeader">Code</div>
+      <!-- Code editor with syntax overlay + fold gutter -->
+      <div class="code-editor-wrap">
+        <div class="fold-gutter" id="foldGutter"></div>
+        <div class="syntax-layer" id="syntaxLayer"></div>
+        <textarea id="codeInput" spellcheck="false" wrap="off"></textarea>
+      </div>
       <!-- MathCanvas editor (visible in MathCanvas mode) -->
       <div class="canvas-container" id="canvasContainer" style="display:none;">
         <canvas id="mathCanvas"></canvas>
@@ -50,11 +146,39 @@
     </div>
   </div>
 
-  <!-- Debug CLI Panel para MathEditor -->
+  <!-- ═══ Keypad Tabs ═══ -->
+  <div class="keypad-bar" id="keypadBar">
+    <div class="keypad-tabs">
+      <button class="keypad-tab active" data-tab="greek">Greek</button>
+      <button class="keypad-tab" data-tab="operators">Operators</button>
+      <button class="keypad-tab" data-tab="functions">Functions</button>
+      <button class="keypad-tab" data-tab="blocks">Blocks</button>
+    </div>
+    <div class="keypad-content" id="keypadContent">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- ═══ Status Bar ═══ -->
+  <div class="status-bar">
+    <span class="sb-label">Decimals:</span>
+    <input type="number" id="decimalsInput" value="2" min="0" max="15" class="sb-input">
+    <div class="sb-sep"></div>
+    <label class="sb-chk"><input type="checkbox" id="chkSubstitute" checked> Substitute</label>
+    <label class="sb-chk"><input type="checkbox" id="chkZeroSmall" checked> Zero small</label>
+    <div class="sb-sep"></div>
+    <span class="sb-label">Plot:</span>
+    <label class="sb-chk"><input type="checkbox" id="chkAdaptive" checked> Adaptive</label>
+    <label class="sb-chk"><input type="checkbox" id="chkShadows"> Shadows</label>
+    <div class="sb-spacer"></div>
+    <span class="sb-version">Hekatan Math Editor v1.0</span>
+  </div>
+
+  <!-- Debug CLI Panel -->
   <div id="debugPanel" class="debug-panel" style="display:none;">
     <div class="debug-header">
-      <span>🔧 MathEditor Debug CLI</span>
-      <button id="debugToggle" class="debug-close" title="Cerrar">✕</button>
+      <span>&#128295; MathEditor Debug CLI</span>
+      <button id="debugToggle" class="debug-close" title="Cerrar">&#10005;</button>
     </div>
     <div id="debugOutput" class="debug-output"></div>
     <div class="debug-input-row">
@@ -62,7 +186,7 @@
       <input type="text" id="debugInput" class="debug-input" placeholder="Comando... (help para ver comandos)" spellcheck="false" autocomplete="off">
     </div>
   </div>
-  <button id="btnDebug" class="debug-btn" title="Debug CLI (F12)">🔧</button>
+  <button id="btnDebug" class="debug-btn" title="Debug CLI (F12)">&#128295;</button>
 
   <script src="/web-ifc-api-iife.js"></script>
   <script type="module" src="./main.ts"></script>

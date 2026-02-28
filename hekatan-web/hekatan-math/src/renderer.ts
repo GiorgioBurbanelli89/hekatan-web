@@ -24,7 +24,12 @@ export function renderNode(node: ASTNode): string {
     case "binary": {
       const { op, left, right } = node as Extract<ASTNode, { type: "binary" }>;
       if (op === "/") {
-        return `<span class="dvc">${renderNode(left)}<span class="dvl"></span>${renderNode(right)}</span>`;
+        // Wrap numerator and denominator in <span> so they stay as single flex items
+        return `<span class="dvc"><span>${renderNode(left)}</span><span class="dvl"></span><span>${renderNode(right)}</span></span>`;
+      }
+      // Implicit multiplication: 2*x → 2x, number*variable or number*call
+      if (op === "*" && left.type === "number" && (right.type === "variable" || right.type === "call" || right.type === "binary")) {
+        return `${renderNode(left)}${renderNode(right)}`;
       }
       return `${renderNode(left)} ${opSymbol(op)} ${renderNode(right)}`;
     }
@@ -184,6 +189,7 @@ export function renderEquationText(text: string): string {
   let html = "";
   let i = 0;
   const len = text.length;
+  let lastTokenStart = 0;
 
   while (i < len) {
     const ch = text[i];
@@ -219,7 +225,9 @@ export function renderEquationText(text: string): string {
     if (ch === "_") {
       const g = extractGroup(text, i + 1);
       if (g) {
-        html += `<sub>${renderEquationText(g.content)}</sub>`;
+        // Simple word/number → plain text with Greek; complex → full render
+        const sub = /^[A-Za-z0-9]+$/.test(g.content) ? (GREEK[g.content] || esc(g.content)) : renderEquationText(g.content);
+        html += `<sub>${sub}</sub>`;
         i = g.end; continue;
       }
     }
@@ -228,7 +236,8 @@ export function renderEquationText(text: string): string {
     if (ch === "^") {
       const g = extractGroup(text, i + 1);
       if (g) {
-        html += `<sup>${renderEquationText(g.content)}</sup>`;
+        const sup = /^[A-Za-z0-9]+$/.test(g.content) ? (GREEK[g.content] || esc(g.content)) : renderEquationText(g.content);
+        html += `<sup>${sup}</sup>`;
         i = g.end; continue;
       }
     }
@@ -291,6 +300,7 @@ export function renderEquationText(text: string): string {
 
     // Word tokens
     if (/[A-Za-z]/.test(ch)) {
+      lastTokenStart = html.length;
       let word = "";
       let j = i;
       while (j < len && /[A-Za-z0-9]/.test(text[j])) { word += text[j]; j++; }
@@ -349,6 +359,7 @@ export function renderEquationText(text: string): string {
 
     // Numbers
     if (/[0-9]/.test(ch)) {
+      lastTokenStart = html.length;
       let num = "";
       let j = i;
       while (j < len && /[0-9.]/.test(text[j])) { num += text[j]; j++; }
@@ -358,11 +369,78 @@ export function renderEquationText(text: string): string {
     // Unicode math pass-through
     if (/[\u2200-\u22FF\u2100-\u214F]/.test(ch)) { html += ch; i++; continue; }
 
+    // Multiplication: * → · between numbers, juxtaposition between variables
+    if (ch === "*") {
+      const prevIsNum = /\d/.test(html.slice(-1));
+      const nextIsNum = i + 1 < len && /[0-9]/.test(text[i + 1]);
+      html += (prevIsNum && nextIsNum) ? "·" : "";
+      i++; continue;
+    }
+
     // Operators with spacing
     if ("+-=<>".includes(ch)) { html += ` ${esc(ch)} `; i++; continue; }
 
     // Dot product
     if (ch === "·") { html += " · "; i++; continue; }
+
+    // Bare fraction: a/b (no spaces around /)
+    if (ch === "/") {
+      if (i > 0 && text[i - 1] !== " " && i + 1 < len && text[i + 1] !== " " && html.length > lastTokenStart) {
+        const numHtml = html.slice(lastTokenStart);
+        html = html.slice(0, lastTokenStart);
+        i++; // skip /
+        let denHtml = "";
+        // Capture denominator token
+        if (i < len && text[i] === "(") {
+          const close = findMatchingParen(text, i);
+          if (close > 0) { denHtml = renderEquationText(text.slice(i + 1, close)); i = close + 1; }
+        } else if (i < len && text[i] === "{") {
+          const close = findMatchingBrace(text, i);
+          if (close > 0) { denHtml = renderEquationText(text.slice(i + 1, close)); i = close + 1; }
+        } else if (i < len && text[i] === "\u221A") {
+          // √ followed by group or token
+          denHtml = "\u221A";
+          i++;
+          if (i < len && text[i] === "(") {
+            const close = findMatchingParen(text, i);
+            if (close > 0) { denHtml += `(${renderEquationText(text.slice(i + 1, close))})`; i = close + 1; }
+          } else if (i < len && /[A-Za-z]/.test(text[i])) {
+            let w = "", j = i; while (j < len && /[A-Za-z0-9]/.test(text[j])) { w += text[j]; j++; }
+            denHtml += GREEK[w] || `<var>${esc(w)}</var>`; i = j;
+          } else if (i < len && /[0-9]/.test(text[i])) {
+            let n = "", j = i; while (j < len && /[0-9.]/.test(text[j])) { n += text[j]; j++; }
+            denHtml += n; i = j;
+          }
+        } else if (i < len && /[A-Za-z]/.test(text[i])) {
+          let word = "", j = i;
+          while (j < len && /[A-Za-z0-9]/.test(text[j])) { word += text[j]; j++; }
+          i = j;
+          if (i < len && text[i] === "(") {
+            const close = findMatchingParen(text, i);
+            if (close > 0) {
+              const fn = EQ_FN_NAMES.has(word) ? `<b>${word}</b>` : (GREEK[word] || `<var>${esc(word)}</var>`);
+              denHtml = `${fn}(${renderEquationText(text.slice(i + 1, close))})`; i = close + 1;
+            } else { denHtml = GREEK[word] || (EQ_FN_NAMES.has(word) ? `<b>${word}</b>` : `<var>${esc(word)}</var>`); }
+          } else { denHtml = GREEK[word] || (EQ_FN_NAMES.has(word) ? `<b>${word}</b>` : `<var>${esc(word)}</var>`); }
+        } else if (i < len && /[0-9]/.test(text[i])) {
+          let num = "", j = i; while (j < len && /[0-9.]/.test(text[j])) { num += text[j]; j++; }
+          denHtml = num; i = j;
+        } else if (i < len) { denHtml = esc(text[i]); i++; }
+        // Subscript/superscript on denominator
+        while (i < len && (text[i] === "_" || text[i] === "^")) {
+          const tag = text[i] === "_" ? "sub" : "sup";
+          const g = extractGroup(text, i + 1);
+          if (g) {
+            const inner = /^[A-Za-z0-9]+$/.test(g.content) ? (GREEK[g.content] || esc(g.content)) : renderEquationText(g.content);
+            denHtml += `<${tag}>${inner}</${tag}>`; i = g.end;
+          } else break;
+        }
+        lastTokenStart = html.length;
+        html += `<span class="dvc"><span>${numHtml}</span><span class="dvl"></span><span>${denHtml}</span></span>`;
+        continue;
+      }
+      html += " / "; i++; continue;
+    }
 
     // Space → thin space
     if (ch === " ") { html += "&thinsp;"; i++; continue; }
@@ -404,10 +482,19 @@ function extractGroup(text: string, idx: number): { content: string; end: number
     if (close > 0) return { content: text.slice(idx + 1, close), end: close + 1 };
     return null;
   }
-  // Single char or word
-  if (/[A-Za-z0-9α-ωΑ-Ω∞]/.test(text[idx])) {
-    return { content: text[idx], end: idx + 1 };
+  // Letters: capture full word (e.g. _max → "max")
+  if (/[A-Za-zα-ωΑ-Ω]/.test(text[idx])) {
+    let j = idx;
+    while (j < text.length && /[A-Za-z0-9α-ωΑ-Ω]/.test(text[j])) j++;
+    return { content: text.slice(idx, j), end: j };
   }
+  // Digits: capture full number (e.g. ^23 → "23")
+  if (/[0-9]/.test(text[idx])) {
+    let j = idx;
+    while (j < text.length && /[0-9]/.test(text[j])) j++;
+    return { content: text.slice(idx, j), end: j };
+  }
+  if (text[idx] === "∞") return { content: "∞", end: idx + 1 };
   return null;
 }
 

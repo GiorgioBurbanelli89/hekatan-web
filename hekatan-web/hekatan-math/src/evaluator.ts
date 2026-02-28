@@ -467,19 +467,43 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
     case "assign": {
       const val = evaluate(node.expr, env);
       if (node.indices) {
-        // Indexed assignment
+        // Indexed assignment: A[i] = val  or  A[i,j] = val  (1-based)
         const existing = env.getVar(node.name);
-        const idx = evaluate(node.indices[0], env);
-        if (typeof idx !== "number") throw new Error("Index must be a number");
-        const i = Math.round(idx);
-        if (Array.isArray(existing)) {
-          (existing as number[])[i] = val as number;
-          env.setVar(node.name, existing);
+        const idx0 = evaluate(node.indices[0], env);
+        if (typeof idx0 !== "number") throw new Error("Index must be a number");
+        const i = Math.round(idx0) - 1; // 1-based → 0-based
+
+        if (node.indices.length >= 2) {
+          // 2D: A[i,j] = val
+          const idx1 = evaluate(node.indices[1], env);
+          if (typeof idx1 !== "number") throw new Error("Index must be a number");
+          const j = Math.round(idx1) - 1; // 1-based → 0-based
+          if (is2D(existing)) {
+            const mat = existing as number[][];
+            if (mat[i]) mat[i][j] = val as number;
+            env.setVar(node.name, mat);
+          } else {
+            throw new Error(`Cannot index 2D into non-matrix: ${node.name}`);
+          }
         } else {
-          // Create new array
-          const arr: number[] = [];
-          arr[i] = val as number;
-          env.setVar(node.name, arr);
+          // 1D: A[i] = val
+          if (Array.isArray(existing) && !is2D(existing)) {
+            (existing as number[])[i] = val as number;
+            env.setVar(node.name, existing);
+          } else if (is2D(existing)) {
+            // M[i] = row vector — set entire row
+            const mat = existing as number[][];
+            if (Array.isArray(val) && !is2D(val)) {
+              mat[i] = val as number[];
+            } else {
+              mat[i] = [val as number];
+            }
+            env.setVar(node.name, mat);
+          } else {
+            const arr: number[] = [];
+            arr[i] = val as number;
+            env.setVar(node.name, arr);
+          }
         }
       } else {
         env.setVar(node.name, val);
@@ -659,6 +683,109 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
           return x.map(v => [v]);
         }
         return NaN;
+      }
+
+      // ─── Numerical Integration (Gauss-Legendre) ───────────
+      // integral(f, a, b)       — single integral ∫_a^b f(x) dx
+      // integral2(f, a, b, c, d) — double integral ∫∫ f(x,y) dx dy
+      // integral3(f, a, b, c, d, e, f) — triple integral ∫∫∫ f(x,y,z) dx dy dz
+      // f must be a user-defined function name
+      if (node.name === "integral" || node.name === "integrate") {
+        // integral(f, a, b)  or  integral(f, a, b, n)
+        if (node.args.length < 3) throw new Error("integral(f, a, b) requires 3 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("integral: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn || fn.params.length < 1) throw new Error(`integral: '${fnName}' is not a function of 1 variable`);
+        const a = evaluate(node.args[1], env) as number;
+        const b = evaluate(node.args[2], env) as number;
+        const nPts = node.args[3] ? Math.round(evaluate(node.args[3], env) as number) : 10;
+        const { pts, wts } = gaussLegendre(nPts);
+        // Transform [-1,1] → [a,b]: x = (b-a)/2 * t + (a+b)/2
+        const hf = (b - a) / 2;
+        const mid = (a + b) / 2;
+        let sum = 0;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        for (let k = 0; k < pts.length; k++) {
+          const x = hf * pts[k] + mid;
+          childEnv.setVar(fn.params[0], x);
+          const fv = evaluate(fn.body, childEnv);
+          sum += wts[k] * (typeof fv === "number" ? fv : NaN);
+        }
+        return hf * sum;
+      }
+
+      if (node.name === "integral2" || node.name === "integrate2" || node.name === "dblintegral") {
+        // integral2(f, xa, xb, ya, yb)  or  integral2(f, xa, xb, ya, yb, n)
+        if (node.args.length < 5) throw new Error("integral2(f, xa, xb, ya, yb) requires 5 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("integral2: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn || fn.params.length < 2) throw new Error(`integral2: '${fnName}' is not a function of 2 variables`);
+        const xa = evaluate(node.args[1], env) as number;
+        const xb = evaluate(node.args[2], env) as number;
+        const ya = evaluate(node.args[3], env) as number;
+        const yb = evaluate(node.args[4], env) as number;
+        const nPts = node.args[5] ? Math.round(evaluate(node.args[5], env) as number) : 7;
+        const { pts, wts } = gaussLegendre(nPts);
+        const hx = (xb - xa) / 2, mx = (xa + xb) / 2;
+        const hy = (yb - ya) / 2, my = (ya + yb) / 2;
+        let sum = 0;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        for (let i = 0; i < pts.length; i++) {
+          const x = hx * pts[i] + mx;
+          childEnv.setVar(fn.params[0], x);
+          for (let j = 0; j < pts.length; j++) {
+            const y = hy * pts[j] + my;
+            childEnv.setVar(fn.params[1], y);
+            const fv = evaluate(fn.body, childEnv);
+            sum += wts[i] * wts[j] * (typeof fv === "number" ? fv : NaN);
+          }
+        }
+        return hx * hy * sum;
+      }
+
+      if (node.name === "integral3" || node.name === "integrate3" || node.name === "tplintegral") {
+        // integral3(f, xa, xb, ya, yb, za, zb)  or  integral3(f, xa, xb, ya, yb, za, zb, n)
+        if (node.args.length < 7) throw new Error("integral3(f, xa, xb, ya, yb, za, zb) requires 7 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("integral3: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn || fn.params.length < 3) throw new Error(`integral3: '${fnName}' is not a function of 3 variables`);
+        const xa = evaluate(node.args[1], env) as number;
+        const xb = evaluate(node.args[2], env) as number;
+        const ya = evaluate(node.args[3], env) as number;
+        const yb = evaluate(node.args[4], env) as number;
+        const za = evaluate(node.args[5], env) as number;
+        const zb = evaluate(node.args[6], env) as number;
+        const nPts = node.args[7] ? Math.round(evaluate(node.args[7], env) as number) : 5;
+        const { pts, wts } = gaussLegendre(nPts);
+        const hx = (xb - xa) / 2, mx = (xa + xb) / 2;
+        const hy = (yb - ya) / 2, my = (ya + yb) / 2;
+        const hz = (zb - za) / 2, mz = (za + zb) / 2;
+        let sum = 0;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        for (let i = 0; i < pts.length; i++) {
+          const x = hx * pts[i] + mx;
+          childEnv.setVar(fn.params[0], x);
+          for (let j = 0; j < pts.length; j++) {
+            const y = hy * pts[j] + my;
+            childEnv.setVar(fn.params[1], y);
+            for (let k = 0; k < pts.length; k++) {
+              const z = hz * pts[k] + mz;
+              childEnv.setVar(fn.params[2], z);
+              const fv = evaluate(fn.body, childEnv);
+              sum += wts[i] * wts[j] * wts[k] * (typeof fv === "number" ? fv : NaN);
+            }
+          }
+        }
+        return hx * hy * hz * sum;
       }
 
       throw new Error(`Unknown function: ${node.name}`);
@@ -859,6 +986,60 @@ function gaussianSolve(A: number[][], b: number[]): number[] {
     }
   }
   return aug.map(row => row[n]);
+}
+
+// ─── Gauss-Legendre quadrature points & weights on [-1,1] ─
+function gaussLegendre(n: number): { pts: number[]; wts: number[] } {
+  // Precomputed tables for common orders (high precision)
+  const tables: Record<number, { pts: number[]; wts: number[] }> = {
+    1: { pts: [0], wts: [2] },
+    2: { pts: [-0.5773502691896257, 0.5773502691896257],
+         wts: [1, 1] },
+    3: { pts: [-0.7745966692414834, 0, 0.7745966692414834],
+         wts: [0.5555555555555556, 0.8888888888888888, 0.5555555555555556] },
+    4: { pts: [-0.8611363115940526, -0.3399810435848563, 0.3399810435848563, 0.8611363115940526],
+         wts: [0.3478548451374538, 0.6521451548625461, 0.6521451548625461, 0.3478548451374538] },
+    5: { pts: [-0.9061798459386640, -0.5384693101056831, 0, 0.5384693101056831, 0.9061798459386640],
+         wts: [0.2369268850561891, 0.4786286704993665, 0.5688888888888889, 0.4786286704993665, 0.2369268850561891] },
+    7: { pts: [-0.9491079123427585, -0.7415311855993945, -0.4058451513773972, 0,
+               0.4058451513773972, 0.7415311855993945, 0.9491079123427585],
+         wts: [0.1294849661688697, 0.2797053914892767, 0.3818300505051189, 0.4179591836734694,
+               0.3818300505051189, 0.2797053914892767, 0.1294849661688697] },
+    10: { pts: [-0.9739065285171717, -0.8650633666889845, -0.6794095682990244, -0.4333953941292472,
+                -0.1488743389816312, 0.1488743389816312, 0.4333953941292472, 0.6794095682990244,
+                0.8650633666889845, 0.9739065285171717],
+          wts: [0.0666713443086881, 0.1494513491505806, 0.2190863625159820, 0.2692667193099963,
+                0.2955242247147529, 0.2955242247147529, 0.2692667193099963, 0.2190863625159820,
+                0.1494513491505806, 0.0666713443086881] },
+  };
+
+  if (tables[n]) return tables[n];
+
+  // For non-tabulated n, compute via Newton iteration on Legendre polynomials
+  const pts: number[] = new Array(n);
+  const wts: number[] = new Array(n);
+  const m = Math.floor((n + 1) / 2);
+  for (let i = 0; i < m; i++) {
+    // Initial guess (Chebyshev approximation)
+    let x = Math.cos(Math.PI * (i + 0.75) / (n + 0.5));
+    let p0: number, p1: number, pp: number;
+    // Newton iteration
+    for (let iter = 0; iter < 100; iter++) {
+      p0 = 1; p1 = x;
+      for (let j = 2; j <= n; j++) {
+        const p2 = ((2 * j - 1) * x * p1 - (j - 1) * p0) / j;
+        p0 = p1; p1 = p2;
+      }
+      pp = n * (x * p1 - p0) / (x * x - 1);
+      const dx = p1 / pp;
+      x -= dx;
+      if (Math.abs(dx) < 1e-15) break;
+    }
+    pts[i] = -x;
+    pts[n - 1 - i] = x;
+    wts[i] = wts[n - 1 - i] = 2 / ((1 - x * x) * pp * pp);
+  }
+  return { pts, wts };
 }
 
 // ─── Convenience ──────────────────────────────────────────

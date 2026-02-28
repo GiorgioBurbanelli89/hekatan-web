@@ -2,42 +2,105 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background: #fff; color: #1a1a2e; overflow: hidden; font-size: 11pt; }
 
-/* ─── Top Bar ─── */
-.top-bar {
-  height: 38px; background: #f0f0f0; border-bottom: 1px solid #ccc;
-  display: flex; align-items: center; padding: 0 8px; gap: 4px;
+/* ═══ Menu Bar ═══ */
+.menu-bar {
+  height: 24px; background: linear-gradient(to bottom, #FAFAFA, #F0F0F0);
+  border-bottom: 1px solid #DDD; display: flex; align-items: center;
+  padding: 0 4px; flex-shrink: 0; position: relative; z-index: 1000;
+}
+.menu-items { display: flex; gap: 0; }
+.menu-item { position: relative; }
+.menu-label {
+  display: inline-block; padding: 2px 10px; font-size: 12px;
+  color: #D4AF37; font-weight: 500; cursor: pointer; border-radius: 3px;
+}
+.menu-label:hover { background: #E8E8E8; }
+.menu-item:hover > .menu-dropdown,
+.menu-item.open > .menu-dropdown { display: block; }
+.menu-dropdown {
+  display: none; position: absolute; top: 100%; left: 0;
+  background: #fff; border: 1px solid #ddd; border-radius: 4px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15); min-width: 200px;
+  padding: 4px 0; z-index: 1001;
+}
+.menu-dropdown button {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 5px 20px; border: none; background: none;
+  font-size: 12px; color: #1A1A25; cursor: pointer; text-align: left;
+}
+.menu-dropdown button:hover { background: #E8E8E8; }
+.menu-dropdown hr { border: none; border-top: 1px solid #eee; margin: 3px 0; }
+.menu-dropdown .shortcut { color: #888; font-size: 11px; margin-left: 20px; }
+.menu-title { margin-left: auto; font-size: 11px; color: #999; padding-right: 8px; }
+
+/* Submenus */
+.submenu-item { position: relative; }
+.submenu-item > span {
+  display: block; padding: 5px 20px; font-size: 12px; cursor: pointer;
+}
+.submenu-item > span::after { content: " \25B6"; font-size: 9px; float: right; color: #999; }
+.submenu-item:hover > span { background: #E8E8E8; }
+.submenu {
+  display: none; position: absolute; left: 100%; top: -4px;
+  background: #fff; border: 1px solid #ddd; border-radius: 4px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15); min-width: 220px;
+  padding: 4px 0; z-index: 1002;
+}
+.submenu-item:hover > .submenu { display: block; }
+.submenu button {
+  display: block; width: 100%; padding: 5px 16px; border: none;
+  background: none; font-size: 12px; color: #1A1A25; cursor: pointer; text-align: left;
+}
+.submenu button:hover { background: #E8E8E8; }
+.submenu hr { border: none; border-top: 1px solid #eee; margin: 3px 0; }
+
+/* ═══ Toolbar ═══ */
+.toolbar {
+  height: 32px; background: linear-gradient(to bottom, #FCFCFC, #F2F2F2);
+  border-bottom: 1px solid #DDD; display: flex; align-items: center;
+  padding: 0 6px; gap: 3px; flex-shrink: 0;
 }
 .tab-btn {
-  padding: 5px 14px; border: 1px solid #bbb; border-radius: 4px;
-  background: #e8e8e8; cursor: pointer; font-size: 0.82rem; font-weight: 500;
+  padding: 4px 12px; border: 1px solid #bbb; border-radius: 4px;
+  background: #e8e8e8; cursor: pointer; font-size: 0.78rem; font-weight: 500;
 }
 .tab-btn:hover { background: #ddd; }
-.tab-btn.active { background: #2196f3; color: white; border-color: #1976d2; }
-.run-btn { background: #4caf50; color: white; border-color: #388e3c; font-size: 0.9rem; }
-.run-btn:hover { background: #43a047; }
+.tab-btn.active { background: #B8960C; color: white; border-color: #8B7209; }
+.tool-btn {
+  padding: 4px 10px; border: 1px solid #bbb; border-radius: 4px;
+  background: #e8e8e8; cursor: pointer; font-size: 0.78rem;
+}
+.tool-btn:hover { border-color: #A0BEE6; background: #E8F0FE; }
+.tool-btn.primary { background: #B8960C; color: white; border-color: #8B7209; }
+.tool-btn.primary:hover { background: #A6870B; }
+.fmt-btn {
+  width: 28px; height: 24px; border: 1px solid #ccc; border-radius: 3px;
+  background: #fff; cursor: pointer; font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; color: #555;
+}
+.fmt-btn:hover { background: rgba(184,150,12,0.12); border-color: #B8960C; }
+.toolbar-sep { width: 1px; height: 20px; background: #ccc; margin: 0 4px; }
+.toolbar-spacer { flex: 1; }
 .cad-btn { background: #ff9800; color: white; border-color: #f57c00; font-weight: 600; }
 .cad-btn:hover:not(:disabled) { background: #fb8c00; }
 .cad-btn:disabled { background: #e0e0e0; color: #999; border-color: #bbb; cursor: default; }
 .cad-btn.active { background: #e65100; border-color: #bf360c; }
 .example-select {
-  padding: 4px 8px; border: 1px solid #bbb; border-radius: 4px;
-  font-size: 0.82rem; background: white; min-width: 200px;
+  padding: 3px 6px; border: 1px solid #bbb; border-radius: 4px;
+  font-size: 0.78rem; background: white; min-width: 180px;
 }
-.spacer { flex: 1; }
+.theme-select {
+  padding: 3px 6px; border: 1px solid #bbb; border-radius: 4px;
+  font-size: 0.78rem; background: white;
+}
 .auto-toggle {
-  font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: #555;
+  font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: #555;
 }
 .auto-toggle input { cursor: pointer; }
-.app-title { font-size: 0.78rem; color: #888; margin-left: 12px; }
 
-.theme-select {
-  padding: 4px 8px; border: 1px solid #bbb; border-radius: 4px;
-  font-size: 0.82rem; background: white;
-}
-
-/* ─── Split Layout (Code mode) ─── */
+/* ═══ Split Layout ═══ */
 .split-layout {
-  display: flex; height: calc(100vh - 38px);
+  display: flex; height: calc(100vh - 56px - 80px - 28px); /* 24 menu + 32 toolbar + 80 keypad + 28 statusbar */
   width: 100%; overflow: hidden;
 }
 
@@ -75,12 +138,55 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   font-size: 0.85rem; font-weight: 600; color: #555;
   flex: 0 0 auto;
 }
+/* ─── Code Editor with Syntax Layer ─── */
+.code-editor-wrap {
+  flex: 1; position: relative; display: flex; overflow: hidden;
+  background: #fafafa;
+}
+/* ─── Fold Gutter (AvalonEdit-style +/- markers) ─── */
+.fold-gutter {
+  position: absolute; top: 0; left: 0; bottom: 0; width: 20px;
+  z-index: 3; overflow: hidden;
+  padding-top: 12px;
+  background: #f4f4f4;
+  border-right: 1px solid #e0e0e0;
+}
+.fold-inner { /* scrolled via JS to match textarea */ }
+.fold-marker {
+  display: block; width: 20px;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px; line-height: 1.6;
+  text-align: center; color: #bbb;
+  cursor: pointer; user-select: none;
+}
+.fold-marker:hover:not(.fold-empty) { color: #333; background: rgba(0,0,0,0.06); }
+.fold-empty { cursor: default; }
+.fold-marker.fold-active { color: #569CD6; font-weight: 700; }
+.syntax-layer {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  padding: 12px 14px 12px 34px; pointer-events: none; z-index: 1;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px; line-height: 1.6; tab-size: 2;
+  white-space: pre-wrap; word-wrap: break-word;
+  overflow: hidden; color: #1A1A25;
+}
 .editor-panel textarea {
-  width: 100%; flex: 1; border: none; padding: 12px 14px;
+  width: 100%; flex: 1; border: none; padding: 12px 14px 12px 34px;
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   font-size: 13px; line-height: 1.6; resize: none; outline: none;
-  background: #fafafa; color: #222; tab-size: 2;
+  background: transparent; color: transparent; caret-color: #1A1A25;
+  tab-size: 2; position: relative; z-index: 2;
 }
+
+/* ─── Syntax Highlighting Colors ─── */
+.syntax-layer .syn-heading { color: #B8960C; font-weight: 600; }
+.syntax-layer .syn-comment { color: #6A9955; }
+.syntax-layer .syn-dim { color: #999; font-style: italic; }
+.syntax-layer .syn-block { color: #C586C0; font-weight: 600; }
+.syntax-layer .syn-keyword { color: #569CD6; }
+.syntax-layer .syn-number { color: #2E7D32; }
+.syntax-layer .syn-function { color: #795548; }
+.syntax-layer .syn-operator { color: #D4D4D4; }
 
 /* ─── Output Panel (right) ─── */
 .output-panel {
@@ -97,38 +203,40 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   padding: 10px;
   padding-top: 22px;   /* space for horizontal ruler (18px ruler + 4px gap, matches MathCanvas) */
   padding-left: 22px;  /* space for vertical ruler (18px ruler + 4px gap, matches MathCanvas) */
-  padding-right: 28px; /* space for custom scrollbar */
+  padding-right: 10px;
   display: flex; justify-content: flex-start; align-items: flex-start;
-  scrollbar-width: none; /* hide native Firefox scrollbar */
+  scrollbar-width: none;           /* hide native scrollbar — custom JS scrollbar used */
 }
-.output-content::-webkit-scrollbar { display: none; } /* hide native Chrome scrollbar */
+.output-content::-webkit-scrollbar { display: none; }
 
-/* ─── Custom Scrollbar Track (always visible) ─── */
+/* ─── Custom Scrollbar Track (JS-driven, always visible) ─── */
 .custom-scrollbar {
+  /* display controlled by JS: hidden when no overflow, shown otherwise */
   position: absolute;
-  right: 0; top: 0; bottom: 0;
-  width: 16px;
-  background: #ddd;
-  border-left: 1px solid #999;
-  z-index: 20;
-  cursor: pointer;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  background: #d0d0d0;
+  border-left: 1px solid #aaa;
+  z-index: 12;
 }
 .custom-scrollbar-thumb {
   position: absolute;
   right: 2px;
-  width: 12px;
+  width: 14px;
   min-height: 30px;
-  background: #555;
-  border-radius: 6px;
+  background: #777;
+  border-radius: 7px;
   cursor: grab;
   transition: background 0.15s;
 }
-.custom-scrollbar-thumb:hover { background: #333; }
-.custom-scrollbar-thumb.dragging { background: #222; cursor: grabbing; }
+.custom-scrollbar-thumb:hover { background: #555; }
+.custom-scrollbar-thumb.dragging { background: #333; cursor: grabbing; }
 .custom-scrollbar-up,
 .custom-scrollbar-down {
   position: absolute;
-  right: 0; width: 16px; height: 18px;
+  right: 0; width: 18px; height: 18px;
   background: #bbb;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
@@ -141,7 +249,7 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
 .custom-scrollbar-down:hover { background: #888; color: #fff; }
 /* ─── Output Rulers (Word-style, created by JS) ─── */
 .output-ruler-h-overlay {
-  position: absolute; left: 18px; right: 0;
+  position: absolute; left: 18px; right: 18px;
   height: 18px; z-index: 15;
   pointer-events: none;
 }
@@ -166,14 +274,14 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
 }
 .output-page {
   position: relative;
-  background: var(--page-bg, #f4eeef);
+  background: var(--page-bg, #ffffff);
   width: 210mm;
   min-height: 297mm;
-  padding: 15mm 15mm 15mm 20mm;
+  padding: 10mm 10mm 10mm 12mm;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   box-sizing: border-box;
   font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif;
-  font-size: 10.5pt; line-height: 120%;
+  font-size: 12pt; line-height: 135%;
 }
 
 /* ─── Cell Array (vector de matrices) ─── */
@@ -217,8 +325,6 @@ h6 { font-size: 1.0em; }
 /* ─── Book-style chapter heading (h1 in output) ─── */
 .output-content h1.chapter-heading {
   text-align: right;
-  border-top: 1.5px solid #444;
-  border-bottom: 1.5px solid #444;
   padding: 0.4em 0.3em;
   margin: 0.8em 0 0.6em 0;
   font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
@@ -270,6 +376,16 @@ p, li {
   color: #086;
   font-style: normal;
   font-size: 90%;
+}
+/* Array index subscripts: v[n] → v_[n] with faded brackets + italic index */
+.eq sub i {
+  font-style: italic;
+  font-size: inherit;
+  color: inherit;
+}
+.eq sub .idx-br {
+  opacity: 0.3;
+  font-style: normal;
 }
 
 i.unit {
@@ -535,6 +651,27 @@ sup.unit {
 .out-comment { color: #444; margin: 0.05em 0; line-height: 120%; }
 .out-error { color: Crimson; background-color: #FEE; font-size: 0.88em; margin: 2px 0; padding: 2px 4px; border-radius: 3px; }
 
+/* ─── Alignment classes ─── */
+.align-left { text-align: left; }
+.align-center { text-align: center; }
+.align-right { text-align: right; }
+
+/* ─── Inline equation inside text (@{eq}...@{end eq} within text) ─── */
+.inline-eq {
+  display: inline;
+  white-space: nowrap;
+  font-size: inherit;
+  color: inherit;
+}
+.inline-eq var {
+  color: inherit;
+  font-size: inherit;
+}
+.inline-eq i {
+  color: inherit;
+  font-size: inherit;
+}
+
 /* ─── Cells (inline row) ─── */
 .out-cells { display: flex; gap: 20px; flex-wrap: wrap; margin: 0.3em 0; }
 
@@ -733,6 +870,75 @@ sup.unit {
   font-size: 9pt;
 }
 
+/* ─── lusolve equation display: {F} = [K]{u} ─── */
+.lsolve-eq-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  vertical-align: middle;
+}
+
+.lsolve-sign {
+  font-size: 1.1em;
+  padding: 0 2px;
+  vertical-align: middle;
+}
+
+.lsolve-sym-vec {
+  display: inline-grid;
+  grid-template-columns: auto;
+  gap: 0;
+  margin: 4px 2px;
+  vertical-align: middle;
+  padding: 2pt 5pt;
+}
+
+.lsolve-sym-vec .sym-row {
+  white-space: nowrap;
+  padding: 1pt 5pt;
+  text-align: center;
+  font-size: 10pt;
+}
+
+/* Calcpad theme: sym vec brackets via table borders */
+.lsolve-sym-vec .tr { display: table-row; }
+.lsolve-sym-vec .td {
+  display: table-cell;
+  white-space: nowrap;
+  padding: 0 2pt;
+  text-align: center;
+  font-size: 10pt;
+}
+.lsolve-sym-vec .td:first-child,
+.lsolve-sym-vec .td:last-child {
+  width: 0.75pt; min-width: 0.75pt; max-width: 0.75pt; padding: 0 1pt;
+}
+.lsolve-sym-vec .td:first-child { border-left: solid 1pt black; }
+.lsolve-sym-vec .td:last-child { border-right: solid 1pt black; }
+.lsolve-sym-vec .tr:first-child .td:first-child,
+.lsolve-sym-vec .tr:first-child .td:last-child { border-top: solid 1pt black; }
+.lsolve-sym-vec .tr:last-child .td:first-child,
+.lsolve-sym-vec .tr:last-child .td:last-child { border-bottom: solid 1pt black; }
+
+/* Hekatan theme: sym vec uses grid + border brackets */
+.theme-hekatan .lsolve-sym-vec {
+  display: inline-grid !important;
+  grid-template-columns: auto;
+  border-left: solid 1.5pt black;
+  border-right: solid 1.5pt black;
+  border-radius: 3px;
+}
+.theme-hekatan .lsolve-sym-vec .tr { display: contents; }
+.theme-hekatan .lsolve-sym-vec .td {
+  display: block;
+  border: none;
+  width: auto; min-width: auto; max-width: none;
+  padding: 1pt 5pt;
+}
+.theme-hekatan .lsolve-sym-vec .td:first-child,
+.theme-hekatan .lsolve-sym-vec .td:last-child { display: none; }
+
 /* ═══════════════════════════════════════════════════════════
    CAD FLOATING TOOLBAR - Estilo ifc-cli.html
    ═══════════════════════════════════════════════════════════ */
@@ -866,6 +1072,111 @@ sup.unit {
   pointer-events: auto;
 }
 .cad-overlay.hidden { display: none; }
+
+/* ═══════════════════════════════════════════════════════════
+   KEYPAD BAR — Bottom tabs with greek, operators, functions
+   ═══════════════════════════════════════════════════════════ */
+.keypad-bar {
+  height: 80px;
+  background: #F5F5F5;
+  border-top: 1px solid #DDD;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.keypad-tabs {
+  display: flex;
+  gap: 0;
+  background: #ECECEC;
+  border-bottom: 1px solid #DDD;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.keypad-tab {
+  padding: 3px 14px;
+  border: none;
+  background: none;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  color: #555;
+  border-bottom: 2px solid transparent;
+}
+.keypad-tab:hover { color: #1A1A25; background: #E0E0E0; }
+.keypad-tab.active {
+  color: #B8960C;
+  font-weight: 600;
+  border-bottom-color: #B8960C;
+  background: #F5F5F5;
+}
+.keypad-content {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
+  gap: 2px;
+  padding: 4px 6px;
+  overflow-y: auto;
+}
+.key-btn {
+  width: 28px;
+  height: 24px;
+  border: 1px solid #DDD;
+  border-radius: 3px;
+  background: #FFF;
+  font-size: 14px;
+  font-family: 'Times New Roman', Georgia, serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.key-btn:hover { background: rgba(184,150,12,0.12); border-color: #B8960C; }
+.key-btn.wide {
+  width: auto;
+  padding: 0 8px;
+  font-size: 11px;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STATUS BAR — Bottom bar
+   ═══════════════════════════════════════════════════════════ */
+.status-bar {
+  height: 28px;
+  background: linear-gradient(to bottom, #FFF, #E0E0E0);
+  border-top: 1px solid #CCC;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.sb-label { font-size: 11px; color: #555; }
+.sb-input {
+  width: 36px;
+  height: 20px;
+  border: 1px solid #CCC;
+  border-radius: 2px;
+  text-align: center;
+  font-size: 12px;
+  font-family: 'Segoe UI Semibold', sans-serif;
+  padding: 0;
+}
+.sb-chk {
+  font-size: 11px;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.sb-chk input { cursor: pointer; }
+.sb-sep { width: 1px; height: 16px; background: #CCC; }
+.sb-spacer { flex: 1; }
+.sb-version { font-size: 10px; color: #999; }
 
 /* ═══════════════════════════════════════════════════════════
    Debug CLI Panel - Testing interactivo del MathEditor
