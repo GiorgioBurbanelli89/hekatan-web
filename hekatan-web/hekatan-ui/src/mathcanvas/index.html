@@ -20,6 +20,7 @@
           <button data-action="saveas">Save As...</button>
           <hr>
           <button data-action="export-html">Export HTML...</button>
+          <button data-action="export-pdf">Export PDF...</button>
           <button data-action="print">Print...</button>
         </div>
       </div>
@@ -50,6 +51,54 @@
               <button data-insert="@{columns 2}\n\n@{end columns}">@{columns 2} - Two Columns</button>
               <button data-insert="@{pagebreak}">@{pagebreak} - Page Break</button>
               <button data-insert="\n---\n">--- Horizontal Rule</button>
+            </div>
+          </div>
+          <div class="submenu-item">
+            <span>CAD Comandos</span>
+            <div class="submenu">
+              <button data-insert="line x1 y1 x2 y2">line - Linea</button>
+              <button data-insert="rect x1 y1 x2 y2">rect - Rectangulo</button>
+              <button data-insert="rrect x1 y1 x2 y2 r">rrect - Rect Redondeado</button>
+              <button data-insert="circle cx cy r">circle - Circulo</button>
+              <button data-insert="ellipse cx cy rx ry">ellipse - Elipse</button>
+              <button data-insert="arc cx cy r startAngle endAngle">arc - Arco</button>
+              <button data-insert="pline x1 y1 x2 y2 x3 y3">pline - Polilinea</button>
+              <hr>
+              <button data-insert="arrow x1 y1 x2 y2">arrow - Flecha</button>
+              <button data-insert="darrow x1 y1 x2 y2">darrow - Flecha Doble</button>
+              <button data-insert="text x y contenido">text - Texto</button>
+              <button data-insert="otext x y contenido">otext - Texto con barra</button>
+              <hr>
+              <button data-insert="beam x1 y1 x2 y2 14">beam - Viga (doble linea)</button>
+              <button data-insert="stirrup x1 y1 x2 y2">stirrup - Estribo</button>
+              <button data-insert="moment cx cy 14 top">moment - Momento</button>
+              <button data-insert="colsection x y w h">colsection - Seccion Columna</button>
+              <button data-insert="axes x y 40 2d X Y">axes - Ejes 2D</button>
+              <button data-insert="axes x y 40 3d X Y Z">axes - Ejes 3D</button>
+              <hr>
+              <button data-insert="cid x y r">cnode - Nodo Circular</button>
+              <button data-insert="tid x y size">tnode - Nodo Triangular</button>
+              <hr>
+              <button data-insert="dim x1 y1 x2 y2 offset">dim - Cota Inclinada</button>
+              <button data-insert="hdim x1 y1 x2 y2 offset">hdim - Cota Horizontal</button>
+              <button data-insert="vdim x1 y1 x2 y2 offset">vdim - Cota Vertical</button>
+              <hr>
+              <button data-insert="mirror x1 y1 x2 y2 mx1 my1 mx2 my2">mirror - Espejo</button>
+              <button data-insert="array x1 y1 x2 y2 rows cols dx dy">array - Array</button>
+              <button data-insert="rotate cx cy angle x1 y1 x2 y2">rotate - Rotar</button>
+              <hr>
+              <button data-insert="grid off">grid off</button>
+              <button data-insert="bg book">bg book</button>
+              <button data-insert="bg white">bg white</button>
+              <button data-insert="color black">color black</button>
+              <button data-insert="lw 1.0">lw - Line Width</button>
+              <button data-insert="fs 10">fs - Font Size</button>
+              <button data-insert="ff serif">ff serif</button>
+              <button data-insert="fi on">fi on - Italic On</button>
+              <button data-insert="fi off">fi off - Italic Off</button>
+              <hr>
+              <button data-insert="yflip on">yflip on - Y cartesiano (+arriba)</button>
+              <button data-insert="yflip off">yflip off - Y canvas (+abajo)</button>
             </div>
           </div>
           <div class="submenu-item">

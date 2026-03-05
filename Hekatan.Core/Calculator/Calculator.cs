@@ -50,7 +50,9 @@ namespace Hekatan.Core
 
         protected Function3[] Functions3 =
         [
-            If
+            If,
+            ArithSum,
+            GeomSum,
         ];
 
         protected Func<IScalarValue[], IScalarValue>[] Interpolations =
@@ -172,6 +174,9 @@ namespace Hekatan.Core
             { "not", 44},
             { "timer", 45 },
             { "suma", 46 },  // TEST: suma(x) = x + 1
+            { "fibonacci", 47 },
+            { "fib", 47 },
+            { "isprime", 48 },
         }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
         internal static readonly FrozenDictionary<string, int> Function2Index =
@@ -181,12 +186,15 @@ namespace Hekatan.Core
             { "root", 1 },
             { "mod", 2 },
             { "mandelbrot", 3 },
+            { "geominf", 4 },
         }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
         internal static readonly FrozenDictionary<string, int> Function3Index =
         new Dictionary<string, int>()
         {
             { "if", 0 },
+            { "arithsum", 1 },
+            { "geomsum", 2 },
         }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
         internal static readonly FrozenDictionary<string, int> MultiFunctionIndex =
@@ -619,5 +627,25 @@ namespace Hekatan.Core
         }
         private static readonly long Ticks = DateTime.Now.Ticks;
         protected static double Timer() => (DateTime.Now.Ticks - Ticks) / 10000000.0;
+
+        // arithsum(a, d, n) = n/2 * (2a + (n-1)*d)
+        protected static IValue ArithSum(in IValue a, in IValue b, in IValue c)
+        {
+            var av = IValue.AsValue(a).Re;
+            var dv = IValue.AsValue(b).Re;
+            var nv = IValue.AsValue(c).Re;
+            return new RealValue(nv / 2.0 * (2.0 * av + (nv - 1.0) * dv));
+        }
+
+        // geomsum(a, r, n) = a * (1 - r^n) / (1 - r)
+        protected static IValue GeomSum(in IValue a, in IValue b, in IValue c)
+        {
+            var av = IValue.AsValue(a).Re;
+            var rv = IValue.AsValue(b).Re;
+            var nv = IValue.AsValue(c).Re;
+            if (Math.Abs(rv - 1.0) < 1e-15)
+                return new RealValue(av * nv);
+            return new RealValue(av * (1.0 - Math.Pow(rv, nv)) / (1.0 - rv));
+        }
     }
 }

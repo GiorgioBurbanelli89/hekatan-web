@@ -18,7 +18,7 @@ export function renderToCtx(engine: CadEngine, ctx: CanvasRenderingContext2D, w:
   ctx.fillRect(0, 0, w, h);
 
   if (engine.gridOn) drawGrid(engine, ctx, w, h);
-  drawOrigin(engine, ctx);
+  if (engine.gridOn) drawOrigin(engine, ctx);
 
   for (let i = 0; i < engine.formas.length; i++) {
     const f = engine.formas[i];
@@ -155,15 +155,23 @@ export function drawShape(engine: CadEngine, ctx: CanvasRenderingContext2D, f: C
     case "arco_circular": {
       const ac2 = engine.w2s3(f.cx!, f.cy!, fz);
       const sr2 = f.r! * engine.cam.zoom;
+      const deg2rad = Math.PI / 180;
+      // 2D: w2s already inverts Y, so use positive angles + CW direction
+      // 3D: legacy behavior with negated angles + CCW direction
+      const startRad = f.is3d ? -f.startAngle! : f.startAngle! * deg2rad;
+      const endRad   = f.is3d ? -f.endAngle!   : f.endAngle!   * deg2rad;
+      const ccw = !!f.is3d;  // 2D: CW (false), 3D: CCW (true)
       ctx.beginPath();
-      ctx.arc(ac2.x, ac2.y, sr2, -f.startAngle!, -f.endAngle!, true);
+      ctx.arc(ac2.x, ac2.y, sr2, startRad, endRad, ccw);
       ctx.stroke();
       // Arrowhead at end of arc (skip for rrect corners via noArrow flag)
       if (!f.noArrow) {
-        const endAng = -f.endAngle!;
+        const endAng = endRad;
         const ex = ac2.x + sr2 * Math.cos(endAng);
         const ey = ac2.y + sr2 * Math.sin(endAng);
-        const tx = Math.sin(endAng), ty = -Math.cos(endAng);
+        // Tangent direction matches arc sweep: CCW tangent for 3D, CW tangent for 2D
+        const tx = ccw ? Math.sin(endAng) : -Math.sin(endAng);
+        const ty = ccw ? -Math.cos(endAng) : Math.cos(endAng);
         const nx = -ty, ny = tx;
         const aLen = 7, aW = 2.8;
         ctx.fillStyle = f.color || engine.currentColor;
@@ -207,6 +215,10 @@ export function drawShape(engine: CadEngine, ctx: CanvasRenderingContext2D, f: C
     }
     case "flecha": {
       drawArrow(engine, ctx, f, sel);
+      break;
+    }
+    case "flecha_doble": {
+      drawDarrow(engine, ctx, f, sel);
       break;
     }
     case "rayado": {
@@ -348,11 +360,30 @@ function drawText(engine: CadEngine, ctx: CanvasRenderingContext2D, f: CadShape,
   const s = engine.w2s3(f.x!, f.y!, fz);
   const textColor = sel ? "#0066dd" : (f.color || "#333");
   const fontSize = f.fontSize || Math.max(10, 12 / Math.max(engine.cam.zoom, 0.3));
-  ctx.font = `${fontSize}px Consolas,monospace`;
+  const isSerif = f.fontFamily === "serif";
+  const italic = f.fontItalic ? "italic " : "";
+  const family = isSerif ? 'Georgia,"Times New Roman",serif' : "Consolas,monospace";
+  ctx.font = `${italic}${fontSize}px ${family}`;
   ctx.textAlign = f.textAlign || "center";
   ctx.textBaseline = "middle";
   ctx.fillStyle = textColor;
   ctx.fillText(f.text || "", s.x, s.y);
+  // Overbar: draw a horizontal line above the text
+  if (f.overbar) {
+    const metrics = ctx.measureText(f.text || "");
+    const tw = metrics.width;
+    const align = f.textAlign || "center";
+    let lx = s.x;
+    if (align === "center") lx = s.x - tw / 2;
+    else if (align === "right") lx = s.x - tw;
+    const barY = s.y - fontSize * 0.55;
+    ctx.strokeStyle = textColor;
+    ctx.lineWidth = Math.max(1, fontSize / 10);
+    ctx.beginPath();
+    ctx.moveTo(lx, barY);
+    ctx.lineTo(lx + tw, barY);
+    ctx.stroke();
+  }
   if (sel) drawNode(ctx, s);
   ctx.restore();
 }
@@ -380,12 +411,59 @@ function drawArrow(engine: CadEngine, ctx: CanvasRenderingContext2D, f: CadShape
   if (len < 2) { ctx.restore(); return; }
   const ux = dx / len, uy = dy / len;
   const nx = -uy, ny = ux;
-  const arrowLen = 12, arrowW = 5;
+  const arrowLen = 8, arrowW = 3;
   ctx.fillStyle = arrowColor;
   ctx.beginPath();
   ctx.moveTo(b.x, b.y);
   ctx.lineTo(b.x - ux * arrowLen + nx * arrowW, b.y - uy * arrowLen + ny * arrowW);
   ctx.lineTo(b.x - ux * arrowLen - nx * arrowW, b.y - uy * arrowLen - ny * arrowW);
+  ctx.closePath(); ctx.fill();
+
+  if (sel) { drawNode(ctx, a); drawNode(ctx, b); }
+  ctx.restore();
+}
+
+// ============================================================================
+// drawDarrow - flecha doble (rotación/momento) con dos puntas de flecha
+// ============================================================================
+
+function drawDarrow(engine: CadEngine, ctx: CanvasRenderingContext2D, f: CadShape, sel: boolean): void {
+  ctx.save();
+  const fz = f.z || 0;
+  const a = engine.w2s3(f.x1!, f.y1!, f.z1 ?? fz);
+  const b = engine.w2s3(f.x2!, f.y2!, f.z2 ?? fz);
+  const arrowColor = sel ? "#0066dd" : (f.color || "#333");
+  const baseLw = f.lw || 1.5;
+  ctx.strokeStyle = arrowColor;
+  ctx.lineWidth = Math.max(baseLw / Math.max(engine.cam.zoom, 0.2), 1);
+
+  // Shaft
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+
+  // Direction unit vector
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 2) { ctx.restore(); return; }
+  const ux = dx / len, uy = dy / len;
+  const nx = -uy, ny = ux;
+  const arrowLen = 8, arrowW = 3, gap = 3;
+
+  ctx.fillStyle = arrowColor;
+
+  // First arrowhead at tip (b)
+  ctx.beginPath();
+  ctx.moveTo(b.x, b.y);
+  ctx.lineTo(b.x - ux * arrowLen + nx * arrowW, b.y - uy * arrowLen + ny * arrowW);
+  ctx.lineTo(b.x - ux * arrowLen - nx * arrowW, b.y - uy * arrowLen - ny * arrowW);
+  ctx.closePath(); ctx.fill();
+
+  // Second arrowhead behind the first (offset by arrowLen + gap)
+  const off = arrowLen + gap;
+  const bx2 = b.x - ux * off, by2 = b.y - uy * off;
+  ctx.beginPath();
+  ctx.moveTo(bx2, by2);
+  ctx.lineTo(bx2 - ux * arrowLen + nx * arrowW, by2 - uy * arrowLen + ny * arrowW);
+  ctx.lineTo(bx2 - ux * arrowLen - nx * arrowW, by2 - uy * arrowLen - ny * arrowW);
   ctx.closePath(); ctx.fill();
 
   if (sel) { drawNode(ctx, a); drawNode(ctx, b); }
@@ -559,6 +637,7 @@ export function getBounds(engine: CadEngine): { minX: number; minY: number; maxX
       case "texto":
         expandPt(f.x!, f.y!, fz, f.is3d); break;
       case "flecha":
+      case "flecha_doble":
         expandPt(f.x1!, f.y1!, f.z1 ?? fz, f.is3d);
         expandPt(f.x2!, f.y2!, f.z2 ?? fz, f.is3d);
         break;

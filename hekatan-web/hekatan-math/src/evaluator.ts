@@ -334,19 +334,36 @@ class Parser {
         this.expect("rbracket"); // consume outer ]
         return { type: "matrix", rows };
       }
-      // Vector: [a, b, c] or [a; b; c]
-      const elements: ASTNode[] = [];
-      elements.push(this.parseExpr());
-      let useSemicolon = false;
-      while (this.peek().type === "comma" || this.peek().type === "semicolon") {
-        if (this.peek().type === "semicolon") useSemicolon = true;
+      // Vector [a, b, c] or MATLAB-style matrix [a, b; c, d]
+      // Parse first row: elements separated by commas
+      const firstRow: ASTNode[] = [];
+      firstRow.push(this.parseExpr());
+      while (this.peek().type === "comma") {
         this.advance();
-        elements.push(this.parseExpr());
+        firstRow.push(this.parseExpr());
+      }
+      // Semicolons → additional rows (MATLAB-style matrix)
+      if (this.peek().type === "semicolon") {
+        const rows: ASTNode[][] = [firstRow];
+        while (this.peek().type === "semicolon") {
+          this.advance(); // consume ;
+          const row: ASTNode[] = [];
+          row.push(this.parseExpr());
+          while (this.peek().type === "comma") {
+            this.advance();
+            row.push(this.parseExpr());
+          }
+          rows.push(row);
+        }
+        this.expect("rbracket");
+        // Multi-column rows → matrix; single-column → vector (backward compat)
+        if (rows.some(r => r.length > 1)) {
+          return { type: "matrix", rows };
+        }
+        return { type: "vector", elements: rows.map(r => r[0]) };
       }
       this.expect("rbracket");
-      // If semicolons were used: [1; 2 | 3; 4] → matrix rows (Calcpad style)
-      // For now treat as vector
-      return { type: "vector", elements };
+      return { type: "vector", elements: firstRow };
     }
 
     // Cell array: {a; b; c}
@@ -969,6 +986,376 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
         return hx * hy * hz * sum;
       }
 
+      // ─── Additional Root Finding ────────────────────────────
+      // bisect(f, a, b)       — bisection method (f(a) and f(b) must have opposite signs)
+      // bisect(f, a, b, tol)  — with tolerance (default: 1e-12)
+      if (node.name === "bisect") {
+        if (node.args.length < 3) throw new Error("bisect(f, a, b) requires 3 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("bisect: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn) throw new Error(`bisect: '${fnName}' is not a function`);
+        let a = evaluate(node.args[1], env) as number;
+        let b = evaluate(node.args[2], env) as number;
+        const tol = node.args[3] ? (evaluate(node.args[3], env) as number) : 1e-12;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        const evalF = (xv: number) => { childEnv.setVar(fn.params[0], xv); return evaluate(fn.body, childEnv) as number; };
+        let fa = evalF(a), fb = evalF(b);
+        if (fa * fb > 0) throw new Error("bisect: f(a) and f(b) must have opposite signs");
+        for (let i = 0; i < 200; i++) {
+          const c = (a + b) / 2, fc = evalF(c);
+          if (Math.abs(fc) < tol || (b - a) / 2 < tol) return c;
+          if (fa * fc < 0) { b = c; fb = fc; } else { a = c; fa = fc; }
+        }
+        return (a + b) / 2;
+      }
+
+      // secant(f, x0, x1) — secant method
+      if (node.name === "secant") {
+        if (node.args.length < 3) throw new Error("secant(f, x0, x1) requires 3 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("secant: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn) throw new Error(`secant: '${fnName}' is not a function`);
+        let x0 = evaluate(node.args[1], env) as number;
+        let x1 = evaluate(node.args[2], env) as number;
+        const tol = node.args[3] ? (evaluate(node.args[3], env) as number) : 1e-12;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        const evalF = (xv: number) => { childEnv.setVar(fn.params[0], xv); return evaluate(fn.body, childEnv) as number; };
+        let f0 = evalF(x0), f1 = evalF(x1);
+        for (let i = 0; i < 200; i++) {
+          if (Math.abs(f1) < tol) return x1;
+          const denom = f1 - f0;
+          if (Math.abs(denom) < 1e-15) break;
+          const x2 = x1 - f1 * (x1 - x0) / denom;
+          x0 = x1; f0 = f1; x1 = x2; f1 = evalF(x2);
+        }
+        return x1;
+      }
+
+      // ─── Numerical Limit (Richardson extrapolation) ─────────
+      // nlimit(f, a)  — lim_{x→a} f(x)
+      if (node.name === "nlimit" || node.name === "lim") {
+        if (node.args.length < 2) throw new Error("nlimit(f, a) requires 2 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("nlimit: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn) throw new Error(`nlimit: '${fnName}' is not a function`);
+        const a = evaluate(node.args[1], env) as number;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        const evalF = (xv: number) => { childEnv.setVar(fn.params[0], xv); return evaluate(fn.body, childEnv) as number; };
+        // Richardson extrapolation: approach from both sides
+        const hs = [0.1, 0.01, 0.001, 0.0001, 0.00001];
+        let bestL = NaN, bestR = NaN;
+        for (const h of hs) {
+          const l = evalF(a - h), r = evalF(a + h);
+          if (isFinite(l)) bestL = l;
+          if (isFinite(r)) bestR = r;
+        }
+        if (isFinite(bestL) && isFinite(bestR)) return (bestL + bestR) / 2;
+        if (isFinite(bestR)) return bestR;
+        if (isFinite(bestL)) return bestL;
+        return NaN;
+      }
+
+      // ─── Taylor Series Coefficients ─────────────────────────
+      // taylor(f, x0, n) → returns vector [f(x0), f'(x0)/1!, f''(x0)/2!, ...]
+      if (node.name === "taylor") {
+        if (node.args.length < 3) throw new Error("taylor(f, x0, n) requires 3 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("taylor: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn) throw new Error(`taylor: '${fnName}' is not a function`);
+        const x0 = evaluate(node.args[1], env) as number;
+        const n = Math.round(evaluate(node.args[2], env) as number);
+        const h = 1e-4;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        const evalF = (xv: number) => { childEnv.setVar(fn.params[0], xv); return evaluate(fn.body, childEnv) as number; };
+        // Compute n+1 function values around x0
+        const coeffs: number[] = [];
+        // Use finite differences for each derivative order
+        let fact = 1;
+        for (let k = 0; k <= n; k++) {
+          if (k > 1) fact *= k;
+          // k-th derivative via central differences with step h
+          let dk = 0;
+          for (let j = 0; j <= k; j++) {
+            const sign = j % 2 === 0 ? 1 : -1;
+            const binom = BUILTINS.comb(k, j);
+            dk += sign * binom * evalF(x0 + (k / 2 - j) * h);
+          }
+          dk /= Math.pow(h, k);
+          coeffs.push(dk / fact);
+        }
+        return coeffs;
+      }
+
+      // ─── Alternative Integration Methods ────────────────────
+      // trapezoid(f, a, b, n) — trapezoidal rule with n intervals
+      if (node.name === "trapezoid" || node.name === "trap") {
+        if (node.args.length < 4) throw new Error("trapezoid(f, a, b, n) requires 4 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("trapezoid: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn) throw new Error(`trapezoid: '${fnName}' is not a function`);
+        const a = evaluate(node.args[1], env) as number;
+        const b = evaluate(node.args[2], env) as number;
+        const n = Math.round(evaluate(node.args[3], env) as number);
+        const h = (b - a) / n;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        const evalF = (xv: number) => { childEnv.setVar(fn.params[0], xv); return evaluate(fn.body, childEnv) as number; };
+        let sum = (evalF(a) + evalF(b)) / 2;
+        for (let i = 1; i < n; i++) sum += evalF(a + i * h);
+        return h * sum;
+      }
+
+      // simpson(f, a, b, n) — Simpson's 1/3 rule with n intervals (n must be even)
+      if (node.name === "simpson") {
+        if (node.args.length < 4) throw new Error("simpson(f, a, b, n) requires 4 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("simpson: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn) throw new Error(`simpson: '${fnName}' is not a function`);
+        const a = evaluate(node.args[1], env) as number;
+        const b = evaluate(node.args[2], env) as number;
+        let n = Math.round(evaluate(node.args[3], env) as number);
+        if (n % 2 !== 0) n++;
+        const h = (b - a) / n;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        const evalF = (xv: number) => { childEnv.setVar(fn.params[0], xv); return evaluate(fn.body, childEnv) as number; };
+        let sum = evalF(a) + evalF(b);
+        for (let i = 1; i < n; i++) sum += (i % 2 === 0 ? 2 : 4) * evalF(a + i * h);
+        return (h / 3) * sum;
+      }
+
+      // ─── Interpolation ─────────────────────────────────────
+      // interp(xdata, ydata, x) — Lagrange polynomial interpolation
+      if (node.name === "interp" || node.name === "lagrange") {
+        if (node.args.length < 3) throw new Error("interp(xdata, ydata, x) requires 3 args");
+        const xdata = evaluate(node.args[0], env);
+        const ydata = evaluate(node.args[1], env);
+        const x = evaluate(node.args[2], env) as number;
+        if (!Array.isArray(xdata) || !Array.isArray(ydata)) throw new Error("interp: xdata and ydata must be vectors");
+        const xd = xdata as number[], yd = ydata as number[];
+        const n = xd.length;
+        let result = 0;
+        for (let i = 0; i < n; i++) {
+          let li = 1;
+          for (let j = 0; j < n; j++) if (i !== j) li *= (x - xd[j]) / (xd[i] - xd[j]);
+          result += yd[i] * li;
+        }
+        return result;
+      }
+
+      // ─── Linear Regression ──────────────────────────────────
+      // linreg(xdata, ydata) → [slope, intercept, R²]
+      if (node.name === "linreg" || node.name === "linfit") {
+        if (node.args.length < 2) throw new Error("linreg(xdata, ydata) requires 2 args");
+        const xdata = evaluate(node.args[0], env) as number[];
+        const ydata = evaluate(node.args[1], env) as number[];
+        if (!Array.isArray(xdata) || !Array.isArray(ydata)) throw new Error("linreg: xdata and ydata must be vectors");
+        const n = xdata.length;
+        let sx = 0, sy = 0, sxx = 0, sxy = 0, syy = 0;
+        for (let i = 0; i < n; i++) {
+          sx += xdata[i]; sy += ydata[i];
+          sxx += xdata[i] * xdata[i]; sxy += xdata[i] * ydata[i];
+          syy += ydata[i] * ydata[i];
+        }
+        const denom = n * sxx - sx * sx;
+        const m = (n * sxy - sx * sy) / denom;
+        const b = (sy - m * sx) / n;
+        const ssRes = ydata.reduce((s, yi, i) => s + (yi - m * xdata[i] - b) ** 2, 0);
+        const ssTot = ydata.reduce((s, yi) => s + (yi - sy / n) ** 2, 0);
+        const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 1;
+        return [m, b, r2];
+      }
+
+      // ─── Euler Method (simple ODE) ──────────────────────────
+      // euler(f, y0, t0, tf, steps) — Euler method ODE solver
+      if (node.name === "euler") {
+        if (node.args.length < 5) throw new Error("euler(f, y0, t0, tf, steps) requires 5 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("euler: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn || fn.params.length < 2) throw new Error(`euler: '${fnName}' must be f(t,y)`);
+        let y = evaluate(node.args[1], env) as number;
+        const t0 = evaluate(node.args[2], env) as number;
+        const tf = evaluate(node.args[3], env) as number;
+        const steps = Math.round(evaluate(node.args[4], env) as number);
+        const h = (tf - t0) / steps;
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        let t = t0;
+        for (let i = 0; i < steps; i++) {
+          childEnv.setVar(fn.params[0], t);
+          childEnv.setVar(fn.params[1], y);
+          y += h * (evaluate(fn.body, childEnv) as number);
+          t += h;
+        }
+        return y;
+      }
+
+      // ─── Number Theory ─────────────────────────────────────
+      // gcd(a, b) — greatest common divisor
+      if (node.name === "gcd") {
+        let a = Math.abs(Math.round(evaluate(node.args[0], env) as number));
+        let b = Math.abs(Math.round(evaluate(node.args[1], env) as number));
+        while (b) { [a, b] = [b, a % b]; }
+        return a;
+      }
+      // lcm(a, b) — least common multiple
+      if (node.name === "lcm") {
+        let a = Math.abs(Math.round(evaluate(node.args[0], env) as number));
+        let b = Math.abs(Math.round(evaluate(node.args[1], env) as number));
+        let g = a, h = b;
+        while (h) { [g, h] = [h, g % h]; }
+        return (a / g) * b;
+      }
+      // fibonacci(n) — n-th Fibonacci number
+      if (node.name === "fibonacci" || node.name === "fib") {
+        const n = Math.round(evaluate(node.args[0], env) as number);
+        if (n <= 0) return 0;
+        if (n <= 2) return 1;
+        let a = 0, b = 1;
+        for (let i = 2; i <= n; i++) { [a, b] = [b, a + b]; }
+        return b;
+      }
+      // isprime(n) — primality test
+      if (node.name === "isprime") {
+        const n = Math.round(evaluate(node.args[0], env) as number);
+        if (n < 2) return 0;
+        if (n < 4) return 1;
+        if (n % 2 === 0 || n % 3 === 0) return 0;
+        for (let i = 5; i * i <= n; i += 6) {
+          if (n % i === 0 || n % (i + 2) === 0) return 0;
+        }
+        return 1;
+      }
+
+      // ─── Sequences & Series ─────────────────────────────────
+      // arithsum(a, d, n) — sum of arithmetic series: n/2 * (2a + (n-1)*d)
+      if (node.name === "arithsum") {
+        const a = evaluate(node.args[0], env) as number;
+        const d = evaluate(node.args[1], env) as number;
+        const n = evaluate(node.args[2], env) as number;
+        return (n / 2) * (2 * a + (n - 1) * d);
+      }
+      // geomsum(a, r, n) — sum of geometric series: a * (1 - r^n) / (1 - r)
+      if (node.name === "geomsum") {
+        const a = evaluate(node.args[0], env) as number;
+        const r = evaluate(node.args[1], env) as number;
+        const n = evaluate(node.args[2], env) as number;
+        if (Math.abs(r - 1) < 1e-15) return a * n;
+        return a * (1 - Math.pow(r, n)) / (1 - r);
+      }
+      // geominf(a, r) — infinite geometric series: a / (1 - r)  (|r| < 1)
+      if (node.name === "geominf") {
+        const a = evaluate(node.args[0], env) as number;
+        const r = evaluate(node.args[1], env) as number;
+        if (Math.abs(r) >= 1) return NaN;
+        return a / (1 - r);
+      }
+
+      // ─── Statistical Functions ──────────────────────────────
+      // mean(v) — arithmetic mean
+      if (node.name === "mean" || node.name === "avg" || node.name === "average") {
+        const v = evaluate(node.args[0], env);
+        if (Array.isArray(v) && !Array.isArray(v[0])) {
+          const arr = v as number[];
+          return arr.reduce((s, x) => s + x, 0) / arr.length;
+        }
+        return NaN;
+      }
+      // median(v)
+      if (node.name === "median") {
+        const v = evaluate(node.args[0], env);
+        if (Array.isArray(v) && !Array.isArray(v[0])) {
+          const sorted = [...(v as number[])].sort((a, b) => a - b);
+          const mid = Math.floor(sorted.length / 2);
+          return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        }
+        return NaN;
+      }
+      // stdev(v) — sample standard deviation
+      if (node.name === "stdev" || node.name === "std") {
+        const v = evaluate(node.args[0], env);
+        if (Array.isArray(v) && !Array.isArray(v[0])) {
+          const arr = v as number[];
+          const m = arr.reduce((s, x) => s + x, 0) / arr.length;
+          const variance = arr.reduce((s, x) => s + (x - m) ** 2, 0) / (arr.length - 1);
+          return Math.sqrt(variance);
+        }
+        return NaN;
+      }
+      // variance(v) — sample variance
+      if (node.name === "variance" || node.name === "var") {
+        const v = evaluate(node.args[0], env);
+        if (Array.isArray(v) && !Array.isArray(v[0])) {
+          const arr = v as number[];
+          const m = arr.reduce((s, x) => s + x, 0) / arr.length;
+          return arr.reduce((s, x) => s + (x - m) ** 2, 0) / (arr.length - 1);
+        }
+        return NaN;
+      }
+      // norm(v) — Euclidean norm (L2)
+      if (node.name === "norm") {
+        const v = evaluate(node.args[0], env);
+        if (Array.isArray(v) && !Array.isArray(v[0])) {
+          return Math.sqrt((v as number[]).reduce((s, x) => s + x * x, 0));
+        }
+        return NaN;
+      }
+      // dot(u, v) — dot product
+      if (node.name === "dot") {
+        const u = evaluate(node.args[0], env) as number[];
+        const v = evaluate(node.args[1], env) as number[];
+        if (Array.isArray(u) && Array.isArray(v)) {
+          return u.reduce((s, x, i) => s + x * (v[i] || 0), 0);
+        }
+        return NaN;
+      }
+      // cross(u, v) — cross product (3D vectors)
+      if (node.name === "cross") {
+        const u = evaluate(node.args[0], env) as number[];
+        const v = evaluate(node.args[1], env) as number[];
+        if (Array.isArray(u) && Array.isArray(v) && u.length === 3 && v.length === 3) {
+          return [u[1]*v[2] - u[2]*v[1], u[2]*v[0] - u[0]*v[2], u[0]*v[1] - u[1]*v[0]];
+        }
+        return NaN;
+      }
+
+      // ─── Symbolic Derivative (AST-based) ────────────────────
+      // sdiff(f, x) → returns the symbolic derivative evaluated at x
+      // Uses AST differentiation rules (chain, product, quotient, trig)
+      if (node.name === "sdiff") {
+        if (node.args.length < 2) throw new Error("sdiff(f, x) requires 2 args");
+        const fnName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!fnName) throw new Error("sdiff: first arg must be a function name");
+        const fn = env.userFunctions.get(fnName);
+        if (!fn) throw new Error(`sdiff: '${fnName}' is not a function`);
+        const x = evaluate(node.args[1], env) as number;
+        const varName = fn.params[0];
+        const dAST = diffAST(fn.body, varName);
+        const childEnv = new HekatanEnvironment();
+        childEnv.variables = new Map(env.variables);
+        childEnv.userFunctions = env.userFunctions;
+        childEnv.setVar(varName, x);
+        return evaluate(dAST, childEnv);
+      }
+
       throw new Error(`Unknown function: ${node.name}`);
     }
 
@@ -1065,6 +1452,89 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
 
     default:
       throw new Error(`Unknown node type: ${(node as any).type}`);
+  }
+}
+
+// ─── Symbolic Differentiation (AST → AST) ────────────────
+function diffAST(node: ASTNode, v: string): ASTNode {
+  const ZERO: ASTNode = { type: "number", value: 0 };
+  const ONE: ASTNode = { type: "number", value: 1 };
+  const num = (n: number): ASTNode => ({ type: "number", value: n });
+  const bin = (op: string, l: ASTNode, r: ASTNode): ASTNode => ({ type: "binary", op, left: l, right: r });
+  const call = (name: string, ...args: ASTNode[]): ASTNode => ({ type: "call", name, args });
+  const neg = (n: ASTNode): ASTNode => ({ type: "unary", op: "-", operand: n });
+
+  switch (node.type) {
+    case "number": return ZERO;
+    case "variable": return node.name === v ? ONE : ZERO;
+    case "binary": {
+      const { op, left: u, right: w } = node;
+      const du = diffAST(u, v), dw = diffAST(w, v);
+      switch (op) {
+        case "+": return bin("+", du, dw);
+        case "-": return bin("-", du, dw);
+        case "*": // product rule: u'w + uw'
+          return bin("+", bin("*", du, w), bin("*", u, dw));
+        case "/": // quotient rule: (u'w - uw') / w²
+          return bin("/", bin("-", bin("*", du, w), bin("*", u, dw)), bin("^", w, num(2)));
+        case "^": {
+          // Power rule: if w is constant → n*u^(n-1)*u'
+          // General: u^w * (w' * ln(u) + w * u'/u)
+          const wIsConst = !hasVar(w, v);
+          const uIsConst = !hasVar(u, v);
+          if (wIsConst && !uIsConst) {
+            return bin("*", bin("*", w, bin("^", u, bin("-", w, ONE))), du);
+          }
+          if (uIsConst && !wIsConst) {
+            return bin("*", bin("*", node, call("ln", u)), dw);
+          }
+          // General case
+          return bin("*", node, bin("+", bin("*", dw, call("ln", u)), bin("*", w, bin("/", du, u))));
+        }
+        default: return ZERO;
+      }
+    }
+    case "unary":
+      if (node.op === "-") return neg(diffAST(node.operand, v));
+      return ZERO;
+    case "call": {
+      const { name, args } = node;
+      if (args.length === 0) return ZERO;
+      const u = args[0], du = diffAST(u, v);
+      // Chain rule: d/dx f(u) = f'(u) * u'
+      let inner: ASTNode;
+      switch (name) {
+        case "sin": inner = call("cos", u); break;
+        case "cos": inner = neg(call("sin", u)); break;
+        case "tan": inner = bin("/", ONE, bin("^", call("cos", u), num(2))); break;
+        case "asin": inner = bin("/", ONE, call("sqrt", bin("-", ONE, bin("^", u, num(2))))); break;
+        case "acos": inner = neg(bin("/", ONE, call("sqrt", bin("-", ONE, bin("^", u, num(2)))))); break;
+        case "atan": inner = bin("/", ONE, bin("+", ONE, bin("^", u, num(2)))); break;
+        case "exp": inner = call("exp", u); break;
+        case "ln": inner = bin("/", ONE, u); break;
+        case "log": inner = bin("/", ONE, bin("*", u, call("ln", num(10)))); break;
+        case "log2": inner = bin("/", ONE, bin("*", u, call("ln", num(2)))); break;
+        case "sqrt": inner = bin("/", ONE, bin("*", num(2), call("sqrt", u))); break;
+        case "abs": inner = call("sign", u); break;
+        case "sinh": inner = call("cosh", u); break;
+        case "cosh": inner = call("sinh", u); break;
+        case "tanh": inner = bin("-", ONE, bin("^", call("tanh", u), num(2))); break;
+        default: return ZERO; // Unknown function → 0
+      }
+      return bin("*", inner, du);
+    }
+    default: return ZERO;
+  }
+}
+
+function hasVar(node: ASTNode, v: string): boolean {
+  switch (node.type) {
+    case "number": return false;
+    case "variable": return node.name === v;
+    case "binary": return hasVar(node.left, v) || hasVar(node.right, v);
+    case "unary": return hasVar(node.operand, v);
+    case "call": return node.args.some(a => hasVar(a, v));
+    default: return false;
   }
 }
 

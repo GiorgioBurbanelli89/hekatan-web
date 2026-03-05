@@ -168,14 +168,21 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   font-size: 13px; line-height: 1.6; tab-size: 2;
   white-space: pre-wrap; word-wrap: break-word;
-  overflow: hidden; color: #1A1A25;
+  overflow-y: scroll; overflow-x: hidden; color: #1A1A25;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent; /* reserve space, invisible */
 }
+.syntax-layer::-webkit-scrollbar { width: 8px; }
+.syntax-layer::-webkit-scrollbar-thumb { background: transparent; }
+.syntax-layer::-webkit-scrollbar-track { background: transparent; }
 .editor-panel textarea {
   width: 100%; flex: 1; border: none; padding: 12px 14px 12px 34px;
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   font-size: 13px; line-height: 1.6; resize: none; outline: none;
   background: transparent; color: transparent; caret-color: #1A1A25;
   tab-size: 2; position: relative; z-index: 2;
+  white-space: pre-wrap; word-wrap: break-word;
+  overflow-y: scroll; scrollbar-width: thin;
 }
 
 /* ─── Syntax Highlighting Colors ─── */
@@ -284,6 +291,54 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   font-size: 12pt; line-height: 135%;
 }
 
+/* ─── Page header (top: page number + section title) ─── */
+.page-header {
+  margin: -2mm 0 4mm 0;
+  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-size: 9pt;
+  color: #555;
+}
+.page-header .header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.5mm;
+}
+.page-header .header-rule {
+  border: none;
+  border-top: 0.5pt solid #888;
+  margin: 0;
+}
+.page-header .header-pagenum { font-style: italic; }
+.page-header .header-section { font-style: italic; }
+
+/* ─── Page footer (bottom: page number + section title) ─── */
+.page-footer {
+  position: absolute;
+  bottom: 4mm;
+  left: 12mm;
+  right: 10mm;
+  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-size: 9pt;
+  color: #555;
+}
+.page-footer .footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.page-footer .footer-rule {
+  border: none;
+  border-top: 0.5pt solid #888;
+  margin: 0 0 1.5mm 0;
+}
+.page-footer .footer-pagenum { font-style: italic; }
+.page-footer .footer-section { font-style: italic; }
+/* Page 1: centered page number only */
+.page-footer.page-footer-centered {
+  text-align: center;
+}
+
 /* ─── Cell Array (vector de matrices) ─── */
 .cell-array {
   display: inline-flex; gap: 12px; align-items: center;
@@ -324,8 +379,8 @@ h6 { font-size: 1.0em; }
 
 /* ─── Book-style chapter heading (h1 in output) ─── */
 .output-content h1.chapter-heading {
-  padding: 0.4em 0.3em;
-  margin: 0.8em 0 0.6em 0;
+  padding: 0.3em 0;
+  margin: 0;
   font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
   font-weight: normal;
   color: #3a2a1a;
@@ -434,10 +489,35 @@ sup.unit {
 /* ─── Matrix (from template.html) — square brackets [ ] ─── */
 .matrix {
   display: inline-table;
-  border-left: solid 1.5pt black;
-  border-right: solid 1.5pt black;
-  border-radius: 2pt;
+  vertical-align: middle;
+  position: relative;
   padding: 1pt 2pt;
+  margin-left: 5pt;
+  margin-right: 5pt;
+}
+/* Left bracket [ */
+.matrix::before {
+  content: '';
+  position: absolute;
+  left: -5pt;
+  top: 0;
+  bottom: 0;
+  width: 5pt;
+  border-left: 1.5pt solid currentColor;
+  border-top: 1.5pt solid currentColor;
+  border-bottom: 1.5pt solid currentColor;
+}
+/* Right bracket ] */
+.matrix::after {
+  content: '';
+  position: absolute;
+  right: -5pt;
+  top: 0;
+  bottom: 0;
+  width: 5pt;
+  border-right: 1.5pt solid currentColor;
+  border-top: 1.5pt solid currentColor;
+  border-bottom: 1.5pt solid currentColor;
 }
 
 .matrix .tr {
@@ -634,10 +714,278 @@ sup.unit {
 .out-comment { color: #444; margin: 0.05em 0; line-height: 120%; }
 .out-error { color: Crimson; background-color: #FEE; font-size: 0.88em; margin: 2px 0; padding: 2px 4px; border-radius: 3px; }
 
+/* ─── CAS Symbolic output ─── */
+.out-symbolic { color: #c792ea; font-style: italic; }
+.cas-badge { display: inline-block; font-size: 0.6em; color: #888; background: #f0f0f0; border-radius: 3px; padding: 0 3px; margin-left: 6px; vertical-align: super; font-style: normal; }
+
 /* ─── Alignment classes (high specificity to override heading defaults) ─── */
 .align-left, .output-content .align-left { text-align: left; }
 .align-center, .output-content .align-center { text-align: center; }
 .align-right, .output-content .align-right { text-align: right; }
+
+/* ─── Bold equations: @{config bold:on} ─── */
+.eq-bold {
+  font-weight: 600;
+}
+.eq-bold var {
+  font-weight: 600;
+}
+.eq-bold .dvc,
+.eq-bold .dvr,
+.eq-bold .dvs {
+  font-weight: 600;
+}
+.eq-bold .dvl {
+  border-bottom-width: 1.2pt;
+}
+
+/* ─── Black equations: @{config color:black} ─── */
+.eq-black,
+.eq-black var,
+.eq-black i,
+.eq-black b,
+.eq-black em,
+.eq-black sub,
+.eq-black sup,
+.eq-black small,
+.eq-black span,
+.eq-black .val,
+.eq-black .nary,
+.eq-black .cell-brace,
+.eq-black .cell-label,
+.eq-black .cell-sep {
+  color: #000 !important;
+}
+
+/* ─── @{eq} Vector (curly braces) and Matrix (square brackets) ─── */
+/* Uses inline-flex spans (NOT tables) because .eq is <p> — tables break HTML parsing */
+.eq-vec {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+/* Curly brace { } — two CSS arcs meeting at a center tip */
+.eq-brace-l, .eq-brace-r {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  width: 5px;
+}
+.eq-brace-l::before, .eq-brace-l::after,
+.eq-brace-r::before, .eq-brace-r::after {
+  content: '';
+  flex: 1;
+  min-height: 4px;
+}
+/* Left brace { — vertical on right, tip points left */
+.eq-brace-l::before {
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  border-bottom-right-radius: 5px;
+}
+.eq-brace-l::after {
+  border-right: 1px solid currentColor;
+  border-top: 1px solid currentColor;
+  border-top-right-radius: 5px;
+}
+/* Right brace } — vertical on left, tip points right */
+.eq-brace-r::before {
+  border-left: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  border-bottom-left-radius: 5px;
+}
+.eq-brace-r::after {
+  border-left: 1px solid currentColor;
+  border-top: 1px solid currentColor;
+  border-top-left-radius: 5px;
+}
+.eq-col {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+}
+.eq-cell {
+  display: block;
+  text-align: center;
+  padding: 0 4pt;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+/* Matrix with square brackets [ ] — vertical line + horizontal serifs */
+.eq-mat {
+  display: inline-table;
+  vertical-align: middle;
+  padding: 2pt 0;
+  position: relative;
+  margin-left: 5pt;
+  margin-right: 5pt;
+}
+/* Left bracket [ */
+.eq-mat::before {
+  content: '';
+  position: absolute;
+  left: -5pt;
+  top: 0;
+  bottom: 0;
+  width: 5pt;
+  border-left: 1.5pt solid currentColor;
+  border-top: 1.5pt solid currentColor;
+  border-bottom: 1.5pt solid currentColor;
+}
+/* Right bracket ] */
+.eq-mat::after {
+  content: '';
+  position: absolute;
+  right: -5pt;
+  top: 0;
+  bottom: 0;
+  width: 5pt;
+  border-right: 1.5pt solid currentColor;
+  border-top: 1.5pt solid currentColor;
+  border-bottom: 1.5pt solid currentColor;
+}
+.eq-mrow {
+  display: table-row;
+}
+.eq-mcell {
+  display: table-cell;
+  padding: 0 6pt;
+  text-align: center;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* ─── Output → Code navigation arrow (Calcpad-style) ─── */
+[data-line] {
+  position: relative;
+}
+[data-line]:hover {
+  cursor: pointer;
+  background: rgba(68, 136, 204, 0.04);
+}
+[data-line]:hover::before {
+  content: '←';
+  position: absolute;
+  left: -1.6em;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #4488cc;
+  font-size: 1em;
+  font-weight: bold;
+  font-style: normal;
+  font-family: sans-serif;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+[data-line]:hover:hover::before {
+  opacity: 1;
+}
+
+/* ─── Line highlight flash in code editor ─── */
+.line-highlight-flash {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 15px;
+  background: rgba(255, 220, 80, 0.4);
+  pointer-events: none;
+  animation: flashFade 1s ease-out forwards;
+  z-index: 10;
+}
+@keyframes flashFade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ─── Go-To dialog (Ctrl+G) ─── */
+.goto-bar {
+  display: none; position: absolute; top: 0; left: 0; right: 0;
+  z-index: 100; background: #f8f4e8; border-bottom: 2px solid #D4AF37;
+  padding: 6px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.goto-bar.visible { display: flex; align-items: center; gap: 8px; }
+.goto-bar label { font-size: 12px; font-weight: 600; color: #555; white-space: nowrap; }
+.goto-bar input {
+  flex: 1; border: 1px solid #ccc; border-radius: 3px; padding: 4px 8px;
+  font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 13px;
+  outline: none; background: #fff;
+}
+.goto-bar input:focus { border-color: #D4AF37; box-shadow: 0 0 3px rgba(212,175,55,0.3); }
+.goto-bar .goto-hint {
+  font-size: 10px; color: #999; white-space: nowrap;
+}
+.goto-bar .goto-close {
+  background: none; border: none; font-size: 16px; color: #999; cursor: pointer; padding: 0 4px;
+}
+.goto-bar .goto-close:hover { color: #333; }
+.goto-bar .goto-status {
+  font-size: 11px; color: #666; white-space: nowrap; min-width: 60px; text-align: center;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+}
+
+/* ─── Function names in @{eq} (roman upright, not italic, not bold) ─── */
+.eq-fn {
+  font-style: normal;
+  font-weight: normal;
+  font-family: inherit;
+}
+
+/* ─── Overbar, hat, tilde, dot decorations for @{eq} ─── */
+.eq-overbar {
+  display: inline-block;
+  text-decoration: overline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: -0.15em;
+}
+.eq-hat {
+  display: inline-block;
+  position: relative;
+}
+.eq-hat::after {
+  content: '\u0302';
+  position: absolute;
+  left: 50%;
+  top: -0.35em;
+  transform: translateX(-50%);
+  font-size: 1.1em;
+}
+.eq-tilde {
+  display: inline-block;
+  position: relative;
+}
+.eq-tilde::after {
+  content: '\u0303';
+  position: absolute;
+  left: 50%;
+  top: -0.35em;
+  transform: translateX(-50%);
+  font-size: 1.1em;
+}
+.eq-dot {
+  display: inline-block;
+  position: relative;
+}
+.eq-dot::after {
+  content: '\u0307';
+  position: absolute;
+  left: 50%;
+  top: -0.4em;
+  transform: translateX(-50%);
+  font-size: 1.2em;
+}
+.eq-ddot {
+  display: inline-block;
+  position: relative;
+}
+.eq-ddot::after {
+  content: '\u0308';
+  position: absolute;
+  left: 50%;
+  top: -0.4em;
+  transform: translateX(-50%);
+  font-size: 1.2em;
+}
 
 /* ─── Inline equation inside text (@{eq}...@{end eq} within text) ─── */
 .inline-eq {
@@ -675,8 +1023,30 @@ sup.unit {
 .theme-hekatan .matrix {
   font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
   font-size: 12pt;
-  line-height: 1.4;
+  line-height: 1.5;
   color: #000;
+}
+
+/* --- Linea de ecuacion: espaciado tipo LaTeX --- */
+.theme-hekatan .out-line {
+  line-height: 160%;
+  margin: 0.15em 0;
+}
+
+/* --- Bold mode: @{config bold:on} — ecuaciones y calculos en negrita --- */
+.theme-hekatan .eq-bold {
+  font-weight: 600;
+}
+.theme-hekatan .eq-bold var {
+  font-weight: 600;
+}
+.theme-hekatan .eq-bold .dvc,
+.theme-hekatan .eq-bold .dvr,
+.theme-hekatan .eq-bold .dvs {
+  font-weight: 600;
+}
+.theme-hekatan .eq-bold .dvl {
+  border-bottom-width: 1.2pt;
 }
 
 /* --- Variables: negro italic (estilo LaTeX puro) --- */
@@ -770,8 +1140,17 @@ sup.unit {
 }
 
 /* --- Fracciones: misma estructura .dvc/.dvl, ajuste fino --- */
+.theme-hekatan .dvc {
+  padding-left: 3pt;
+  padding-right: 3pt;
+  line-height: 120%;
+}
+
 .theme-hekatan .dvl {
-  padding: 1px 6px;
+  padding: 1px 4px;
+  border-bottom: solid 0.8pt #000;
+  margin-top: 2pt;
+  margin-bottom: 2pt;
 }
 
 .theme-hekatan .dvl:last-child {
@@ -813,18 +1192,36 @@ sup.unit {
   vertical-align: baseline;
 }
 
+/* --- @{eq} Vector/Matrix: negro --- */
+.theme-hekatan .eq-brace-l,
+.theme-hekatan .eq-brace-r {
+  color: #000;
+}
+.theme-hekatan .eq-mat {
+  color: #000;
+}
+.theme-hekatan .eq-mcell,
+.theme-hekatan .eq-cell {
+  font-size: 10pt;
+}
+
 /* --- N-ary: negro, flexbox vertical --- */
 .theme-hekatan .nary {
   color: #000;
-  font-size: 140%;
+  font-size: 160%;
   font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
   font-weight: normal;
   font-style: normal;
   line-height: 0;
   display: block;
   margin: 0;
-  padding: 0.9em 0;
-  transform: scaleY(1.4);
+  padding: 0.8em 0;
+  transform: scaleY(1.3);
+}
+
+/* N-ary em (italic integral) */
+.theme-hekatan .nary em {
+  transform: scaleX(0.75) rotate(6deg);
 }
 
 /* --- Headings: Segoe UI, gold underline on h1 --- */
@@ -1222,4 +1619,131 @@ sup.unit {
   flex: 1; background: transparent; border: none; color: #e0e0e0;
   font-family: Consolas, 'Courier New', monospace; font-size: 12px;
   outline: none; caret-color: #ff00ff;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PRINT / EXPORT PDF
+   ═══════════════════════════════════════════════════════════ */
+@media print {
+  /* Hide everything except output pages */
+  .menu-bar, .toolbar, .editor-panel, .splitter,
+  .keypad-bar, .status-bar, .debug-panel, .debug-btn,
+  .output-header, .custom-scrollbar,
+  .fab-btn { display: none !important; }
+
+  /* Full-width layout */
+  body { margin: 0; padding: 0; background: white; }
+  .split-layout { display: block !important; }
+  .output-panel {
+    position: static !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+  .output-content {
+    overflow: visible !important;
+    padding: 0 !important;
+    height: auto !important;
+  }
+  .output-pages-wrapper {
+    gap: 0 !important;
+  }
+
+  /* Each output-page becomes a print page */
+  .output-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+    page-break-after: always;
+    break-after: page;
+  }
+  .output-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4;
+    margin: 10mm 10mm 10mm 12mm;
+  }
+  .output-page {
+    padding: 0 !important;
+  }
+
+  /* Canvas/SVG: ensure they print */
+  canvas, svg { max-width: 100%; }
+
+  /* Hide figure toolbar and nav in print */
+  .draw-toolbar, .fig-nav-bar { display: none !important; }
+}
+
+/* ─── Figure toolbar & zoom ─────────────────────── */
+.draw-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  font-family: 'Segoe UI', sans-serif;
+}
+.draw-fig-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #555;
+  flex: 1;
+}
+.draw-zoom-btn {
+  font-size: 10px;
+  padding: 2px 8px;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  color: #333;
+  transition: background 0.15s;
+}
+.draw-zoom-btn:hover {
+  background: #4488ff;
+  color: #fff;
+  border-color: #3366cc;
+}
+
+/* ─── Figure navigation bar ─────────────────────── */
+.fig-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #eef2f7;
+  border-bottom: 1px solid #ccd;
+  font-family: 'Segoe UI', sans-serif;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.fig-nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #666;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.fig-nav-btn {
+  font-size: 10px;
+  padding: 2px 8px;
+  border: 1px solid #bbc;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  color: #444;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.fig-nav-btn:hover {
+  background: #4488ff;
+  color: #fff;
+  border-color: #3366cc;
 }

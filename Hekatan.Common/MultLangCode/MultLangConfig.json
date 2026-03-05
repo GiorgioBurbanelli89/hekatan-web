@@ -57,34 +57,8 @@
       "keywords": ["int", "double", "float", "char", "void", "bool", "if", "else", "for", "while", "do", "switch", "case", "return", "class", "struct", "public", "private", "protected"],
       "builtins": ["cout", "cin", "endl", "printf", "scanf", "malloc", "free", "new", "delete"],
       "requiresCompilation": true,
-      "compileArgs": "{input} -o {output} -static-libgcc -static-libstdc++",
+      "compileArgs": "{input} -o {output}",
       "runArgs": ""
-    },
-    "explain": {
-      "command": "",
-      "extension": "",
-      "directive": "@{explain}",
-      "endDirective": "@{end explain}",
-      "commentPrefix": "",
-      "keywords": [],
-      "builtins": [],
-      "requiresCompilation": false,
-      "compileArgs": "",
-      "runArgs": "",
-      "description": "Explica codigo C++ en pseudocodigo. Soporta idiomas: spanish (default), english, matlab, python. Sintaxis: @{explain spanish}...@{end explain}"
-    },
-    "cpp-explain": {
-      "command": "",
-      "extension": "",
-      "directive": "@{cpp-explain}",
-      "endDirective": "@{end cpp-explain}",
-      "commentPrefix": "",
-      "keywords": [],
-      "builtins": [],
-      "requiresCompilation": false,
-      "compileArgs": "",
-      "runArgs": "",
-      "description": "Muestra codigo C++ y su explicacion lado a lado. Soporta idiomas: spanish, english, matlab, python. Sintaxis: @{cpp-explain spanish}...@{end cpp-explain}"
     },
     "bash": {
       "command": "bash",
@@ -133,7 +107,7 @@
       "requiresCompilation": false,
       "compileArgs": "",
       "runArgs": "",
-      "description": "Markdown con soporte Hekatan - Usa @{calcpad:expr} para expresiones inline, o $varName para valores. Soporta keywords: #val, #nosub, #hide, etc."
+      "description": "Markdown con soporte Calcpad - Usa @{calcpad:expr} para expresiones inline, o $varName para valores. Soporta keywords: #val, #nosub, #hide, etc."
     },
     "table": {
       "command": "",
@@ -146,33 +120,7 @@
       "requiresCompilation": false,
       "compileArgs": "",
       "runArgs": "",
-      "description": "Genera tablas HTML desde matrices/vectores Hekatan. Sintaxis: nombreMatriz [opciones]. Opciones: headers=A,B,C rows=1,2,3 style=bordered export=xlsx"
-    },
-    "eq": {
-      "command": "",
-      "extension": "",
-      "directive": "@{eq}",
-      "endDirective": "@{end eq}",
-      "commentPrefix": "",
-      "keywords": [],
-      "builtins": [],
-      "requiresCompilation": false,
-      "compileArgs": "",
-      "runArgs": "",
-      "description": "Renderiza ecuaciones matemáticas con formato Hekatan (fracciones, subíndices, superíndices). Solo muestra ecuaciones sin calcular."
-    },
-    "eqdef": {
-      "command": "",
-      "extension": "",
-      "directive": "@{eqdef}",
-      "endDirective": "@{end eqdef}",
-      "commentPrefix": "",
-      "keywords": [],
-      "builtins": [],
-      "requiresCompilation": false,
-      "compileArgs": "",
-      "runArgs": "",
-      "description": "Ecuaciones con definiciones en dos columnas. Sintaxis: ecuacion | descripcion. Ejemplo: S_a = η*Z*F_a | Aceleración espectral"
+      "description": "Genera tablas HTML desde matrices/vectores Calcpad. Sintaxis: nombreMatriz [opciones]. Opciones: headers=A,B,C rows=1,2,3 style=bordered export=xlsx"
     },
     "columns": {
       "command": "",
@@ -185,7 +133,7 @@
       "requiresCompilation": false,
       "compileArgs": "",
       "runArgs": "",
-      "description": "Layout multi-columnas. Sintaxis: @{columns N}...@{column}...@{end columns}. N = numero de columnas (2-4). Soporta contenido Hekatan y parsers externos."
+      "description": "Layout multi-columnas. Sintaxis: @{columns N}...@{column}...@{end columns}. N = numero de columnas (2-4). Soporta contenido Calcpad y parsers externos."
     },
     "plot": {
       "command": "",
@@ -199,6 +147,58 @@
       "compileArgs": "",
       "runArgs": "",
       "description": "Generador de gráficas SVG. Sintaxis: x: [1;2;3] y: [4;5;6] xlabel: \"X\" ylabel: \"Y\" title: \"Titulo\" color: #0066CC grid: true legend: \"Serie 1\" style: solid|dash|dot"
+    },
+    "svg": {
+      "command": "",
+      "extension": ".svg",
+      "directive": "@{svg}",
+      "endDirective": "@{end svg}",
+      "commentPrefix": "<!--",
+      "keywords": ["svg", "rect", "circle", "ellipse", "line", "polyline", "polygon", "path", "text", "g", "defs", "use", "clipPath", "mask", "filter", "linearGradient", "radialGradient", "stop", "pattern", "marker", "symbol"],
+      "builtins": ["viewBox", "xmlns", "width", "height", "x", "y", "cx", "cy", "r", "rx", "ry", "x1", "y1", "x2", "y2", "points", "d", "fill", "stroke", "stroke-width", "transform", "opacity", "font-size", "text-anchor", "dominant-baseline"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "SVG inline con sustitucion de variables. Usa $varName para valores de Calcpad. Si el contenido no tiene <svg>, se envuelve automaticamente."
+    },
+    "eq": {
+      "command": "",
+      "extension": "",
+      "directive": "@{eq}",
+      "endDirective": "@{end eq}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Ecuacion formateada con estilo Calcpad. Soporta fracciones (a/b), subindices (X_a), superindices (X^2), letras griegas. Alias: @{equation}, @{ecuacion}, @{formula}"
+    },
+    "eqdef": {
+      "command": "",
+      "extension": "",
+      "directive": "@{eqdef}",
+      "endDirective": "@{end eqdef}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Ecuaciones con definiciones en dos columnas. Sintaxis: S_a = n*Z*F_a | Aceleracion espectral. Alias: @{ecuaciondef}, @{eqdefinicion}"
+    },
+    "center": {
+      "command": "",
+      "extension": "",
+      "directive": "@{center}",
+      "endDirective": "@{end center}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Centra contenido horizontalmente. Soporta contenido Calcpad y parsers externos."
     },
     "csharp": {
       "command": "csc",
@@ -552,7 +552,7 @@
       "requiresCompilation": false,
       "compileArgs": "",
       "runArgs": "",
-      "description": "LaTeX Math Expression Parser - Traduce expresiones matemáticas LaTeX a sintaxis Hekatan"
+      "description": "LaTeX Math Expression Parser - Traduce expresiones matemáticas LaTeX a sintaxis Calcpad"
     },
     "symbolic": {
       "command": "",
@@ -567,6 +567,19 @@
       "runArgs": "",
       "description": "Symbolic Math Parser (AngouriMath) - Procesa cálculo simbólico: derivadas, integrales, simplificación, expansión, límites"
     },
+    "maxima": {
+      "command": "maxima",
+      "extension": ".mac",
+      "directive": "@{maxima}",
+      "endDirective": "@{end maxima}",
+      "commentPrefix": "/*",
+      "keywords": ["diff", "integrate", "limit", "sum", "product", "solve", "ode2", "desolve", "ic1", "ic2", "bc2", "laplace", "ilt", "fourier", "taylor", "expand", "factor", "ratsimp", "trigsimp", "radcan", "logcontract", "fullratsimp", "subst", "ev", "at", "define", "lambda", "block", "if", "then", "else", "for", "do", "while", "unless", "thru", "step", "return", "matrix", "invert", "transpose", "eigenvalues", "eigenvectors", "determinant", "rank", "atvalue"],
+      "builtins": ["sin", "cos", "tan", "asin", "acos", "atan", "sinh", "cosh", "tanh", "exp", "log", "sqrt", "abs", "signum", "max", "min", "mod", "floor", "ceiling", "round", "float", "rat", "realpart", "imagpart", "conjugate", "cabs", "carg", "rectform", "polarform", "display2d", "display", "print", "grind", "string", "concat", "sconcat", "printf", "plot2d", "plot3d", "wxplot2d", "wxplot3d"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "--very-quiet --batch=\"{file}\"",
+      "description": "Maxima CAS - Sistema de álgebra computacional: ODEs, PDEs, Transformadas de Laplace/Fourier, series de Taylor, factorización, manipulación simbólica avanzada"
+    },
     "pymath": {
       "command": "",
       "extension": "",
@@ -578,7 +591,7 @@
       "requiresCompilation": false,
       "compileArgs": "",
       "runArgs": "",
-      "description": "Python Math Syntax Parser - Traduce expresiones matemáticas con sintaxis Python a Hekatan"
+      "description": "Python Math Syntax Parser - Traduce expresiones matemáticas con sintaxis Python a Calcpad"
     },
     "mathcad": {
       "command": "",
@@ -591,7 +604,7 @@
       "requiresCompilation": false,
       "compileArgs": "",
       "runArgs": "",
-      "description": "Mathcad Syntax Parser - Traduce expresiones con sintaxis Mathcad a Hekatan"
+      "description": "Mathcad Syntax Parser - Traduce expresiones con sintaxis Mathcad a Calcpad"
     },
     "ifc": {
       "command": "",
@@ -617,7 +630,7 @@
       "requiresCompilation": false,
       "compileArgs": "",
       "runArgs": "",
-      "description": "IFC 3D Viewer Inline - Visor IFC embebido directamente en el output de Hekatan. Sintaxis: @{html-ifc}path/to/file.ifc@{end html-ifc}"
+      "description": "IFC 3D Viewer Inline - Visor IFC embebido directamente en el output de Calcpad. Sintaxis: @{html-ifc}path/to/file.ifc@{end html-ifc}"
     },
     "code": {
       "command": "",
@@ -656,7 +669,7 @@
       "requiresCompilation": false,
       "compileArgs": "",
       "runArgs": "",
-      "description": "Bloque explicito de Hekatan - codigo matematico que sera procesado por ExpressionParser"
+      "description": "Bloque explicito de Calcpad - codigo matematico que sera procesado por ExpressionParser"
     },
     "ifc-create": {
       "command": "",
@@ -684,18 +697,47 @@
       "runArgs": "",
       "description": "IFC Fragments Viewer - Carga optimizada de IFC usando ThatOpen Fragments. Muestra tiempo de fragmentación + tiempo de carga. Sintaxis: @{ifc-fragment}path/to/file.ifc@{end ifc-fragment}"
     },
-    "svg": {
+    "explain": {
       "command": "",
       "extension": "",
-      "directive": "@{svg}",
-      "endDirective": "@{end svg}",
-      "commentPrefix": "#",
-      "keywords": ["line", "rect", "circle", "ellipse", "polyline", "polygon", "text", "arc", "arrow", "grid", "background", "group", "endgroup", "path"],
-      "builtins": ["stroke", "fill", "width", "opacity", "size", "color", "anchor", "rotate", "dash", "font", "bold", "italic", "rx", "ry", "step", "translate", "scale", "id"],
+      "directive": "@{explain}",
+      "endDirective": "@{end explain}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
       "requiresCompilation": false,
       "compileArgs": "",
       "runArgs": "",
-      "description": "SVG Drawing DSL - Dibuja graficos SVG con sintaxis simplificada sin tags XML. Sintaxis: @{svg 600 400} line 0 0 100 100 stroke:red width:2 @{end svg}"
+      "description": "Explica codigo C++ en pseudocodigo. Soporta idiomas: spanish (default), english, matlab, python. Sintaxis: @{explain spanish}codigo C++@{end explain}"
+    },
+    "cpp-explain": {
+      "command": "",
+      "extension": "",
+      "directive": "@{cpp-explain}",
+      "endDirective": "@{end cpp-explain}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Muestra codigo C++ y su explicacion lado a lado. Sintaxis: @{cpp-explain spanish}codigo C++@{end cpp-explain}"
+    },
+    "draw": {
+      "command": "",
+      "extension": "",
+      "directive": "@{draw}",
+      "endDirective": "@{end draw}",
+      "commentPrefix": "#",
+      "keywords": ["line", "rect", "circle", "arrow", "text", "pline", "arc",
+                   "line3d", "arrow3d", "text3d", "circle3d", "carc3d", "pline3d",
+                   "box", "box3d"],
+      "builtins": ["color", "grid", "bg", "proj", "fit", "lw",
+                   "off", "on", "oblique", "close"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "CAD 2D/3D Drawing DSL - Dibujo tecnico con proyeccion oblicua. Sintaxis: @{draw 600 400} line 0 0 10 5 @{end draw}"
     },
     "tree": {
       "command": "",
@@ -723,6 +765,97 @@
       "runArgs": "",
       "description": "Animation DSL - Genera animaciones SVG con CSS keyframes. Tipos: spring (masa-resorte), sine (ondas viajeras), circle (curvas polares). Sintaxis: @{animation spring} title: Mi titulo xi: 0.1 @{end animation}"
     },
+    "three": {
+      "command": "",
+      "extension": "",
+      "directive": "@{three}",
+      "endDirective": "@{end three}",
+      "commentPrefix": "#",
+      "keywords": ["box", "sphere", "cylinder", "plane", "line", "cone", "torus", "group", "endgroup", "light", "camera", "background", "grid", "axes", "text3d", "extrude", "points"],
+      "builtins": ["color", "size", "radius", "height", "width", "depth", "position", "rotation", "scale", "opacity", "wireframe", "intensity", "look", "fov", "step", "segments", "metalness", "roughness"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Three.js 3D Scene DSL - Crea escenas 3D con sintaxis simplificada sin tags HTML. Sintaxis: @{three 800 600} box 0 0 0 size:1,1,1 color:#4488ff @{end three}"
+    },
+    "triangle": {
+      "command": "",
+      "extension": "",
+      "directive": "@{triangle}",
+      "endDirective": "@{end triangle}",
+      "commentPrefix": "#",
+      "keywords": ["vertex", "segment", "hole", "region", "quality", "area", "delaunay"],
+      "builtins": ["color", "fill", "stroke", "width", "opacity", "label", "show"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Triangle (Shewchuk) Delaunay mesh DSL - Genera mallas triangulares 2D con triangulacion de Delaunay. Sintaxis: @{triangle 600 400} vertex 0 0 vertex 4 0 vertex 4 3 vertex 0 3 segment 0 1 segment 1 2 segment 2 3 segment 3 0 quality:30 area:0.5 @{end triangle}"
+    },
+    "integral": {
+      "command": "",
+      "extension": "",
+      "directive": "@{integral}",
+      "endDirective": "@{end integral}",
+      "commentPrefix": "'",
+      "keywords": ["integrate", "dintegrate", "tintegrate", "int", "dint", "tint"],
+      "builtins": ["sin", "cos", "tan", "sqrt", "exp", "log", "abs", "pi"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Bloque de integrales numericas. Sintaxis: result = integrate(sin(x), x, 0, pi). Soporta: integrate (simple), dintegrate (doble), tintegrate (triple). Alias: @{integrales}"
+    },
+    "derivate": {
+      "command": "",
+      "extension": "",
+      "directive": "@{derivate}",
+      "endDirective": "@{end derivate}",
+      "commentPrefix": "'",
+      "keywords": ["derivate", "derivative", "diff", "deriv", "slope", "derivate2", "derivative2"],
+      "builtins": ["sin", "cos", "tan", "sqrt", "exp", "log", "abs", "pi"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Bloque de derivadas numericas. Sintaxis: slope = derivate(x^3, x, 2). Soporta: derivate, derivative, diff, slope, derivate2. Alias: @{derivative}, @{derivada}"
+    },
+    "gauss": {
+      "command": "",
+      "extension": "",
+      "directive": "@{gauss}",
+      "endDirective": "@{end gauss}",
+      "commentPrefix": "'",
+      "keywords": ["gauss", "gauss1d", "gauss2d", "gauss3d"],
+      "builtins": ["xi", "eta", "zeta", "sin", "cos", "sqrt", "exp", "abs"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Bloque de cuadratura de Gauss-Legendre para FEM. Sintaxis: result = gauss(f(xi), xi, 2). Soporta: gauss (1D), gauss2d (2D quad), gauss3d (3D hex). Alias: @{cuadratura}"
+    },
+    "hide": {
+      "command": "",
+      "extension": "",
+      "directive": "@{hide}",
+      "endDirective": "@{end hide}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Control de visibilidad - Oculta la salida del parser Calcpad. @{hide}...@{end hide} es equivalente a #hide...#show pero usando sintaxis de parser global @{}. Se procesa como preprocessor en GlobalParser."
+    },
+    "show": {
+      "command": "",
+      "extension": "",
+      "directive": "@{show}",
+      "endDirective": "@{end show}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Control de visibilidad - Muestra la salida del parser Calcpad. @{show} reactiva la visibilidad. Es equivalente a #show usando sintaxis de parser global @{}."
+    },
     "function": {
       "command": "",
       "extension": "",
@@ -736,6 +869,123 @@
       "runArgs": "",
       "description": "Define funciones matematicas con sintaxis Octave o simplificada. Sintaxis: function y = nombre(x) y = x^2 end. O simplificada: nombre(x) = x^2. Alias: @{funcion}, @{func}"
     },
+    "paper": {
+      "command": "",
+      "extension": "",
+      "directive": "@{paper}",
+      "endDirective": "@{end paper}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Configuracion de pagina para documentos formales. Sintaxis key:value - size, margin, font, fontsize, color, accent, background, lineheight, columngap. Alias: @{pagina}, @{documento}"
+    },
+    "header": {
+      "command": "",
+      "extension": "",
+      "directive": "@{header}",
+      "endDirective": "@{end header}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Encabezado de pagina con barra coloreada. Sintaxis key:value - left, right, center, color, textcolor, height, barside, linecolor. Alias: @{encabezado}"
+    },
+    "footer": {
+      "command": "",
+      "extension": "",
+      "directive": "@{footer}",
+      "endDirective": "@{end footer}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Pie de pagina con linea separadora. Sintaxis key:value - left, right, linecolor, textcolor. Alias: @{piepagina}"
+    },
+    "pagebreak": {
+      "command": "",
+      "extension": "",
+      "directive": "@{pagebreak}",
+      "endDirective": "@{end pagebreak}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Salto de pagina para impresion/PDF. Alias: @{saltopagina}, @{newpage}"
+    },
+    "figure": {
+      "command": "",
+      "extension": "",
+      "directive": "@{figure}",
+      "endDirective": "@{end figure}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Figura con imagen y caption numerado. Sintaxis key:value - src, width, caption, align. O simple: primera linea = ruta imagen, segunda = caption. Alias: @{figura}"
+    },
+    "author": {
+      "command": "",
+      "extension": "",
+      "directive": "@{author}",
+      "endDirective": "@{end author}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Tarjeta de autor con foto. Sintaxis key:value - photo, name, affiliation, email, role. Multiples autores separados por ---. Alias: @{autor}"
+    },
+    "abstract": {
+      "command": "",
+      "extension": "",
+      "directive": "@{abstract}",
+      "endDirective": "@{end abstract}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Seccion de resumen/abstract con borde. Soporta idiomas: @{abstract english}, @{resumen}. Opciones: keywords. Alias: @{resumen}"
+    },
+    "reference": {
+      "command": "",
+      "extension": "",
+      "directive": "@{reference}",
+      "endDirective": "@{end reference}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Lista de referencias/bibliografia numerada. Cada linea es una referencia. Formato: [1] Autor, Titulo... Alias: @{referencia}, @{bibliografia}"
+    },
+    "title": {
+      "command": "",
+      "extension": "",
+      "directive": "@{title}",
+      "endDirective": "@{end title}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Titulo de documento/seccion. Sintaxis key:value - text, subtitle, doi, type, received, accepted, udc. O simple: texto plano como titulo. Alias: @{titulo}"
+    },
     "theme": {
       "command": "",
       "extension": "",
@@ -748,10 +998,49 @@
       "compileArgs": "",
       "runArgs": "",
       "description": "Tema de color para ecuaciones y formato. Uso: @{theme:black}, @{theme:calcpad}, @{theme:mathcad}, @{theme:book}, @{theme:blueprint}. Tema custom con propiedades: var=#color, greek=#color, nary=#color, etc. Alias: @{tema}"
+    },
+    "text": {
+      "command": "",
+      "extension": "",
+      "directive": "@{text}",
+      "endDirective": "@{end text}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Bloque de texto plano sin evaluacion matematica. El contenido se renderiza como parrafos HTML. Alias: @{texto}"
+    },
+    "texto": {
+      "command": "",
+      "extension": "",
+      "directive": "@{texto}",
+      "endDirective": "@{end texto}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Bloque de texto plano (alias español de @{text})"
+    },
+    "config": {
+      "command": "",
+      "extension": "",
+      "directive": "@{config}",
+      "endDirective": "@{end config}",
+      "commentPrefix": "",
+      "keywords": ["bg", "align", "header", "footer", "startpage", "color", "bold", "headertitle", "comment", "hide"],
+      "builtins": ["book", "cream", "white", "black", "left", "center", "right", "on", "off", "default"],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Configuracion del documento. Sintaxis: @{config bg:book, align:left, header:on, startpage:1, color:black}"
     }
   },
   "settings": {
-    "timeout": 30000,
+    "timeout": 60000,
     "maxOutputLines": 1000,
     "tempDirectory": "temp_multilang",
     "shareVariables": true

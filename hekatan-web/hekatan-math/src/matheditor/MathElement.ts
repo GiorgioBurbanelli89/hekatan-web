@@ -2041,7 +2041,7 @@ export class MathSvg extends MathElement {
           ctx.strokeStyle = sc;
           ctx.fillStyle = fill || sFill || "none";
           ctx.lineWidth = (lw ?? (sWidth || 1.5)) * scaleF;
-          const down = yUp ? -1 : 1;
+          const down = 1; // always +1 in pixel space (down on screen)
           if (type === "pin") {
             ctx.beginPath();
             ctx.moveTo(sx, sy);

@@ -569,6 +569,173 @@ function testCellArrays() {
   evaluate(parseExpression("C = {10; 20; 30}"), env);
 }
 
+function testBisectSecant() {
+  console.log("\n═══ Root Finding: Bisection & Secant ═══");
+  const env = new HekatanEnvironment();
+
+  env.userFunctions.set("f", { params: ["x"], body: parseExpression("x^2 - 4") });
+  checkClose("bisect(x^2-4, 0, 3)", evaluate(parseExpression("bisect(f; 0; 3)"), env) as number, 2, 1e-8);
+  checkClose("secant(x^2-4, 1, 3)", evaluate(parseExpression("secant(f; 1; 3)"), env) as number, 2, 1e-8);
+
+  env.userFunctions.set("g", { params: ["x"], body: parseExpression("cos(x) - x") });
+  checkClose("bisect(cos(x)-x)", evaluate(parseExpression("bisect(g; 0; 1)"), env) as number, 0.7390851332, 1e-6);
+  checkClose("secant(cos(x)-x)", evaluate(parseExpression("secant(g; 0; 1)"), env) as number, 0.7390851332, 1e-6);
+}
+
+function testNumericalLimit() {
+  console.log("\n═══ Numerical Limit ═══");
+  const env = new HekatanEnvironment();
+
+  // lim_{x→0} sin(x)/x = 1
+  env.userFunctions.set("f", { params: ["x"], body: parseExpression("sin(x)/x") });
+  checkClose("lim sin(x)/x → 1", evaluate(parseExpression("nlimit(f; 0)"), env) as number, 1, 1e-4);
+
+  // lim_{x→0} (e^x - 1)/x = 1
+  env.userFunctions.set("g", { params: ["x"], body: parseExpression("(exp(x) - 1)/x") });
+  checkClose("lim (e^x-1)/x → 1", evaluate(parseExpression("nlimit(g; 0)"), env) as number, 1, 1e-3);
+}
+
+function testTaylorSeries() {
+  console.log("\n═══ Taylor Series ═══");
+  const env = new HekatanEnvironment();
+
+  // Taylor of e^x at x=0: [1, 1, 1/2, 1/6, 1/24]
+  env.userFunctions.set("f", { params: ["x"], body: parseExpression("exp(x)") });
+  const t = evaluate(parseExpression("taylor(f; 0; 4)"), env) as number[];
+  checkClose("e^x taylor[0] = 1", t[0], 1, 1e-3);
+  checkClose("e^x taylor[1] = 1", t[1], 1, 1e-3);
+  checkClose("e^x taylor[2] = 1/2", t[2], 0.5, 1e-2);
+  checkClose("e^x taylor[3] = 1/6", t[3], 1/6, 1e-1);
+}
+
+function testTrapezoidSimpson() {
+  console.log("\n═══ Integration: Trapezoid & Simpson ═══");
+  const env = new HekatanEnvironment();
+
+  env.userFunctions.set("f", { params: ["x"], body: parseExpression("x^2") });
+  checkClose("trap ∫₀¹ x² = 1/3", evaluate(parseExpression("trapezoid(f; 0; 1; 100)"), env) as number, 1/3, 1e-4);
+  checkClose("simpson ∫₀¹ x² = 1/3", evaluate(parseExpression("simpson(f; 0; 1; 10)"), env) as number, 1/3, 1e-8);
+
+  env.userFunctions.set("g", { params: ["x"], body: parseExpression("sin(x)") });
+  checkClose("simpson ∫₀^π sin = 2", evaluate(parseExpression("simpson(g; 0; pi; 20)"), env) as number, 2, 1e-4);
+}
+
+function testLagrangeInterp() {
+  console.log("\n═══ Lagrange Interpolation ═══");
+  const env = new HekatanEnvironment();
+  evaluate(parseExpression("xd = [0; 1; 2; 3]"), env);
+  evaluate(parseExpression("yd = [0; 1; 4; 9]"), env); // y = x^2
+
+  checkClose("interp(xd, yd, 1.5) ≈ 2.25", evaluate(parseExpression("interp(xd; yd; 1.5)"), env) as number, 2.25, 1e-6);
+  checkClose("interp(xd, yd, 2.5) ≈ 6.25", evaluate(parseExpression("interp(xd; yd; 2.5)"), env) as number, 6.25, 1e-6);
+}
+
+function testLinearRegression() {
+  console.log("\n═══ Linear Regression ═══");
+  const env = new HekatanEnvironment();
+  evaluate(parseExpression("xd = [1; 2; 3; 4; 5]"), env);
+  evaluate(parseExpression("yd = [2.1; 3.9; 6.2; 7.8; 10.1]"), env); // ≈ y = 2x + 0
+
+  const r = evaluate(parseExpression("linreg(xd; yd)"), env) as number[];
+  checkClose("slope ≈ 2", r[0], 2, 0.1);
+  checkClose("R² ≈ 1", r[2], 1, 0.05);
+}
+
+function testEulerMethod() {
+  console.log("\n═══ Euler Method ODE ═══");
+  const env = new HekatanEnvironment();
+
+  // y' = y, y(0)=1 → y(1) = e (less accurate than RK4)
+  env.userFunctions.set("f", { params: ["t", "y"], body: parseExpression("y") });
+  const r = evaluate(parseExpression("euler(f; 1; 0; 1; 10000)"), env) as number;
+  checkClose("euler y'=y, y(1)≈e", r, Math.E, 1e-3);
+}
+
+function testNumberTheory() {
+  console.log("\n═══ Number Theory ═══");
+  check("gcd(12; 8)", evalExpr("gcd(12; 8)"), 4);
+  check("gcd(100; 75)", evalExpr("gcd(100; 75)"), 25);
+  check("lcm(4; 6)", evalExpr("lcm(4; 6)"), 12);
+  check("lcm(12; 18)", evalExpr("lcm(12; 18)"), 36);
+  check("fib(1)", evalExpr("fib(1)"), 1);
+  check("fib(10)", evalExpr("fib(10)"), 55);
+  check("fib(20)", evalExpr("fib(20)"), 6765);
+  check("isprime(2)", evalExpr("isprime(2)"), 1);
+  check("isprime(7)", evalExpr("isprime(7)"), 1);
+  check("isprime(4)", evalExpr("isprime(4)"), 0);
+  check("isprime(97)", evalExpr("isprime(97)"), 1);
+  check("isprime(100)", evalExpr("isprime(100)"), 0);
+}
+
+function testSequences() {
+  console.log("\n═══ Sequences & Series ═══");
+  // Arithmetic: a=1, d=2, n=5 → 1+3+5+7+9 = 25
+  check("arithsum(1;2;5)", evalExpr("arithsum(1; 2; 5)"), 25);
+  // Arithmetic: a=1, d=1, n=100 → 5050
+  check("arithsum(1;1;100)", evalExpr("arithsum(1; 1; 100)"), 5050);
+  // Geometric: a=1, r=2, n=10 → 1*(1-2^10)/(1-2) = 1023
+  check("geomsum(1;2;10)", evalExpr("geomsum(1; 2; 10)"), 1023);
+  // Geometric: a=3, r=1/2, n=5 → 3*(1-(1/2)^5)/(1-1/2) ≈ 5.8125
+  checkClose("geomsum(3;0.5;5)", evalExpr("geomsum(3; 0.5; 5)"), 5.8125);
+  // Infinite geometric: a=1, r=1/2 → 2
+  check("geominf(1;0.5)", evalExpr("geominf(1; 0.5)"), 2);
+  // Infinite geometric: a=3, r=1/3 → 4.5
+  checkClose("geominf(3;1/3)", evalExpr("geominf(3; 1/3)"), 4.5);
+}
+
+function testStatistics() {
+  console.log("\n═══ Statistical Functions ═══");
+  const env = new HekatanEnvironment();
+  evaluate(parseExpression("v = [2; 4; 4; 4; 5; 5; 7; 9]"), env);
+
+  checkClose("mean(v)", evaluate(parseExpression("mean(v)"), env) as number, 5);
+  checkClose("median(v)", evaluate(parseExpression("median(v)"), env) as number, 4.5);
+  checkClose("stdev(v)", evaluate(parseExpression("stdev(v)"), env) as number, 2.1381, 1e-3);
+
+  // norm and dot
+  evaluate(parseExpression("u = [3; 4]"), env);
+  checkClose("norm([3;4])", evaluate(parseExpression("norm(u)"), env) as number, 5);
+
+  evaluate(parseExpression("a = [1; 2; 3]"), env);
+  evaluate(parseExpression("b = [4; 5; 6]"), env);
+  check("dot([1;2;3],[4;5;6])", evaluate(parseExpression("dot(a; b)"), env), 32);
+
+  // cross product
+  evaluate(parseExpression("cx = [1; 0; 0]"), env);
+  evaluate(parseExpression("cy = [0; 1; 0]"), env);
+  const cr = evaluate(parseExpression("cross(cx; cy)"), env);
+  check("cross(x,y)=[0,0,1]", cr, [0, 0, 1]);
+}
+
+function testSymbolicDerivative() {
+  console.log("\n═══ Symbolic Derivative (sdiff) ═══");
+  const env = new HekatanEnvironment();
+
+  // d/dx(x^3) at x=2 → 3*2^2 = 12
+  env.userFunctions.set("f", { params: ["x"], body: parseExpression("x^3") });
+  checkClose("d/dx(x^3)|x=2 = 12", evaluate(parseExpression("sdiff(f; 2)"), env) as number, 12, 1e-6);
+
+  // d/dx(sin(x)) at x=0 → cos(0) = 1
+  env.userFunctions.set("g", { params: ["x"], body: parseExpression("sin(x)") });
+  checkClose("d/dx(sin)|x=0 = 1", evaluate(parseExpression("sdiff(g; 0)"), env) as number, 1, 1e-6);
+
+  // d/dx(e^x) at x=1 → e
+  env.userFunctions.set("h", { params: ["x"], body: parseExpression("exp(x)") });
+  checkClose("d/dx(e^x)|x=1 = e", evaluate(parseExpression("sdiff(h; 1)"), env) as number, Math.E, 1e-6);
+
+  // d/dx(x*sin(x)) at x=pi → sin(pi) + pi*cos(pi) = 0 + pi*(-1) = -pi
+  env.userFunctions.set("p", { params: ["x"], body: parseExpression("x*sin(x)") });
+  checkClose("d/dx(x·sin(x))|π = -π", evaluate(parseExpression("sdiff(p; pi)"), env) as number, -Math.PI, 1e-6);
+
+  // d/dx(ln(x)) at x=2 → 1/2
+  env.userFunctions.set("lf", { params: ["x"], body: parseExpression("ln(x)") });
+  checkClose("d/dx(ln(x))|x=2 = 0.5", evaluate(parseExpression("sdiff(lf; 2)"), env) as number, 0.5, 1e-6);
+
+  // d/dx(sqrt(x)) at x=4 → 1/(2*sqrt(4)) = 1/4
+  env.userFunctions.set("sq", { params: ["x"], body: parseExpression("sqrt(x)") });
+  checkClose("d/dx(√x)|x=4 = 0.25", evaluate(parseExpression("sdiff(sq; 4)"), env) as number, 0.25, 1e-6);
+}
+
 // ─── WASM Tests ──────────────────────────────────────────
 
 async function testEigenWASM() {
@@ -829,7 +996,18 @@ async function main() {
     testProduct();
     testODE();
     testNsolve();
+    testBisectSecant();
+    testNumericalLimit();
+    testTaylorSeries();
     testIntegrals();
+    testTrapezoidSimpson();
+    testLagrangeInterp();
+    testLinearRegression();
+    testEulerMethod();
+    testNumberTheory();
+    testSequences();
+    testStatistics();
+    testSymbolicDerivative();
     testCellArrays();
 
     // ── WASM ──

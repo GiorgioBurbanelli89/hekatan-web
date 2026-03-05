@@ -627,6 +627,18 @@ namespace Hekatan.Common.MultLangCode
                     {
                         output = ProcessTitleBlock(block.Code ?? "", block.StartDirective);
                     }
+                    // @{text} / @{texto} - Plain text block (no math evaluation)
+                    // Renders content as HTML paragraphs. Blank lines create paragraph breaks.
+                    else if (language.Equals("text", StringComparison.OrdinalIgnoreCase) ||
+                             language.Equals("texto", StringComparison.OrdinalIgnoreCase))
+                    {
+                        output = ProcessTextBlock(block.Code ?? "", block.StartDirective);
+                    }
+                    // @{config} - Document configuration (bg, align, header, footer, startpage, color, bold)
+                    else if (language.StartsWith("config", StringComparison.OrdinalIgnoreCase))
+                    {
+                        output = ProcessConfigBlock(language, block.Code ?? "");
+                    }
                     // @{css} - Apply styles silently (no visible output)
                     else if (language.Equals("css", StringComparison.OrdinalIgnoreCase))
                     {
@@ -2042,6 +2054,8 @@ namespace Hekatan.Common.MultLangCode
                 double projAngle = 45;
                 double projScale = 0.5;
                 bool autoFit = false;
+                string fontFamily = "sans-serif";
+                bool fontItalic = false;
 
                 // Collect draw commands as structured data
                 var cmds = new List<string>();
@@ -2060,7 +2074,16 @@ namespace Hekatan.Common.MultLangCode
                             if (parts.Length >= 2) currentColor = parts[1];
                             break;
                         case "bg":
-                            if (parts.Length >= 2) bgColor = parts[1];
+                            if (parts.Length >= 2)
+                            {
+                                bgColor = parts[1].ToLowerInvariant() switch
+                                {
+                                    "book" => "#fffef8",
+                                    "cream" => "#fffdd0",
+                                    "dark" => "#1e1e1e",
+                                    _ => parts[1]
+                                };
+                            }
                             break;
                         case "grid":
                             gridOn = parts.Length >= 2 && parts[1].ToLower() != "off";
@@ -2118,6 +2141,92 @@ namespace Hekatan.Common.MultLangCode
                         case "pline":
                             cmds.Add($"P|{string.Join("|", parts.Skip(1))}|COL:{currentColor}|LW:{F(lineWidth)}");
                             break;
+                        case "darrow":
+                        case "flechadoble":
+                            if (parts.Length >= 5)
+                            {
+                                var daCol = parts.Length >= 6 && parts[5].StartsWith("#") ? parts[5] : currentColor;
+                                cmds.Add($"DA|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{daCol}|{F(lineWidth)}");
+                            }
+                            break;
+                        case "otext":
+                        case "otexto":
+                        case "overbar":
+                            if (parts.Length >= 4)
+                            {
+                                var otxt = string.Join(" ", parts.Skip(3));
+                                cmds.Add($"OT|{parts[1]}|{parts[2]}|{DrawEscapeJs(otxt)}|{currentColor}|{F(fontSize)}");
+                            }
+                            break;
+                        case "beam":
+                        case "viga":
+                            if (parts.Length >= 5)
+                            {
+                                var bmW = parts.Length >= 6 && !parts[5].StartsWith("#") ? parts[5] : "5";
+                                var bmC = parts.Length >= 6 && parts[5].StartsWith("#") ? parts[5]
+                                        : parts.Length >= 7 && parts[6].StartsWith("#") ? parts[6] : currentColor;
+                                var bmH = parts.Length >= 8 ? parts[7] : "3";
+                                cmds.Add($"BM2|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{bmW}|{bmC}|{F(lineWidth)}|{bmH}");
+                            }
+                            break;
+                        case "cnode":
+                        case "cid":
+                        case "cn":
+                            if (parts.Length >= 4)
+                            {
+                                var cnR = parts.Length >= 5 && !parts[4].StartsWith("#") ? parts[4] : "8";
+                                var cnCol = parts.Length >= 5 && parts[4].StartsWith("#") ? parts[4]
+                                          : parts.Length >= 6 && parts[5].StartsWith("#") ? parts[5] : currentColor;
+                                cmds.Add($"C|{parts[1]}|{parts[2]}|{cnR}|{cnCol}|{F(lineWidth)}|#ffffff");
+                                cmds.Add($"T|{parts[1]}|{parts[2]}|{DrawEscapeJs(parts[3])}|{cnCol}");
+                            }
+                            break;
+                        case "tnode":
+                        case "tid":
+                        case "tn":
+                            if (parts.Length >= 4)
+                            {
+                                var tnSz = parts.Length >= 5 && !parts[4].StartsWith("#") ? parts[4] : "10";
+                                var tnCol = parts.Length >= 5 && parts[4].StartsWith("#") ? parts[4]
+                                          : parts.Length >= 6 && parts[5].StartsWith("#") ? parts[5] : currentColor;
+                                cmds.Add($"TN|{parts[1]}|{parts[2]}|{tnSz}|{tnCol}|{F(lineWidth)}|{DrawEscapeJs(parts[3])}");
+                            }
+                            break;
+                        case "axes2d":
+                            if (parts.Length >= 3)
+                            {
+                                var a2sz = parts.Length >= 4 ? parts[3] : "50";
+                                var a2lh = parts.Length >= 5 ? parts[4] : "X";
+                                var a2lv = parts.Length >= 6 ? parts[5] : "Y";
+                                cmds.Add($"A|{parts[1]}|{parts[2]}|{parts[1]}+{a2sz}|{parts[2]}|#333333|{F(lineWidth)}");
+                                cmds.Add($"T|{parts[1]}+{a2sz}+4|{parts[2]}|{DrawEscapeJs(a2lh)}|#333333");
+                                cmds.Add($"A|{parts[1]}|{parts[2]}|{parts[1]}|{parts[2]}+{a2sz}|#333333|{F(lineWidth)}");
+                                cmds.Add($"T|{parts[1]}-2|{parts[2]}+{a2sz}+6|{DrawEscapeJs(a2lv)}|#333333");
+                            }
+                            break;
+                        case "axes2dxyz":
+                            if (parts.Length >= 3)
+                            {
+                                var axsz = parts.Length >= 4 ? parts[3] : "40";
+                                var axlx = parts.Length >= 5 ? parts[4] : "X";
+                                var axly = parts.Length >= 6 ? parts[5] : "Y";
+                                var axlz = parts.Length >= 7 ? parts[6] : "Z";
+                                cmds.Add($"A|{parts[1]}|{parts[2]}|{parts[1]}+{axsz}|{parts[2]}|#cc0000|{F(lineWidth)}");
+                                cmds.Add($"T|{parts[1]}+{axsz}+4|{parts[2]}|{DrawEscapeJs(axlx)}|#cc0000");
+                                cmds.Add($"A|{parts[1]}|{parts[2]}|{parts[1]}|{parts[2]}+{axsz}|#00aa00|{F(lineWidth)}");
+                                cmds.Add($"T|{parts[1]}-4|{parts[2]}+{axsz}+6|{DrawEscapeJs(axly)}|#00aa00");
+                                cmds.Add($"A|{parts[1]}|{parts[2]}|{parts[1]}|{parts[2]}-{axsz}|#0000cc|{F(lineWidth)}");
+                                cmds.Add($"T|{parts[1]}-4|{parts[2]}-{axsz}-6|{DrawEscapeJs(axlz)}|#0000cc");
+                            }
+                            break;
+                        case "fontfamily":
+                        case "ff":
+                            if (parts.Length >= 2) fontFamily = parts[1].ToLower() == "serif" ? "serif" : "sans-serif";
+                            break;
+                        case "fontitalic":
+                        case "fi":
+                            if (parts.Length >= 2) fontItalic = parts[1].ToLower() == "on" || parts[1].ToLower() == "yes" || parts[1].ToLower() == "true";
+                            break;
 
                         // 3D Primitives
                         case "line3d":
@@ -2127,6 +2236,14 @@ namespace Hekatan.Common.MultLangCode
                         case "arrow3d":
                             if (parts.Length >= 7)
                                 cmds.Add($"A3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{parts[6]}|{currentColor}|{F(lineWidth)}");
+                            break;
+                        case "darrow3d":
+                        case "flechadoble3d":
+                            if (parts.Length >= 7)
+                            {
+                                var da3Col = parts.Length >= 8 && parts[7].StartsWith("#") ? parts[7] : currentColor;
+                                cmds.Add($"DA3|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{parts[6]}|{da3Col}|{F(lineWidth)}");
+                            }
                             break;
                         case "text3d":
                             if (parts.Length >= 5)
@@ -2152,10 +2269,40 @@ namespace Hekatan.Common.MultLangCode
 
                         // New primitives
                         case "fontsize":
+                        case "fs":
                             if (parts.Length >= 2 && double.TryParse(parts[1],
                                 System.Globalization.NumberStyles.Float,
                                 System.Globalization.CultureInfo.InvariantCulture, out double fsVal))
                                 fontSize = fsVal;
+                            break;
+                        case "hdim":
+                        case "cotah":
+                            // hdim x1 y1 x2 y2 offset text — horizontal dimension line
+                            // In hdim, y2 is forced to y1 (horizontal)
+                            if (parts.Length >= 6)
+                            {
+                                var hdText = parts.Length >= 7 ? string.Join(" ", parts.Skip(6)) : "";
+                                cmds.Add($"DIM|{parts[1]}|{parts[2]}|{parts[3]}|{parts[2]}|{parts[5]}|{DrawEscapeJs(hdText)}|{currentColor}|{F(lineWidth)}|{F(fontSize)}");
+                            }
+                            break;
+                        case "vdim":
+                        case "cotav":
+                            // vdim x1 y1 x2 y2 offset text — vertical dimension line
+                            // In vdim, x2 is forced to x1 (vertical)
+                            if (parts.Length >= 6)
+                            {
+                                var vdText = parts.Length >= 7 ? string.Join(" ", parts.Skip(6)) : "";
+                                cmds.Add($"DIM|{parts[1]}|{parts[2]}|{parts[1]}|{parts[4]}|{parts[5]}|{DrawEscapeJs(vdText)}|{currentColor}|{F(lineWidth)}|{F(fontSize)}");
+                            }
+                            break;
+                        case "dim":
+                        case "cota":
+                            // dim x1 y1 x2 y2 offset text — general dimension line
+                            if (parts.Length >= 6)
+                            {
+                                var dimText = parts.Length >= 7 ? string.Join(" ", parts.Skip(6)) : "";
+                                cmds.Add($"DIM|{parts[1]}|{parts[2]}|{parts[3]}|{parts[4]}|{parts[5]}|{DrawEscapeJs(dimText)}|{currentColor}|{F(lineWidth)}|{F(fontSize)}");
+                            }
                             break;
                         case "hatch3d":
                             if (parts.Length >= 13)
@@ -2294,7 +2441,7 @@ namespace Hekatan.Common.MultLangCode
 
                 var sb = new StringBuilder();
                 var wrapperId = containerId + "_wrap";
-                sb.AppendLine($"<div style='text-align:{align};position:relative;display:inline-block;{marginStyle}'>");
+                sb.AppendLine($"<div style='text-align:{align};position:relative;display:block;max-width:{canvasW}px;{marginStyle}'>");
                 sb.AppendLine($"  <div id='{wrapperId}' style='overflow:hidden;border:1px solid #ccc;border-radius:4px;" +
                               $"width:{canvasW}px;height:{canvasH}px;cursor:grab;position:relative;'>");
                 sb.AppendLine($"    <canvas id='{containerId}' width='{canvasW}' height='{canvasH}' " +
@@ -2348,6 +2495,24 @@ namespace Hekatan.Common.MultLangCode
                     "ctx.moveTo(x2,y2);" +
                     "ctx.lineTo(x2-h*Math.cos(a-0.35),y2-h*Math.sin(a-0.35));" +
                     "ctx.lineTo(x2-h*Math.cos(a+0.35),y2-h*Math.sin(a+0.35));" +
+                    "ctx.closePath();ctx.fill();}");
+
+                // Double arrow helper (two arrowheads)
+                sb.AppendLine("function drawDArr(ctx,x1,y1,x2,y2,col,lw){" +
+                    "ctx.beginPath();ctx.strokeStyle=col;ctx.lineWidth=lw;" +
+                    "ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();" +
+                    "var dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);" +
+                    "if(len<2)return;var ux=dx/len,uy=dy/len,nx=-uy,ny=ux;" +
+                    "var aL=8*lw,aW=3*lw,gap=3;" +
+                    "ctx.fillStyle=col;" +
+                    "ctx.beginPath();ctx.moveTo(x2,y2);" +
+                    "ctx.lineTo(x2-ux*aL+nx*aW,y2-uy*aL+ny*aW);" +
+                    "ctx.lineTo(x2-ux*aL-nx*aW,y2-uy*aL-ny*aW);" +
+                    "ctx.closePath();ctx.fill();" +
+                    "var off=aL+gap,bx=x2-ux*off,by=y2-uy*off;" +
+                    "ctx.beginPath();ctx.moveTo(bx,by);" +
+                    "ctx.lineTo(bx-ux*aL+nx*aW,by-uy*aL+ny*aW);" +
+                    "ctx.lineTo(bx-ux*aL-nx*aW,by-uy*aL-ny*aW);" +
                     "ctx.closePath();ctx.fill();}");
 
                 if (autoFit)
@@ -2471,6 +2636,30 @@ namespace Hekatan.Common.MultLangCode
                     case "RDOF3": // rotational DOF (two parallel arrows)
                         sb.AppendLine($"pts.push(w2s({p[1]},{p[2]},{p[3]}));");
                         sb.AppendLine($"pts.push(w2s({p[1]}+{p[4]},{p[2]}+{p[5]},{p[3]}+{p[6]}));");
+                        break;
+                    case "DA": // darrow x1 y1 x2 y2
+                        sb.AppendLine($"pts.push([{p[1]},{p[2]}],[{p[3]},{p[4]}]);");
+                        break;
+                    case "DA3": // darrow3d x1 y1 z1 x2 y2 z2
+                        sb.AppendLine($"pts.push(w2s({p[1]},{p[2]},{p[3]}),w2s({p[4]},{p[5]},{p[6]}));");
+                        break;
+                    case "OT": // otext x y
+                        sb.AppendLine($"pts.push([{p[1]},{p[2]}]);");
+                        break;
+                    case "BM2": // beam2d x1 y1 x2 y2 width
+                        sb.AppendLine($"(function(){{var w={p[5]}/2,dx={p[3]}-{p[1]},dy={p[4]}-{p[2]},len=Math.sqrt(dx*dx+dy*dy);" +
+                            "if(len<1)return;var nx=-dy/len*w,ny=dx/len*w;" +
+                            $"pts.push([{p[1]}+nx,{p[2]}+ny],[{p[1]}-nx,{p[2]}-ny],[{p[3]}+nx,{p[4]}+ny],[{p[3]}-nx,{p[4]}-ny]);}})();");
+                        break;
+                    case "TN": // tnode cx cy size
+                        sb.AppendLine($"(function(){{var s={p[3]};pts.push([{p[1]}-s,{p[2]}-s*0.577],[{p[1]}+s,{p[2]}-s*0.577],[{p[1]},{p[2]}+s*1.155]);}})();");
+                        break;
+                    case "DIM": // dim x1 y1 x2 y2 offset text color lw fontSize
+                        sb.AppendLine($"(function(){{var x1={p[1]},y1={p[2]},x2={p[3]},y2={p[4]},off={p[5]};" +
+                            "var dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);" +
+                            "if(len<0.01){dx=0;dy=1;}else{dx/=len;dy/=len;}" +
+                            "var nx=-dy*off,ny=dx*off;" +
+                            "pts.push([x1+nx,y1+ny],[x2+nx,y2+ny]);}})();");
                         break;
                 }
             }
@@ -2790,6 +2979,145 @@ namespace Hekatan.Common.MultLangCode
                                 $"ctx.textAlign='center';ctx.textBaseline='middle';" +
                                 $"ctx.fillText('{p[7]}',t[0],t[1]);}})();");
                         }
+                        break;
+                    }
+
+                    case "DA": // darrow x1 y1 x2 y2 color lw
+                        sb.AppendLine($"drawDArr(ctx,{p[1]},{p[2]},{p[3]},{p[4]},'{p[5]}',{lwMul(p[6])});");
+                        break;
+
+                    case "DA3": // darrow3d x1 y1 z1 x2 y2 z2 color lw
+                        sb.AppendLine($"(function(){{var a=w2s({p[1]},{p[2]},{p[3]}),b=w2s({p[4]},{p[5]},{p[6]});" +
+                            $"drawDArr(ctx,a[0],a[1],b[0],b[1],'{p[7]}',{lwMul(p[8])});}})()" + ";");
+                        break;
+
+                    case "OT": // otext x y txt color fontSize
+                    {
+                        var otFs = p.Length >= 6 ? p[5] : "12";
+                        if (scaled)
+                        {
+                            sb.AppendLine($"(function(){{ctx.save();ctx.translate({p[1]},{p[2]});ctx.scale(1,-1);" +
+                                $"ctx.fillStyle='{p[4]}';var fs={fontSize(int.TryParse(otFs.Split('.')[0], out int otfsi) ? otfsi : 12)};" +
+                                "ctx.font=fs+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';" +
+                                $"ctx.fillText('{p[3]}',0,0);" +
+                                $"var m=ctx.measureText('{p[3]}'),tw=m.width;" +
+                                "ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=1.5*lwS;" +
+                                "ctx.beginPath();ctx.moveTo(-tw/2,-fs*0.6);ctx.lineTo(tw/2,-fs*0.6);ctx.stroke();" +
+                                "ctx.restore();})();");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"(function(){{ctx.fillStyle='{p[4]}';ctx.font='{otFs}px sans-serif';" +
+                                $"ctx.textAlign='center';ctx.textBaseline='middle';" +
+                                $"ctx.fillText('{p[3]}',{p[1]},{p[2]});" +
+                                $"var m=ctx.measureText('{p[3]}'),tw=m.width;" +
+                                $"ctx.strokeStyle='{p[4]}';ctx.lineWidth=1.5;" +
+                                $"ctx.beginPath();ctx.moveTo({p[1]}-tw/2,{p[2]}-{otFs}*0.6);ctx.lineTo({p[1]}+tw/2,{p[2]}-{otFs}*0.6);ctx.stroke();" +
+                                "})();");
+                        }
+                        break;
+                    }
+
+                    case "BM2": // beam2d: BM2|x1|y1|x2|y2|width|color|lw|hatchSpacing
+                    {
+                        sb.AppendLine($"(function(){{" +
+                            $"var x1={p[1]},y1={p[2]},x2={p[3]},y2={p[4]},w={p[5]}/2;" +
+                            "var dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);" +
+                            "if(len<1)return;var nx=-dy/len*w,ny=dx/len*w;" +
+                            "var c1x=x1+nx,c1y=y1+ny,c2x=x2+nx,c2y=y2+ny," +
+                            "c3x=x2-nx,c3y=y2-ny,c4x=x1-nx,c4y=y1-ny;" +
+                            // Outline
+                            $"ctx.strokeStyle='{p[6]}';ctx.lineWidth={lwMul(p[7])};" +
+                            "ctx.beginPath();ctx.moveTo(c1x,c1y);ctx.lineTo(c2x,c2y);" +
+                            "ctx.lineTo(c3x,c3y);ctx.lineTo(c4x,c4y);ctx.closePath();ctx.stroke();" +
+                            // Hatching
+                            $"ctx.save();ctx.beginPath();ctx.moveTo(c1x,c1y);ctx.lineTo(c2x,c2y);" +
+                            "ctx.lineTo(c3x,c3y);ctx.lineTo(c4x,c4y);ctx.closePath();ctx.clip();" +
+                            $"var sp={p[8]};if(sp<0.5)sp=0.5;" +
+                            $"ctx.strokeStyle='{p[6]}';ctx.lineWidth={lwMul(p[7])}*0.3;" +
+                            "var mn=Math.min(c1x,c2x,c3x,c4x),mx=Math.max(c1x,c2x,c3x,c4x)," +
+                            "mny=Math.min(c1y,c2y,c3y,c4y),mxy=Math.max(c1y,c2y,c3y,c4y);" +
+                            "var dg=(mx-mn)+(mxy-mny);" +
+                            "for(var d=-dg;d<dg;d+=sp){ctx.beginPath();" +
+                            "ctx.moveTo(mn+d,mny);ctx.lineTo(mn+d+(mxy-mny),mxy);ctx.stroke();}" +
+                            "ctx.restore();}})();");
+                        break;
+                    }
+
+                    case "TN": // tnode: TN|cx|cy|size|color|lw|label
+                    {
+                        sb.AppendLine($"(function(){{" +
+                            $"var cx={p[1]},cy={p[2]},sz={p[3]};" +
+                            "var h=sz*1.155,hb=sz*0.577;" +
+                            // White-filled triangle
+                            "ctx.beginPath();ctx.moveTo(cx-sz,cy-hb);ctx.lineTo(cx+sz,cy-hb);ctx.lineTo(cx,cy+h-hb);ctx.closePath();" +
+                            $"ctx.fillStyle='#ffffff';ctx.fill();" +
+                            $"ctx.strokeStyle='{p[4]}';ctx.lineWidth={lwMul(p[5])};ctx.stroke();");
+                        if (p.Length >= 7 && !string.IsNullOrEmpty(p[6]))
+                        {
+                            if (scaled)
+                            {
+                                sb.AppendLine($"ctx.save();ctx.translate(cx,cy);ctx.scale(1,-1);" +
+                                    $"ctx.fillStyle='{p[4]}';ctx.font={fontSize(10)}+'px serif';" +
+                                    $"ctx.textAlign='center';ctx.textBaseline='middle';" +
+                                    $"ctx.fillText('{p[6]}',0,0);ctx.restore();");
+                            }
+                            else
+                            {
+                                sb.AppendLine($"ctx.fillStyle='{p[4]}';ctx.font='10px serif';" +
+                                    $"ctx.textAlign='center';ctx.textBaseline='middle';" +
+                                    $"ctx.fillText('{p[6]}',cx,cy);");
+                            }
+                        }
+                        sb.AppendLine("})();");
+                        break;
+                    }
+
+                    case "DIM": // dimension line: DIM|x1|y1|x2|y2|offset|text|color|lw|fontSize
+                    {
+                        // Renders a dimension line with arrows and centered text
+                        // The offset is perpendicular to the line direction
+                        var dimFsz = p.Length >= 10 ? p[9] : "10";
+                        sb.AppendLine($"(function(){{" +
+                            $"var x1={p[1]},y1={p[2]},x2={p[3]},y2={p[4]},off={p[5]};" +
+                            $"var col='{p[7]}',lw={lwMul(p[8])},fsz={dimFsz};" +
+                            "var dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);" +
+                            "if(len<0.01)return;" +
+                            "var ux=dx/len,uy=dy/len,nx=-uy,ny=ux;" +
+                            // Extension lines from points to dimension line
+                            "var ox1=x1+nx*off,oy1=y1+ny*off,ox2=x2+nx*off,oy2=y2+ny*off;" +
+                            "ctx.strokeStyle=col;ctx.lineWidth=lw*0.5;" +
+                            "ctx.beginPath();ctx.moveTo(x1+nx*2,y1+ny*2);ctx.lineTo(ox1+nx*3,oy1+ny*3);ctx.stroke();" +
+                            "ctx.beginPath();ctx.moveTo(x2+nx*2,y2+ny*2);ctx.lineTo(ox2+nx*3,oy2+ny*3);ctx.stroke();" +
+                            // Dimension line
+                            "ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(ox1,oy1);ctx.lineTo(ox2,oy2);ctx.stroke();" +
+                            // Arrowheads
+                            "var as=Math.min(8,len*0.15);" +
+                            "ctx.beginPath();ctx.moveTo(ox1,oy1);ctx.lineTo(ox1+ux*as+nx*as*0.3,oy1+uy*as+ny*as*0.3);" +
+                            "ctx.moveTo(ox1,oy1);ctx.lineTo(ox1+ux*as-nx*as*0.3,oy1+uy*as-ny*as*0.3);ctx.stroke();" +
+                            "ctx.beginPath();ctx.moveTo(ox2,oy2);ctx.lineTo(ox2-ux*as+nx*as*0.3,oy2-uy*as+ny*as*0.3);" +
+                            "ctx.moveTo(ox2,oy2);ctx.lineTo(ox2-ux*as-nx*as*0.3,oy2-uy*as-ny*as*0.3);ctx.stroke();");
+                        // Text label
+                        var dimLabel = p.Length >= 7 ? p[6] : "";
+                        if (!string.IsNullOrEmpty(dimLabel))
+                        {
+                            if (scaled)
+                            {
+                                sb.AppendLine($"var mx=(ox1+ox2)/2,my=(oy1+oy2)/2;" +
+                                    $"ctx.save();ctx.translate(mx,my);ctx.scale(1,-1);" +
+                                    $"ctx.fillStyle=col;ctx.font={fontSize(int.TryParse(dimFsz, out var dimFs) ? dimFs : 10)}+'px serif';" +
+                                    $"ctx.textAlign='center';ctx.textBaseline='bottom';" +
+                                    $"ctx.fillText('{dimLabel}',0,0);ctx.restore();");
+                            }
+                            else
+                            {
+                                sb.AppendLine($"var mx=(ox1+ox2)/2,my=(oy1+oy2)/2;" +
+                                    $"ctx.fillStyle=col;ctx.font='{dimFsz}px serif';" +
+                                    $"ctx.textAlign='center';ctx.textBaseline='bottom';" +
+                                    $"ctx.fillText('{dimLabel}',mx,my-2);");
+                            }
+                        }
+                        sb.AppendLine("})();");
                         break;
                     }
                 }
@@ -11435,8 +11763,34 @@ animate();
                 // Page break: --- (three or more dashes on a line by themselves)
                 if (trimLine.Length >= 3 && trimLine.All(c => c == '-'))
                 {
-                    // Close current .page div and open a new one
+                    // Only emit page break if there's visible content before it
+                    // (avoid empty first page when document starts with @{config} + ---)
+                    var priorContent = lineHtml.ToString();
+                    bool hasVisibleContent = System.Text.RegularExpressions.Regex.IsMatch(
+                        priorContent, @"<(h[1-6]|p |div |canvas |img |table )", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (hasVisibleContent)
+                        lineHtml.AppendLine("</div><div class=\"page\">");
+                    continue;
+                }
+
+                // @{config ...} — inline document configuration directive
+                if (trimLine.StartsWith("@{config ", StringComparison.OrdinalIgnoreCase) && trimLine.EndsWith("}"))
+                {
+                    var cfgContent = trimLine[8..^1]; // Extract between "@{config " and "}"
+                    lineHtml.Append(ProcessConfigBlock("config " + cfgContent, ""));
+                    continue;
+                }
+
+                // @{pagebreak} — standalone page break (without @{end pagebreak})
+                if (trimLine.StartsWith("@{pagebreak", StringComparison.OrdinalIgnoreCase) && trimLine.EndsWith("}"))
+                {
                     lineHtml.AppendLine("</div><div class=\"page\">");
+                    continue;
+                }
+
+                // @{end pagebreak} — skip (already handled)
+                if (System.Text.RegularExpressions.Regex.IsMatch(trimLine, @"^@\{end\s+pagebreak\}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                {
                     continue;
                 }
 
@@ -12120,6 +12474,119 @@ h1, h2, h3, h4 {{ font-family: var(--paper-font); color: var(--paper-accent); }}
         ///     right: 15
         ///   @{end pagebreak}
         /// </summary>
+        /// <summary>
+        /// Processes @{text} blocks — renders content as plain text paragraphs (no math evaluation).
+        /// Blank lines create paragraph breaks. Supports basic inline markup.
+        /// </summary>
+        private string ProcessTextBlock(string code, string startDirective)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                return "";
+
+            var sb = new StringBuilder();
+            var lines = code.Split('\n');
+            var paraLines = new List<string>();
+
+            void FlushParagraph()
+            {
+                if (paraLines.Count == 0) return;
+                var text = string.Join(" ", paraLines.Select(l => l.Trim()));
+                // Basic inline formatting: **bold**, *italic*, `code`
+                text = System.Text.RegularExpressions.Regex.Replace(text, @"\*\*(.+?)\*\*", "<b>$1</b>");
+                text = System.Text.RegularExpressions.Regex.Replace(text, @"\*(.+?)\*", "<i>$1</i>");
+                text = System.Text.RegularExpressions.Regex.Replace(text, @"`(.+?)`", "<code>$1</code>");
+                sb.Append($"<p style=\"text-align:justify; line-height:160%; margin:0.4em 0;\">{text}</p>\n");
+                paraLines.Clear();
+            }
+
+            foreach (var rawLine in lines)
+            {
+                var line = rawLine.TrimEnd('\r');
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    FlushParagraph();
+                }
+                else
+                {
+                    paraLines.Add(line);
+                }
+            }
+            FlushParagraph();
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Processes @{config ...} directives — document configuration.
+        /// Supports: bg, align, header, footer, startpage, color, bold, headertitle.
+        /// </summary>
+        private string ProcessConfigBlock(string language, string code)
+        {
+            // Parse inline config from directive: @{config bg:book, align:right, header:on}
+            var cfgStr = language.Length > 6 ? language[6..].Trim() : "";
+            if (string.IsNullOrWhiteSpace(cfgStr) && !string.IsNullOrWhiteSpace(code))
+                cfgStr = code.Trim();
+
+            if (string.IsNullOrWhiteSpace(cfgStr))
+                return "";
+
+            var sb = new StringBuilder();
+
+            // Parse bg:<color>
+            var bgMatch = System.Text.RegularExpressions.Regex.Match(cfgStr, @"bg:([^\s,}]+)");
+            if (bgMatch.Success)
+            {
+                var bgColor = bgMatch.Groups[1].Value.ToLowerInvariant() switch
+                {
+                    "book" => "#fffef8",
+                    "cream" => "#fffdd0",
+                    "white" => "#ffffff",
+                    "dark" => "#1e1e1e",
+                    _ => bgMatch.Groups[1].Value
+                };
+                sb.Append($"<style>.page {{ background: {bgColor} !important; }}</style>\n");
+            }
+
+            // Parse align:<left|center|right>
+            var alignMatch = System.Text.RegularExpressions.Regex.Match(cfgStr, @"align:(\w+)");
+            if (alignMatch.Success)
+            {
+                sb.Append($"<style>.page {{ text-align: {alignMatch.Groups[1].Value} !important; }}</style>\n");
+            }
+
+            // Parse color:black — all-black equations (like printed books)
+            var colorMatch = System.Text.RegularExpressions.Regex.Match(cfgStr, @"color:(black|default)");
+            if (colorMatch.Success && colorMatch.Groups[1].Value.Equals("black", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.Append("<style>.eq var, .eq i, .eq { color: #000 !important; }</style>\n");
+            }
+
+            // Parse header:on — page headers
+            var headerMatch = System.Text.RegularExpressions.Regex.Match(cfgStr, @"header:(on|off)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (headerMatch.Success && headerMatch.Groups[1].Value.Equals("on", StringComparison.OrdinalIgnoreCase))
+            {
+                // Store header state - actual rendering happens in template
+                MultLangTemplateManager.MarkLanguageUsed("header");
+            }
+
+            // Parse startpage:<N>
+            var startPageMatch = System.Text.RegularExpressions.Regex.Match(cfgStr, @"startpage:(\d+)");
+            if (startPageMatch.Success)
+            {
+                // Store start page number for pagination
+                sb.Append($"<script>window.__hekatanStartPage = {startPageMatch.Groups[1].Value};</script>\n");
+            }
+
+            // Parse bold:on
+            var boldMatch = System.Text.RegularExpressions.Regex.Match(cfgStr, @"bold:(on|off)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (boldMatch.Success && boldMatch.Groups[1].Value.Equals("on", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.Append("<style>.eq { font-weight: bold; }</style>\n");
+            }
+
+            return sb.ToString();
+        }
+
         private string ProcessPageBreak(string language, string code)
         {
             var sb = new StringBuilder();
@@ -12166,8 +12633,8 @@ h1, h2, h3, h4 {{ font-family: var(--paper-font); color: var(--paper-accent); }}
                 sb.Append("</div>");
             }
 
-            // Page break
-            sb.Append("<div style=\"page-break-before:always; break-before:page;\"></div>");
+            // Page break — close current .page div and open a new one (visual + print)
+            sb.Append("</div><div class=\"page\">");
 
             return sb.ToString();
         }

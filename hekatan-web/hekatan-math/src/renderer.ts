@@ -239,7 +239,7 @@ export function renderEquationText(text: string): string {
       html += r.html; i = r.end; continue;
     }
 
-    // Partial ∂
+    // Partial ∂ — "∂" upright, variable italic
     if (ch === "\u2202") {
       const rest = text.slice(i);
       const m2 = rest.match(/^∂([²³⁴]?)\/∂([A-Za-z])([²³⁴]?)/);
@@ -247,7 +247,7 @@ export function renderEquationText(text: string): string {
         const ord = m2[1] || m2[3];
         const v = m2[2];
         const top = ord ? `∂${ord}` : "∂";
-        const bot = `∂${v}${ord}`;
+        const bot = `∂<var>${v}</var>${ord}`;
         html += `<span class="dvc">${top}<span class="dvl"></span>${bot}</span>`;
         i += m2[0].length; continue;
       }
@@ -258,8 +258,8 @@ export function renderEquationText(text: string): string {
     if (ch === "_") {
       const g = extractGroup(text, i + 1);
       if (g) {
-        // Simple word/number → plain text with Greek; complex → full render
-        const sub = /^[A-Za-z0-9]+$/.test(g.content) ? (GREEK[g.content] || esc(g.content)) : renderEquationText(g.content);
+        // Simple word/number → formatSubSup (letters italic, numbers upright); complex → full render
+        const sub = /^[A-Za-z0-9]+$/.test(g.content) ? formatSubSup(g.content) : renderEquationText(g.content);
         html += `<sub>${sub}</sub>`;
         i = g.end; continue;
       }
@@ -269,7 +269,7 @@ export function renderEquationText(text: string): string {
     if (ch === "^") {
       const g = extractGroup(text, i + 1);
       if (g) {
-        const sup = /^[A-Za-z0-9]+$/.test(g.content) ? (GREEK[g.content] || esc(g.content)) : renderEquationText(g.content);
+        const sup = /^[A-Za-z0-9]+$/.test(g.content) ? formatSubSup(g.content) : renderEquationText(g.content);
         html += `<sup>${sup}</sup>`;
         i = g.end; continue;
       }
@@ -290,10 +290,17 @@ export function renderEquationText(text: string): string {
           }
         }
       }
-      // Not a fraction, just output brace content
+      // Not a fraction — vector {a; b} or visible braces {P}
       const close2 = findMatchingBrace(text, i);
       if (close2 > 0) {
-        html += renderEquationText(text.slice(i + 1, close2));
+        const inner = text.slice(i + 1, close2);
+        if (inner.includes(";")) {
+          // Column vector with curly braces
+          html += renderEqVector(inner);
+          i = close2 + 1; continue;
+        }
+        // Single element: show visible braces
+        html += `{${renderEquationText(inner)}}`;
         i = close2 + 1; continue;
       }
     }
@@ -318,6 +325,20 @@ export function renderEquationText(text: string): string {
       if (close2 > 0) {
         html += `(${renderEquationText(text.slice(i + 1, close2))})`;
         i = close2 + 1; continue;
+      }
+    }
+
+    // Square brackets [a, b; c, d] → matrix, or [k] → visible brackets
+    if (ch === "[") {
+      const closeBr = findMatchingBracket(text, i);
+      if (closeBr > 0) {
+        const inner = text.slice(i + 1, closeBr);
+        if (inner.includes(";")) {
+          html += renderEqMatrix(inner);
+          i = closeBr + 1; continue;
+        }
+        html += `[${renderEquationText(inner)}]`;
+        i = closeBr + 1; continue;
       }
     }
 
@@ -349,6 +370,19 @@ export function renderEquationText(text: string): string {
         const r = buildNary(text, j, "\u220F"); html += r.html; i = r.end; continue;
       }
 
+      // bar(x), hat(x), tilde(x) — overbar / hat / tilde decoration
+      if ((word === "bar" || word === "overline" || word === "hat" || word === "tilde" || word === "dot" || word === "ddot") && j < len && (text[j] === "(" || text[j] === "{")) {
+        const open = text[j];
+        const close = open === "(" ? findMatchingParen(text, j) : findMatchingBrace(text, j);
+        if (close > 0) {
+          const inner = text.slice(j + 1, close);
+          const innerHtml = renderEquationText(inner);
+          const cls = word === "hat" ? "eq-hat" : word === "tilde" ? "eq-tilde" : word === "dot" ? "eq-dot" : word === "ddot" ? "eq-ddot" : "eq-overbar";
+          html += `<span class="${cls}">${innerHtml}</span>`;
+          i = close + 1; continue;
+        }
+      }
+
       // lim
       if (word === "lim") {
         let limHtml = '<span style="font-style:normal;font-weight:bold;">lim</span>';
@@ -359,25 +393,25 @@ export function renderEquationText(text: string): string {
         html += limHtml; i = j; continue;
       }
 
-      // d/dx derivative
+      // d/dx derivative — "d" upright, variable italic
       if (word === "d" && j < len && text[j] === "/") {
         const dMatch = text.slice(i).match(/^d([²³]?)\/d([A-Za-z])([²³]?)/);
         if (dMatch) {
           const ord = dMatch[1] || dMatch[3];
           const v = dMatch[2];
           const top = ord ? `d${ord}` : "d";
-          const bot = `d${v}${ord}`;
+          const bot = `d<var>${v}</var>${ord}`;
           html += `<span class="dvc">${top}<span class="dvl"></span>${bot}</span>`;
           i += dMatch[0].length; continue;
         }
       }
 
-      // Greek letters
-      if (GREEK[word]) { html += GREEK[word]; i = j; continue; }
+      // Greek letters → italic (variable)
+      if (GREEK[word]) { html += `<var>${GREEK[word]}</var>`; i = j; continue; }
 
-      // Function names
+      // Function names (roman/upright, not italic, not bold)
       if (EQ_FN_NAMES.has(word)) {
-        html += `<b>${word}</b>`; i = j; continue;
+        html += `<span class="eq-fn">${word}</span>`; i = j; continue;
       }
 
       // inf → ∞
@@ -399,6 +433,12 @@ export function renderEquationText(text: string): string {
       html += num; i = j; continue;
     }
 
+    // Unicode Greek letters → italic (variable): α-ω (U+03B1-03C9), Α-Ω (U+0391-03A9)
+    // Exclude Σ(U+03A3) and Π(U+03A0) which are N-ary operators handled above
+    if (/[\u03B1-\u03C9\u0391-\u03A9]/.test(ch) && ch !== "\u03A3" && ch !== "\u03A0") {
+      html += `<var>${ch}</var>`; i++; continue;
+    }
+
     // Unicode math pass-through
     if (/[\u2200-\u22FF\u2100-\u214F]/.test(ch)) { html += ch; i++; continue; }
 
@@ -408,6 +448,11 @@ export function renderEquationText(text: string): string {
       const nextIsNum = i + 1 < len && /[0-9]/.test(text[i + 1]);
       html += (prevIsNum && nextIsNum) ? "·" : "";
       i++; continue;
+    }
+
+    // Unary minus (leading or after delimiter) → minus sign without spaces
+    if (ch === "-" && (i === 0 || ",;([{=<>+- *".includes(text[i - 1]))) {
+      html += "−"; i++; continue;
     }
 
     // Operators with spacing
@@ -439,7 +484,7 @@ export function renderEquationText(text: string): string {
             if (close > 0) { denHtml += `(${renderEquationText(text.slice(i + 1, close))})`; i = close + 1; }
           } else if (i < len && /[A-Za-z]/.test(text[i])) {
             let w = "", j = i; while (j < len && /[A-Za-z0-9]/.test(text[j])) { w += text[j]; j++; }
-            denHtml += GREEK[w] || `<var>${esc(w)}</var>`; i = j;
+            denHtml += GREEK[w] ? `<var>${GREEK[w]}</var>` : `<var>${esc(w)}</var>`; i = j;
           } else if (i < len && /[0-9]/.test(text[i])) {
             let n = "", j = i; while (j < len && /[0-9.]/.test(text[j])) { n += text[j]; j++; }
             denHtml += n; i = j;
@@ -451,10 +496,10 @@ export function renderEquationText(text: string): string {
           if (i < len && text[i] === "(") {
             const close = findMatchingParen(text, i);
             if (close > 0) {
-              const fn = EQ_FN_NAMES.has(word) ? `<b>${word}</b>` : (GREEK[word] || `<var>${esc(word)}</var>`);
+              const fn = EQ_FN_NAMES.has(word) ? `<span class="eq-fn">${word}</span>` : (GREEK[word] ? `<var>${GREEK[word]}</var>` : `<var>${esc(word)}</var>`);
               denHtml = `${fn}(${renderEquationText(text.slice(i + 1, close))})`; i = close + 1;
-            } else { denHtml = GREEK[word] || (EQ_FN_NAMES.has(word) ? `<b>${word}</b>` : `<var>${esc(word)}</var>`); }
-          } else { denHtml = GREEK[word] || (EQ_FN_NAMES.has(word) ? `<b>${word}</b>` : `<var>${esc(word)}</var>`); }
+            } else { denHtml = GREEK[word] ? `<var>${GREEK[word]}</var>` : (EQ_FN_NAMES.has(word) ? `<span class="eq-fn">${word}</span>` : `<var>${esc(word)}</var>`); }
+          } else { denHtml = GREEK[word] ? `<var>${GREEK[word]}</var>` : (EQ_FN_NAMES.has(word) ? `<span class="eq-fn">${word}</span>` : `<var>${esc(word)}</var>`); }
         } else if (i < len && /[0-9]/.test(text[i])) {
           let num = "", j = i; while (j < len && /[0-9.]/.test(text[j])) { num += text[j]; j++; }
           denHtml = num; i = j;
@@ -464,7 +509,7 @@ export function renderEquationText(text: string): string {
           const tag = text[i] === "_" ? "sub" : "sup";
           const g = extractGroup(text, i + 1);
           if (g) {
-            const inner = /^[A-Za-z0-9]+$/.test(g.content) ? (GREEK[g.content] || esc(g.content)) : renderEquationText(g.content);
+            const inner = /^[A-Za-z0-9]+$/.test(g.content) ? formatSubSup(g.content) : renderEquationText(g.content);
             denHtml += `<${tag}>${inner}</${tag}>`; i = g.end;
           } else break;
         }
@@ -482,6 +527,51 @@ export function renderEquationText(text: string): string {
     i++;
   }
   return html;
+}
+
+/** Format subscript/superscript content: letters → italic <var>, numbers → upright, Greek → italic <var> */
+function formatSubSup(content: string): string {
+  let result = "";
+  let i = 0;
+  while (i < content.length) {
+    if (/[A-Za-z]/.test(content[i])) {
+      let word = "";
+      let j = i;
+      while (j < content.length && /[A-Za-z0-9]/.test(content[j])) { word += content[j]; j++; }
+      if (GREEK[word]) {
+        result += `<var>${GREEK[word]}</var>`;
+      } else if (/^\d+$/.test(word)) {
+        result += word; // pure numbers → upright
+      } else {
+        // Mixed: split letter parts into <var>, number parts plain
+        let k = 0;
+        while (k < word.length) {
+          if (/[A-Za-z]/.test(word[k])) {
+            let letters = "";
+            while (k < word.length && /[A-Za-z]/.test(word[k])) { letters += word[k]; k++; }
+            result += `<var>${esc(letters)}</var>`;
+          } else {
+            let nums = "";
+            while (k < word.length && /[0-9]/.test(word[k])) { nums += word[k]; k++; }
+            result += nums;
+          }
+        }
+      }
+      i = j;
+    } else if (/[0-9]/.test(content[i])) {
+      let num = "";
+      while (i < content.length && /[0-9.]/.test(content[i])) { num += content[i]; i++; }
+      result += num;
+    } else if (/[\u03B1-\u03C9\u0391-\u03A9]/.test(content[i])) {
+      // Unicode Greek → italic
+      result += `<var>${content[i]}</var>`;
+      i++;
+    } else {
+      result += esc(content[i]);
+      i++;
+    }
+  }
+  return result;
 }
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -547,4 +637,58 @@ function findMatchingParen(text: string, idx: number): number {
     if (text[i] === ")") { depth--; if (depth === 0) return i; }
   }
   return -1;
+}
+
+function findMatchingBracket(text: string, idx: number): number {
+  let depth = 1;
+  for (let i = idx + 1; i < text.length; i++) {
+    if (text[i] === "[") depth++;
+    if (text[i] === "]") { depth--; if (depth === 0) return i; }
+  }
+  return -1;
+}
+
+/** Split text by separator, respecting nested brackets/braces/parens */
+function splitRespectingBrackets(text: string, sep: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const ch of text) {
+    if ("{([".includes(ch)) depth++;
+    if ("})]".includes(ch)) depth--;
+    if (ch === sep && depth === 0) {
+      parts.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  parts.push(current);
+  return parts;
+}
+
+/** Render {a; b; c} as column vector with curly braces (CSS borders). */
+function renderEqVector(inner: string): string {
+  const rows = splitRespectingBrackets(inner, ";");
+  let cells = '';
+  for (const row of rows) {
+    cells += `<span class="eq-cell">${renderEquationText(row.trim())}</span>`;
+  }
+  return `<span class="eq-vec"><span class="eq-brace-l"></span><span class="eq-col">${cells}</span><span class="eq-brace-r"></span></span>`;
+}
+
+/** Render [a, b; c, d] as matrix with square brackets (CSS borders).
+ *  Uses spans (not tables) because eq containers are <p> elements. */
+function renderEqMatrix(inner: string): string {
+  const rows = splitRespectingBrackets(inner, ";");
+  let rowsHtml = '';
+  for (const rowStr of rows) {
+    const cols = splitRespectingBrackets(rowStr.trim(), ",");
+    let colsHtml = '';
+    for (const col of cols) {
+      colsHtml += `<span class="eq-mcell">${renderEquationText(col.trim())}</span>`;
+    }
+    rowsHtml += `<span class="eq-mrow">${colsHtml}</span>`;
+  }
+  return `<span class="eq-mat">${rowsHtml}</span>`;
 }

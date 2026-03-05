@@ -36,6 +36,11 @@ namespace Hekatan.Core
             { "norm_i", 10 },
             { "unit", 11 },
             { "vector_hp", 12 },
+            { "median", 13 },
+            { "stdev", 14 },
+            { "std", 14 },
+            { "variance", 15 },
+            { "var", 15 },
         }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
         internal static readonly FrozenDictionary<string, int> Function2Index =
@@ -48,7 +53,9 @@ namespace Hekatan.Core
             { "extract", 4 },
             { "dot", 5 },
             { "cross", 6 },
-            { "norm_p", 7 }
+            { "norm_p", 7 },
+            { "linreg", 8 },
+            { "linfit", 8 },
         }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
         internal static readonly FrozenDictionary<string, int> Function3Index =
@@ -72,7 +79,9 @@ namespace Hekatan.Core
             { "lookup_lt", 13 },
             { "lookup_le", 14 },
             { "lookup_gt", 15 },
-            { "lookup_ge", 16 }
+            { "lookup_ge", 16 },
+            { "interp", 17 },
+            { "lagrange", 17 },
         }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
         internal static readonly FrozenDictionary<string, int> MultiFunctionIndex =
@@ -92,8 +101,12 @@ namespace Hekatan.Core
             "norm1",
             "normp",
             "normi",
-            "search"
-
+            "search",
+            "median",
+            "stdev",
+            "std",
+            "variance",
+            "var",
         }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
         internal static bool IsVectorResultFunction(string name) =>
@@ -124,7 +137,10 @@ namespace Hekatan.Core
                 L1Norm,
                 InfNorm,
                 Unit,
-                CreateHp
+                CreateHp,
+                Median,   //13
+                Stdev,    //14
+                Variance, //15
             ];
 
             VectorFunctions2 = [
@@ -135,7 +151,8 @@ namespace Hekatan.Core
                 Extract,
                 Dot,
                 Cross,
-                LpNorm
+                LpNorm,
+                LinReg,   //8
             ];
 
             VectorFunctions3 = [
@@ -155,7 +172,8 @@ namespace Hekatan.Core
                 Lookup_LT,
                 Lookup_LE,
                 Lookup_GT,
-                Lookup_GE
+                Lookup_GE,
+                Interp,   //17
            ];
 
             VectorMultiFunctions = [
@@ -401,6 +419,68 @@ namespace Hekatan.Core
         private static Vector Lookup_GE(in IValue x, in IValue y, in IValue value) =>
             Lookup(x, y, value, Vector.Relation.GreaterOrEqual);
 
+        // linreg(xdata, ydata) — linear regression → vector [slope, intercept, R²]
+        private static IValue LinReg(in IValue xdata, in IValue ydata)
+        {
+            var xd = IValue.AsVector(xdata);
+            var yd = IValue.AsVector(ydata);
+            int n = Math.Min(xd.Length, yd.Length);
+            if (n < 2) return RealValue.NaN;
+            double sx = 0, sy = 0, sxx = 0, sxy = 0;
+            for (int i = 0; i < n; i++)
+            {
+                var xi = xd[i].D;
+                var yi = yd[i].D;
+                sx += xi; sy += yi;
+                sxx += xi * xi;
+                sxy += xi * yi;
+            }
+            double denom = n * sxx - sx * sx;
+            if (Math.Abs(denom) < 1e-15) return RealValue.NaN;
+            double m = (n * sxy - sx * sy) / denom;
+            double b = (sy - m * sx) / n;
+            double yMean = sy / n;
+            double ssRes = 0, ssTot = 0;
+            for (int i = 0; i < n; i++)
+            {
+                var yi = yd[i].D;
+                ssRes += (yi - m * xd[i].D - b) * (yi - m * xd[i].D - b);
+                ssTot += (yi - yMean) * (yi - yMean);
+            }
+            double r2 = ssTot > 0 ? 1.0 - ssRes / ssTot : 1.0;
+            var result = new Vector(3);
+            result[0] = new RealValue(m);
+            result[1] = new RealValue(b);
+            result[2] = new RealValue(r2);
+            return result;
+        }
+
+        // interp(xdata, ydata, x) — Lagrange polynomial interpolation
+        private static IValue Interp(in IValue xdata, in IValue ydata, in IValue xval)
+        {
+            var xd = IValue.AsVector(xdata);
+            var yd = IValue.AsVector(ydata);
+            var x = IValue.AsReal(xval).D;
+            int n = Math.Min(xd.Length, yd.Length);
+            if (n == 0) return RealValue.NaN;
+            double result = 0;
+            for (int i = 0; i < n; i++)
+            {
+                double li = 1;
+                for (int j = 0; j < n; j++)
+                {
+                    if (i != j)
+                    {
+                        var denom = xd[i].D - xd[j].D;
+                        if (Math.Abs(denom) < 1e-15) return RealValue.NaN;
+                        li *= (x - xd[j].D) / denom;
+                    }
+                }
+                result += yd[i].D * li;
+            }
+            return new RealValue(result, yd[0].Units);
+        }
+
         private static Vector Lookup(in IValue x, in IValue y, in IValue value, Vector.Relation rel)
         {
             var vecX = IValue.AsVector(x);
@@ -410,6 +490,55 @@ namespace Hekatan.Core
                 return hpVec.Lookup(vecY, val, rel);
 
             return vecX.Lookup(vecY, val, rel);
+        }
+
+        // median(v) — middle value of sorted vector
+        private static IValue Median(in IValue vector)
+        {
+            var vec = IValue.AsVector(vector);
+            var sorted = vec.Sort();
+            int n = sorted.Length;
+            if (n == 0) return RealValue.NaN;
+            int mid = n / 2;
+            if (n % 2 != 0)
+                return sorted[mid];
+            return new RealValue((sorted[mid - 1].D + sorted[mid].D) / 2.0, sorted[0].Units);
+        }
+
+        // stdev(v) — sample standard deviation
+        private static IValue Stdev(in IValue vector)
+        {
+            var vec = IValue.AsVector(vector);
+            int n = vec.Length;
+            if (n < 2) return RealValue.NaN;
+            double sum = 0, sumSq = 0;
+            for (int i = 0; i < n; i++)
+            {
+                var x = vec[i].D;
+                sum += x;
+                sumSq += x * x;
+            }
+            var mean = sum / n;
+            var variance = (sumSq - n * mean * mean) / (n - 1);
+            return new RealValue(Math.Sqrt(Math.Abs(variance)), vec[0].Units);
+        }
+
+        // variance(v) — sample variance
+        private static IValue Variance(in IValue vector)
+        {
+            var vec = IValue.AsVector(vector);
+            int n = vec.Length;
+            if (n < 2) return RealValue.NaN;
+            double sum = 0, sumSq = 0;
+            for (int i = 0; i < n; i++)
+            {
+                var x = vec[i].D;
+                sum += x;
+                sumSq += x * x;
+            }
+            var mean = sum / n;
+            var variance = (sumSq - n * mean * mean) / (n - 1);
+            return new RealValue(variance, vec[0].Units?.Pow(2f));
         }
 
         private static Vector Join(IValue[] items) => Vector.Join(items);

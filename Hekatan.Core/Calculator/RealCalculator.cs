@@ -99,7 +99,9 @@ namespace Hekatan.Core
                 (in RealValue a) => -a, //43
                 Not,      //44
                 Timer,    //45
-                Suma      //46 TEST: suma(x) = x + 1
+                Suma,     //46 TEST: suma(x) = x + 1
+                Fibonacci,//47
+                IsPrime,  //48
             ];
 
             _functions2 =
@@ -107,7 +109,8 @@ namespace Hekatan.Core
                 Atan2,
                 UnitRoot,
                 (in RealValue a, in RealValue b) => a % b,
-                (in RealValue a, in RealValue b) => MandelbrotSet(a, b)
+                (in RealValue a, in RealValue b) => MandelbrotSet(a, b),
+                GeomInf,  //4
             ];
         }
 
@@ -523,5 +526,47 @@ namespace Hekatan.Core
             new(value * FromRad[_degrees]);
 
         protected static RealValue Timer(in RealValue _) => new(Timer(), Unit.Get("s"));
+
+        // fibonacci(n) — n-th Fibonacci number
+        private static RealValue Fibonacci(in RealValue value)
+        {
+            if (value.Units is not null)
+                throw Exceptions.FactorialArgumentUnitless();
+
+            var n = (int)Math.Round(value.D, MidpointRounding.AwayFromZero);
+            if (n < 0) return RealValue.NaN;
+            if (n <= 1) return new RealValue(n);
+            long a = 0, b = 1;
+            for (int i = 2; i <= n; i++)
+                (a, b) = (b, a + b);
+            return new RealValue(b);
+        }
+
+        // isprime(n) — returns 1 if prime, 0 otherwise
+        private static RealValue IsPrime(in RealValue value)
+        {
+            if (value.Units is not null)
+                throw Exceptions.FactorialArgumentUnitless();
+
+            var n = (long)Math.Round(value.D, MidpointRounding.AwayFromZero);
+            if (n < 2) return RealValue.Zero;
+            if (n < 4) return RealValue.One;
+            if (n % 2 == 0 || n % 3 == 0) return RealValue.Zero;
+            for (long i = 5; i * i <= n; i += 6)
+            {
+                if (n % i == 0 || n % (i + 2) == 0)
+                    return RealValue.Zero;
+            }
+            return RealValue.One;
+        }
+
+        // geominf(a, r) — infinite geometric series: a / (1 - r), |r| < 1
+        private static RealValue GeomInf(in RealValue a, in RealValue b)
+        {
+            var av = a.D;
+            var rv = b.D * Unit.Convert(a.Units, b.Units, ',');
+            if (Math.Abs(rv) >= 1.0) return RealValue.NaN;
+            return new RealValue(av / (1.0 - rv), a.Units);
+        }
     }
 }

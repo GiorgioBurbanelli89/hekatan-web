@@ -838,7 +838,7 @@ namespace Hekatan.Common.MultLangCode
 
                     // Match end directive: exact match OR base language match for parameterized blocks
                     // e.g., currentLanguage="theme:black" should close on @{end theme} (langName="theme")
-                    bool isMatchingEnd = isEnd && (
+                    bool isMatchingEnd = isEnd && currentLanguage != null && (
                         currentLanguage == langName ||
                         (currentLanguage.Contains(':') &&
                          currentLanguage.Substring(0, currentLanguage.IndexOf(':')) == langName)
@@ -872,17 +872,66 @@ namespace Hekatan.Common.MultLangCode
                     }
                     else if (!isEnd && currentLanguage == null)
                     {
-                        // Start of block
-                        currentLanguage = langName;
-                        currentStartDirective = lines[i].Trim();  // Save original directive (e.g., "@{image png base64}")
-                        blockStart = i;
+                        // Check if this is a self-closing directive (single-line, ends with })
+                        // Examples: @{config bg:book, ...}, @{pagebreak}
+                        var directiveTrimmed = lines[i].Trim();
+                        bool isSelfClosing = directiveTrimmed.EndsWith("}") && (
+                            langName.StartsWith("pagebreak", StringComparison.OrdinalIgnoreCase) ||
+                            langName.StartsWith("saltopagina", StringComparison.OrdinalIgnoreCase) ||
+                            langName.StartsWith("newpage", StringComparison.OrdinalIgnoreCase) ||
+                            langName.StartsWith("config", StringComparison.OrdinalIgnoreCase)
+                        );
 
-                        try
+                        // Also check: if the next non-empty line is another directive start or @{end ...},
+                        // treat as self-closing (empty block)
+                        if (!isSelfClosing)
                         {
-                            var debugPath = Path.Combine(Path.GetTempPath(), "calcpad-debug.txt");
-                            File.AppendAllText(debugPath, $"[{DateTime.Now:HH:mm:ss}] Block started: '{currentLanguage}', directive: '{currentStartDirective}'\n");
+                            // Peek ahead: if next line is another start directive, close this one immediately
+                            int nextI = i + 1;
+                            while (nextI < lines.Length && string.IsNullOrWhiteSpace(lines[nextI]))
+                                nextI++;
+                            if (nextI < lines.Length)
+                            {
+                                var (nextFound, _, nextIsEnd) = DetectDirective(lines[nextI]);
+                                if (nextFound && !nextIsEnd)
+                                    isSelfClosing = true;
+                            }
                         }
-                        catch { }
+
+                        if (isSelfClosing)
+                        {
+                            // Auto-close: emit block with empty content
+                            if (!blocks.ContainsKey(langName))
+                                blocks[langName] = new List<CodeBlock>();
+                            blocks[langName].Add(new CodeBlock
+                            {
+                                Language = langName,
+                                Code = "",
+                                StartLine = i,
+                                EndLine = i,
+                                StartDirective = directiveTrimmed
+                            });
+                            try
+                            {
+                                var debugPath = Path.Combine(Path.GetTempPath(), "calcpad-debug.txt");
+                                File.AppendAllText(debugPath, $"[{DateTime.Now:HH:mm:ss}] Self-closing block: '{langName}', directive: '{directiveTrimmed}'\n");
+                            }
+                            catch { }
+                        }
+                        else
+                        {
+                            // Start of block
+                            currentLanguage = langName;
+                            currentStartDirective = lines[i].Trim();  // Save original directive (e.g., "@{image png base64}")
+                            blockStart = i;
+
+                            try
+                            {
+                                var debugPath = Path.Combine(Path.GetTempPath(), "calcpad-debug.txt");
+                                File.AppendAllText(debugPath, $"[{DateTime.Now:HH:mm:ss}] Block started: '{currentLanguage}', directive: '{currentStartDirective}'\n");
+                            }
+                            catch { }
+                        }
                     }
                 }
                 else if (currentLanguage != null)

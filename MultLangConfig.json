@@ -998,6 +998,32 @@
       "compileArgs": "",
       "runArgs": "",
       "description": "Tema de color para ecuaciones y formato. Uso: @{theme:black}, @{theme:calcpad}, @{theme:mathcad}, @{theme:book}, @{theme:blueprint}. Tema custom con propiedades: var=#color, greek=#color, nary=#color, etc. Alias: @{tema}"
+    },
+    "text": {
+      "command": "",
+      "extension": "",
+      "directive": "@{text}",
+      "endDirective": "@{end text}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Bloque de texto plano sin evaluacion matematica. El contenido se renderiza como parrafos HTML. Alias: @{texto}"
+    },
+    "texto": {
+      "command": "",
+      "extension": "",
+      "directive": "@{texto}",
+      "endDirective": "@{end texto}",
+      "commentPrefix": "",
+      "keywords": [],
+      "builtins": [],
+      "requiresCompilation": false,
+      "compileArgs": "",
+      "runArgs": "",
+      "description": "Bloque de texto plano (alias español de @{text})"
     }
   },
   "settings": {

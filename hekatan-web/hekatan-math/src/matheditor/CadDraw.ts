@@ -19,6 +19,7 @@ export function addLine(engine: CadEngine, x1: number, y1: number, x2: number, y
     z: engine.currentZ, color: c,
   };
   if (opts?.lw) shape.lw = opts.lw;
+  else if (engine.currentLineWidth !== 1.5) shape.lw = engine.currentLineWidth;
   engine.formas.push(shape);
   engine.refresh();
   return engine.formas.length - 1;
@@ -33,6 +34,7 @@ export function addRect(engine: CadEngine, x: number, y: number, w: number, h: n
   };
   if (opts?.fill) shape.fill = opts.fill;
   if (opts?.lw) shape.lw = opts.lw;
+  else if (engine.currentLineWidth !== 1.5) shape.lw = engine.currentLineWidth;
   engine.formas.push(shape);
   engine.refresh();
   return engine.formas.length - 1;
@@ -47,6 +49,7 @@ export function addCircle(engine: CadEngine, cx: number, cy: number, r: number, 
   };
   if (opts?.fill) shape.fill = opts.fill;
   if (opts?.lw) shape.lw = opts.lw;
+  else if (engine.currentLineWidth !== 1.5) shape.lw = engine.currentLineWidth;
   engine.formas.push(shape);
   engine.refresh();
   return engine.formas.length - 1;
@@ -84,6 +87,7 @@ export function addCarc(engine: CadEngine, cx: number, cy: number, r: number, st
     z: engine.currentZ, color: c,
   };
   if (opts?.noArrow) shape.noArrow = true;
+  if (engine.currentLineWidth !== 1.5) shape.lw = engine.currentLineWidth;
   engine.formas.push(shape);
   engine.refresh();
   return engine.formas.length - 1;
@@ -96,7 +100,9 @@ export function addPline(engine: CadEngine, coords: number[], color?: string): n
     pts.push({ x: engine.toPx(coords[i]), y: engine.toPx(coords[i + 1]), z: engine.currentZ });
   }
   if (pts.length < 2) return -1;
-  engine.formas.push({ tipo: "polilinea", pts, z: engine.currentZ, color: c });
+  const plShape: CadShape = { tipo: "polilinea", pts, z: engine.currentZ, color: c };
+  if (engine.currentLineWidth !== 1.5) plShape.lw = engine.currentLineWidth;
+  engine.formas.push(plShape);
   engine.refresh();
   return engine.formas.length - 1;
 }
@@ -131,6 +137,25 @@ export function addText(engine: CadEngine, x: number, y: number, text: string, c
   };
   if (opts?.fontSize) shape.fontSize = opts.fontSize;
   if (opts?.textAlign) shape.textAlign = opts.textAlign;
+  if (engine.currentFontFamily !== "mono") shape.fontFamily = engine.currentFontFamily;
+  if (engine.currentFontItalic) shape.fontItalic = true;
+  engine.formas.push(shape);
+  engine.refresh();
+  return engine.formas.length - 1;
+}
+
+export function addOText(engine: CadEngine, x: number, y: number, text: string, color?: string, opts?: { fontSize?: number; textAlign?: "left" | "center" | "right" }): number {
+  const c = color || engine.currentColor;
+  const shape: CadShape = {
+    tipo: "texto",
+    x: engine.toPx(x), y: engine.toPx(y),
+    text, z: engine.currentZ, color: c,
+    overbar: true,
+  };
+  if (opts?.fontSize) shape.fontSize = opts.fontSize;
+  if (opts?.textAlign) shape.textAlign = opts.textAlign;
+  if (engine.currentFontFamily !== "mono") shape.fontFamily = engine.currentFontFamily;
+  if (engine.currentFontItalic) shape.fontItalic = true;
   engine.formas.push(shape);
   engine.refresh();
   return engine.formas.length - 1;
@@ -145,6 +170,22 @@ export function addArrow(engine: CadEngine, x1: number, y1: number, x2: number, 
     z: engine.currentZ, color: c,
   };
   if (opts?.lw) shape.lw = opts.lw;
+  else if (engine.currentLineWidth !== 1.5) shape.lw = engine.currentLineWidth;
+  engine.formas.push(shape);
+  engine.refresh();
+  return engine.formas.length - 1;
+}
+
+export function addDarrow(engine: CadEngine, x1: number, y1: number, x2: number, y2: number, color?: string, opts?: { lw?: number }): number {
+  const c = color || engine.currentColor;
+  const shape: CadShape = {
+    tipo: "flecha_doble",
+    x1: engine.toPx(x1), y1: engine.toPx(y1),
+    x2: engine.toPx(x2), y2: engine.toPx(y2),
+    z: engine.currentZ, color: c,
+  };
+  if (opts?.lw) shape.lw = opts.lw;
+  else if (engine.currentLineWidth !== 1.5) shape.lw = engine.currentLineWidth;
   engine.formas.push(shape);
   engine.refresh();
   return engine.formas.length - 1;
@@ -173,6 +214,18 @@ export function addArrow3d(engine: CadEngine, x1: number, y1: number, z1: number
   const c = color || engine.currentColor;
   engine.formas.push({
     tipo: "flecha",
+    x1: engine.toPx(x1), y1: engine.toPx(y1), z1: engine.toPx(z1),
+    x2: engine.toPx(x2), y2: engine.toPx(y2), z2: engine.toPx(z2),
+    z: 0, color: c, is3d: true,
+  });
+  engine.refresh();
+  return engine.formas.length - 1;
+}
+
+export function addDarrow3d(engine: CadEngine, x1: number, y1: number, z1: number, x2: number, y2: number, z2: number, color?: string): number {
+  const c = color || engine.currentColor;
+  engine.formas.push({
+    tipo: "flecha_doble",
     x1: engine.toPx(x1), y1: engine.toPx(y1), z1: engine.toPx(z1),
     x2: engine.toPx(x2), y2: engine.toPx(y2), z2: engine.toPx(z2),
     z: 0, color: c, is3d: true,
@@ -229,6 +282,51 @@ export function addCarc3d(engine: CadEngine, cx: number, cy: number, cz: number,
   });
   engine.refresh();
   return engine.formas.length - 1;
+}
+
+// ============================================================================
+// 2D compound: beam with hatch (structural element)
+// ============================================================================
+
+/** beam2d: rectangle between two points with diagonal hatching (perpendicular width).
+ *  Draws outline + rayado. All coordinates in user units. */
+export function addBeam2d(engine: CadEngine, x1: number, y1: number, x2: number, y2: number, width: number, color?: string, hatchSpacing?: number): void {
+  const c = color || engine.currentColor;
+  const w = width;
+  // Direction vector
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 0.001) return;
+  // Perpendicular unit vector (rotated 90° CCW)
+  const px = -dy / len * w / 2;
+  const py = dx / len * w / 2;
+  // 4 corners of the parallelogram
+  const ax = x1 + px, ay = y1 + py;  // top-left
+  const bx = x2 + px, by = y2 + py;  // top-right
+  const cx2 = x2 - px, cy2 = y2 - py; // bottom-right
+  const dx2 = x1 - px, dy2 = y1 - py; // bottom-left
+
+  // Outline (4 lines)
+  addLine(engine, ax, ay, bx, by, c);
+  addLine(engine, bx, by, cx2, cy2, c);
+  addLine(engine, cx2, cy2, dx2, dy2, c);
+  addLine(engine, dx2, dy2, ax, ay, c);
+
+  // Hatch fill (2D rayado) — reuse "rayado" shape type with is3d=false
+  const sp = hatchSpacing || (w * 0.7);
+  const pts: CadPoint[] = [
+    { x: engine.toPx(ax), y: engine.toPx(ay), z: 0 },
+    { x: engine.toPx(bx), y: engine.toPx(by), z: 0 },
+    { x: engine.toPx(cx2), y: engine.toPx(cy2), z: 0 },
+    { x: engine.toPx(dx2), y: engine.toPx(dy2), z: 0 },
+  ];
+  engine.formas.push({
+    tipo: "rayado",
+    pts,
+    spacing: engine.toPx(sp),
+    z: 0, color: c, is3d: false, lw: engine.currentLineWidth * 0.3,
+  });
+  engine.refresh();
 }
 
 // ============================================================================

@@ -21,39 +21,6 @@ import { Color as THREEColor } from "three";
 
 // ─── Ejemplos ───────────────────────────────────────────
 const EXAMPLES: Record<string, { name: string; code: string }> = {
-  texto: {
-    name: "Texto y Ecuaciones",
-    code: `@{config eq:$, text:"}
-# Mecanica de Materiales
-
-@{text}
-En mecanica de materiales, la letra griega sigma
-representa el esfuerzo. La relacion esfuerzo-deformacion
-esta dada por la Ley de Hooke $sigma = E*epsilon$
-donde sigma es el esfuerzo y epsilon la deformacion.
-
-Nota: sin comillas, sigma se convierte en simbolo griego.
-Con comillas, "sigma" permanece como texto literal.
-Igual para: "epsilon", "delta", "alpha", "theta".
-
-La deflexion maxima de una viga simplemente apoyada es
-$delta_max = P*L^3/(48*E*I)$ donde delta_max es la
-deflexion en el centro del claro.
-@{end text}
-@{end config}
-
----
-
-## Calculo Numerico
-
-E = 200000
-I = 500
-L = 6000
-P = 10
-
-delta = P*L^3/(48*E*I)
-`,
-  },
   basico: {
     name: "Basico",
     code: `# Hekatan Math Editor
@@ -134,6 +101,631 @@ K = {Kg1, Kg2, Kg1 + Kg2}
 
 > K{3} = ensamblaje total
 Ktotal = K{3}`,
+  },
+  libroC4: {
+    name: "Cap 4 - Porticos Planos (Libro)",
+    code: `@{config bg:book, align:right, header:on, startpage:143, color:black}
+---
+# 4 Porticos Planos
+---
+@{config align:left}
+
+## 4.1 Introduccion
+
+@{text}
+El analisis estructural utilizando el metodo de rigidez matricial para estructuras
+modeladas como vigas ha sido presentado en los tres capitulos precedentes. Este
+metodo de analisis cuando se aplica a estructuras modeladas como porticos planos
+requiere la inclusion del efecto axial en la matriz de rigidez del elemento; por lo
+tanto, la inclusion del efecto axial en la matriz de rigidez del sistema. Tambien
+requiere una transformacion de coordenadas de las fuerzas y desplazamientos en los
+extremos del elemento, desde los ejes de coordenadas del elemento o locales hacia
+los ejes de coordenadas del sistema o globales. Excepto por la consideracion del
+efecto axial y la necesidad de transformar las fuerzas y desplazamientos en los
+extremos del elemento, el metodo de rigidez matricial aplicado a porticos planos es
+identico al analisis de vigas presentado en los capitulos precedentes.
+@{end text}
+
+## 4.2 Coeficientes de Rigidez para Fuerzas Axiales
+
+@{text}
+La inclusion de fuerzas axiales y deformaciones axiales en la matriz de rigidez de un
+elemento de viga a flexion requiere la determinacion de los coeficientes de rigidez
+para cargas axiales. Para derivar la matriz de rigidez de un miembro cargado
+axialmente, considere en la Figura 4.1 un elemento de viga sometido a las fuerzas
+axiales P_1 y P_2, produciendo desplazamientos axiales δ_1 y δ_2 en los nodos del
+elemento. Para un segmento de viga prismatico y uniforme de longitud L y area de
+seccion transversal A, es relativamente simple obtener los coeficientes de rigidez
+para efectos axiales aplicando la ley de Hooke. En relacion con la viga mostrada en
+la Figura 4.1, el desplazamiento δ_1 producido por la fuerza P_1 actuando en el
+nodo 1 mientras el nodo 2 se mantiene fijo (δ_2 = 0) esta dado por
+@{end text}
+
+@{pagebreak}
+
+@{draw 460 100 name:Fig 4.1}
+grid off
+bg book
+color black
+lw 1.2
+ff serif
+fi on
+
+# Elemento de viga (rectangulo)
+rect 100 40 260 18
+
+# Flecha P1,δ1 izquierda
+arrow 30 49 98 49
+fs 10
+text 6 38 P₁,δ₁
+
+# Flecha P2,δ2 derecha
+arrow 362 49 430 49
+text 434 38 P₂,δ₂
+
+# Etiqueta A,E arriba
+fs 10
+text 210 24 A,E
+
+# Dimension L abajo
+lw 0.7
+hdim 100 60 360 60 26 L
+ff mono
+fi off
+@{end draw}
+
+> -Fig. 4.1- Elemento de viga con cargas axiales nodales P_1 y P_2, y desplazamientos nodales correspondientes δ_1 y δ_2
+
+@{eq}
+δ_1 = P_1*L/(AE)  (4.1)
+@{end eq}
+
+@{text}
+De la ec. (4.1) y la definicion del coeficiente de rigidez k_{11} (fuerza en el nodo 1
+para producir un desplazamiento unitario δ_1 = 1.0), se obtiene
+@{end text}
+
+@{eq}
+k_{11} = P_1/δ_1 = AE/L  (4.2a)
+@{end eq}
+
+@{text}
+El equilibrio del elemento de viga sometido a la fuerza k_{11} requiere una fuerza
+opuesta k_{21} en el otro extremo, es decir
+@{end text}
+
+@{eq}
+k_{21} = k_{11} = -AE/L  (4.2b)
+@{end eq}
+
+> Analogamente, los otros coeficientes de rigidez son
+
+@{eq}
+k_{22} = AE/L  (4.2c)
+@{end eq}
+
+> y
+
+@{eq}
+k_{12} = -AE/L  (4.2d)
+@{end eq}
+
+@{text}
+Los coeficientes de rigidez dados por las ecs. (4.2) se disponen convenientemente en
+la matriz de rigidez que relaciona las fuerzas axiales {P} y los desplazamientos {δ}
+para un elemento de viga prismatico uniforme, es decir
+@{end text}
+
+@{eq}
+{P_1; P_2} = AE/L * [1, -1; -1, 1] * {δ_1; δ_2}  (4.3)
+@{end eq}
+
+@{pagebreak}
+
+@{draw 460 240 name:Fig 4.2}
+grid off
+bg book
+color black
+lw 1.0
+ff serif
+fi on
+
+# ── Viga original (arriba) con hatch ──
+lw 1.2
+rect 120 50 240 16
+# Lineas de hatch (deformacion izquierda)
+lw 0.6
+line 120 50 130 66
+line 128 50 138 66
+line 136 50 146 66
+line 144 50 154 66
+lw 1.2
+# Hatch derecho (soporte fijo)
+lw 0.6
+line 360 50 370 66
+line 360 54 366 66
+line 360 58 362 66
+lw 1.2
+
+# P1=k11 flecha izquierda
+arrow 14 58 118 58
+fs 10
+text 2 46 P₁ = k₁₁
+
+# P2=k21 flecha derecha
+arrow 362 58 446 58
+text 398 46 P₂ = k₂₁
+
+# δ₂ = 0 arriba derecha
+text 340 26 δ₂ = 0
+
+# ── Dimension x (debajo de la viga) ──
+lw 0.7
+fs 10
+hdim 120 68 240 68 16 x
+
+# ── Dimension dx ──
+hdim 240 68 280 68 16 dx
+
+# ── Flecha u+du ──
+arrow 290 100 248 100
+text 248 88 u+du
+
+# ── δ₁ = 1 flecha izquierda ──
+arrow 100 120 120 120
+text 68 118 δ₁ = 1
+
+# ── Flecha u ──
+arrow 200 120 160 120
+text 168 108 u
+
+# ── Viga deformada (abajo) con hatch ──
+rect 112 148 248 16
+# Hatch izquierdo
+lw 0.6
+line 112 148 122 164
+line 120 148 130 164
+line 128 148 138 164
+line 136 148 146 164
+lw 1.2
+# Hatch derecho
+lw 0.6
+line 360 148 370 164
+line 360 152 366 164
+line 360 156 362 164
+lw 1.2
+
+# Dimension dx+du debajo de viga deformada
+lw 0.7
+hdim 232 166 280 166 16 dx+du
+
+ff mono
+fi off
+@{end draw}
+
+> -Fig. 4.2- Elemento de viga mostrando la deformacion debida a un desplazamiento unitario δ_1 = 1
+
+## 4.3 Funciones de Desplazamiento para una Viga Cargada Axialmente
+
+@{text}
+Considere en la Figura 4.2 un elemento de viga sometido a un desplazamiento
+unitario δ_1 = 1 en su extremo izquierdo. Si u = u(x) es el desplazamiento en la
+seccion x, el desplazamiento en la seccion x + dx sera u + du. El elemento dx en esta
+nueva posicion ha cambiado su longitud en la cantidad du, y por lo tanto, la
+deformacion unitaria es du/dx. Por la ley de Hooke, la deformacion unitaria es igual
+al esfuerzo (P/A) dividido por el modulo de elasticidad E, es decir
+@{end text}
+
+@{eq}
+du(x)/dx = P/(AE)  (4.4)
+@{end eq}
+
+> La integracion de la ec. (4.4) con respecto a x produce
+
+@{eq}
+u(x) = P/(AE) * x + C
+@{end eq}
+
+@{text}
+en donde C es una constante de integracion. Introduciendo las condiciones de
+frontera u = 1 en x = 0 y u = 0 en x = L, se obtiene la funcion de desplazamiento
+u_1 = u_1(x) correspondiente a δ_1 = 1 como
+@{end text}
+
+@{eq}
+u_1(x) = 1 - x/L  (4.5)
+@{end eq}
+
+@{text}
+Analogamente, la funcion de desplazamiento u_2(x) correspondiente a un
+desplazamiento unitario δ_2 = 1 es
+@{end text}
+
+@{eq}
+u_2(x) = x/L  (4.6)
+@{end eq}`,
+  },
+  formC4: {
+    name: "Formulas Cap 4 - Portico Plano",
+    code: `@{config bg:bookwarm, align:right, header:on, startpage:148, color:black}
+---
+### Formulas de Referencia - Porticos Planos
+---
+@{config align:left}
+
+> Matriz de rigidez del elemento de portico plano:
+
+@{eq}
+{P_1; P_2; P_3; P_4; P_5; P_6} = EI/L^3 * [AL^2/I, 0, 0, -AL^2/I, 0, 0; 0, 12, 6L, 0, -12, 6L; 0, 6L, 4L^2, 0, -6L, 2L^2; -AL^2/I, 0, 0, AL^2/I, 0, 0; 0, -12, -6L, 0, 12, -6L; 0, 6L, 2L^2, 0, -6L, 4L^2] * {δ_1; δ_2; δ_3; δ_4; δ_5; δ_6}    (4.8)
+@{end eq}
+
+> o en notacion condensada,
+
+@{eq}
+{P} = [k]{δ}    (4.9)
+@{end eq}
+
+> Matriz de transformacion de coordenadas:
+
+@{eq}
+{P_1; P_2; P_3; P_4; P_5; P_6} = [cos θ, sin θ, 0, 0, 0, 0; -sin θ, cos θ, 0, 0, 0, 0; 0, 0, 1, 0, 0, 0; 0, 0, 0, cos θ, sin θ, 0; 0, 0, 0, -sin θ, cos θ, 0; 0, 0, 0, 0, 0, 1] * {bar(P)_1; bar(P)_2; bar(P)_3; bar(P)_4; bar(P)_5; bar(P)_6}    (4.12)
+@{end eq}
+
+> o en notacion condensada,
+
+@{eq}
+{P} = [T]{bar(P)}    (4.13)
+@{end eq}
+
+> Matriz de rigidez en coordenadas globales:
+
+@{eq}
+[bar(k)] = [T]^T [k] [T]    (4.18)
+@{end eq}
+`,
+  },
+  ejC4_1: {
+    name: "Ejemplo 4.1 - Portico Plano",
+    code: `@{config bg:bookwarm, align:left, header:on, startpage:151, color:black, notation:eng}
+---
+### Ejemplo Ilustrativo 4.1
+---
+
+@{text}
+Para el portico plano cargado mostrado en la Figura 4.5 determinar:
+(a) Desplazamientos en el nodo 2
+(b) Fuerzas en los extremos de los elementos
+(c) Reacciones en los apoyos
+@{end text}
+
+@{draw 480 380 name:Fig 4.5}
+grid off
+bg book
+color black
+ff serif
+fi on
+
+# ── Members ──
+lw 1.5
+line 80 50 224 242
+line 224 242 370 242
+
+# ── Fixed support at node 1 (ground) ──
+lw 1.0
+line 60 48 100 48
+lw 0.6
+line 64 48 58 40
+line 71 48 65 40
+line 78 48 72 40
+line 85 48 79 40
+line 92 48 86 40
+line 99 48 93 40
+
+# ── Fixed support at node 3 (wall to the right) ──
+lw 0.8
+line 382 228 382 258
+line 382 254 392 248
+line 382 248 392 242
+line 382 242 392 236
+line 382 236 392 230
+line 382 230 392 224
+
+# ── Distributed load 1.0 k/in along column ──
+lw 0.5
+arrow 46 60 86 60
+arrow 58 77 99 77
+arrow 70 94 112 94
+arrow 82 111 125 111
+arrow 94 128 138 128
+arrow 106 145 151 145
+arrow 118 162 164 162
+arrow 130 179 177 179
+arrow 142 196 190 196
+arrow 154 213 203 213
+arrow 166 230 215 230
+line 46 60 166 230
+lw 0.3
+line 52 65 58 72
+line 64 82 70 89
+line 76 99 82 106
+line 88 116 94 123
+line 100 133 106 140
+line 112 150 118 157
+line 124 167 130 174
+line 136 184 142 191
+line 148 201 154 208
+line 160 218 166 225
+fs 9
+text 8 142 1.0 k/in
+
+# ── Moment 108 (k-in) at node 2 ──
+lw 1.2
+moment 224 242 18
+fs 9
+text 182 260 108 (k-in)
+
+# ── Concentrated load 100 k at midspan ──
+lw 1.2
+arrow 297 280 297 244
+fs 10
+text 280 290 100 k
+
+# ── Node labels ──
+lw 1.0
+cid 80 50 1 10
+cid 224 242 2 10
+cid 370 242 3 10
+
+# ── Dimensions ──
+lw 0.6
+fs 9
+hdim 224 230 297 230 -16 6 ft
+hdim 297 230 370 230 -16 6 ft
+vdim 385 242 385 50 22 8 ft
+hdim 80 35 224 35 -16 6 ft
+
+# ── Properties box ──
+lw 0.8
+rect 340 290 136 72
+fs 8
+fi off
+text 408 354 All Members
+fi on
+text 408 342 E = 30,000 ksi
+text 408 330 W14X82 or
+text 408 318 I = 882 in⁴
+text 408 306 A = 24.1 in²
+
+# ── Coordinate axes ──
+lw 1.0
+fi on
+fs 10
+arrow 80 50 80 340
+text 66 348 Y
+arrow 80 50 456 50
+text 460 56 X
+
+ff mono
+fi off
+@{end draw}
+
+> -Fig. 4.5- Portico plano para el Ejemplo Ilustrativo 4.1
+
+### Solucion:
+
+> Datos del problema - Variables de calculo:
+
+E = 30000
+> E | Modulo de elasticidad (ksi)
+I = 882
+> I | Momento de inercia (in⁴)
+A = 24.1
+> A | Area de la seccion (in²)
+
+> 1. Modelacion de la estructura.
+
+@{text}
+El portico plano mostrado en la Figura 4.5 se modela, como se muestra en la Figura
+4.6, con dos elementos de viga, tres nodos y nueve coordenadas nodales del sistema. Las
+primeras tres coordenadas nodales del sistema corresponden a las coordenadas nodales
+libres y las ultimas seis a las coordenadas nodales fijas, como se muestra en la Figura 4.6.
+@{end text}
+
+@{draw 380 320 name:Fig 4.6}
+grid off
+bg book
+color black
+lw 1.2
+ff serif
+fi on
+fs 10
+
+# ── Members ──
+line 80 40 200 210
+line 200 210 340 210
+
+# ── Element triangles ──
+tid 140 115 1 14
+tid 270 200 2 14
+
+# ── Node circles ──
+cid 80 40 1 12
+cid 200 210 2 12
+cid 340 210 3 12
+
+# ── Coordinate axes ──
+lw 1.0
+arrow 80 40 80 290
+fs 11
+text 68 298 Y
+arrow 80 40 370 40
+text 374 46 X
+
+# ── DOF arrows at node 1 ──
+lw 0.8
+fs 9
+arrow 38 40 68 40
+text 20 46 u₄
+arrow 80 18 80 28
+text 68 8 u₅
+moment 80 40 16 left
+text 56 66 u₆
+
+# ── DOF arrows at node 2 ──
+arrow 160 210 188 210
+text 142 216 u₁
+arrow 200 186 200 198
+text 188 176 u₂
+moment 200 210 16
+text 214 236 u₃
+
+# ── DOF arrows at node 3 ──
+arrow 352 210 378 210
+text 382 216 u₇
+arrow 340 186 340 198
+text 328 176 u₈
+moment 340 210 16
+text 354 236 u₉
+
+ff mono
+fi off
+@{end draw}
+
+> -Fig. 4.6- Portico plano modelado para el Ejemplo Ilustrativo 4.1 mostrando las coordenadas nodales del sistema u_1 a u_9
+
+> 2. Matrices de rigidez de los elementos (coordenadas locales).
+
+> Sustituyendo los valores numericos en la ec. (4.8):
+
+> **ELEMENTO 1** (nodo 1 a nodo 2):
+
+L_1 = sqrt((6*12)^2 + (8*12)^2)
+> L_1 | Longitud del Elemento 1 (in)
+
+> Coeficientes de rigidez:
+f_1 = E*I/L_1^3
+> EI/L_1^3 | Factor de rigidez
+a_1 = f_1*A*L_1^2/I
+b_1 = 12*f_1
+c_1 = 6*f_1*L_1
+d_1 = 4*f_1*L_1^2
+e_1 = 2*f_1*L_1^2
+
+> Matriz de rigidez local [k]_1 — DOFs: (4, 5, 6, 1, 2, 3):
+k_1 = [[a_1, 0, 0, -a_1, 0, 0],[0, b_1, c_1, 0, -b_1, c_1],[0, c_1, d_1, 0, -c_1, e_1],[-a_1, 0, 0, a_1, 0, 0],[0, -b_1, -c_1, 0, b_1, -c_1],[0, c_1, e_1, 0, -c_1, d_1]]
+
+> **ELEMENTO 2** (nodo 2 a nodo 3):
+
+L_2 = 12*12
+> L_2 | Longitud del Elemento 2 (in)
+
+> Coeficientes de rigidez:
+f_2 = E*I/L_2^3
+> EI/L_2^3 | Factor de rigidez
+a_2 = f_2*A*L_2^2/I
+b_2 = 12*f_2
+c_2 = 6*f_2*L_2
+d_2 = 4*f_2*L_2^2
+e_2 = 2*f_2*L_2^2
+
+> Matriz de rigidez local [k]_2 — DOFs: (1, 2, 3, 7, 8, 9):
+k_2 = [[a_2, 0, 0, -a_2, 0, 0],[0, b_2, c_2, 0, -b_2, c_2],[0, c_2, d_2, 0, -c_2, e_2],[-a_2, 0, 0, a_2, 0, 0],[0, -b_2, -c_2, 0, b_2, -c_2],[0, c_2, e_2, 0, -c_2, d_2]]
+
+> 3. Matrices de transformacion, ec. (4.12).
+
+> **ELEMENTO 1**: cos θ = 0.60, sin θ = 0.80
+
+cos_1 = (6*12)/L_1
+> cos θ_1 | Coseno del angulo Elem 1
+sin_1 = (8*12)/L_1
+> sin θ_1 | Seno del angulo Elem 1
+
+T_1 = [[cos_1, sin_1, 0, 0, 0, 0],[-sin_1, cos_1, 0, 0, 0, 0],[0, 0, 1, 0, 0, 0],[0, 0, 0, cos_1, sin_1, 0],[0, 0, 0, -sin_1, cos_1, 0],[0, 0, 0, 0, 0, 1]]
+
+> **ELEMENTO 2**: cos θ = 1.0, sin θ = 0.0 (viga horizontal)
+
+T_2 = [[1, 0, 0, 0, 0, 0],[0, 1, 0, 0, 0, 0],[0, 0, 1, 0, 0, 0],[0, 0, 0, 1, 0, 0],[0, 0, 0, 0, 1, 0],[0, 0, 0, 0, 0, 1]]
+
+> 4. Matrices de rigidez de los elementos (coordenadas globales).
+
+@{text}
+La matriz de rigidez del elemento en referencia al sistema global de coordenadas se obtiene sustituyendo en la ec. (4.18) la matriz de rigidez del elemento y la matriz de transformacion, respectivamente de las ecs. (a) y (c). Al realizar la multiplicacion de matrices como se indica en la ec. (4.18), obtenemos:
+@{end text}
+
+> **ELEMENTO 1** — DOFs: (4, 5, 6, 1, 2, 3):
+
+kb_1 = transpose(T_1)*k_1*T_1
+
+> **ELEMENTO 2** — DOFs: (1, 2, 3, 7, 8, 9):
+
+@{text}
+Como la matriz de transformacion para este elemento es la matriz unitaria [T]₂ = [I] ya que θ₂ = 0, la matriz de rigidez en coordenadas globales es identica a la matriz en coordenadas locales.
+@{end text}
+
+kb_2 = k_2
+
+> 5. Ensamblaje de la matriz de rigidez reducida del sistema.
+
+@{text}
+Para ensamblar la matriz de rigidez reducida del sistema para la estructura (considerando solo las coordenadas nodales libres), se procede a transferir cada coeficiente de las dos matrices de rigidez de los elementos, ecs. (d) y (b), a la matriz de rigidez del sistema. Para este objetivo, se escriben en la parte superior y al lado derecho de estas dos matrices las coordenadas nodales asignadas a estos elementos en coordenadas globales como se indica en la Figura 4.6.
+@{end text}
+
+@{text}
+Procediendo sistematicamente a transferir los coeficientes de las matrices de rigidez de los elementos, ecs. (d) y (b), de acuerdo con las filas y columnas indicadas a la derecha y arriba de estas dos matrices, resulta la matriz de rigidez reducida del sistema:
+@{end text}
+
+> [K]_R = contribucion Elem 1 (DOFs 1,2,3 = filas 4-6 de kb_1) + contribucion Elem 2 (DOFs 1,2,3 = filas 1-3 de kb_2):
+
+K_R = [[7307.4333, 2803.8, 8820],[2803.8, 4028.4868, 1041.25],[8820, 1041.25, 1617000]]
+
+> 6. Fuerzas equivalentes en los nodos (coordenadas locales).
+
+> **ELEMENTO 1**:
+
+@{text}
+La Figura 4.7 muestra la carga distribuida verticalmente sobre el elemento 1 descompuesta en la superposicion de las componentes normal y axial de esta carga. Las fuerzas equivalentes nodales para el elemento 1 se calculan usando las formulas del Apendice I como sigue (L = 120 in):
+@{end text}
+
+w = 1.0
+> w | Carga distribuida (k/in)
+
+> Componente normal: w_n = -0.8 w, Componente axial: w_a = -0.6 w
+
+@{columns 2}
+Q_1 = -0.8*w*L_1/2
+Q_4 = -0.8*w*L_1/2
+Q_2 = -0.6*w*L_1/2
+Q_5 = -0.6*w*L_1/2
+Q_3 = -0.6*w*L_1^2/12
+Q_6 = 0.6*w*L_1^2/12
+@{end columns}
+
+> o en notacion vectorial:
+
+Qe_1 = [[-48],[-36],[-720],[-48],[-36],[720]]
+
+> **ELEMENTO 2**:
+
+@{text}
+Las fuerzas equivalentes nodales para el elemento 2 se calculan usando las formulas para una carga concentrada en el punto medio, Caso (a) del Apendice I (W = 100 kip, L₂ = 144 in):
+@{end text}
+
+W_2 = 100
+> W_2 | Carga concentrada en el Elemento 2 (kip)
+
+@{columns 2}
+Q_1 = 0
+Q_4 = 0
+Q_2 = -W_2/2
+Q_5 = -W_2/2
+Q_3 = -W_2*L_2/8
+Q_6 = W_2*L_2/8
+@{end columns}
+
+> o en notacion vectorial:
+
+Qe_2 = [[0],[-50],[-1800],[0],[-50],[1800]]
+`,
   },
   libroC5: {
     name: "Cap 5 - Grid Frames (Libro)",
@@ -1046,11 +1638,245 @@ fit
 > Columnas + Placas base + Refuerzo + Miembros + Pernos
 @{import:ifc:FINAL.ifc 700 500 connections}`,
   },
+  cadTest: {
+    name: "CAD Draw - Pruebas",
+    code: `@{config bg:white, align:left, color:black}
+---
+# Pruebas de Herramientas CAD @{draw}
+---
+
+@{text}
+Catalogo de comandos en @{draw}:
+- Geometria: line, rect, rrect, circle, ellipse, arc, carc, pline
+- Texto: text, otext (overbar)
+- Flechas: arrow, darrow
+- Estructural: beam, stirrup, colsection, moment, axes
+- Nodos: cid/cnode, tid/tnode
+- Cotas: dim, hdim, vdim
+- Transf: move, copy, mirror, rotate, array, polararray
+- Estilo: color, lw, fs, ff, fi, bg, grid
+- Coord: yflip on/off (Y cartesiano vs canvas)
+@{end text}
+
+---
+## 1. Primitivas basicas
+---
+
+@{draw 500 180 name:Primitivas}
+grid off
+bg white
+color black
+lw 1.0
+
+line 20 40 100 40
+fs 8
+fi off
+text 40 30 line
+
+rect 120 20 200 60
+text 140 12 rect
+
+rrect 220 20 300 60 8
+text 225 12 rrect
+
+circle 350 40 20
+text 335 12 circle
+
+ellipse 440 40 40 18
+text 420 12 ellipse
+
+arc 60 140 30 30 180
+text 50 100 arc
+
+pline 140 100 180 100 200 130 180 160 140 160
+text 145 92 pline
+
+carc 280 130 25 0 270
+text 262 95 carc
+
+arrow 340 150 340 100
+text 335 90 arrow
+
+darrow 400 100 460 100
+text 405 90 darrow
+
+@{end draw}
+
+---
+## 2. Elementos estructurales
+---
+
+@{draw 500 200 name:Estructurales}
+grid off
+bg white
+color black
+
+lw 1.2
+beam 30 100 170 100 16
+fs 9
+fi off
+text 70 82 beam (horizontal)
+
+beam 220 160 290 60 14
+text 240 46 beam (inclinada)
+
+stirrup 350 50 440 150
+text 350 42 stirrup
+
+lw 1.0
+moment 500 100 18 top
+text 475 72 moment top
+
+@{end draw}
+
+---
+## 3. yflip on — Coordenadas cartesianas
+---
+
+@{text}
+Con yflip on: Y=0 es abajo, Y crece hacia arriba (como plano cartesiano).
+Sin yflip (default): Y=0 arriba, crece hacia abajo (canvas).
+@{end text}
+
+@{draw 420 560 name:Mensula}
+grid off
+bg white
+color black
+lw 2
+yflip on
+
+# ── Geometria ──
+# Columna: x=150 a x=230 (ancho=80 ≈ 50cm), y=20 a y=540
+# Mensula: x=230 a x=345 (vuelo=115)
+#   Tope: y=400, Fondo cara: y=265 (peralte=135), Fondo punta: y=340
+# rec=18
+
+# ── Contorno de concreto ──
+color #999999
+lw 2
+pline 150 20 230 20 230 265 345 340 345 400 230 400 230 540 150 540 150 20
+
+# ── Eje de columna ──
+color #cccccc
+lw 0.5
+line 190 20 190 265
+line 190 400 190 540
+
+# ══════════════════════════════════════════════════════
+# ARMADO — basado en offset interior del contorno
+# ══════════════════════════════════════════════════════
+# Contorno interior (offset rec=18 hacia adentro):
+#   Columna: x=168..212, y=38..522
+#   Esquina col→inclinacion: (212, 275)
+#   Inclinacion interior: (212,275) → (327,350)
+#   Punta interior: x=327, y=350..382
+#   Tope interior: y=382, x=327..212
+#
+# x_right(y) del contorno interior:
+#   y<275 o y>382: 212
+#   275<=y<=350: 212 + (y-275)*115/75
+#   350<y<=382: 327
+
+# ── Contorno interior (linea fina gris, referencia visual) ──
+color #cccccc
+lw 0.5
+pline 168 38 212 38 212 275 327 350 327 382 212 382 212 522 168 522 168 38
+
+# ── Barras verticales columna ──
+color #333333
+lw 2
+line 168 38 168 522
+line 212 38 212 522
+
+# ── As — Refuerzo principal mensula (L-shape con gancho) ──
+color #333333
+lw 3
+# Barra 1: anclaje vertical en columna + horizontal + gancho 90° en punta
+line 172 120 172 380
+line 172 380 325 380
+line 325 380 325 355
+# Barra 2 (segunda capa):
+lw 2.5
+line 178 150 178 368
+line 178 368 320 368
+line 320 368 320 345
+
+# ── Barra diagonal (inclinacion interior) ──
+color #333333
+lw 2
+line 215 278 325 348
+
+# ── Estribos — espaciado uniforme cada 30, UN SOLO sistema ──
+# En zona mensula: mismos estribos, solo mas anchos (x_right segun offset)
+color #333333
+lw 2
+line 168 45 212 45
+line 168 75 212 75
+line 168 105 212 105
+line 168 135 212 135
+line 168 165 212 165
+line 168 195 212 195
+line 168 225 212 225
+line 168 255 212 255
+# mensula: x_right = 212+(y-275)*1.53, max 327
+line 168 285 227 285
+line 168 315 273 315
+line 168 345 319 345
+line 168 375 327 375
+# columna superior
+line 168 405 212 405
+line 168 435 212 435
+line 168 465 212 465
+line 168 495 212 495
+
+# ── Placa de apoyo ──
+color #444444
+lw 2
+rect 290 400 42 10
+
+# ── Cargas ──
+color #cc0000
+lw 2
+# V* (vertical)
+arrow 311 450 311 410
+# N* (horizontal)
+lw 1.5
+arrow 345 405 380 405
+
+# ── Etiquetas ──
+color black
+fs 11
+ff serif
+fi on
+text 122 375 As
+text 348 355 Ah
+text 120 100 Av
+fi off
+ff mono
+
+# ── Cotas ──
+color #d4a017
+lw 0.8
+hdim 150 20 230 20 -25
+hdim 230 340 345 340 -25
+vdim 352 265 352 400 18
+
+# ── Textos carga ──
+color #cc0000
+fs 10
+text 315 458 V*
+text 383 408 N*
+
+fit
+
+@{end draw}
+
+`,
+  },
 };
 
 // ─── DOM ────────────────────────────────────────────────
 const codeInput = document.getElementById("codeInput") as HTMLTextAreaElement;
-const syntaxLayer = document.getElementById("syntaxLayer") as HTMLDivElement;
 const output = document.getElementById("output") as HTMLDivElement;
 const exampleSelect = document.getElementById("exampleSelect") as HTMLSelectElement;
 const chkAutoRun = document.getElementById("chkAutoRun") as HTMLInputElement;
@@ -1060,9 +1886,49 @@ const btnRun = document.getElementById("btnRun") as HTMLButtonElement;
 const btnCad = document.getElementById("btnCad") as HTMLButtonElement;
 const themeSelect = document.getElementById("themeSelect") as HTMLSelectElement;
 const canvasContainer = document.getElementById("canvasContainer") as HTMLDivElement;
+const codeEditorWrap = codeInput.parentElement as HTMLDivElement; // .code-editor-wrap
 const mathCanvasEl = document.getElementById("mathCanvas") as HTMLCanvasElement;
 const editorHeader = document.getElementById("editorHeader") as HTMLDivElement;
-const foldGutter = document.getElementById("foldGutter") as HTMLDivElement;
+
+// ─── Syntax Highlighting (syntax-layer overlay) ─────────
+const syntaxLayer = document.getElementById("syntaxLayer") as HTMLDivElement;
+
+function synHl(text: string, cls: string): string {
+  return `<span class="${cls}">${escHtml(text)}</span>`;
+}
+function synHighlightLine(line: string): string {
+  return escHtml(line)
+    .replace(/\b(\d+\.?\d*([eE][+-]?\d+)?)\b/g, '<span class="syn-number">$1</span>')
+    .replace(/\b(sin|cos|tan|asin|acos|atan|atan2|sqrt|cbrt|ln|log|exp|abs|round|floor|ceiling|min|max|mod|gcd|lcm|sum|product|integral|transpose|lsolve|det|inv|identity|matrix)\b/g, '<span class="syn-function">$1</span>');
+}
+function updateSyntax() {
+  const text = codeInput.value;
+  const lines = text.split("\n");
+  let inBlock = false;
+  const parts: string[] = [];
+  for (const line of lines) {
+    const t = line.trimStart();
+    if (/^@\{(?!end)/.test(t)) inBlock = true;
+    if (/^@\{end\s/.test(t)) { parts.push(synHl(line, "syn-block")); inBlock = false; continue; }
+    if (/^@\{/.test(t)) { parts.push(synHl(line, "syn-block")); continue; }
+    if (inBlock) { parts.push(escHtml(line)); continue; }
+    if (/^#{1,6}\s/.test(t)) { parts.push(synHl(line, "syn-heading")); continue; }
+    if (t.startsWith(">")) { parts.push(synHl(line, "syn-comment")); continue; }
+    if (t.startsWith("'") || t.startsWith("//")) { parts.push(synHl(line, "syn-comment")); continue; }
+    if (/^#?(for|next|if|else|end if|repeat|loop|break|continue|while|do)\b/i.test(t)) {
+      parts.push(synHl(line, "syn-keyword")); continue;
+    }
+    parts.push(synHighlightLine(line));
+  }
+  syntaxLayer.innerHTML = parts.join("\n");
+  syntaxLayer.scrollTop = codeInput.scrollTop;
+  syntaxLayer.scrollLeft = codeInput.scrollLeft;
+}
+codeInput.addEventListener("input", updateSyntax);
+codeInput.addEventListener("scroll", () => {
+  syntaxLayer.scrollTop = codeInput.scrollTop;
+  syntaxLayer.scrollLeft = codeInput.scrollLeft;
+});
 
 // ─── MathEditor (WYSIWYG canvas) ────────────────────────
 const editor = new MathEditor(mathCanvasEl);
@@ -1752,20 +2618,18 @@ function setMode(mode: "code" | "canvas") {
     editorHeader.textContent = mode === "canvas" ? "MathCanvas" : "Code";
 
     if (mode === "code") {
-      // Code mode: show textarea, hide canvas (output always visible)
-      codeInput.style.display = "";
-      if (syntaxLayer) syntaxLayer.style.display = "";
+      // Code mode: show textarea+gutter, hide canvas (output always visible)
+      codeEditorWrap.style.display = "";
       canvasContainer.style.display = "none";
       // Sync from canvas → code
       if (wasCanvas) {
-        setCodeContent(editor.toHekatan());
+        codeInput.value = editor.toHekatan();
       }
       updateSyntax();
       runCode();
     } else {
-      // MathCanvas mode: show canvas, hide textarea (output always visible)
-      codeInput.style.display = "none";
-      if (syntaxLayer) syntaxLayer.style.display = "none";
+      // MathCanvas mode: show canvas full-height, hide code editor wrap entirely
+      codeEditorWrap.style.display = "none";
       canvasContainer.style.display = "";
       // Sync code → canvas
       editor.loadFromText(codeInput.value);
@@ -1785,10 +2649,31 @@ function setMode(mode: "code" | "canvas") {
 }
 
 tabCode.addEventListener("click", () => setMode("code"));
-tabCanvas.addEventListener("click", () => setMode("canvas"));
+tabCanvas.addEventListener("click", () => {
+  // MathCanvas está en desarrollo — mostrar aviso
+  const overlay = document.createElement("div");
+  overlay.style.cssText = `
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:9999;
+  `;
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:10px;padding:32px 44px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3);max-width:420px;">
+      <div style="font-size:40px;margin-bottom:12px;">🚧</div>
+      <h2 style="margin:0 0 8px;font-size:18px;color:#333;">MathCanvas — En Desarrollo</h2>
+      <p style="margin:0 0 16px;color:#666;font-size:13px;line-height:1.5;">
+        El modo MathCanvas (editor WYSIWYG tipo MathCAD) aún no está disponible.<br>
+        Use el modo <b>Code</b> + <b>Output</b> para trabajar.
+      </p>
+      <button style="background:#d4a017;color:#fff;border:none;border-radius:6px;padding:8px 28px;font-size:14px;cursor:pointer;" id="_mcClose">Entendido</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector("#_mcClose")!.addEventListener("click", () => overlay.remove());
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+});
 btnRun.addEventListener("click", () => {
   if (currentMode === "canvas") {
-    setCodeContent(editor.toHekatan());
+    codeInput.value = editor.toHekatan();
   }
   runCode();
 });
@@ -1798,7 +2683,7 @@ editor.onContentChanged = (code: string) => {
   if (_isSyncingModes) return;
   try {
     _isSyncingModes = true;
-    setCodeContent(code);
+    codeInput.value = code;
     // Auto-run if enabled
     if (chkAutoRun.checked) {
       runCode();
@@ -1812,9 +2697,9 @@ editor.onContentChanged = (code: string) => {
 exampleSelect.addEventListener("change", () => {
   const ex = EXAMPLES[exampleSelect.value];
   if (!ex) return;
-  setCodeContent(ex.code);
-  editor.loadFromText(ex.code);
+  codeInput.value = ex.code;
   updateSyntax();
+  editor.loadFromText(ex.code);
   runCode(); // Always update output
   if (currentMode === "canvas") {
     mathCanvasEl.focus();
@@ -1831,7 +2716,7 @@ chkAutoRun.addEventListener("change", () => {
 
 editor.onExecute = (code: string) => {
   // F5 / Ctrl+Enter: switch to code mode to see results
-  setCodeContent(code);
+  codeInput.value = code;
   setMode("code");
   runCode();
 };
@@ -1842,178 +2727,14 @@ themeSelect.addEventListener("change", () => {
   if (currentMode === "code") runCode();
 });
 
-// ─── Eigen WASM (pre-load for fast linear algebra) ──────
-import { eigenSolver } from "hekatan-math/wasm/eigenSolver.js";
-eigenSolver.init().then(() => console.log("Eigen WASM loaded (229 KB) — sparse/dense solvers ready"));
-
 // ─── Evaluator ──────────────────────────────────────────
 const evaluator = new HekatanEvaluator();
 
 // Track active 3D scenes for cleanup
 let active3DScenes: Draw3DScene[] = [];
 
-// ─── Code Folding (AvalonEdit-style +/- collapse) ─────────
-let fullSourceLines: string[] = [];
-let foldRanges: Map<number, number> = new Map(); // srcStart → srcEnd
-let viewToSourceMap: number[] = [];
-let prevViewLineCount = 0;
-
-/** Find matching `end` for a foldable block at startIdx.
- *  Supports: for/if/while...end  AND  @{tag}...@{end tag} */
-function findFoldEnd(lines: string[], startIdx: number): number {
-  const startTrim = lines[startIdx].trim();
-  // @{tag} blocks → find matching @{end tag}
-  const atMatch = startTrim.match(/^@\{(\w+)/);
-  if (atMatch && !/^@\{end\b/.test(startTrim)) {
-    const tag = atMatch[1].toLowerCase();
-    for (let i = startIdx + 1; i < lines.length; i++) {
-      const t = lines[i].trim().toLowerCase();
-      if (t.startsWith(`@{end ${tag}`) || t === `@{end ${tag}}`) return i;
-    }
-    return -1;
-  }
-  // for/if/while blocks → find matching end
-  let depth = 0;
-  for (let i = startIdx; i < lines.length; i++) {
-    const t = lines[i].trim().toLowerCase();
-    if (/^(for|if|while)\b/.test(t)) depth++;
-    if (/^end\b/.test(t)) { depth--; if (depth === 0) return i; }
-  }
-  return -1;
-}
-
-/** Build the visible textarea view from fullSourceLines + folds */
-function buildFoldView(): { viewLines: string[], mapping: number[] } {
-  const viewLines: string[] = [];
-  const mapping: number[] = [];
-  let i = 0;
-  while (i < fullSourceLines.length) {
-    if (foldRanges.has(i)) {
-      viewLines.push(fullSourceLines[i] + "  \u22EF"); // ⋯
-      mapping.push(i);
-      i = foldRanges.get(i)! + 1;
-    } else {
-      viewLines.push(fullSourceLines[i]);
-      mapping.push(i);
-      i++;
-    }
-  }
-  return { viewLines, mapping };
-}
-
-/** Refresh textarea content to reflect current fold state */
-function refreshFoldView() {
-  const sel = codeInput.selectionStart;
-  const { viewLines, mapping } = buildFoldView();
-  viewToSourceMap = mapping;
-  codeInput.value = viewLines.join("\n");
-  codeInput.selectionStart = codeInput.selectionEnd = Math.min(sel, codeInput.value.length);
-  prevViewLineCount = viewLines.length;
-  updateSyntax();
-  updateFoldGutter();
-}
-
-/** Toggle fold/unfold on a view line */
-function toggleFold(viewLineIdx: number) {
-  const srcLine = viewToSourceMap[viewLineIdx];
-  if (srcLine === undefined) return;
-  if (foldRanges.has(srcLine)) {
-    foldRanges.delete(srcLine);
-  } else {
-    const endLine = findFoldEnd(fullSourceLines, srcLine);
-    if (endLine > srcLine) foldRanges.set(srcLine, endLine);
-  }
-  refreshFoldView();
-  if (chkAutoRun.checked) {
-    if (autoRunTimer) clearTimeout(autoRunTimer);
-    autoRunTimer = window.setTimeout(runCode, 400);
-  }
-}
-
-/** Render fold markers in the gutter */
-function updateFoldGutter() {
-  if (!foldGutter) return;
-  const lines = codeInput.value.split("\n");
-  const markers: string[] = [];
-  for (let v = 0; v < lines.length; v++) {
-    const srcIdx = viewToSourceMap[v] ?? v;
-    const trimmed = (fullSourceLines[srcIdx] ?? lines[v] ?? "").trim().toLowerCase();
-    const isFoldable = /^(for|if|while)\b/.test(trimmed) ||
-      (/^@\{\w+/.test(trimmed) && !/^@\{end\b/.test(trimmed) && !/^@\{config\b/.test(trimmed));
-    if (isFoldable) {
-      const folded = foldRanges.has(srcIdx);
-      markers.push(`<span class="fold-marker fold-active" data-v="${v}">${folded ? "+" : "\u2212"}</span>`);
-    } else {
-      markers.push(`<span class="fold-marker fold-empty">\u00A0</span>`);
-    }
-  }
-  foldGutter.innerHTML = `<div class="fold-inner">${markers.join("")}</div>`;
-  syncFoldGutterScroll();
-}
-
-/** Sync fold gutter scroll position with textarea */
-function syncFoldGutterScroll() {
-  if (!foldGutter) return;
-  const inner = foldGutter.querySelector(".fold-inner") as HTMLElement;
-  if (inner) inner.style.marginTop = `-${codeInput.scrollTop}px`;
-}
-
-/** Set code content and reset all folds */
-function setCodeContent(code: string) {
-  codeInput.value = code;
-  fullSourceLines = code.split("\n");
-  foldRanges.clear();
-  viewToSourceMap = fullSourceLines.map((_, i) => i);
-  prevViewLineCount = fullSourceLines.length;
-  updateFoldGutter();
-}
-
-/** Sync textarea edits back to fullSourceLines */
-function syncFromTextarea() {
-  const newLines = codeInput.value.split("\n");
-  if (foldRanges.size === 0) {
-    fullSourceLines = newLines;
-    viewToSourceMap = newLines.map((_, i) => i);
-    prevViewLineCount = newLines.length;
-    return;
-  }
-  if (newLines.length !== prevViewLineCount) {
-    // Line count changed while folds active → unfold all
-    fullSourceLines = newLines.map(l => l.endsWith("  \u22EF") ? l.slice(0, -3) : l);
-    foldRanges.clear();
-    viewToSourceMap = fullSourceLines.map((_, i) => i);
-    prevViewLineCount = newLines.length;
-  } else {
-    // Same line count → sync changed lines through mapping
-    for (let v = 0; v < newLines.length; v++) {
-      const s = viewToSourceMap[v];
-      if (s !== undefined) {
-        let line = newLines[v];
-        // Strip fold marker if editing a folded line
-        if (foldRanges.has(s) && line.endsWith("  \u22EF")) line = line.slice(0, -3);
-        fullSourceLines[s] = line;
-      }
-    }
-  }
-  updateFoldGutter();
-}
-
-/** Get the full unfolded source for evaluation */
-function getFullSource(): string {
-  if (foldRanges.size === 0 || fullSourceLines.length === 0) return codeInput.value;
-  return fullSourceLines.join("\n");
-}
-
-// Fold gutter click handler
-foldGutter?.addEventListener("click", (e) => {
-  const el = (e.target as HTMLElement).closest(".fold-marker:not(.fold-empty)") as HTMLElement;
-  if (!el) return;
-  const v = parseInt(el.dataset.v || "0", 10);
-  toggleFold(v);
-});
-
-function runCode() {
-  const code = getFullSource();
+async function runCode() {
+  const code = codeInput.value;
   if (!code.trim()) { output.innerHTML = `<div class="output-pages-wrapper"><div class="output-page"></div></div>`; return; }
 
   // Cleanup previous 3D scenes
@@ -2021,14 +2742,25 @@ function runCode() {
   active3DScenes = [];
 
   try {
-    const results = evaluator.evalDocument(code);
+    const results = await evaluator.evalDocument(code);
     const rawHTML = renderResults(results, code);
     // Split by page break markers into multiple pages
     const pageContents = rawHTML.split("<!--PAGEBREAK-->");
-    const pagesHTML = pageContents.map(pc => `<div class="output-page">${pc}</div>`).join("\n");
+    // Apply page background color from @{config bg:...}
+    const bgColorMap: Record<string, string> = {
+      book: "#fdf6e3", bookwarm: "#fdf6e3", cream: "#fdf6e3",
+      white: "#ffffff", black: "#1a1a2e", dark: "#1a1a2e",
+      gray: "#e8e8e8", grey: "#e8e8e8", sepia: "#f4ecd8",
+    };
+    const rawBg = evaluator.pageBackground || "";
+    const pageBg = bgColorMap[rawBg.toLowerCase()] || rawBg || "";
+    const bgStyle = pageBg ? ` style="background-color:${pageBg}"` : "";
+    const pagesHTML = pageContents.map(pc => `<div class="output-page"${bgStyle}>${pc}</div>`).join("\n");
     output.innerHTML = `<div class="output-pages-wrapper">${pagesHTML}</div>`;
     // Render @{draw} CAD blocks into their canvas elements (must be after innerHTML)
     renderDrawBlocks(results);
+    // Build figure navigation bar
+    buildFigNav();
     // Render @{draw:3D} Three.js blocks
     renderDraw3DBlocks(results);
     // Render @{draw:3D:IFC} file upload + viewer
@@ -2041,6 +2773,132 @@ function runCode() {
     output.innerHTML = `<div class="output-pages-wrapper"><div class="output-page"><div class="out-error">Error: ${escHtml(e.message)}</div></div></div>`;
     setTimeout(syncZoom, 50);
   }
+}
+
+// ─── Figure Zoom Overlay ─────────────────────────────────
+function openFigZoom(figNum: number) {
+  const data = _figData.get(figNum);
+  if (!data) return;
+
+  // Remove any existing overlay
+  document.getElementById("fig-zoom-overlay")?.remove();
+
+  // Compute scaled canvas size: fit to 90% of viewport
+  const vw = window.innerWidth * 0.9;
+  const vh = window.innerHeight * 0.88;
+  const scaleX = vw / data.w;
+  const scaleY = vh / data.h;
+  const scale = Math.min(scaleX, scaleY, 4);  // cap at 4x
+  const cw = Math.round(data.w * scale);
+  const ch = Math.round(data.h * scale);
+
+  const overlay = document.createElement("div");
+  overlay.id = "fig-zoom-overlay";
+  overlay.style.cssText = `position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.82);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;`;
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay || (e.target as HTMLElement).classList.contains("fig-zoom-close")) overlay.remove();
+  });
+
+  // Header
+  const header = document.createElement("div");
+  const label = data.name ? `Fig ${figNum} — ${data.name}` : `Fig ${figNum}`;
+  header.style.cssText = `color:#fff;font-size:16px;font-family:'Segoe UI',sans-serif;margin-bottom:8px;display:flex;align-items:center;gap:16px;`;
+  header.innerHTML = `<span style="font-weight:600;">${label}</span><span style="font-size:12px;color:#aaa;">${data.w}×${data.h} → ${cw}×${ch} (${scale.toFixed(1)}x)</span><button class="fig-zoom-close" style="margin-left:auto;background:#555;color:#fff;border:none;border-radius:4px;padding:4px 14px;cursor:pointer;font-size:13px;">✕ Cerrar</button>`;
+  overlay.appendChild(header);
+
+  // Canvas
+  const canvas = document.createElement("canvas");
+  canvas.width = cw;
+  canvas.height = ch;
+  canvas.style.cssText = `border:2px solid #666;border-radius:4px;background:#fff;cursor:default;max-width:90vw;max-height:85vh;`;
+  canvas.addEventListener("click", (e) => e.stopPropagation());
+  overlay.appendChild(canvas);
+
+  // Navigation arrows
+  const nav = document.createElement("div");
+  nav.style.cssText = `display:flex;gap:12px;margin-top:8px;`;
+  const totalFigs = _figData.size;
+  if (totalFigs > 1) {
+    const prevNum = figNum > 1 ? figNum - 1 : totalFigs;
+    const nextNum = figNum < totalFigs ? figNum + 1 : 1;
+    const btnStyle = `background:#555;color:#fff;border:none;border-radius:4px;padding:6px 16px;cursor:pointer;font-size:13px;`;
+    nav.innerHTML = `<button style="${btnStyle}" onclick="event.stopPropagation();document.getElementById('fig-zoom-overlay').remove();window._hkFigZoom(${prevNum})">◀ Fig ${prevNum}</button><span style="color:#888;font-size:12px;align-self:center;">${figNum} / ${totalFigs}</span><button style="${btnStyle}" onclick="event.stopPropagation();document.getElementById('fig-zoom-overlay').remove();window._hkFigZoom(${nextNum})">Fig ${nextNum} ▶</button>`;
+  }
+  overlay.appendChild(nav);
+
+  document.body.appendChild(overlay);
+
+  // Render CAD using high-DPI approach:
+  // Canvas pixel buffer = cw × ch, but logical coordinate space = original w × h
+  // ctx.scale handles the upscaling so all CAD coordinates work unchanged
+  canvas.width = cw;
+  canvas.height = ch;
+  canvas.style.width = `${cw}px`;
+  canvas.style.height = `${ch}px`;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.scale(scale, scale);
+  const eng = new CadEngine();
+  eng.canvasW = data.w;
+  eng.canvasH = data.h;
+  execCommands(eng, data.commands.join("\n"));
+  eng.zoomFit();
+  eng.renderToCtx(ctx, data.w, data.h);
+
+  // ESC to close
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === "Escape") { overlay.remove(); window.removeEventListener("keydown", onKey); }
+    if (e.key === "ArrowLeft" && totalFigs > 1) {
+      const prev = figNum > 1 ? figNum - 1 : totalFigs;
+      overlay.remove(); window.removeEventListener("keydown", onKey);
+      openFigZoom(prev);
+    }
+    if (e.key === "ArrowRight" && totalFigs > 1) {
+      const next = figNum < totalFigs ? figNum + 1 : 1;
+      overlay.remove(); window.removeEventListener("keydown", onKey);
+      openFigZoom(next);
+    }
+  };
+  window.addEventListener("keydown", onKey);
+}
+
+// Expose globally for onclick handlers in generated HTML
+(window as any)._hkFigZoom = openFigZoom;
+
+// ─── Figure Navigation: scroll to fig(n) ─────────────────
+function scrollToFig(figNum: number) {
+  const el = document.getElementById(`fig-${figNum}`);
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Flash highlight
+    el.style.outline = "3px solid #4488ff";
+    el.style.outlineOffset = "4px";
+    setTimeout(() => { el.style.outline = ""; el.style.outlineOffset = ""; }, 1500);
+  }
+}
+(window as any)._hkFigNav = scrollToFig;
+
+// ─── Build figure navigation bar after render ─────────────
+function buildFigNav() {
+  let bar = document.getElementById("figNavBar");
+  if (_figCount === 0) { bar?.remove(); return; }
+
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "figNavBar";
+    // Insert at top of output panel
+    const outputPanel = output.parentElement;
+    if (outputPanel) outputPanel.insertBefore(bar, output);
+  }
+
+  const btns: string[] = [];
+  for (let i = 1; i <= _figCount; i++) {
+    const d = _figData.get(i);
+    const label = d?.name ? `${i}: ${d.name}` : `${i}`;
+    btns.push(`<button class="fig-nav-btn" onclick="window._hkFigNav(${i})" title="Ir a Fig ${i}">Fig ${label}</button>`);
+  }
+  bar.className = "fig-nav-bar";
+  bar.innerHTML = `<span class="fig-nav-label">Figuras:</span>${btns.join("")}`;
 }
 
 // ─── Auto page-break: split pages when content overflows A4 height ───
@@ -2081,6 +2939,8 @@ function autoPageBreak() {
       if (splitIdx > 0) {
         const newPage = document.createElement("div");
         newPage.className = "output-page";
+        // Inherit page background from first page
+        if (page.style.backgroundColor) newPage.style.backgroundColor = page.style.backgroundColor;
         const toMove = children.slice(splitIdx);
         for (const el of toMove) newPage.appendChild(el);
         wrapper.insertBefore(newPage, page.nextSibling);
@@ -2372,8 +3232,9 @@ function syncZoom() {
   if (wrapper) {
     const a4Wpx = 210 * 96 / 25.4;            // 794px = A4 width
     const vRulerW = 18, sbW = 10, sbMargin = 2; // same as MathEditor constants
-    // Use output panel width for scale calculation
-    const panelW = output.clientWidth || mathCanvasEl.clientWidth || codeInput.clientWidth;
+    // Use canvas width if visible, else use codeInput/editorPanel width
+    let panelW = mathCanvasEl.clientWidth;
+    if (!panelW) panelW = codeInput.clientWidth || output.clientWidth;
     const availW = panelW - sbW - sbMargin - vRulerW;
     const scale = Math.min((availW - 20) / a4Wpx, 1);
     wrapper.style.zoom = `${scale * zoom}`;
@@ -2445,138 +3306,15 @@ codeInput.addEventListener("keydown", (e) => {
     const end = codeInput.selectionEnd;
     codeInput.value = codeInput.value.substring(0, s) + "  " + codeInput.value.substring(end);
     codeInput.selectionStart = codeInput.selectionEnd = s + 2;
-    syncFromTextarea();
-    updateSyntax();
   }
 });
 
 // AutoRun on input (Calculate mode)
 let autoRunTimer: number | null = null;
 codeInput.addEventListener("input", () => {
-  syncFromTextarea();
-  updateSyntax();
-  updateFoldGutter();
   if (!chkAutoRun.checked) return;
   if (autoRunTimer) clearTimeout(autoRunTimer);
   autoRunTimer = window.setTimeout(runCode, 400);
-});
-
-// ─── Syntax Highlighting ────────────────────────────────
-const SYN_FUNCTIONS = /\b(sin|cos|tan|asin|acos|atan|atan2|sqrt|cbrt|ln|log|exp|abs|round|floor|ceiling|min|max|mod|gcd|lcm|sum|product|integral|transpose|lsolve|det|inv|identity|matrix)\b/g;
-const SYN_NUMBERS = /\b(\d+\.?\d*([eE][+-]?\d+)?)\b/g;
-
-function synEsc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-function synHl(text: string, cls: string): string {
-  return `<span class="${cls}">${synEsc(text)}</span>`;
-}
-function synLine(line: string): string {
-  return synEsc(line)
-    .replace(SYN_NUMBERS, '<span class="syn-number">$1</span>')
-    .replace(/\b(sin|cos|tan|asin|acos|atan|atan2|sqrt|cbrt|ln|log|exp|abs|round|floor|ceiling|min|max|mod|gcd|lcm|sum|product|integral|transpose|lsolve|det|inv|identity|matrix)\b/g,
-      '<span class="syn-function">$1</span>');
-}
-/** Split line at // and dim the comment part */
-function synWithInlineComment(line: string, mainFn: (s: string) => string): string {
-  const idx = line.indexOf("//");
-  if (idx < 0) return mainFn(line);
-  const codePart = line.slice(0, idx);
-  const commentPart = line.slice(idx);
-  return mainFn(codePart) + `<span class="syn-dim">${synEsc(commentPart)}</span>`;
-}
-function updateSyntax() {
-  if (!syntaxLayer) return;
-  const text = codeInput.value;
-  const lines = text.split("\n");
-  let inBlock = false;
-  const parts: string[] = [];
-  for (const line of lines) {
-    const trimmed = line.trimStart();
-    if (/^@\{(?!end)/.test(trimmed)) inBlock = true;
-    if (/^@\{end\s/.test(trimmed)) { parts.push(synHl(line, "syn-block")); inBlock = false; continue; }
-    if (/^@\{/.test(trimmed)) { parts.push(synHl(line, "syn-block")); continue; }
-    if (inBlock) { parts.push(synEsc(line)); continue; }
-    if (/^#{1,6}\s/.test(trimmed)) {
-      parts.push(synWithInlineComment(line, s => synHl(s, "syn-heading"))); continue;
-    }
-    if (trimmed.startsWith("//")) { parts.push(synHl(line, "syn-dim")); continue; }
-    if (trimmed.startsWith(">")) {
-      parts.push(synWithInlineComment(line, s => synHl(s, "syn-comment"))); continue;
-    }
-    if (trimmed.startsWith("'")) {
-      parts.push(synWithInlineComment(line, s => synHl(s, "syn-comment"))); continue;
-    }
-    if (/^(for|next|end(\s+(for|if|while))?|end|if|else(\s+if)?|repeat|loop|break|continue|while|do)\b/i.test(trimmed)) {
-      parts.push(synWithInlineComment(line, s => synHl(s, "syn-keyword"))); continue;
-    }
-    parts.push(synWithInlineComment(line, synLine));
-  }
-  syntaxLayer.innerHTML = parts.join("\n");
-  syntaxLayer.scrollTop = codeInput.scrollTop;
-  syntaxLayer.scrollLeft = codeInput.scrollLeft;
-}
-codeInput.addEventListener("scroll", () => {
-  if (syntaxLayer) {
-    syntaxLayer.scrollTop = codeInput.scrollTop;
-    syntaxLayer.scrollLeft = codeInput.scrollLeft;
-  }
-  syncFoldGutterScroll();
-});
-
-// ─── Menu & Toolbar Actions ─────────────────────────────
-function insertAtCursor(text: string) {
-  const s = codeInput.selectionStart;
-  const e = codeInput.selectionEnd;
-  const val = codeInput.value;
-  const insert = text.replace(/\\n/g, "\n");
-  codeInput.value = val.substring(0, s) + insert + val.substring(e);
-  codeInput.selectionStart = codeInput.selectionEnd = s + insert.length;
-  codeInput.focus();
-  syncFromTextarea();
-  updateSyntax();
-  if (chkAutoRun.checked) {
-    if (autoRunTimer) clearTimeout(autoRunTimer);
-    autoRunTimer = window.setTimeout(runCode, 400);
-  }
-}
-
-// Menu dropdown buttons
-document.querySelectorAll<HTMLButtonElement>(".menu-dropdown button[data-action]").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const action = btn.dataset.action;
-    switch (action) {
-      case "new": setCodeContent(""); updateSyntax(); runCode(); break;
-      case "save": {
-        const blob = new Blob([getFullSource()], { type: "text/plain" });
-        const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-        a.download = "document.hcalc"; a.click(); break;
-      }
-      case "open": {
-        const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".hcalc,.txt";
-        inp.onchange = () => { if (inp.files?.[0]) inp.files[0].text().then(t => { setCodeContent(t); updateSyntax(); runCode(); }); };
-        inp.click(); break;
-      }
-      case "export-html": {
-        const blob = new Blob([output.innerHTML], { type: "text/html" });
-        const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-        a.download = "output.html"; a.click(); break;
-      }
-      case "print": window.print(); break;
-      case "undo": document.execCommand("undo"); updateSyntax(); break;
-      case "redo": document.execCommand("redo"); updateSyntax(); break;
-      case "find": /* TODO */ break;
-      case "selectall": codeInput.select(); break;
-    }
-  });
-});
-
-// Insert buttons (menu submenus + toolbar fmt-btn)
-document.querySelectorAll<HTMLButtonElement>("[data-insert]").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const text = btn.dataset.insert || "";
-    insertAtCursor(text);
-  });
 });
 
 // ─── HTML escaping ──────────────────────────────────────
@@ -2588,34 +3326,24 @@ function escHtml(s: string): string {
 // RENDERER - Genera HTML con clases de template.html
 // ═══════════════════════════════════════════════════════════
 
+// Global figure counter (reset each render)
+let _figCount = 0;
+// Store figure data for zoom overlay re-render
+const _figData: Map<number, { w: number; h: number; commands: string[]; name?: string }> = new Map();
+
 function renderResults(results: LineResult[], sourceCode: string): string {
   const html: string[] = [];
   let inColumns = false;
   let columnCount = 0;
   let columnItems: string[] = [];
-  let currentAlign: "left" | "center" | "right" = "left"; // default alignment
+  let inEqBlock = false;
+  let eqBlockAlign = "center";
   const sourceLines = sourceCode.split("\n");
-  _renderSourceLines = sourceLines; // Store for integral notation lookup
-  // Reset render-time config (will be re-applied from directives)
-  evaluator.eqDelimiter = "";
-  evaluator.textDelimiter = "";
+  _figCount = 0;
+  _figData.clear();
 
   for (const r of results) {
-    let srcLine = sourceLines[r.lineIndex]?.trim() ?? "";
-    // Strip inline // comments from source line for rendering
-    const cmtIdx = srcLine.indexOf("//");
-    if (cmtIdx >= 0) srcLine = srcLine.slice(0, cmtIdx).trim();
-
-    // Detect alignment from @{align:...}, @{text:...} and @{eq:...} directives
-    if (r.type === "directive" && r.display && /^(align|text|eq):/.test(r.display)) {
-      const align = r.display.split(":")[1];
-      if (align === "end") {
-        currentAlign = "left";
-      } else {
-        currentAlign = align as "left" | "center" | "right";
-      }
-      continue;
-    }
+    const srcLine = sourceLines[r.lineIndex]?.trim() ?? "";
 
     // Detect @{columns N} start
     const colMatch = srcLine.match(/^@\{columns\s+(\d+)\}/i);
@@ -2627,7 +3355,7 @@ function renderResults(results: LineResult[], sourceCode: string): string {
     }
 
     // Empty line or heading/comment exits columns mode
-    if (inColumns && (r.type === "empty" || r.type === "heading" || r.type === "comment" || r.type === "hrule")) {
+    if (inColumns && (r.type === "empty" || r.type === "heading" || r.type === "comment")) {
       if (columnItems.length > 0) {
         html.push(renderColumnsGrid(columnItems, columnCount));
         columnItems = [];
@@ -2657,79 +3385,88 @@ function renderResults(results: LineResult[], sourceCode: string): string {
           if (level === 1) {
             const chapMatch = headText.match(/^(\d+)\s+(.*)/);
             if (chapMatch) {
-              html.push(`<h1 class="chapter-heading align-${currentAlign}"><span class="chapter-num">${escHtml(chapMatch[1])}</span> <span class="chapter-title">${escHtml(chapMatch[2])}</span></h1>`);
+              html.push(`<h1 class="chapter-heading"><span class="chapter-num">${escHtml(chapMatch[1])}</span> <span class="chapter-title">${escHtml(chapMatch[2])}</span></h1>`);
             } else {
-              html.push(`<h1 class="chapter-heading align-${currentAlign}"><span class="chapter-title">${escHtml(headText)}</span></h1>`);
+              html.push(`<h1 class="chapter-heading"><span class="chapter-title">${escHtml(headText)}</span></h1>`);
             }
           } else if (level === 2) {
             // Section heading: "## 5.2 Efectos" → number spaced from title
             const secMatch = headText.match(/^([\d.]+)\s+(.*)/);
             if (secMatch) {
-              html.push(`<h${level} class="section-heading align-${currentAlign}"><span class="section-num">${escHtml(secMatch[1])}</span><span class="section-title">${escHtml(secMatch[2])}</span></h${level}>`);
+              html.push(`<h${level} class="section-heading"><span class="section-num">${escHtml(secMatch[1])}</span><span class="section-title">${escHtml(secMatch[2])}</span></h${level}>`);
             } else {
-              html.push(`<h${level} class="align-${currentAlign}">${escHtml(headText)}</h${level}>`);
+              html.push(`<h${level}>${escHtml(headText)}</h${level}>`);
             }
           } else {
-            html.push(`<h${level} class="align-${currentAlign}">${escHtml(headText)}</h${level}>`);
+            html.push(`<h${level}>${escHtml(headText)}</h${level}>`);
           }
         }
         break;
       }
       case "comment":
-        html.push(`<p class="out-comment align-${currentAlign}">${renderCommentMath(r.display!)}</p>`);
+        html.push(`<p class="out-comment">${renderCommentMath(r.display!)}</p>`);
         break;
       case "empty":
         html.push(`<div class="out-empty"></div>`);
         break;
-      case "hrule":
-        html.push(`<hr class="out-hrule">`);
-        break;
-      case "eqline": {
-        // Equation line inside @{text} > @{eq} block
-        const eqLine = r.display!;
-        const numMatch = eqLine.match(/\((\d+(?:\.\d+)?[a-z]?)\)\s*$/);
-        let eqText = eqLine;
-        let eqNum = "";
-        if (numMatch) {
-          eqText = eqLine.slice(0, numMatch.index).trim();
-          eqNum = numMatch[1];
-        }
-        let eqHtml = `<p class="eq align-${currentAlign}" style="line-height:2.2;margin:4px 0;">`;
-        eqHtml += renderEquationText(eqText);
-        if (eqNum) eqHtml += `<span style="float:right;font-style:normal;margin-left:24px">(${eqNum})</span>`;
-        eqHtml += `</p>`;
-        html.push(eqHtml);
-        break;
-      }
       case "assignment":
-        if (r.displayHint) {
-          html.push(`<p class="eq out-line align-${currentAlign}">${renderDisplayHint(r)}</p>`);
-        } else {
-          html.push(`<p class="eq out-line align-${currentAlign}">${renderLineEq(r, srcLine)}</p>`);
-        }
+        html.push(`<p class="eq out-line">${renderLineEq(r, srcLine)}</p>`);
         break;
       case "expression":
-        if (r.displayHint) {
-          html.push(`<p class="eq out-line align-${currentAlign}">${renderDisplayHint(r)}</p>`);
-        } else {
-          html.push(`<p class="eq out-line align-${currentAlign}">${renderExprResult(r)}</p>`);
-        }
-        break;
-      case "plot":
-        html.push(renderPlotBlock(r));
+        html.push(`<p class="eq out-line">${renderExprResult(r)}</p>`);
         break;
       case "cells":
         html.push(renderCells(r));
         break;
+      case "image64": {
+        // Embedded base64 image from @{image64 W [H] [name:Name]}
+        const imgData = (r as any).imageData || "";
+        const imgName = (r as any).imageName || "";
+        const imgW = (r as any).drawWidth || 560;
+        if (imgData) {
+          html.push(`<div class="out-image64" style="text-align:center;margin:8px 0;">`);
+          html.push(`<img src="${imgData}" alt="${escHtml(imgName)}" style="max-width:${imgW}px;width:100%;" />`);
+          html.push(`</div>`);
+        }
+        break;
+      }
+      case "eqline": {
+        // @{eq} block line — render with equation formatter
+        const eqTrimmed = (r.display || "").trim();
+        if (!eqTrimmed) break;
+        // Equation number at end: (1.1), (4.8a), etc.
+        const eqNumMatch = eqTrimmed.match(/\((\d+(?:\.\d+)?[a-z]?)\)\s*$/);
+        let eqText = eqTrimmed;
+        let eqNum = "";
+        if (eqNumMatch) {
+          eqText = eqTrimmed.slice(0, eqNumMatch.index).trim();
+          eqNum = eqNumMatch[1];
+        }
+        let eqHtml = `<p class="eq" style="margin:4px 0;line-height:2.2;text-align:${eqBlockAlign};">`;
+        eqHtml += renderEquationText(eqText);
+        if (eqNum) eqHtml += `<span style="float:right;font-style:normal;margin-left:24px">(${eqNum})</span>`;
+        eqHtml += "</p>";
+        html.push(eqHtml);
+        break;
+      }
       case "error":
         html.push(`<div class="out-error">${escHtml(r.error!)}</div>`);
         break;
       case "draw": {
+        _figCount++;
+        const figNum = _figCount;
         const uid = `cad-output-${r.lineIndex}`;
         const w = r.drawWidth || 500;
         const h = r.drawHeight || 400;
-        html.push(`<div class="draw-container" style="margin:0.5em 0;max-width:100%;overflow:hidden;">
-          <canvas id="${uid}" width="${w}" height="${h}" style="border:1px solid #ccc;display:block;max-width:100%;height:auto;"></canvas>
+        const figLabel = r.drawName ? `Fig ${figNum} — ${escHtml(r.drawName)}` : `Fig ${figNum}`;
+        // Store data for zoom re-render
+        if (r.drawCommands) _figData.set(figNum, { w, h, commands: [...r.drawCommands], name: r.drawName });
+        html.push(`<div class="draw-container" id="fig-${figNum}" data-fig="${figNum}" style="margin:0.5em 0;max-width:100%;overflow:hidden;">
+          <div class="draw-toolbar">
+            <span class="draw-fig-label">${figLabel}</span>
+            <button class="draw-zoom-btn" title="Ampliar figura (zoom)" onclick="window._hkFigZoom(${figNum})">&#x1F50D; Zoom</button>
+          </div>
+          <canvas id="${uid}" width="${w}" height="${h}" style="border:1px solid #ccc;display:block;max-width:100%;height:auto;cursor:pointer;" onclick="window._hkFigZoom(${figNum})"></canvas>
         </div>`);
         break;
       }
@@ -2791,17 +3528,18 @@ function renderResults(results: LineResult[], sourceCode: string): string {
         if (/^@\{pagebreak/i.test(srcLine)) {
           html.push(`<!--PAGEBREAK-->`);
         }
-        // Apply/reset config delimiters for rendering
-        const disp = r.display || "";
-        if (disp === "config:end") {
-          evaluator.eqDelimiter = "";
-          evaluator.textDelimiter = "";
-        } else if (disp.startsWith("config:")) {
-          const cfgBody = disp.slice(7); // after "config:"
-          const eqM = cfgBody.match(/eq=(.)/);
-          if (eqM) evaluator.eqDelimiter = eqM[1];
-          const txM = cfgBody.match(/text=(.)/);
-          if (txM) evaluator.textDelimiter = txM[1];
+        // Detect eq block open: display = "eq:center", "eq:left", "eq:right"
+        const eqDirDisplay = r.display || "";
+        if (/^eq:(left|center|right)$/i.test(eqDirDisplay)) {
+          const align = eqDirDisplay.split(":")[1].toLowerCase();
+          inEqBlock = true;
+          eqBlockAlign = align;
+          html.push(`<div class="eq-block" style="text-align:${align};margin:8px 0;">`);
+        }
+        // Detect eq block close: display = "eq:end"
+        if (eqDirDisplay === "eq:end" && inEqBlock) {
+          inEqBlock = false;
+          html.push(`</div>`);
         }
         break;
       }
@@ -3080,66 +3818,6 @@ function renderColumnsGrid(items: string[], cols: number): string {
 // ═══════════════════════════════════════════════════════════
 
 /** Renderiza una linea de asignacion: var = expr = valor */
-// Source lines stored during renderResults for integral notation lookup
-let _renderSourceLines: string[] = [];
-
-/** Build ∫ HTML for integral/integral2/integral3 calls */
-function buildIntegralHTML(intName: string, fnName: string, exprText: string): string | null {
-  // Find function definition in source: f(x) = expr or f(x,y) = expr
-  const fnDefRe = new RegExp(`^${fnName}\\(([^)]+)\\)\\s*=\\s*(.+)$`);
-  let params: string[] = [];
-  let bodyText = "";
-  for (const line of _renderSourceLines) {
-    const stripped = line.trim().replace(/\/\/.*$/, "").trim();
-    const m = stripped.match(fnDefRe);
-    if (m) {
-      params = m[1].split(",").map(s => s.trim());
-      bodyText = m[2].trim();
-      break;
-    }
-  }
-  if (!bodyText) return null;
-
-  // Parse bounds from exprText: integral(f, a, b) or integral2(f, xa, xb, ya, yb) etc.
-  // Remove "integralN(fnName," prefix and trailing ")"
-  const argsStr = exprText.replace(/^integral[23]?\s*\(\s*\w+\s*,\s*/, "").replace(/\)\s*$/, "");
-  const bounds = splitArgs(argsStr);
-
-  const bodyHtml = renderMathExpr(bodyText);
-
-  // Helper: build one ∫ symbol with limits
-  const intSym = (lo: string, hi: string) =>
-    `<span class="dvr"><small>${renderMathExpr(hi)}</small><span class="nary"><em>∫</em></span><small>${renderMathExpr(lo)}</small></span>`;
-
-  if (intName === "integral" && bounds.length >= 2) {
-    const dv = params[0] || "x";
-    return `${intSym(bounds[0], bounds[1])} (${bodyHtml}) <i>d${dv}</i>`;
-  }
-  if (intName === "integral2" && bounds.length >= 4) {
-    const dx = params[0] || "x", dy = params[1] || "y";
-    return `${intSym(bounds[0], bounds[1])} ${intSym(bounds[2], bounds[3])} (${bodyHtml}) <i>d${dy}</i> <i>d${dx}</i>`;
-  }
-  if (intName === "integral3" && bounds.length >= 6) {
-    const dx = params[0] || "x", dy = params[1] || "y", dz = params[2] || "z";
-    return `${intSym(bounds[0], bounds[1])} ${intSym(bounds[2], bounds[3])} ${intSym(bounds[4], bounds[5])} (${bodyHtml}) <i>d${dz}</i> <i>d${dy}</i> <i>d${dx}</i>`;
-  }
-  return null;
-}
-
-/** Split function arguments respecting parentheses */
-function splitArgs(s: string): string[] {
-  const args: string[] = [];
-  let depth = 0, start = 0;
-  for (let i = 0; i <= s.length; i++) {
-    if (i === s.length || (s[i] === "," && depth === 0)) {
-      args.push(s.slice(start, i).trim());
-      start = i + 1;
-    } else if (s[i] === "(") depth++;
-    else if (s[i] === ")") depth--;
-  }
-  return args;
-}
-
 function renderLineEq(r: LineResult, srcLine: string): string {
   const varName = r.varName ?? "";
   const value = r.value;
@@ -3150,34 +3828,6 @@ function renderLineEq(r: LineResult, srcLine: string): string {
 
   // Nombre de variable con <var> y subindices
   const nameHTML = renderVarName(varName);
-
-  // ─── hideExpr: ocultar expresion/funcion, mostrar solo var = resultado ───
-  if (r.hideExpr && value !== undefined && typeof value !== "function") {
-    if (evaluator.isMatrix(value)) {
-      return `${nameHTML} = ${renderMatrixHTML(value)}`;
-    }
-    if (evaluator.isCellArray(value)) {
-      return `${nameHTML} = ${renderCellArrayHTML(value, varName)}`;
-    }
-    return `${nameHTML} = ${renderValueSpan(value)}`;
-  }
-
-  // ─── Render lusolve equation: {F} = [K]{u} ───
-  if (r.lsolveData) {
-    return renderLsolveEquation(r.lsolveData, varName);
-  }
-
-  // ─── Render integral() calls with ∫ notation ───
-  if (typeof value === "number" && exprText) {
-    const intMatch = exprText.match(/^(integral[23]?)\s*\(\s*(\w+)\s*,/);
-    if (intMatch) {
-      const intHtml = buildIntegralHTML(intMatch[1], intMatch[2], exprText);
-      if (intHtml) {
-        const valueHTML = renderValueSpan(value);
-        return `${nameHTML} = ${intHtml} = ${valueHTML}`;
-      }
-    }
-  }
 
   // Si es una funcion definida, solo mostrar la definicion
   if (typeof value === "function" || value === undefined) {
@@ -3220,11 +3870,9 @@ function renderLineEq(r: LineResult, srcLine: string): string {
   }
 
   // Procedimiento: nombre = expr simbolica = expr con valores = resultado
-  if (chkSubstitute?.checked !== false) {
-    const substituted = substituteValues(exprText, scope);
-    if (substituted && substituted !== fmtNum(value)) {
-      return `${nameHTML} = ${renderMathExpr(exprText)} = ${renderMathExpr(substituted)} = ${valueHTML}`;
-    }
+  const substituted = substituteValues(exprText, scope);
+  if (substituted && substituted !== fmtNum(value)) {
+    return `${nameHTML} = ${renderMathExpr(exprText)} = ${renderMathExpr(substituted)} = ${valueHTML}`;
   }
   return `${nameHTML} = ${renderMathExpr(exprText)} = ${valueHTML}`;
 }
@@ -3232,213 +3880,6 @@ function renderLineEq(r: LineResult, srcLine: string): string {
 /** Renderiza una expresion pura (sin asignacion) */
 function renderExprResult(r: LineResult): string {
   return renderValueSpan(r.value);
-}
-
-/** Renderiza con display hint row/col */
-function renderDisplayHint(r: LineResult): string {
-  const val = r.value;
-  const nameHTML = r.varName ? renderVarName(r.varName) + " = " : "";
-  if (r.displayHint === "row") {
-    return nameHTML + renderRowValue(val);
-  }
-  if (r.displayHint === "col") {
-    return nameHTML + renderColumnVector(val);
-  }
-  return nameHTML + renderValueSpan(val);
-}
-
-/** Renderiza valor en una sola linea horizontal [a b c ...] */
-function renderRowValue(val: any): string {
-  if (val === undefined || val === null) return "";
-  let arr: any[] | null = null;
-  if (evaluator.isMatrix(val)) arr = val.toArray();
-  else if (Array.isArray(val)) arr = val;
-  if (!arr) return fmtNum(val);
-  // Flatten: [[1],[2],[3]] → [1,2,3] or [[1,2],[3,4]] → "1 2 ; 3 4"
-  if (Array.isArray(arr[0])) {
-    const rows = arr as any[][];
-    if (rows[0].length === 1) {
-      // Column vector Nx1 → flat horizontal
-      return `[${rows.map(r => fmtNum(r[0])).join("&ensp;")}]`;
-    }
-    // Matrix: rows separated by ;
-    return `[${rows.map(row => row.map(fmtNum).join("&ensp;")).join(";&ensp;")}]`;
-  }
-  return `[${arr.map(fmtNum).join("&ensp;")}]`;
-}
-
-/** Renderiza @{plot} block como SVG con heatmap/mesh/colorbar */
-function renderPlotBlock(r: LineResult): string {
-  if (!r.plotCommands || r.plotCommands.length === 0) return "";
-  const scope = evaluator.getScope();
-
-  let xRange: number[] | null = null;
-  let yRange: number[] | null = null;
-  let heatmapVar: string | null = null;
-  let showMesh = false;
-  let colorbarLabel = "";
-  let titleText = "";
-  let titleX = 0;
-  let titleY = 0;
-
-  for (const line of r.plotCommands) {
-    const t = line.trim();
-    if (!t || t.startsWith("//")) continue;
-
-    // x = 0 : 6
-    const xMatch = t.match(/^x\s*=\s*(.+?)\s*:\s*(.+)$/);
-    if (xMatch) {
-      const a = Number(math.evaluate(xMatch[1], scope));
-      const b = Number(math.evaluate(xMatch[2], scope));
-      const n = Math.round(b - a);
-      xRange = [];
-      for (let i = 0; i <= n; i++) xRange.push(a + i);
-      continue;
-    }
-    // y = 0 : 4
-    const yMatch = t.match(/^y\s*=\s*(.+?)\s*:\s*(.+)$/);
-    if (yMatch) {
-      const a = Number(math.evaluate(yMatch[1], scope));
-      const b = Number(math.evaluate(yMatch[2], scope));
-      const n = Math.round(b - a);
-      yRange = [];
-      for (let i = 0; i <= n; i++) yRange.push(a + i);
-      continue;
-    }
-    // heatmap VARNAME
-    const heatMatch = t.match(/^heatmap\s+(\w+)/i);
-    if (heatMatch) { heatmapVar = heatMatch[1]; continue; }
-    // mesh
-    if (/^mesh\s*$/i.test(t)) { showMesh = true; continue; }
-    // colorbar "label"
-    const cbMatch = t.match(/^colorbar\s+"([^"]+)"/i);
-    if (cbMatch) { colorbarLabel = cbMatch[1]; continue; }
-    // text X Y "label"
-    const txtMatch = t.match(/^text\s+([\d.]+)\s+([\d.-]+)\s+"([^"]+)"/i);
-    if (txtMatch) { titleX = parseFloat(txtMatch[1]); titleY = parseFloat(txtMatch[2]); titleText = txtMatch[3]; continue; }
-  }
-
-  if (!heatmapVar || !xRange || !yRange) return `<div class="out-error">Plot: missing heatmap variable or x/y range</div>`;
-
-  // Get matrix from scope
-  const matVal = scope[heatmapVar];
-  if (!matVal) return `<div class="out-error">Plot: variable '${heatmapVar}' not found</div>`;
-  let data: number[][];
-  if (matVal.toArray) data = matVal.toArray();
-  else if (Array.isArray(matVal)) data = matVal;
-  else return `<div class="out-error">Plot: '${heatmapVar}' is not a matrix</div>`;
-
-  const nRows = data.length;
-  const nCols = Array.isArray(data[0]) ? data[0].length : 1;
-
-  // Find min/max
-  let vmin = Infinity, vmax = -Infinity;
-  for (const row of data) {
-    if (Array.isArray(row)) {
-      for (const v of row) { if (v < vmin) vmin = v; if (v > vmax) vmax = v; }
-    } else {
-      if ((row as any) < vmin) vmin = row as any; if ((row as any) > vmax) vmax = row as any;
-    }
-  }
-
-  // SVG dimensions
-  const margin = { top: 30, right: 80, bottom: 50, left: 50 };
-  const plotW = 420, plotH = 280;
-  const svgW = plotW + margin.left + margin.right;
-  const svgH = plotH + margin.top + margin.bottom;
-
-  const xMin = xRange[0], xMax = xRange[xRange.length - 1];
-  const yMin = yRange[0], yMax = yRange[yRange.length - 1];
-  const cellW = plotW / nCols;
-  const cellH = plotH / nRows;
-
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" style="font-family:sans-serif;font-size:11px;display:block;margin:8px 0;">`;
-  svg += `<rect width="${svgW}" height="${svgH}" fill="#fff"/>`;
-
-  // Heatmap cells
-  for (let ri = 0; ri < nRows; ri++) {
-    for (let ci = 0; ci < nCols; ci++) {
-      const v = Array.isArray(data[ri]) ? data[ri][ci] : data[ri];
-      const t = vmax > vmin ? (v - vmin) / (vmax - vmin) : 0.5;
-      const color = heatColor(t);
-      const x = margin.left + ci * cellW;
-      const y = margin.top + ri * cellH;
-      svg += `<rect x="${x}" y="${y}" width="${cellW}" height="${cellH}" fill="${color}" stroke="${showMesh ? '#666' : 'none'}" stroke-width="${showMesh ? 0.5 : 0}"/>`;
-    }
-  }
-
-  // Mesh overlay: node grid
-  if (showMesh) {
-    // Vertical lines
-    for (let ci = 0; ci <= nCols; ci++) {
-      const x = margin.left + ci * cellW;
-      svg += `<line x1="${x}" y1="${margin.top}" x2="${x}" y2="${margin.top + plotH}" stroke="#999" stroke-width="0.3"/>`;
-    }
-    // Horizontal lines
-    for (let ri = 0; ri <= nRows; ri++) {
-      const y = margin.top + ri * cellH;
-      svg += `<line x1="${margin.left}" y1="${y}" x2="${margin.left + plotW}" y2="${y}" stroke="#999" stroke-width="0.3"/>`;
-    }
-  }
-
-  // X axis labels
-  for (let ci = 0; ci <= nCols; ci++) {
-    const x = margin.left + ci * cellW;
-    const val = xMin + (xMax - xMin) * ci / nCols;
-    svg += `<text x="${x}" y="${margin.top + plotH + 16}" text-anchor="middle" fill="#333">${val.toFixed(1)}</text>`;
-  }
-  // Y axis labels
-  for (let ri = 0; ri <= nRows; ri++) {
-    const y = margin.top + ri * cellH;
-    const val = yMin + (yMax - yMin) * ri / nRows;
-    svg += `<text x="${margin.left - 8}" y="${y + 4}" text-anchor="end" fill="#333">${val.toFixed(1)}</text>`;
-  }
-
-  // Colorbar
-  if (colorbarLabel) {
-    const cbX = margin.left + plotW + 12;
-    const cbW = 14, cbH = plotH;
-    const nSteps = 50;
-    for (let s = 0; s < nSteps; s++) {
-      const t = 1 - s / nSteps;
-      const cy = margin.top + s * (cbH / nSteps);
-      svg += `<rect x="${cbX}" y="${cy}" width="${cbW}" height="${cbH / nSteps + 0.5}" fill="${heatColor(t)}"/>`;
-    }
-    svg += `<rect x="${cbX}" y="${margin.top}" width="${cbW}" height="${cbH}" fill="none" stroke="#666" stroke-width="0.5"/>`;
-    svg += `<text x="${cbX + cbW + 4}" y="${margin.top + 4}" fill="#333" font-size="10">${fmtNum(vmax)}</text>`;
-    svg += `<text x="${cbX + cbW + 4}" y="${margin.top + cbH}" fill="#333" font-size="10">${fmtNum(vmin)}</text>`;
-    svg += `<text x="${cbX + cbW / 2}" y="${margin.top - 8}" text-anchor="middle" fill="#333" font-size="10">${escHtml(colorbarLabel)}</text>`;
-  }
-
-  // Title
-  if (titleText) {
-    const tx = margin.left + plotW / 2;
-    const ty = margin.top + plotH + 38;
-    svg += `<text x="${tx}" y="${ty}" text-anchor="middle" fill="#333" font-size="12" font-weight="bold">${escHtml(titleText)}</text>`;
-  }
-
-  svg += `</svg>`;
-  return svg;
-}
-
-/** Heatmap color scale: blue → cyan → green → yellow → red */
-function heatColor(t: number): string {
-  t = Math.max(0, Math.min(1, t));
-  let r: number, g: number, b: number;
-  if (t < 0.25) {
-    const s = t / 0.25;
-    r = 0; g = Math.round(255 * s); b = 255;
-  } else if (t < 0.5) {
-    const s = (t - 0.25) / 0.25;
-    r = 0; g = 255; b = Math.round(255 * (1 - s));
-  } else if (t < 0.75) {
-    const s = (t - 0.5) / 0.25;
-    r = Math.round(255 * s); g = 255; b = 0;
-  } else {
-    const s = (t - 0.75) / 0.25;
-    r = 255; g = Math.round(255 * (1 - s)); b = 0;
-  }
-  return `rgb(${r},${g},${b})`;
 }
 
 /** Renderiza celdas @{cells} */
@@ -3455,11 +3896,9 @@ function renderCells(r: LineResult): string {
         return `<span class="eq">${nameHTML} = ${valueHTML}</span>`;
       }
       // Procedimiento: nombre = simbolico = con valores = resultado
-      if (chkSubstitute?.checked !== false) {
-        const substituted = substituteValues(c.expr, scope);
-        if (substituted && substituted !== fmtNum(c.value)) {
-          return `<span class="eq">${nameHTML} = ${exprHTML} = ${renderMathExpr(substituted)} = ${valueHTML}</span>`;
-        }
+      const substituted = substituteValues(c.expr, scope);
+      if (substituted && substituted !== fmtNum(c.value)) {
+        return `<span class="eq">${nameHTML} = ${exprHTML} = ${renderMathExpr(substituted)} = ${valueHTML}</span>`;
       }
       return `<span class="eq">${nameHTML} = ${exprHTML} = ${valueHTML}</span>`;
     }
@@ -3622,33 +4061,13 @@ function renderMathExpr(expr: string): string {
     return `[<var>${greekify(name)}</var>]<sub>${greekify(idx)}</sub>`;
   });
 
-  // 0b. Array indexing: v[n] → v_[n] with faded brackets (distinct from v_n plain subscript)
-  //     K[i,j] → K_[i,j]   Ke[1,1] → Ke_[1,1]
-  result = result.replace(/\b([a-zA-Z_]\w*)\[([^\]]+)\]/g, (_, name: string, idx: string) => {
-    const idxParts = idx.split(',').map((p: string) => `<i>${greekify(p.trim())}</i>`).join(',');
-    return `<var>${greekify(name)}</var><sub><span class="idx-br">[</span>${idxParts}<span class="idx-br">]</span></sub>`;
-  });
-
   // 1. sqrt(expr) -> radical con clase .r0 + .o0 (SVG)
   result = result.replace(/sqrt\(([^)]+)\)/g, (_, inner) => {
     return `<span class="radical-wrap"><span class="r0"></span><span class="o0">${renderMathExpr(inner)}</span></span>`;
   });
 
-  // 2. Fracciones -> .dvc / .dvl
-  // 2a. (expr)/(expr) -> fraccion con ambos en parentesis
+  // 2. (a+b)/(c-d) -> fraccion con .dvc / .dvl
   result = result.replace(/\(([^)]+)\)\s*\/\s*\(([^)]+)\)/g, (_, num, den) => {
-    return `<span class="dvc"><span class="dvl">${renderMathExpr(num)}</span><span>${renderMathExpr(den)}</span></span>`;
-  });
-  // 2b. expr/(expr) -> fraccion cuando solo denominador en parentesis (e.g. P*L^3/(48*E*I))
-  result = result.replace(/^(.+)\/\(([^)]+)\)$/, (_, num, den) => {
-    return `<span class="dvc"><span class="dvl">${renderMathExpr(num)}</span><span>${renderMathExpr(den)}</span></span>`;
-  });
-  // 2c. (expr)/token -> fraccion con numerador en parentesis, denominador simple (e.g. (11600*5.08)/100)
-  result = result.replace(/\(([^)]+)\)\s*\/\s*([a-zA-Z_]\w*|\d+(?:\.\d+)?)/g, (_, num, den) => {
-    return `<span class="dvc"><span class="dvl">${renderMathExpr(num)}</span><span>${renderMathExpr(den)}</span></span>`;
-  });
-  // 2d. expr/token -> fraccion general (e.g. G_s*J_t/L, 4*E*I/L)
-  result = result.replace(/^(.+)\/([a-zA-Z_]\w*|\d+(?:\.\d+)?)$/, (_, num, den) => {
     return `<span class="dvc"><span class="dvl">${renderMathExpr(num)}</span><span>${renderMathExpr(den)}</span></span>`;
   });
 
@@ -3691,56 +4110,6 @@ function renderMathExpr(expr: string): string {
 
 /** Renderiza texto de comentario con formato math (subscripts, superscripts, griego) */
 function renderCommentMath(text: string): string {
-  // --- Text delimiter: "..." becomes literal (no Greek, no subscripts, etc.) ---
-  const tDelim = evaluator.textDelimiter;
-  if (tDelim && text.includes(tDelim)) {
-    const tEsc = tDelim.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const tRe = new RegExp(`(${tEsc}[^${tEsc}]*${tEsc})`, "g");
-    const tParts = text.split(tRe);
-    return tParts.map(part => {
-      if (part.startsWith(tDelim) && part.endsWith(tDelim) && part.length >= 2) {
-        // Literal text — just escape HTML, no processing
-        const inner = part.slice(tDelim.length, -tDelim.length);
-        return escHtml(inner);
-      }
-      return renderCommentMathInner(part);
-    }).join("");
-  }
-  return renderCommentMathInner(text);
-}
-
-/** Procesa inline @{eq} y $...$ despues de extraer texto literal */
-function renderCommentMathInner(text: string): string {
-  // Inline @{eq}...@{end eq} mixed with text on the same line
-  if (text.includes("@{eq}") && text.includes("@{end")) {
-    const parts = text.split(/(@\{eq\}.*?@\{end\s+eq\})/gi);
-    return parts.map(part => {
-      const m = part.match(/^@\{eq\}(.*?)@\{end\s+eq\}$/i);
-      if (m) {
-        return `<span class="inline-eq">${renderEquationText(m[1].trim())}</span>`;
-      }
-      return renderCommentMathPlain(part);
-    }).join("");
-  }
-  // $...$ inline equations (when eq delimiter is configured)
-  const delim = evaluator.eqDelimiter;
-  if (delim && text.includes(delim)) {
-    const escaped = delim.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(`(${escaped}[^${escaped}]+${escaped})`, "g");
-    const parts = text.split(re);
-    return parts.map(part => {
-      if (part.startsWith(delim) && part.endsWith(delim) && part.length > 2) {
-        const eq = part.slice(delim.length, -delim.length).trim();
-        return `<span class="inline-eq">${renderEquationText(eq)}</span>`;
-      }
-      return renderCommentMathPlain(part);
-    }).join("");
-  }
-  return renderCommentMathPlain(text);
-}
-
-/** Procesamiento basico de texto comentario (sin inline @{eq}) */
-function renderCommentMathPlain(text: string): string {
   let result = escHtml(text);
 
   // Cell/matrix bracket notation in comments:
@@ -3835,53 +4204,12 @@ function renderMatrixHTML(m: any): string {
   return html;
 }
 
-/** Renderiza un vector como columna (siempre vertical) */
-function renderColumnVector(v: any): string {
-  if (!v || !v.toArray) return renderValueSpan(v);
-  const arr = v.toArray() as any[];
-  // Si es 2D (Nx1 o NxM), usar renderMatrixHTML directamente
-  if (Array.isArray(arr[0])) return renderMatrixHTML(v);
-  // 1D: forzar columna vertical
-  const n = arr.length;
-  let html = `<span class="matrix" style="--mat-cols:1">`;
-  for (const val of arr) {
-    html += `<span class="tr"><span class="td"></span><span class="td">${fmtNum(val)}</span><span class="td"></span></span>`;
-  }
-  html += `</span>`;
-  return html;
-}
-
-/** Renderiza ecuacion matricial {F} = [K]{u} para lusolve */
-function renderLsolveEquation(data: { K: any; F: any; Z: any }, varName: string): string {
-  const kArr = data.K.toArray ? data.K.toArray() : data.K;
-  const n = Array.isArray(kArr) ? kArr.length : 0;
-  const nameHTML = renderVarName(varName);
-  // Limite de tamano: solo mostrar ecuacion completa para sistemas pequenos
-  if (n > 12 || n === 0) {
-    return `${nameHTML} = ${renderColumnVector(data.Z)}`;
-  }
-  // Vector simbolico de incognitas: {u₁, u₂, u₃, ...}
-  let symHTML = `<span class="lsolve-sym-vec">`;
-  for (let i = 0; i < n; i++) {
-    symHTML += `<span class="tr"><span class="td"></span><span class="td">${renderVarName(varName)}<sub>${i + 1}</sub></span><span class="td"></span></span>`;
-  }
-  symHTML += `</span>`;
-  const fHTML = renderColumnVector(data.F);
-  const kHTML = renderMatrixHTML(data.K);
-  const zHTML = renderColumnVector(data.Z);
-  // Ecuacion: {F} = [K] · {var} → var = [Z]
-  return `<span class="lsolve-eq-wrap">${fHTML}<span class="lsolve-sign">=</span>${kHTML}<span class="lsolve-sign">&middot;</span>${symHTML}</span><br>${nameHTML} = ${zHTML}`;
-}
-
 /** Formatea un numero */
 function fmtNum(v: any): string {
   if (typeof v === "number") {
-    const dec = parseInt(decimalsInput?.value ?? "2", 10);
-    const zeroSmall = chkZeroSmall?.checked ?? true;
-    if (zeroSmall && Math.abs(v) < 1e-12) return "0";
     if (Number.isInteger(v)) return String(v);
-    if (Math.abs(v) < 0.001 || Math.abs(v) > 1e6) return v.toPrecision(Math.max(dec, 2));
-    return v.toFixed(dec);
+    if (Math.abs(v) < 0.001 || Math.abs(v) > 1e6) return v.toPrecision(6);
+    return (Math.round(v * 10000) / 10000).toString();
   }
   return escHtml(String(v));
 }
@@ -4511,7 +4839,7 @@ splitter.addEventListener("mousedown", (e) => {
         case "new":
         case "blank": {
           editor.loadFromText("");
-          setCodeContent("");
+          codeInput.value = "";
           exampleSelect.value = "";
           if (currentMode === "canvas") {
             mathCanvasEl.focus();
@@ -4544,7 +4872,7 @@ splitter.addEventListener("mousedown", (e) => {
             if (match) {
               const mex = EXAMPLES[match];
               exampleSelect.value = match;
-              setCodeContent(mex.code);
+              codeInput.value = mex.code;
               editor.loadFromText(mex.code);
               runCode();
               if (currentMode === "canvas") mathCanvasEl.focus();
@@ -4555,7 +4883,7 @@ splitter.addEventListener("mousedown", (e) => {
             break;
           }
           exampleSelect.value = name;
-          setCodeContent(ex.code);
+          codeInput.value = ex.code;
           editor.loadFromText(ex.code);
           runCode();
           if (currentMode === "canvas") mathCanvasEl.focus();
@@ -4613,7 +4941,7 @@ splitter.addEventListener("mousedown", (e) => {
 
         case "run": {
           if (currentMode === "canvas") {
-            setCodeContent(editor.toHekatan());
+            codeInput.value = editor.toHekatan();
           }
           runCode();
           dbgPrint("ok", "Codigo ejecutado");
@@ -4662,117 +4990,110 @@ splitter.addEventListener("mousedown", (e) => {
   (window as any).__editor = editor;
 }
 
-// ═══════════════════════════════════════════════════════════
-// KEYPAD BAR — Greek, Operators, Functions, Blocks
-// ═══════════════════════════════════════════════════════════
-const keypadContent = document.getElementById("keypadContent") as HTMLDivElement;
-
-const KEYPAD_DATA: Record<string, { label: string; insert: string }[]> = {
-  greek: [
-    { label: "\u03B1", insert: "alpha" }, { label: "\u03B2", insert: "beta" },
-    { label: "\u03B3", insert: "gamma" }, { label: "\u03B4", insert: "delta" },
-    { label: "\u03B5", insert: "epsilon" }, { label: "\u03B6", insert: "zeta" },
-    { label: "\u03B7", insert: "eta" }, { label: "\u03B8", insert: "theta" },
-    { label: "\u03BB", insert: "lambda" }, { label: "\u03BC", insert: "mu" },
-    { label: "\u03BD", insert: "nu" }, { label: "\u03BE", insert: "xi" },
-    { label: "\u03C0", insert: "pi" }, { label: "\u03C1", insert: "rho" },
-    { label: "\u03C3", insert: "sigma" }, { label: "\u03C4", insert: "tau" },
-    { label: "\u03C6", insert: "phi" }, { label: "\u03C8", insert: "psi" },
-    { label: "\u03C9", insert: "omega" },
-    { label: "\u0393", insert: "Gamma" }, { label: "\u0394", insert: "Delta" },
-    { label: "\u0398", insert: "Theta" }, { label: "\u039B", insert: "Lambda" },
-    { label: "\u03A3", insert: "Sigma" }, { label: "\u03A6", insert: "Phi" },
-    { label: "\u03A8", insert: "Psi" }, { label: "\u03A9", insert: "Omega" },
-  ],
-  operators: [
-    { label: "+", insert: " + " }, { label: "\u2212", insert: " - " },
-    { label: "\u00D7", insert: "*" }, { label: "\u00F7", insert: "/" },
-    { label: "^", insert: "^" }, { label: "!", insert: "!" },
-    { label: "\u221A", insert: "sqrt(" }, { label: "\u221B", insert: "cbrt(" },
-    { label: "\u2261", insert: " == " }, { label: "\u2260", insert: " != " },
-    { label: "<", insert: " < " }, { label: ">", insert: " > " },
-    { label: "\u2264", insert: " <= " }, { label: "\u2265", insert: " >= " },
-    { label: "\u2227", insert: " && " }, { label: "\u2228", insert: " || " },
-    { label: "\u2211", insert: "sum(" }, { label: "\u220F", insert: "product(" },
-    { label: "\u222B", insert: "integral(" },
-  ],
-  functions: [
-    { label: "sin", insert: "sin(" }, { label: "cos", insert: "cos(" },
-    { label: "tan", insert: "tan(" }, { label: "asin", insert: "asin(" },
-    { label: "acos", insert: "acos(" }, { label: "atan", insert: "atan(" },
-    { label: "ln", insert: "ln(" }, { label: "log", insert: "log(" },
-    { label: "exp", insert: "exp(" }, { label: "abs", insert: "abs(" },
-    { label: "sqrt", insert: "sqrt(" }, { label: "cbrt", insert: "cbrt(" },
-    { label: "round", insert: "round(" }, { label: "floor", insert: "floor(" },
-    { label: "ceil", insert: "ceiling(" }, { label: "min", insert: "min(" },
-    { label: "max", insert: "max(" }, { label: "mod", insert: "mod(" },
-    { label: "det", insert: "det(" }, { label: "inv", insert: "inv(" },
-    { label: "transp", insert: "transpose(" }, { label: "lsolve", insert: "lsolve(" },
-  ],
-  blocks: [
-    { label: "@{eq}", insert: "@{eq}\\n\\n@{end eq}" },
-    { label: "@{text}", insert: "@{text}\\n\\n@{end text}" },
-    { label: "@{draw}", insert: "@{draw 500 400}\\n\\n@{end draw}" },
-    { label: "@{three}", insert: "@{three 600 400}\\n\\n@{end three}" },
-    { label: "@{config}", insert: "@{config eq:$, text:\"}\\n\\n@{end config}" },
-    { label: "@{columns}", insert: "@{columns 2}\\n\\n@{end columns}" },
-    { label: "for", insert: "for i = 1 to 10\\n\\nnext" },
-    { label: "if", insert: "if x > 0\\n\\nelse\\n\\nend if" },
-    { label: "@{pagebreak}", insert: "@{pagebreak}" },
-    { label: "---", insert: "\\n---\\n" },
-  ],
-};
-
-function renderKeypad(tabName: string) {
-  keypadContent.innerHTML = "";
-  const items = KEYPAD_DATA[tabName] || [];
-  for (const item of items) {
-    const btn = document.createElement("button");
-    btn.className = item.label.length > 3 ? "key-btn wide" : "key-btn";
-    btn.textContent = item.label;
-    btn.dataset.insert = item.insert;
-    btn.title = item.insert.replace(/\\n/g, "\u21B5");
-    btn.addEventListener("click", () => insertAtCursor(item.insert));
-    keypadContent.appendChild(btn);
+// ─── Menu Bar Actions ─────────────────────────────────────
+document.querySelectorAll<HTMLButtonElement>(".menu-dropdown button[data-action]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const action = btn.dataset.action;
+    switch (action) {
+      case "new":
+        codeInput.value = "";
+        editor.loadFromText("");
+        updateSyntax();
+        runCode();
+        break;
+      case "open": {
+        const inp = document.createElement("input");
+        inp.type = "file";
+        inp.accept = ".hcalc,.txt";
+        inp.onchange = () => {
+          const f = inp.files?.[0];
+          if (!f) return;
+          f.text().then(t => {
+            codeInput.value = t;
+            editor.loadFromText(t);
+            updateSyntax();
+            runCode();
+          });
+        };
+        inp.click();
+        break;
+      }
+      case "save":
+      case "saveas": {
+        const blob = new Blob([codeInput.value], { type: "text/plain" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "documento.hcalc";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        break;
+      }
+      case "export-html": {
+        const outputEl = document.getElementById("output")!;
+        const html = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><title>Hekatan Output</title>
+<style>body{font-family:'Segoe UI',sans-serif;margin:20px;}</style>
+</head><body>${outputEl.innerHTML}</body></html>`;
+        const blob = new Blob([html], { type: "text/html" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "output.html";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        break;
+      }
+      case "export-pdf":
+      case "print": {
+        // Export PDF: print ONLY the output panel content
+        const outputEl = document.getElementById("output")!;
+        const printWin = window.open("", "_blank")!;
+        // Collect all stylesheets from current page
+        const styles = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"))
+          .map(el => el.outerHTML).join("\n");
+        printWin.document.write(`<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><title>Hekatan - Export PDF</title>
+${styles}
+<style>
+  @media print {
+    @page { size: A4; margin: 10mm; }
+    body { margin: 0; padding: 0; background: white; }
+    .page { margin: 0 auto; box-shadow: none; }
   }
-}
-
-// Tab switching
-document.querySelectorAll<HTMLButtonElement>(".keypad-tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".keypad-tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    renderKeypad(tab.dataset.tab!);
+  body { background: white; margin: 0; padding: 0; }
+  .output-content { all: unset; }
+</style>
+</head><body>${outputEl.innerHTML}</body></html>`);
+        printWin.document.close();
+        // Give images/canvases time to load before printing
+        setTimeout(() => {
+          printWin.focus();
+          printWin.print();
+        }, 800);
+        break;
+      }
+      case "undo":
+        document.execCommand("undo");
+        break;
+      case "redo":
+        document.execCommand("redo");
+        break;
+      case "selectall":
+        codeInput.select();
+        break;
+    }
   });
 });
 
-// Initial keypad
-renderKeypad("greek");
-
-// ═══════════════════════════════════════════════════════════
-// STATUS BAR — Decimals, Substitute, Zero small, Plot options
-// ═══════════════════════════════════════════════════════════
-const decimalsInput = document.getElementById("decimalsInput") as HTMLInputElement;
-const chkSubstitute = document.getElementById("chkSubstitute") as HTMLInputElement;
-const chkZeroSmall = document.getElementById("chkZeroSmall") as HTMLInputElement;
-const chkAdaptive = document.getElementById("chkAdaptive") as HTMLInputElement;
-const chkShadows = document.getElementById("chkShadows") as HTMLInputElement;
-
-// Re-run on status bar changes
-decimalsInput.addEventListener("change", () => { if (chkAutoRun.checked) runCode(); });
-chkSubstitute.addEventListener("change", () => { if (chkAutoRun.checked) runCode(); });
-chkZeroSmall.addEventListener("change", () => { if (chkAutoRun.checked) runCode(); });
-
 // ─── Init ───────────────────────────────────────────────
-// Load default example: Texto y Ecuaciones
-const defaultEx = EXAMPLES["texto"];
+// Load default example: CAD Draw - Pruebas
+const defaultEx = EXAMPLES["cadTest"];
 if (defaultEx) {
-  exampleSelect.value = "texto";
-  setCodeContent(defaultEx.code);
+  exampleSelect.value = "cadTest";
+  codeInput.value = defaultEx.code;
   editor.loadFromText(defaultEx.code);
 } else {
   exampleSelect.value = "";
-  setCodeContent("");
+  codeInput.value = "";
   editor.loadFromText("");
 }
 updateSyntax();

@@ -101,7 +101,9 @@ namespace Hekatan.Core
                 (in ComplexValue a) => -a,   //43
                 Not,      //44
                 Timer,    //45
-                Suma      //46 TEST: suma(x) = x + 1
+                Suma,     //46 TEST: suma(x) = x + 1
+                Fibonacci,//47
+                IsPrime,  //48
             ];
 
             Functions2 =
@@ -109,7 +111,8 @@ namespace Hekatan.Core
                 Atan2,
                 Root,
                 (in ComplexValue a, in ComplexValue b) => a % b,
-                (in ComplexValue a, in ComplexValue b) => MandelbrotSet(a, b)
+                (in ComplexValue a, in ComplexValue b) => MandelbrotSet(a, b),
+                GeomInf,  //4
             ];
         }
 
@@ -536,5 +539,45 @@ namespace Hekatan.Core
 
         protected static ComplexValue Timer(in ComplexValue _) => new(Timer(), Unit.Get("s"));
 
+        // fibonacci(n) — delegates to real calculation
+        private static ComplexValue Fibonacci(in ComplexValue value)
+        {
+            if (value.Units is not null)
+                throw Exceptions.FactorialArgumentUnitless();
+
+            var n = (int)Math.Round(value.A, MidpointRounding.AwayFromZero);
+            if (n < 0) return new ComplexValue(double.NaN);
+            if (n <= 1) return new ComplexValue(n);
+            long a = 0, b = 1;
+            for (int i = 2; i <= n; i++)
+                (a, b) = (b, a + b);
+            return new ComplexValue(b);
+        }
+
+        // isprime(n) — returns 1 if prime, 0 otherwise
+        private static ComplexValue IsPrime(in ComplexValue value)
+        {
+            if (value.Units is not null)
+                throw Exceptions.FactorialArgumentUnitless();
+
+            var n = (long)Math.Round(value.A, MidpointRounding.AwayFromZero);
+            if (n < 2) return new ComplexValue(0);
+            if (n < 4) return new ComplexValue(1);
+            if (n % 2 == 0 || n % 3 == 0) return new ComplexValue(0);
+            for (long i = 5; i * i <= n; i += 6)
+            {
+                if (n % i == 0 || n % (i + 2) == 0)
+                    return new ComplexValue(0);
+            }
+            return new ComplexValue(1);
+        }
+
+        // geominf(a, r) — infinite geometric series: a / (1 - r)
+        private static ComplexValue GeomInf(in ComplexValue a, in ComplexValue b)
+        {
+            var rv = b.A;
+            if (Math.Abs(rv) >= 1.0) return new ComplexValue(double.NaN);
+            return new ComplexValue(a.A / (1.0 - rv), 0, a.Units);
+        }
     }
 }

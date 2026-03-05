@@ -1,0 +1,31 @@
+const E="https://xcas.univ-grenoble-alpes.fr/xcasjs";let o=null,p=null,v=!1;const S={name:"giac",label:"Giac/Xcas (C++ WASM)",isReady(){return o!==null},async init(){if(!o){if(v)throw new Error("Giac init previously failed");return p||(p=new Promise((t,e)=>{const n=setTimeout(()=>{v=!0,e(new Error("Giac WASM load timeout (45s)"))},45e3),r=document.createElement("script");r.src=`${E}/giac.js`,r.onload=()=>{const a=()=>{const i=globalThis;i.Module&&i.Module.ccall?(o=i.Module,clearTimeout(n),console.log("[CAS] Giac/Xcas WASM loaded"),t()):i.UI&&i.UI.caseval?(o={caseval:i.UI.caseval},clearTimeout(n),console.log("[CAS] Giac/Xcas (UI.caseval) loaded"),t()):setTimeout(a,300)};a()},r.onerror=()=>{clearTimeout(n),v=!0,e(new Error("Failed to load Giac WASM from CDN"))},document.head.appendChild(r)}),p)}},async evaluate(t){if(!o)throw new Error("Giac not loaded");const e=performance.now();let n;try{if(o.caseval)n=o.caseval(t);else if(o.ccall)n=o.ccall("caseval","string",["string"],[t]);else throw new Error("Giac: no evaluation method available")}catch(i){throw new Error(`Giac error: ${i.message||i}`)}const r=performance.now()-e;let a;try{const i=`latex(${t})`;o.caseval?a=o.caseval(i):o.ccall&&(a=o.ccall("caseval","string",["string"],[i])),a&&a.startsWith('"')&&a.endsWith('"')&&(a=a.slice(1,-1))}catch{}return{text:n,latex:a,engine:"giac",timeMs:r}},supports(t){return!0}},h="https://cdn.jsdelivr.net/pyodide/v0.27.5/full/";let u=null,g=null;function M(t){return t.replace(/\^/g,"**")}const P={name:"sympy",label:"SymPy (Python WASM)",isReady(){return u!==null},async init(){if(!u)return g||(g=(async()=>{globalThis.loadPyodide||await new Promise((e,n)=>{const r=document.createElement("script");r.src=`${h}pyodide.js`,r.onload=()=>e(),r.onerror=()=>n(new Error("Failed to load Pyodide")),document.head.appendChild(r)});const t=globalThis.loadPyodide;u=await t({indexURL:h}),await u.loadPackage("sympy"),await u.runPythonAsync(`
+from sympy import *
+x, y, z, t, s, n, k, m, a, b, c, d = symbols('x y z t s n k m a b c d')
+init_printing()
+
+def _hekatan_eval(expr_str):
+    """Evaluate a SymPy expression string and return (text, latex, numeric)"""
+    try:
+        _expr = eval(expr_str)
+    except Exception as e:
+        return (f"Error: {e}", "", None)
+
+    _text = str(_expr)
+
+    try:
+        _ltx = latex(_expr)
+    except:
+        _ltx = ""
+
+    _num = None
+    try:
+        _n = N(_expr)
+        if _n.is_number:
+            _num = float(_n)
+    except:
+        pass
+
+    return (_text, _ltx, _num)
+`),console.log("[CAS] SymPy/Pyodide loaded")})(),g)},async evaluate(t){if(!u)throw new Error("SymPy not loaded");const e=performance.now(),n=M(t),r=`_hekatan_eval(${JSON.stringify(n)})`,a=await u.runPythonAsync(r),[i,l,c]=a.toJs();a.destroy();const _=performance.now()-e;if(typeof i=="string"&&i.startsWith("Error:"))throw new Error(i);return{text:i,latex:l||void 0,numeric:c??void 0,engine:"sympy",timeMs:_}},supports(t){return!0}},A="https://maxima-on-wasm.pages.dev";let s=null,m=!1,w=null,C=0;const f=new Map;function T(t){if(t.source!==(s==null?void 0:s.contentWindow))return;const e=t.data;if(!(!e||typeof e!="object")){if(e.type==="maxima-ready"){m=!0;return}if(e.type==="maxima-result"&&typeof e.id=="number"){const n=f.get(e.id);n&&(f.delete(e.id),e.error?n.reject(new Error(e.error)):n.resolve(e))}}}const $={name:"maxima",label:"Maxima (Lisp WASM)",isReady(){return m},async init(){if(!m)return w||(w=new Promise((t,e)=>{window.addEventListener("message",T),s=document.createElement("iframe"),s.style.display="none",s.src=A,document.body.appendChild(s);const n=setTimeout(()=>{m||e(new Error("Maxima init timeout (60s)"))},6e4),r=setInterval(()=>{m&&(clearInterval(r),clearTimeout(n),console.log("[CAS] Maxima WASM loaded"),t())},500)}),w)},async evaluate(t){if(!m||!(s!=null&&s.contentWindow))throw new Error("Maxima not loaded");const e=performance.now(),n=++C,r=await new Promise((i,l)=>{f.set(n,{resolve:i,reject:l}),s.contentWindow.postMessage({type:"maxima-eval",id:n,expr:t},"*"),setTimeout(()=>{f.has(n)&&(f.delete(n),l(new Error("Maxima eval timeout (30s)")))},3e4)}),a=performance.now()-e;return{text:r.text||String(r.result),latex:r.latex||void 0,engine:"maxima",timeMs:a}},supports(t){return!0}};let b=!1,x=null;const I=["ode","laplace","fourier"];function W(t){try{const n=new Function("Math",`"use strict"; return (${t});`)(Math);if(typeof n=="number"&&isFinite(n))return String(n)}catch{}return`[SymEngine fallback] ${t}`}const N={name:"symengine",label:"SymEngine (C++ — JS fallback)",isReady(){return b},async init(){if(!b)return x||(x=(async()=>{b=!0,console.log("[CAS] SymEngine initialized (JS fallback mode)")})(),x)},async evaluate(t){if(!b)throw new Error("SymEngine not initialized");const e=performance.now(),n=W(t),r=performance.now()-e,a=parseFloat(n);return{text:n,numeric:isFinite(a)?a:void 0,engine:"symengine",timeMs:r}},supports(t){return!I.includes(t)}},y={giac:S,sympy:P,maxima:$,symengine:N};let d=["sympy","giac","maxima","symengine"];function G(t){const e=t.trim().toLowerCase();return/\bdiff\b|\bderivative\b/.test(e)?"diff":/\bintegrat/.test(e)?"integrate":/\blimit\b/.test(e)?"limit":/\bsolve\b|\broots?\b/.test(e)?"solve":/\bode\b|\bdsolve\b/.test(e)?"ode":/\bmatrix\b|\bdet\b|\beigenval/.test(e)?"matrix":/\bseries\b|\btaylor\b/.test(e)?"series":/\blaplace\b/.test(e)?"laplace":/\bfourier\b/.test(e)?"fourier":/\bsimplif/.test(e)?"simplify":/\bexpand\b/.test(e)?"expand":/\bfactor\b/.test(e)?"factor":/\bsum\b/.test(e)?"sum":/\bproduct\b/.test(e)?"product":"eval"}const U={get engines(){return y},get priority(){return[...d]},setPriority(t){d=[...t]},async init(){for(const t of d)try{return await y[t].init(),t}catch(e){console.warn(`[CAS] Failed to init ${t}:`,e)}return null},async initEngine(t){await y[t].init()},async initAll(){return(await Promise.allSettled(d.map(async e=>(await y[e].init(),e)))).filter(e=>e.status==="fulfilled").map(e=>e.value)},async evaluate(t,e){const n=G(t),r=[],a=e?[e,...d.filter(i=>i!==e)]:d;for(const i of a){const l=y[i];if(l.supports(n)){if(!l.isReady())try{await l.init()}catch(c){r.push(`${i}: init failed — ${c.message}`);continue}try{return await l.evaluate(t)}catch(c){r.push(`${i}: ${c.message}`)}}}throw new Error(`All CAS engines failed for "${t}":
+${r.join(`
+`)}`)}};export{U as c};
