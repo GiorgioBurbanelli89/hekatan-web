@@ -6,7 +6,7 @@
  * comments, markdown, user functions
  */
 import { parseExpression, evaluate, HekatanEnvironment, type ASTNode } from "./evaluator.js";
-import { renderNode, renderValue, renderValueRow, renderValueCol, renderInlineText, renderEquationText } from "./renderer.js";
+import { renderNode, renderValue, renderValueRow, renderValueCol, renderInlineText, renderEquationText, renderVarName } from "./renderer.js";
 
 const BLOCK_OPEN_RE = /^@\{(plot|plotly|svg|three|eq)\b\s*([^}]*)\}\s*$/i;
 const BLOCK_CLOSE_RE = /^@\{end\s+(plot|plotly|svg|three|eq)\}\s*$/i;
@@ -226,7 +226,7 @@ function parseLine(line: string, env: HekatanEnvironment, compact?: boolean): st
       const val = evaluate(innerAst, env);
       env.setVar(ast.name, val);
       const valHtml = callExpr.name === "row" ? renderValueRow(val) : renderValueCol(val);
-      const lhs = `<var>${ast.name}</var>`;
+      const lhs = `<var>${renderVarName(ast.name)}</var>`;
       if (compact) return `<div class="line assign">${lhs} = ${valHtml}</div>`;
       return `<div class="line assign">${lhs} = ${renderNode(innerAst)} = ${valHtml}</div>`;
     }
@@ -235,7 +235,7 @@ function parseLine(line: string, env: HekatanEnvironment, compact?: boolean): st
 
     if (ast.type === "assign") {
       const valHtml = renderValue(val);
-      let lhs = `<var>${ast.name}</var>`;
+      let lhs = `<var>${renderVarName(ast.name)}</var>`;
       if (ast.indices) {
         const idxStr = ast.indices.map(n => renderNode(n)).join(",");
         lhs += `<sub>${idxStr}</sub>`;
@@ -319,7 +319,7 @@ function heatColor(t: number): string {
   return `rgb(${r},${g},${b})`;
 }
 
-function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment): string {
+export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment): string {
   const W = 600, H = 400, PAD = 50;
   let xMin = -5, xMax = 5, yMin = -2, yMax = 2;
   const funcs: { expr: string; color: string; width: number; label: string }[] = [];
@@ -574,7 +574,7 @@ function handlePlotlyBlock(lines: string[]): string {
 }
 
 // ─── @{svg} block ────────────────────────────────────────
-function handleSvgBlock(lines: string[]): string {
+export function handleSvgBlock(lines: string[]): string {
   return `<div class="svg-container">${lines.join("\n")}</div>`;
 }
 
@@ -626,7 +626,7 @@ function threeColorHex(c: string): string {
   return named[c.toLowerCase()] || "0x4488ff";
 }
 
-function processThreeDSL(lines: string[]): string {
+export function processThreeDSL(lines: string[]): string {
   const js: string[] = [];
   // Persistent state
   let curColor = "#4488ff", curOpacity = "1", curWireframe = "false";
@@ -874,7 +874,7 @@ function processThreeDSL(lines: string[]): string {
   return js.join("\n");
 }
 
-function handleThreeBlock(lines: string[]): string {
+export function handleThreeBlock(lines: string[]): string {
   const id = `three_${Math.random().toString(36).slice(2, 8)}`;
   const code = processThreeDSL(lines);
   return `<div id="${id}" style="width:100%;height:400px;border:1px solid #ddd;"></div>

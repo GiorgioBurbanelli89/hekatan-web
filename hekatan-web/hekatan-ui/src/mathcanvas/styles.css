@@ -341,20 +341,26 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
 
 /* ─── Cell Array (vector de matrices) ─── */
 .cell-array {
-  display: inline-flex; gap: 12px; align-items: center;
+  display: inline-flex; gap: 2px; align-items: center;
   vertical-align: middle;
 }
 .cell-element {
-  display: inline-flex; align-items: center; gap: 4px;
+  display: inline-flex; align-items: center; gap: 0;
   vertical-align: middle;
 }
-.cell-label { font-style: italic; color: #1565c0; }
+.cell-label { font-style: normal; color: #1565c0; }
+.cell-label var { font-style: normal; }
 .cell-brace {
   font-size: 160%; font-weight: 300; color: #333;
   vertical-align: middle; line-height: 1;
   font-family: 'Jost* Thin', 'Segoe UI', sans-serif;
 }
-.cell-sep { color: #888; margin: 0 2px; vertical-align: middle; }
+.cell-sep { color: #888; margin: 0; vertical-align: middle; }
+
+/* ─── Function Definition ─── */
+.func-def { color: #555; font-style: italic; }
+.func-keyword { color: #7b1fa2; font-weight: 600; font-style: normal; font-family: 'Segoe UI', sans-serif; margin-right: 0.3em; }
+.func-name { color: #1565c0; font-weight: 600; font-style: italic; }
 
 /* (custom scrollbar implemented via JS + .custom-scrollbar CSS above) */
 
@@ -537,6 +543,39 @@ sup.unit {
 .matrix .td:first-child,
 .matrix .td:last-child {
   display: none;
+}
+
+/* --- Matrices truncadas (tema base) --- */
+.mat-trunc {
+  display: inline-grid;
+  position: relative;
+  gap: 0;
+  align-items: center;
+  vertical-align: middle;
+}
+.mat-trunc .mat-row-idx,
+.mat-trunc .mat-col-idx {
+  color: #999;
+  font-size: 0.8em;
+  font-weight: normal;
+  font-style: normal;
+  user-select: none;
+}
+.mat-trunc .mat-dots {
+  color: #999;
+  font-size: 0.9em;
+}
+.mat-trunc .mat-cell {
+  text-align: right;
+  padding: 0 3pt;
+  position: relative;
+  z-index: 1;
+}
+.mat-trunc .mat-bracket {
+  display: none; /* tema base no usa este bracket */
+}
+.mat-trunc .mat-hdr-corner {
+  /* esquina vacia header */
 }
 
 /* ─── Fractions / Division (from template.html) ─── */
@@ -749,11 +788,24 @@ sup.unit {
 .eq-black sup,
 .eq-black small,
 .eq-black span,
+.eq-black p,
 .eq-black .val,
 .eq-black .nary,
 .eq-black .cell-brace,
 .eq-black .cell-label,
-.eq-black .cell-sep {
+.eq-black .cell-sep,
+.eq-black h1,
+.eq-black h2,
+.eq-black h3,
+.eq-black h4,
+.eq-black .chapter-heading,
+.eq-black .chapter-heading .chapter-num,
+.eq-black .chapter-heading .chapter-title,
+.eq-black .section-heading,
+.eq-black .section-heading .section-num,
+.eq-black .section-heading .section-title,
+.eq-black .out-comment,
+.eq-black .out-text {
   color: #000 !important;
 }
 
@@ -1115,6 +1167,11 @@ sup.unit {
   border-radius: 3px;
   padding: 2pt 5pt;
 }
+/* Quitar pseudo-brackets del tema base (ya usamos border en .matrix) */
+.theme-hekatan .matrix::before,
+.theme-hekatan .matrix::after {
+  display: none;
+}
 
 .theme-hekatan .matrix .tr {
   display: contents;
@@ -1137,6 +1194,92 @@ sup.unit {
 .theme-hekatan .matrix .td:first-child,
 .theme-hekatan .matrix .td:last-child {
   display: none;
+}
+
+/* --- Matrices truncadas estilo Mathcad (indices FUERA de corchetes) --- */
+.theme-hekatan .mat-trunc {
+  display: inline-grid;
+  position: relative;
+  gap: 0;
+  align-items: center;
+  vertical-align: middle;
+}
+/* Indices de fila (columna izquierda, fuera del bracket) */
+.theme-hekatan .mat-trunc .mat-row-idx {
+  color: #999;
+  font-size: 0.8em;
+  font-weight: normal;
+  font-style: normal;
+  text-align: right;
+  padding: 0 4px 0 0;
+  user-select: none;
+}
+/* Indices de columna (fila superior, fuera del bracket) */
+.theme-hekatan .mat-trunc .mat-col-idx {
+  color: #999;
+  font-size: 0.75em;
+  font-weight: normal;
+  font-style: normal;
+  text-align: center;
+  padding: 0 3pt 2pt 3pt;
+  user-select: none;
+}
+/* Celdas de datos */
+.theme-hekatan .mat-trunc .mat-cell {
+  text-align: right;
+  padding: 0 3pt;
+  position: relative;
+  z-index: 1;
+}
+.theme-hekatan .mat-trunc .mat-dots {
+  color: #999;
+  font-size: 0.9em;
+  user-select: none;
+}
+/* Bracket (corchetes): abs-positioned sobre area de datos */
+.theme-hekatan .mat-trunc .mat-bracket {
+  display: block;
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  border-left: 1.87px solid currentColor;
+  border-right: 1.87px solid currentColor;
+  border-radius: 4.5pt;
+  pointer-events: none;
+  z-index: 0;
+}
+.theme-hekatan .mat-trunc .mat-hdr-corner {
+  /* esquina vacia alineada con col-header */
+}
+/* --- Grip de resize (esquina inferior-derecha, estilo Mathcad) --- */
+.mat-grip {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+.mat-grip::before {
+  content: '';
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid #4a90d9;
+  border-bottom: 2px solid #4a90d9;
+}
+.mat-trunc:hover .mat-grip,
+.mat-resizing .mat-grip {
+  opacity: 1;
+}
+/* Borde punteado azul durante resize (estilo Mathcad) */
+.mat-resizing {
+  outline: 1.5px dashed #4a90d9 !important;
+  outline-offset: 3px;
 }
 
 /* --- Fracciones: misma estructura .dvc/.dvl, ajuste fino --- */

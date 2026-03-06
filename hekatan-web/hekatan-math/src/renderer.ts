@@ -11,25 +11,45 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/** Render variable name with subscript support: I_z → I<sub>z</sub>, K_R → K<sub>R</sub> */
+export function renderVarName(name: string): string {
+  const idx = name.indexOf("_");
+  if (idx > 0 && idx < name.length - 1) {
+    const base = esc(name.slice(0, idx));
+    const sub = esc(name.slice(idx + 1));
+    return `${base}<sub>${sub}</sub>`;
+  }
+  return esc(name);
+}
+
 // ─── renderNode: AST → HTML ──────────────────────────────
 export function renderNode(node: ASTNode): string {
   switch (node.type) {
     case "number": return formatNum(node.value);
-    case "variable": return `<var>${esc(node.name)}</var>`;
+    case "variable": return `<var>${renderVarName(node.name)}</var>`;
     case "assign": {
-      let lhs = `<var>${esc(node.name)}</var>`;
+      let lhs = `<var>${renderVarName(node.name)}</var>`;
       if (node.indices) lhs += `<sub>${node.indices.map(renderNode).join(",")}</sub>`;
       return `${lhs} = ${renderNode(node.expr)}`;
     }
     case "binary": {
       const { op, left, right } = node as Extract<ASTNode, { type: "binary" }>;
+      if (op === "^") {
+        return `${renderNode(left)}<sup>${renderNode(right)}</sup>`;
+      }
       if (op === "/") {
         // Wrap numerator and denominator in <span> so they stay as single flex items
         return `<span class="dvc"><span>${renderNode(left)}</span><span class="dvl"></span><span>${renderNode(right)}</span></span>`;
       }
-      // Implicit multiplication: 2*x → 2x, number*variable or number*call
-      if (op === "*" && left.type === "number" && (right.type === "variable" || right.type === "call" || right.type === "binary")) {
-        return `${renderNode(left)}${renderNode(right)}`;
+      // Implicit multiplication: juxtaposition when right side is variable/call
+      if (op === "*") {
+        const l = renderNode(left), r = renderNode(right);
+        // Right is variable → always juxtapose: 2x, ax, (a+b)x, 4E_s·I_z → 4E_sI_z
+        if (right.type === "variable") return `${l}${r}`;
+        // number*call or number*binary: 2sin(x), 3(a+b)
+        if (left.type === "number" && (right.type === "call" || right.type === "binary")) return `${l}${r}`;
+        // Everything else: explicit dot
+        return `${l} · ${r}`;
       }
       return `${renderNode(left)} ${opSymbol(op)} ${renderNode(right)}`;
     }
@@ -76,13 +96,13 @@ function formatNum(v: number): string {
 }
 
 function renderMatrixNode(rows: ASTNode[][]): string {
-  let html = '<table class="mat"><tbody>';
+  let html = '<span class="mat-wrap"><span class="mat-bkt left"></span><table class="mat"><tbody>';
   for (const row of rows) {
     html += "<tr>";
     for (const cell of row) html += `<td>${renderNode(cell)}</td>`;
     html += "</tr>";
   }
-  return html + "</tbody></table>";
+  return html + '</tbody></table><span class="mat-bkt right"></span></span>';
 }
 
 // ─── renderValue: number → HTML ──────────────────────────
@@ -101,13 +121,13 @@ export function renderValue(val: number | number[] | number[][], units?: string)
 }
 
 export function renderMatrix(m: number[][]): string {
-  let html = '<table class="mat"><tbody>';
+  let html = '<span class="mat-wrap"><span class="mat-bkt left"></span><table class="mat"><tbody>';
   for (const row of m) {
     html += "<tr>";
     for (const v of row) html += `<td>${formatNum(v)}</td>`;
     html += "</tr>";
   }
-  return html + "</tbody></table>";
+  return html + '</tbody></table><span class="mat-bkt right"></span></span>';
 }
 
 export function renderVector(v: number[]): string {
@@ -135,9 +155,9 @@ export function renderValueCol(val: number | number[] | number[][]): string {
     if (Array.isArray(val[0])) return renderMatrix(val as number[][]);
     // 1D vector → vertical column
     const v = val as number[];
-    let html = '<table class="mat"><tbody>';
+    let html = '<span class="mat-wrap"><span class="mat-bkt left"></span><table class="mat"><tbody>';
     for (const x of v) html += `<tr><td>${formatNum(x)}</td></tr>`;
-    return html + "</tbody></table>";
+    return html + '</tbody></table><span class="mat-bkt right"></span></span>';
   }
   return formatNum(val);
 }

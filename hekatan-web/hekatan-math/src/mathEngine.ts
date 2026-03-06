@@ -427,6 +427,35 @@ math.import({
     // Singular values = sqrt of eigenvalues of M^T*M, sorted descending
     return (vals as number[]).map((v: number) => Math.sqrt(Math.abs(v))).sort((a: number, b: number) => b - a);
   },
+
+  // col(a, b, c, ...) → column vector (Nx1 matrix)
+  col: function (...args: number[]) {
+    return (math as any).matrix(args.map((v: number) => [v]));
+  },
+
+  // row(a, b, c, ...) → row vector (1xN matrix)
+  row: function (...args: number[]) {
+    return (math as any).matrix([args]);
+  },
+
+  // range(start, end[, step]) → column vector
+  range: function (start: number, end: number, step?: number) {
+    const s = step ?? (end >= start ? 1 : -1);
+    if (s === 0) return (math as any).matrix([[start]]);
+    const arr: number[][] = [];
+    if (s > 0) { for (let i = start; i <= end + 1e-12; i += s) arr.push([i]); }
+    else       { for (let i = start; i >= end - 1e-12; i += s) arr.push([i]); }
+    return (math as any).matrix(arr);
+  },
+
+  // linspace(start, end, n) → column vector of n evenly spaced values
+  linspace: function (start: number, end: number, n: number) {
+    const count = Math.max(1, Math.round(n));
+    if (count === 1) return (math as any).matrix([[start]]);
+    const arr: number[][] = [];
+    for (let i = 0; i < count; i++) arr.push([start + (end - start) * i / (count - 1)]);
+    return (math as any).matrix(arr);
+  },
 }, { override: true });
 
 // ─── CAS (Computer Algebra System) ──────────────────────
@@ -461,7 +490,7 @@ export interface CellResult {
 export interface LineResult {
   lineIndex: number;
   input: string;
-  type: "assignment" | "expression" | "comment" | "heading" | "empty" | "directive" | "cells" | "draw" | "draw3d" | "draw3difc" | "importifc" | "image64" | "hrule" | "eqline" | "plot" | "error";
+  type: "assignment" | "expression" | "comment" | "heading" | "empty" | "directive" | "cells" | "draw" | "draw3d" | "draw3difc" | "importifc" | "image64" | "hrule" | "eqline" | "plot" | "svg" | "three" | "error";
   varName?: string;
   value?: any;
   display?: string;
@@ -475,6 +504,10 @@ export interface LineResult {
   drawName?: string;
   /** For type "plot": plot command lines */
   plotCommands?: string[];
+  /** For type "svg": raw SVG lines */
+  svgLines?: string[];
+  /** For type "three": Three.js DSL command lines */
+  threeLines?: string[];
   /** For type "importifc": IFC file path/URL and optional filter */
   ifcFile?: string;
   ifcFilter?: string;
@@ -529,6 +562,8 @@ export class HekatanEvaluator {
   namedFigures = new Map<string, { width: number; height: number; commands: string[] }>();
   /** Named equations store: eqNumber → {lines, align} for @{eqn} references */
   namedEquations = new Map<string, { lines: string[]; align: string }>();
+  /** Multiline function definitions: name → { params, outputs, lines } */
+  multilineFunctions = new Map<string, { params: string[]; outputs: string[]; lines: string[] }>();
 
   constructor() {
     this.reset();
@@ -539,6 +574,12 @@ export class HekatanEvaluator {
     this.scope["pi"] = Math.PI;
     this.scope["e"] = Math.E;
     this.scope["inf"] = Infinity;
+    // Cell array support
+    this.scope["cell"] = (n: number) => ({ __cell: true, elements: new Array(Math.round(n)).fill(0) });
+    this.scope["__cellget"] = (c: any, i: number) => {
+      if (c && c.__cell) return c.elements[Math.round(i) - 1] ?? 0;
+      return c;
+    };
     this.eqDelimiter = "";
     this.textDelimiter = "";
     this.commentDelimiter = "//";
@@ -554,6 +595,7 @@ export class HekatanEvaluator {
     this.headerTitle = "";
     this.namedFigures = new Map();
     this.namedEquations = new Map();
+    this.multilineFunctions = new Map();
   }
 
   getScope(): Record<string, any> {
@@ -563,6 +605,210 @@ export class HekatanEvaluator {
   /** Evalua una sola expresion */
   eval(expr: string): any {
     return math.evaluate(expr, this.scope);
+  }
+
+  /**
+   * Registra una funcion multilinea (function...end) en el scope de math.js.
+   * Crea una closure JS que ejecuta el body linea por linea con math.evaluate.
+   */
+  private _registerMultilineFunction(
+    funcName: string,
+    params: string[],
+    outputs: string[],
+    bodyLines: string[]
+  ): void {
+    this.multilineFunctions.set(funcName, { params, outputs, lines: bodyLines });
+    const self = this;
+
+    // Crear funcion JS que math.js puede llamar
+    const fn = (...args: any[]) => {
+      // Scope aislado: copia del scope padre + parametros
+      const localScope: Record<string, any> = { ...self.scope };
+      for (let i = 0; i < params.length; i++) {
+        if (i < args.length) localScope[params[i]] = args[i];
+      }
+
+      // Ejecutar body linea por linea
+      self._execFunctionBody(bodyLines, localScope);
+
+      // Retornar outputs
+      if (outputs.length === 1) {
+        return localScope[outputs[0]] ?? 0;
+      }
+      // Multiple outputs → cell array
+      const elements = outputs.map(o => localScope[o] ?? 0);
+      return { __cell: true, elements };
+    };
+
+    // Registrar en scope para math.js
+    this.scope[funcName] = fn;
+  }
+
+  /**
+   * Ejecuta un bloque de lineas de funcion en un scope local.
+   * Soporta for/while/if/elseif/else/end, break, continue.
+   */
+  private _execFunctionBody(
+    lines: string[], scope: Record<string, any>,
+    start = 0, end?: number
+  ): "break" | "continue" | undefined {
+    const limit = end ?? lines.length;
+    let i = start;
+
+    while (i < limit) {
+      const raw = lines[i];
+      const trimmed = raw.replace(/%.*$/, "").trim(); // strip % comments
+
+      if (!trimmed || trimmed.startsWith("//")) { i++; continue; }
+      if (trimmed === "break") return "break";
+      if (trimmed === "continue") return "continue";
+
+      // ── for var = start:step:end ─────────
+      const forMatch = trimmed.match(/^for\s+(\w+)\s*=\s*(.+)$/i);
+      if (forMatch) {
+        const varName = forMatch[1];
+        const rangeExpr = forMatch[2];
+        // Parse range: start:end or start:step:end
+        const rp = rangeExpr.split(":").map(s => s.trim());
+        const fStart = Number(math.evaluate(rp[0], scope));
+        const fEnd = rp.length >= 3
+          ? Number(math.evaluate(rp[2], scope))
+          : Number(math.evaluate(rp[1], scope));
+        const fStep = rp.length >= 3
+          ? Number(math.evaluate(rp[1], scope))
+          : 1;
+        const bodyEnd = this._findMatchingEnd(lines, i + 1, limit);
+        for (let v = fStart; fStep > 0 ? v <= fEnd : v >= fEnd; v += fStep) {
+          scope[varName] = v;
+          const signal = this._execFunctionBody(lines, scope, i + 1, bodyEnd);
+          if (signal === "break") break;
+        }
+        i = bodyEnd + 1;
+        continue;
+      }
+
+      // ── while condition ──────────────────
+      const whileMatch = trimmed.match(/^while\s+(.+)$/i);
+      if (whileMatch) {
+        const condExpr = whileMatch[1];
+        const bodyEnd = this._findMatchingEnd(lines, i + 1, limit);
+        let maxIter = 100000;
+        while (maxIter-- > 0) {
+          let cond: any;
+          try { cond = math.evaluate(condExpr, scope); } catch { break; }
+          if (!cond || cond === 0) break;
+          const signal = this._execFunctionBody(lines, scope, i + 1, bodyEnd);
+          if (signal === "break") break;
+        }
+        i = bodyEnd + 1;
+        continue;
+      }
+
+      // ── if condition ─────────────────────
+      if (/^if\s+/i.test(trimmed)) {
+        const { branches, endLine } = this._parseIfBlock(lines, i, limit);
+        for (const br of branches) {
+          if (br.condition === null) {
+            // else branch — always execute
+            const sig = this._execFunctionBody(lines, scope, br.bodyStart, br.bodyEnd);
+            if (sig) return sig; // propagate break/continue
+            break;
+          }
+          let condVal: any;
+          try { condVal = math.evaluate(br.condition, scope); } catch { condVal = 0; }
+          if (condVal && condVal !== 0) {
+            const sig = this._execFunctionBody(lines, scope, br.bodyStart, br.bodyEnd);
+            if (sig) return sig; // propagate break/continue
+            break;
+          }
+        }
+        i = endLine + 1;
+        continue;
+      }
+
+      // ── Cell assignment: VAR{idx} = expr ──
+      const cellAssign = trimmed.match(/^(\w+)\{(.+?)\}\s*=\s*(.+)$/);
+      if (cellAssign) {
+        const [, varName, idxExpr, valExpr] = cellAssign;
+        try {
+          const idx = Math.round(Number(math.evaluate(idxExpr, scope)));
+          const val = math.evaluate(valExpr, scope);
+          if (!scope[varName] || !scope[varName].__cell) {
+            scope[varName] = { __cell: true, elements: [] };
+          }
+          scope[varName].elements[idx - 1] = val;
+        } catch { /* skip */ }
+        i++;
+        continue;
+      }
+
+      // ── Assignment / expression ──────────
+      // Split by semicolons (suppresses output in MATLAB)
+      const stmts = trimmed.split(";").map(s => s.trim()).filter(Boolean);
+      for (const stmt of stmts) {
+        try {
+          // Convert cell reads: VAR{idx} → __cellget(VAR, idx)
+          const processed = stmt.replace(/(\w+)\{([^}]+)\}/g, '__cellget($1, $2)');
+          math.evaluate(processed, scope);
+        } catch {
+          // Silently skip errors in function body
+        }
+      }
+
+      i++;
+    }
+    return undefined;
+  }
+
+  /** Encuentra el 'end' correspondiente (respetando profundidad) */
+  private _findMatchingEnd(lines: string[], startBody: number, limit: number): number {
+    let depth = 1;
+    for (let i = startBody; i < limit; i++) {
+      const t = lines[i].replace(/%.*$/, "").trim().toLowerCase();
+      if (/^(for|while|if)\s+/.test(t)) depth++;
+      if (t === "end") {
+        depth--;
+        if (depth === 0) return i;
+      }
+    }
+    return limit;
+  }
+
+  /** Parsea estructura if/elseif/else/end */
+  private _parseIfBlock(
+    lines: string[], ifLine: number, limit: number
+  ): { branches: { condition: string | null; bodyStart: number; bodyEnd: number }[]; endLine: number } {
+    const branches: { condition: string | null; bodyStart: number; bodyEnd: number }[] = [];
+    const firstCond = lines[ifLine].replace(/%.*$/, "").trim().replace(/^if\s+/i, "").trim();
+    let depth = 1, branchStart = ifLine + 1;
+    let currentCond: string | null = firstCond;
+
+    for (let i = ifLine + 1; i < limit; i++) {
+      const t = lines[i].replace(/%.*$/, "").trim();
+      const tl = t.toLowerCase();
+      if (/^(for|while|if)\s+/.test(tl)) { depth++; continue; }
+      if (tl === "end") {
+        depth--;
+        if (depth === 0) {
+          branches.push({ condition: currentCond, bodyStart: branchStart, bodyEnd: i });
+          return { branches, endLine: i };
+        }
+        continue;
+      }
+      if (depth === 1) {
+        if (/^elseif\s+/i.test(t)) {
+          branches.push({ condition: currentCond, bodyStart: branchStart, bodyEnd: i });
+          currentCond = t.replace(/^elseif\s+/i, "").trim();
+          branchStart = i + 1;
+        } else if (/^else\s*$/i.test(t)) {
+          branches.push({ condition: currentCond, bodyStart: branchStart, bodyEnd: i });
+          currentCond = null;
+          branchStart = i + 1;
+        }
+      }
+    }
+    branches.push({ condition: currentCond, bodyStart: branchStart, bodyEnd: limit });
+    return { branches, endLine: limit };
   }
 
   /** Evalua documento completo linea por linea */
@@ -796,6 +1042,57 @@ export class HekatanEvaluator {
         continue;
       }
 
+      // ── function [out] = name(args) ... end ───────────────
+      // MATLAB-style multiline function definition
+      // Patterns: function [a,b] = name(x,y)
+      //           function out = name(x)
+      //           function name(x)  (no explicit output → funcName is output)
+      const funcMatch = trimmed.match(
+        /^function\s*(?:(?:\[([^\]]*)\]|(\w+))\s*=\s*)?(\w+)\s*\(([^)]*)\)\s*$/i
+      );
+      if (funcMatch) {
+        const funcName = funcMatch[3];
+        const paramStr = funcMatch[4] || "";
+        let outputs: string[];
+        if (funcMatch[1]) {
+          // [a, b] = name(...)
+          outputs = funcMatch[1].split(",").map(s => s.trim()).filter(Boolean);
+        } else if (funcMatch[2]) {
+          // out = name(...)
+          outputs = [funcMatch[2]];
+        } else {
+          // name(...)  — no explicit output, use funcName as output var
+          outputs = [funcName];
+        }
+        const params = paramStr.split(",").map(s => s.trim()).filter(Boolean);
+
+        // Collect body lines until matching 'end'
+        const bodyLines: string[] = [];
+        let depth = 1;
+        i++;
+        while (i < lines.length && depth > 0) {
+          const bLine = lines[i].trim();
+          const bLower = bLine.replace(/%.*$/, "").trim().toLowerCase();
+          if (/^(for|while|if)\s+/.test(bLower)) depth++;
+          if (bLower === "end") {
+            depth--;
+            if (depth === 0) break;
+          }
+          bodyLines.push(lines[i]);
+          i++;
+        }
+
+        // Registrar funcion en scope de math.js
+        this._registerMultilineFunction(funcName, params, outputs, bodyLines);
+        // Emit a directive so the renderer knows a function was defined
+        results.push({
+          lineIndex: i, input: raw,
+          type: "directive",
+          display: `function:${funcName}(${params.join(", ")})`,
+        });
+        continue;
+      }
+
       // @{plot}...@{end plot} - Plot block (heatmap, curves, etc.)
       if (/^@\{plot\}\s*$/i.test(trimmed)) {
         const plotCommands: string[] = [];
@@ -812,8 +1109,40 @@ export class HekatanEvaluator {
         continue;
       }
 
-      // @{draw W H}, @{draw W H name:Fig 5.1}, @{draw:3D W H} - CAD block
-      const drawMatch = trimmed.match(/^@\{draw(?::(2D|3D|3D:IFC))?\s+(\d+)\s+(\d+)(?:\s+name:([^}]+?))?\s*\}/i);
+      // @{svg}...@{end svg} - SVG block (raw SVG passthrough)
+      if (/^@\{svg\}\s*$/i.test(trimmed)) {
+        const svgLines: string[] = [];
+        i++;
+        while (i < lines.length && !/^@\{end\s+svg\}/i.test(lines[i].trim())) {
+          svgLines.push(lines[i]);
+          i++;
+        }
+        results.push({
+          lineIndex: i, input: raw,
+          type: "svg",
+          svgLines,
+        });
+        continue;
+      }
+
+      // @{three}...@{end three} - Three.js 3D scene block
+      if (/^@\{three\}\s*$/i.test(trimmed)) {
+        const threeLines: string[] = [];
+        i++;
+        while (i < lines.length && !/^@\{end\s+three\}/i.test(lines[i].trim())) {
+          threeLines.push(lines[i]);
+          i++;
+        }
+        results.push({
+          lineIndex: i, input: raw,
+          type: "three",
+          threeLines,
+        });
+        continue;
+      }
+
+      // @{draw W H}, @{draw W H name:Fig 5.1}, @{draw:3D W H}, @{svg W H} (alias) - CAD block
+      const drawMatch = trimmed.match(/^@\{(?:draw|svg)(?::(2D|3D|3D:IFC))?\s+(\d+)\s+(\d+)(?:\s+name:([^}]+?))?\s*\}/i);
       if (drawMatch) {
         const mode = (drawMatch[1] || "2D").toUpperCase();
         const drawWidth = parseInt(drawMatch[2]);
@@ -821,7 +1150,7 @@ export class HekatanEvaluator {
         const drawName = drawMatch[4]?.trim() || undefined;
         const drawCommands: string[] = [];
         i++;
-        while (i < lines.length && !/^@\{end\s+draw\}/i.test(lines[i].trim())) {
+        while (i < lines.length && !/^@\{end\s+(?:draw|svg)\}/i.test(lines[i].trim())) {
           drawCommands.push(lines[i]);
           i++;
         }
@@ -1681,8 +2010,14 @@ export class HekatanEvaluator {
     if (!value || !(value as any).__cell) return this._formatValue(value);
     const elems = (value as any).elements as any[];
     const parts = elems.map((e: any, i: number) => {
+      let fmtName = varName ?? "";
+      // Convert underscores to subscripts: KM_0 → KM<sub>0</sub>
+      if (fmtName.includes("_")) {
+        const p = fmtName.split("_");
+        fmtName = `${p[0]}<sub>${p.slice(1).join("_")}</sub>`;
+      }
       const label = varName
-        ? `<span class="cell-label">${varName}<sub>${i + 1}</sub></span> = `
+        ? `<span class="cell-label">[${fmtName}]<sub>${i + 1}</sub></span> = `
         : "";
       if (this.isMatrix(e)) {
         return `<span class="cell-element">${label}${this.formatMatrixHTML(e)}</span>`;

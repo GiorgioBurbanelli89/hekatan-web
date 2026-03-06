@@ -102,7 +102,7 @@ export function execCommands(engine: CadEngine, cmdText: string): void {
         case "bg": case "background": {
           const bgVal = tokens[1]?.toLowerCase() || "white";
           const bgMap: Record<string, string> = {
-            book: "#fdf6e3", bookwarm: "#fdf6e3", cream: "#fdf6e3",
+            book: "#f2eced", bookwarm: "#f2eced", cream: "#fdf6e3",
             white: "#ffffff", black: "#000000", dark: "#1a1a2e",
             gray: "#e0e0e0", grey: "#e0e0e0",
           };

@@ -85,6 +85,10 @@ function tokenize(expr: string): Token[] {
       if (two === "==" || two === "!=" || two === "<=" || two === ">=" || two === "&&" || two === "||") {
         tokens.push({ type: "op", value: two }); i += 2; continue;
       }
+      // MATLAB ~= (not equal) → normalize to !=
+      if (two === "~=") {
+        tokens.push({ type: "op", value: "!=" }); i += 2; continue;
+      }
     }
 
     // Single-char
@@ -356,11 +360,8 @@ class Parser {
           rows.push(row);
         }
         this.expect("rbracket");
-        // Multi-column rows → matrix; single-column → vector (backward compat)
-        if (rows.some(r => r.length > 1)) {
-          return { type: "matrix", rows };
-        }
-        return { type: "vector", elements: rows.map(r => r[0]) };
+        // Semicolons always produce a matrix (column vector if single-col)
+        return { type: "matrix", rows };
       }
       this.expect("rbracket");
       return { type: "vector", elements: firstRow };
@@ -454,11 +455,17 @@ const CONSTANTS: Record<string, number> = {
 // ─── Environment ──────────────────────────────────────────
 export type EnvVal = number | number[] | number[][] | CellArray;
 
+export interface MultilineFunction {
+  params: string[];       // input parameter names
+  outputs: string[];      // output variable names (from [a,b]=func(...))
+  lines: string[];        // body lines (raw text)
+}
+
 export class HekatanEnvironment {
   variables: Map<string, EnvVal> = new Map();
   userFunctions: Map<string, { params: string[]; body: ASTNode }> = new Map();
-  /** Multiline function bodies: name → lines (raw text) */
-  multilineFunctions: Map<string, { params: string[]; lines: string[] }> = new Map();
+  /** Multiline function bodies: name → { params, outputs, lines } */
+  multilineFunctions: Map<string, MultilineFunction> = new Map();
   decimals = 4;
 
   reset(): void {
@@ -603,16 +610,24 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
     }
 
     case "call": {
-      // Check user-defined functions first
+      // Check user-defined functions first (single-line)
       const userFn = env.userFunctions.get(node.name);
       if (userFn) {
         const childEnv = new HekatanEnvironment();
         childEnv.variables = new Map(env.variables);
         childEnv.userFunctions = env.userFunctions;
+        childEnv.multilineFunctions = env.multilineFunctions;
         for (let i = 0; i < userFn.params.length; i++) {
           childEnv.setVar(userFn.params[i], evaluate(node.args[i], env) as number);
         }
         return evaluate(userFn.body, childEnv);
+      }
+
+      // Check multiline functions (MATLAB-style function...end)
+      const mlFn = env.multilineFunctions.get(node.name);
+      if (mlFn) {
+        const evalArgs = node.args.map(a => evaluate(a, env));
+        return executeMultilineFunction(mlFn, evalArgs, env);
       }
 
       // Built-in functions
@@ -701,6 +716,35 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
           const v = evaluate(a, env);
           return typeof v === "number" ? v : NaN;
         })];
+      }
+      // range(start, end[, step]) → column vector [[start],[start+step],...,[end]]
+      if (node.name === "range" || node.name === "seq") {
+        const a0 = evaluate(node.args[0], env);
+        const a1 = evaluate(node.args[1], env);
+        const a2 = node.args[2] != null ? evaluate(node.args[2], env) : undefined;
+        if (typeof a0 === "number" && typeof a1 === "number") {
+          const step = typeof a2 === "number" ? a2 : (a1 >= a0 ? 1 : -1);
+          if (step === 0) return [[a0]];
+          const arr: number[][] = [];
+          if (step > 0) { for (let i = a0; i <= a1 + 1e-12; i += step) arr.push([i]); }
+          else          { for (let i = a0; i >= a1 - 1e-12; i += step) arr.push([i]); }
+          return arr; // Nx1 matrix (column vector)
+        }
+        return NaN;
+      }
+      // linspace(start, end, n) → column vector of n evenly spaced values
+      if (node.name === "linspace") {
+        const a0 = evaluate(node.args[0], env);
+        const a1 = evaluate(node.args[1], env);
+        const a2 = evaluate(node.args[2], env);
+        if (typeof a0 === "number" && typeof a1 === "number" && typeof a2 === "number" && a2 >= 1) {
+          const n = Math.round(a2);
+          if (n === 1) return [[a0]];
+          const arr: number[][] = [];
+          for (let i = 0; i < n; i++) arr.push([a0 + (a1 - a0) * i / (n - 1)]);
+          return arr; // Nx1 matrix
+        }
+        return NaN;
       }
       if (node.name === "inv" || node.name === "inverse") {
         const m = evaluate(node.args[0], env);
@@ -1414,7 +1458,11 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
         if (Array.isArray(idx)) {
           return mat.slice(idx[0], idx[1] + 1);
         }
-        return mat[idx as number] ?? [];
+        const row = mat[idx as number];
+        if (!row) return NaN;
+        // Auto-extract scalar from Nx1 column vectors: u[1] → scalar instead of [scalar]
+        if (row.length === 1) return row[0];
+        return row;
       }
 
       // 1D vector indexing
@@ -1697,4 +1745,252 @@ function gaussLegendre(n: number): { pts: number[]; wts: number[] } {
 export function evalString(expr: string, env: HekatanEnvironment): number | number[] | number[][] {
   const ast = parseExpression(expr);
   return evaluate(ast, env);
+}
+
+// ═══════════════════════════════════════════════════════════
+// MULTILINE FUNCTION EXECUTOR
+// Supports: for/end, if/else/end, while/end, assignments,
+// expressions, continue, break, zeros(), ones(), input()
+// ═══════════════════════════════════════════════════════════
+
+/** Execute a multiline function and return the output values */
+export function executeMultilineFunction(
+  fn: MultilineFunction,
+  args: any[],
+  callerEnv: HekatanEnvironment
+): any {
+  // Create isolated child environment
+  const env = new HekatanEnvironment();
+  env.variables = new Map(callerEnv.variables);
+  env.userFunctions = callerEnv.userFunctions;
+  env.multilineFunctions = callerEnv.multilineFunctions;
+  env.decimals = callerEnv.decimals;
+
+  // Bind input parameters
+  for (let i = 0; i < fn.params.length; i++) {
+    if (i < args.length) {
+      env.setVar(fn.params[i], args[i]);
+    }
+  }
+
+  // Execute body
+  execBlock(fn.lines, 0, fn.lines.length, env);
+
+  // Return outputs
+  if (fn.outputs.length === 1) {
+    return env.getVar(fn.outputs[0]) ?? 0;
+  }
+  // Multiple outputs → return as cell array
+  const elements = fn.outputs.map(o => env.getVar(o) ?? 0);
+  return { __cell: true, elements };
+}
+
+/** Evaluate a single expression string in the given environment, returning any type */
+function evalAny(expr: string, env: HekatanEnvironment): any {
+  try {
+    const ast = parseExpression(expr);
+    return evaluate(ast, env);
+  } catch {
+    return 0;
+  }
+}
+
+/** Evaluate expression as a number */
+function evalNum(expr: string, env: HekatanEnvironment): number {
+  const v = evalAny(expr, env);
+  return typeof v === "number" ? v : 0;
+}
+
+/** Strip trailing MATLAB-style comments: line % comment → line */
+function stripComment(line: string): string {
+  // Don't strip % inside strings
+  let inStr = false;
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === "'" || line[i] === '"') inStr = !inStr;
+    if (!inStr && line[i] === '%') return line.slice(0, i).trimEnd();
+  }
+  return line;
+}
+
+/**
+ * Execute a block of lines [start, end) in the environment.
+ * Returns "break" or "continue" if those statements are hit, otherwise undefined.
+ */
+function execBlock(
+  lines: string[], start: number, end: number, env: HekatanEnvironment
+): "break" | "continue" | undefined {
+  let i = start;
+  while (i < end) {
+    const raw = lines[i];
+    const trimmed = stripComment(raw).trim();
+
+    // Skip empty lines and pure comment lines
+    if (!trimmed || trimmed.startsWith('%') || trimmed.startsWith('//')) {
+      i++; continue;
+    }
+
+    // ── break / continue ─────────────────
+    if (trimmed === "break") return "break";
+    if (trimmed === "continue") return "continue";
+
+    // ── for i = start : end ─────────────
+    const forMatch = trimmed.match(
+      /^for\s+(\w+)\s*=\s*(.+?)\s*:\s*(.+?)(?:\s*:\s*(.+?))?\s*$/i
+    );
+    if (forMatch) {
+      const varName = forMatch[1];
+      const forStart = evalNum(forMatch[2], env);
+      const forEnd = evalNum(forMatch[3], env);
+      const forStep = forMatch[4] ? evalNum(forMatch[4], env) : 1;
+      // Find matching "end"
+      const bodyEnd = findMatchingEnd(lines, i + 1, end);
+      // Execute loop
+      for (let v = forStart; forStep > 0 ? v <= forEnd : v >= forEnd; v += forStep) {
+        env.setVar(varName, v);
+        const signal = execBlock(lines, i + 1, bodyEnd, env);
+        if (signal === "break") break;
+        // "continue" just goes to next iteration
+      }
+      i = bodyEnd + 1;
+      continue;
+    }
+
+    // ── while condition ──────────────────
+    const whileMatch = trimmed.match(/^while\s+(.+)$/i);
+    if (whileMatch) {
+      const condExpr = whileMatch[1];
+      const bodyEnd = findMatchingEnd(lines, i + 1, end);
+      let maxIter = 100000;
+      while (maxIter-- > 0 && evalNum(condExpr, env) !== 0) {
+        const signal = execBlock(lines, i + 1, bodyEnd, env);
+        if (signal === "break") break;
+      }
+      i = bodyEnd + 1;
+      continue;
+    }
+
+    // ── if condition ─────────────────────
+    if (/^if\s+/i.test(trimmed)) {
+      const condExpr = trimmed.replace(/^if\s+/i, "").trim();
+      // Find else/elseif/end structure
+      const { branches, endLine } = parseIfBlock(lines, i, end);
+      // Evaluate branches
+      let executed = false;
+      for (const br of branches) {
+        if (br.condition === null) {
+          // else branch
+          execBlock(lines, br.bodyStart, br.bodyEnd, env);
+          executed = true;
+          break;
+        }
+        if (evalNum(br.condition, env) !== 0) {
+          execBlock(lines, br.bodyStart, br.bodyEnd, env);
+          executed = true;
+          break;
+        }
+      }
+      i = endLine + 1;
+      continue;
+    }
+
+    // ── Assignment or expression ─────────
+    // Handle semicolon-separated statements: a=1; b=2; c=3
+    const stmts = splitStatements(trimmed);
+    for (const stmt of stmts) {
+      const s = stmt.trim();
+      if (!s) continue;
+      try {
+        const ast = parseExpression(s);
+        evaluate(ast, env);
+      } catch {
+        // Silently skip errors in function body
+      }
+    }
+
+    i++;
+  }
+  return undefined;
+}
+
+/** Split a line by semicolons (respecting brackets and strings) */
+function splitStatements(line: string): string[] {
+  const stmts: string[] = [];
+  let depth = 0, inStr = false, start = 0;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === "'" || c === '"') inStr = !inStr;
+    if (!inStr) {
+      if (c === '(' || c === '[' || c === '{') depth++;
+      else if (c === ')' || c === ']' || c === '}') depth--;
+      else if (c === ';' && depth === 0) {
+        stmts.push(line.slice(start, i));
+        start = i + 1;
+      }
+    }
+  }
+  if (start < line.length) stmts.push(line.slice(start));
+  return stmts;
+}
+
+/** Find matching 'end' for a for/while/if block starting at line startBody */
+function findMatchingEnd(lines: string[], startBody: number, limit: number): number {
+  let depth = 1;
+  for (let i = startBody; i < limit; i++) {
+    const t = stripComment(lines[i]).trim().toLowerCase();
+    if (/^(for|while|if)\s+/.test(t)) depth++;
+    if (t === "end") {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return limit; // No matching end found
+}
+
+interface IfBranch {
+  condition: string | null;  // null = else (unconditional)
+  bodyStart: number;
+  bodyEnd: number;
+}
+
+/** Parse if/elseif/else/end block structure */
+function parseIfBlock(
+  lines: string[], ifLine: number, limit: number
+): { branches: IfBranch[]; endLine: number } {
+  const branches: IfBranch[] = [];
+  const ifTrimmed = stripComment(lines[ifLine]).trim();
+  const firstCond = ifTrimmed.replace(/^if\s+/i, "").trim();
+
+  let depth = 1;
+  let branchStart = ifLine + 1;
+  let currentCond: string | null = firstCond;
+
+  for (let i = ifLine + 1; i < limit; i++) {
+    const t = stripComment(lines[i]).trim();
+    const tl = t.toLowerCase();
+
+    if (/^(for|while|if)\s+/.test(tl)) { depth++; continue; }
+    if (tl === "end") {
+      depth--;
+      if (depth === 0) {
+        branches.push({ condition: currentCond, bodyStart: branchStart, bodyEnd: i });
+        return { branches, endLine: i };
+      }
+      continue;
+    }
+
+    if (depth === 1) {
+      if (/^elseif\s+/i.test(t)) {
+        branches.push({ condition: currentCond, bodyStart: branchStart, bodyEnd: i });
+        currentCond = t.replace(/^elseif\s+/i, "").trim();
+        branchStart = i + 1;
+      } else if (/^else\s*$/i.test(t)) {
+        branches.push({ condition: currentCond, bodyStart: branchStart, bodyEnd: i });
+        currentCond = null;
+        branchStart = i + 1;
+      }
+    }
+  }
+  // No matching end
+  branches.push({ condition: currentCond, bodyStart: branchStart, bodyEnd: limit });
+  return { branches, endLine: limit };
 }
