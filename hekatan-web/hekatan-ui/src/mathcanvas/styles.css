@@ -147,11 +147,13 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
 .fold-gutter {
   position: absolute; top: 0; left: 0; bottom: 0; width: 20px;
   z-index: 3; overflow: hidden;
-  padding-top: 12px;
   background: #f4f4f4;
   border-right: 1px solid #e0e0e0;
 }
-.fold-inner { /* scrolled via JS to match textarea */ }
+.fold-inner {
+  padding-top: 12px;
+  transition: transform 0.02s linear;
+}
 .fold-marker {
   display: block; width: 20px;
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
@@ -572,7 +574,14 @@ sup.unit {
   z-index: 1;
 }
 .mat-trunc .mat-bracket {
-  display: none; /* tema base no usa este bracket */
+  display: block;
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  border-left: 1.5pt solid currentColor;
+  border-right: 1.5pt solid currentColor;
+  border-radius: 3pt;
+  pointer-events: none;
+  z-index: 0;
 }
 .mat-trunc .mat-hdr-corner {
   /* esquina vacia header */
@@ -908,7 +917,7 @@ sup.unit {
   white-space: nowrap;
 }
 
-/* ─── Output → Code navigation arrow (Calcpad-style) ─── */
+/* ─── Output → Code navigation arrow ─── */
 [data-line] {
   position: relative;
 }
@@ -1424,7 +1433,7 @@ sup.unit {
   font-size: 10pt;
 }
 
-/* Calcpad theme: sym vec brackets via table borders */
+/* Classic theme: sym vec brackets via table borders */
 .lsolve-sym-vec .tr { display: table-row; }
 .lsolve-sym-vec .td {
   display: table-cell;
@@ -1461,6 +1470,803 @@ sup.unit {
 }
 .theme-hekatan .lsolve-sym-vec .td:first-child,
 .theme-hekatan .lsolve-sym-vec .td:last-child { display: none; }
+
+/* ═══════════════════════════════════════════════════════════
+   THEME: LaTeX — estilo articulo academico
+   Fuentes: Georgia / Times New Roman (serif), espaciado paper
+   ═══════════════════════════════════════════════════════════ */
+
+/* --- Output panel: fondo blanco puro, márgenes paper --- */
+.theme-latex {
+  background: #fff;
+  font-family: Georgia, 'Times New Roman', 'Palatino Linotype', serif;
+  font-size: 11pt;
+  line-height: 1.45;
+  color: #111;
+  padding: 24px 36px;
+}
+
+/* --- Ecuaciones: serif grande --- */
+.theme-latex .eq,
+.theme-latex .matrix {
+  font-family: 'Cambria Math', Georgia, 'Times New Roman', serif;
+  font-size: 11.5pt;
+  line-height: 1.5;
+  color: #111;
+}
+
+/* --- Linea de output: espaciado tipo paper --- */
+.theme-latex .out-line {
+  line-height: 155%;
+  margin: 0.12em 0;
+}
+
+/* --- Bold mode --- */
+.theme-latex .eq-bold { font-weight: 600; }
+.theme-latex .eq-bold var { font-weight: 600; }
+.theme-latex .eq-bold .dvc,
+.theme-latex .eq-bold .dvr,
+.theme-latex .eq-bold .dvs { font-weight: 600; }
+.theme-latex .eq-bold .dvl { border-bottom-width: 1.2pt; }
+
+/* --- Variables: italic serif --- */
+.theme-latex .eq var {
+  font-family: 'Cambria Math', Georgia, 'Times New Roman', serif;
+  color: #111;
+  font-size: 100%;
+  font-style: italic;
+}
+
+/* --- Funciones: upright --- */
+.theme-latex .eq i {
+  color: #111;
+  font-style: italic;
+  font-size: 100%;
+  font-weight: normal;
+}
+
+.theme-latex .eq b {
+  font-weight: normal;
+  font-style: normal;
+  color: #111;
+}
+
+/* --- Sub/superindices --- */
+.theme-latex .eq sub {
+  font-family: 'Cambria Math', Georgia, 'Times New Roman', serif;
+  font-size: 70%;
+  vertical-align: -0.25em;
+  margin-left: 1pt;
+  line-height: 0;
+}
+
+.theme-latex .eq sup {
+  display: inline-block;
+  margin-left: 1pt;
+  font-size: 70%;
+  vertical-align: 0.58em;
+  line-height: 0;
+}
+
+/* --- Unidades: sans-serif pequeño --- */
+.theme-latex .unit {
+  font-size: 0.85em;
+  color: #555;
+  font-family: 'Segoe UI', Calibri, sans-serif;
+}
+
+/* --- Valores resaltados --- */
+.theme-latex .val {
+  font-weight: 600;
+  color: #000;
+}
+
+/* --- Matrices: square brackets [ ] --- */
+.theme-latex .matrix {
+  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+  font-size: 10pt;
+}
+.theme-latex .matrix::before {
+  border-color: #111;
+  border-width: 1.2pt;
+}
+.theme-latex .matrix::after {
+  border-color: #111;
+  border-width: 1.2pt;
+}
+.theme-latex .matrix .td {
+  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+  font-size: 10pt;
+}
+
+/* --- Matrices truncadas --- */
+.theme-latex .mat-trunc {
+  display: inline-grid;
+  position: relative;
+  gap: 0;
+  align-items: center;
+  vertical-align: middle;
+}
+.theme-latex .mat-trunc .mat-row-idx {
+  color: #999; font-size: 0.8em; font-weight: normal; font-style: normal;
+  text-align: right; padding: 0 4px 0 0; user-select: none;
+}
+.theme-latex .mat-trunc .mat-col-idx {
+  color: #999; font-size: 0.75em; font-weight: normal; font-style: normal;
+  text-align: center; padding: 0 3pt 2pt 3pt; user-select: none;
+}
+.theme-latex .mat-trunc .mat-cell {
+  text-align: right; padding: 0 3pt; position: relative; z-index: 1;
+  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+  font-size: 11pt;
+}
+.theme-latex .mat-trunc .mat-dots {
+  color: #999; font-size: 0.9em; user-select: none;
+}
+.theme-latex .mat-trunc .mat-bracket {
+  display: block; position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  border-left: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  border-radius: 3pt;
+  pointer-events: none; z-index: 0;
+}
+
+/* --- Cell arrays / vectors con indice --- */
+.theme-latex .cell-array {
+  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+  font-size: 11pt;
+}
+.theme-latex .cell-element {
+  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+  font-size: 11pt;
+}
+.theme-latex .cell-label {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: normal; color: #1a3c6e; font-size: 9pt;
+}
+.theme-latex .cell-label var { font-style: normal; }
+.theme-latex .cell-brace {
+  font-size: 160%; font-weight: 300; color: #333;
+  font-family: 'Cambria Math', 'Latin Modern Math', serif;
+}
+.theme-latex .cell-sep { color: #888; }
+.theme-latex .idx-br { color: #1a3c6e; }
+
+/* --- Function definitions --- */
+.theme-latex .func-def {
+  color: #555; font-style: italic;
+  font-family: 'Cambria Math', Georgia, serif; font-size: 11pt;
+}
+.theme-latex .func-keyword {
+  color: #7b1fa2; font-weight: 600; font-style: normal;
+  font-family: Georgia, 'Times New Roman', serif; font-size: 10pt;
+}
+.theme-latex .func-name {
+  color: #1a3c6e; font-weight: 600; font-style: italic;
+  font-family: 'Cambria Math', Georgia, serif; font-size: 11pt;
+}
+
+/* --- Comments/descriptions --- */
+.theme-latex .out-comment {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 10.5pt; color: #333;
+}
+
+/* --- Fracciones --- */
+.theme-latex .dvc {
+  padding-left: 3pt;
+  padding-right: 3pt;
+  line-height: 120%;
+}
+
+.theme-latex .dvl {
+  padding: 1px 4px;
+  border-bottom: solid 0.8pt #111;
+  margin-top: 2pt;
+  margin-bottom: 2pt;
+}
+
+.theme-latex .dvl:last-child { border-bottom: none; }
+
+/* --- Radical --- */
+.theme-latex .radical-wrap {
+  display: inline-flex;
+  align-items: stretch;
+  vertical-align: middle;
+  padding-left: 0;
+  line-height: 1;
+}
+
+.theme-latex .r0 {
+  background-image: none;
+  width: auto; height: auto;
+  margin-left: 0; margin-top: 0; margin-right: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 120%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.theme-latex .r0::before { content: '\221A'; }
+
+.theme-latex .o0 {
+  display: inline-block;
+  border-top: 0.8px solid #111;
+  padding: 2px 3px 0 2px;
+  margin-top: 1px;
+  line-height: 1.2;
+  vertical-align: baseline;
+}
+
+/* --- @{eq} elements --- */
+.theme-latex .eq-brace-l,
+.theme-latex .eq-brace-r { color: #111; }
+.theme-latex .eq-mat { color: #111; }
+.theme-latex .eq-mcell,
+.theme-latex .eq-cell { font-size: 10pt; }
+
+/* --- N-ary --- */
+.theme-latex .nary {
+  color: #111;
+  font-size: 160%;
+  font-family: 'Cambria Math', Georgia, 'Times New Roman', serif;
+  font-weight: normal; font-style: normal;
+  line-height: 0;
+  display: block;
+  margin: 0; padding: 0.8em 0;
+  transform: scaleY(1.3);
+}
+
+.theme-latex .nary em {
+  transform: scaleX(0.75) rotate(6deg);
+}
+
+/* --- Headings: serif con linea sutil --- */
+.theme-latex h1 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 18pt;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 4px;
+  margin-top: 16px;
+}
+
+.theme-latex h2 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 14pt;
+  font-weight: 700;
+  margin-top: 12px;
+}
+
+.theme-latex h3 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 12pt;
+  font-weight: 600;
+  font-style: italic;
+  margin-top: 10px;
+}
+
+/* --- Texto descriptivo (>) --- */
+.theme-latex .description {
+  font-style: italic;
+  color: #333;
+  margin-left: 12px;
+}
+
+/* --- Errores --- */
+.theme-latex .ok {
+  color: #006400;
+  background-color: #f0fff0;
+  padding: 1px 4px;
+  font-size: 9pt;
+}
+
+.theme-latex .err {
+  color: #b00;
+  background-color: #fff5f5;
+  padding: 1px 4px;
+  font-size: 9pt;
+}
+
+/* --- Sym vec (lsolve) --- base brackets, font overrides */
+.theme-latex .lsolve-sym-vec .td {
+  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+  font-size: 10pt;
+}
+.theme-latex .lsolve-sym-vec .td:first-child { border-color: #111; }
+.theme-latex .lsolve-sym-vec .td:last-child { border-color: #111; }
+
+/* ═══════════════════════════════════════════════════════════
+   THEME: Gabriola — estilo Mathcad Prime
+   Fuentes: Gabriola (ecuaciones), Tahoma (texto/headings)
+   Colores: Variables negro, Unidades azul oscuro, Constantes verde oliva
+   ═══════════════════════════════════════════════════════════ */
+
+.theme-gabriola {
+  background: #fff;
+  font-family: Tahoma, 'Segoe UI', Calibri, sans-serif;
+  font-size: 11pt;
+  line-height: 1.45;
+  color: #000;
+  padding: 20px 30px;
+}
+
+/* --- Ecuaciones: Gabriola grande --- */
+.theme-gabriola .eq,
+.theme-gabriola .matrix {
+  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif;
+  font-size: 14pt;
+  line-height: 1.6;
+  color: #000;
+}
+
+.theme-gabriola .out-line {
+  line-height: 160%;
+  margin: 0.15em 0;
+}
+
+/* --- Bold mode --- */
+.theme-gabriola .eq-bold { font-weight: 600; }
+.theme-gabriola .eq-bold var { font-weight: 600; }
+.theme-gabriola .eq-bold .dvc,
+.theme-gabriola .eq-bold .dvr,
+.theme-gabriola .eq-bold .dvs { font-weight: 600; }
+.theme-gabriola .eq-bold .dvl { border-bottom-width: 1.2pt; }
+
+/* --- Variables: italic negro (Mathcad style) --- */
+.theme-gabriola .eq var {
+  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  color: #000;
+  font-size: 100%;
+  font-style: italic;
+}
+
+/* --- Funciones: upright normal --- */
+.theme-gabriola .eq i {
+  color: #000;
+  font-style: italic;
+  font-size: 100%;
+  font-weight: normal;
+}
+
+.theme-gabriola .eq b {
+  font-weight: normal;
+  font-style: normal;
+  color: #000;
+}
+
+/* --- Subindices --- */
+.theme-gabriola .eq sub {
+  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 70%;
+  vertical-align: -0.25em;
+  margin-left: 1pt;
+  line-height: 0;
+}
+
+/* --- Superindices --- */
+.theme-gabriola .eq sup {
+  display: inline-block;
+  margin-left: 1pt;
+  font-size: 70%;
+  vertical-align: 0.58em;
+  line-height: 0;
+}
+
+/* --- Unidades: bold italic azul oscuro (Mathcad Prime) --- */
+.theme-gabriola .unit {
+  font-size: 0.85em;
+  color: #00008B;
+  font-weight: bold;
+  font-style: italic;
+  font-family: Gabriola, 'Cambria Math', serif;
+}
+
+/* --- Valores resaltados --- */
+.theme-gabriola .val {
+  font-weight: 600;
+  color: #000;
+}
+
+/* --- Matrices: square brackets [ ] --- */
+.theme-gabriola .matrix {
+  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+}
+.theme-gabriola .matrix::before {
+  border-color: #000;
+  border-width: 1.5pt;
+}
+.theme-gabriola .matrix::after {
+  border-color: #000;
+  border-width: 1.5pt;
+}
+.theme-gabriola .matrix .td {
+  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 11pt;
+}
+
+/* --- Matrices truncadas --- */
+.theme-gabriola .mat-trunc {
+  display: inline-grid;
+  position: relative;
+  gap: 0;
+  align-items: center;
+  vertical-align: middle;
+}
+.theme-gabriola .mat-trunc .mat-row-idx {
+  color: #999; font-size: 0.8em; font-weight: normal; font-style: normal;
+  text-align: right; padding: 0 4px 0 0; user-select: none;
+}
+.theme-gabriola .mat-trunc .mat-col-idx {
+  color: #999; font-size: 0.75em; font-weight: normal; font-style: normal;
+  text-align: center; padding: 0 3pt 2pt 3pt; user-select: none;
+}
+.theme-gabriola .mat-trunc .mat-cell {
+  text-align: right; padding: 0 3pt; position: relative; z-index: 1;
+  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 12pt;
+}
+.theme-gabriola .mat-trunc .mat-dots {
+  color: #999; font-size: 0.9em; user-select: none;
+}
+.theme-gabriola .mat-trunc .mat-bracket {
+  display: block; position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  border-left: 1.87px solid currentColor;
+  border-right: 1.87px solid currentColor;
+  border-radius: 4.5pt;
+  pointer-events: none; z-index: 0;
+}
+
+/* --- Cell arrays / vectors con indice --- */
+.theme-gabriola .cell-array {
+  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 14pt;
+}
+.theme-gabriola .cell-element {
+  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 14pt;
+}
+.theme-gabriola .cell-label {
+  font-family: Tahoma, 'Segoe UI', sans-serif;
+  font-style: normal; color: #2E3192; font-size: 10pt;
+}
+.theme-gabriola .cell-label var { font-style: normal; }
+.theme-gabriola .cell-brace {
+  font-size: 160%; font-weight: 300; color: #333;
+  font-family: Gabriola, 'Cambria Math', serif;
+}
+.theme-gabriola .cell-sep { color: #888; }
+.theme-gabriola .idx-br { color: #2E3192; }
+
+/* --- Function definitions --- */
+.theme-gabriola .func-def {
+  color: #555; font-style: italic;
+  font-family: Gabriola, 'Cambria Math', serif; font-size: 14pt;
+}
+.theme-gabriola .func-keyword {
+  color: #7b1fa2; font-weight: 600; font-style: normal;
+  font-family: Tahoma, 'Segoe UI', sans-serif; font-size: 10pt;
+}
+.theme-gabriola .func-name {
+  color: #2E3192; font-weight: 600; font-style: italic;
+  font-family: Gabriola, 'Cambria Math', serif; font-size: 14pt;
+}
+
+/* --- Comments/descriptions --- */
+.theme-gabriola .out-comment {
+  font-family: Tahoma, 'Segoe UI', Calibri, sans-serif;
+  font-size: 11pt; color: #333;
+}
+
+/* --- Fracciones --- */
+.theme-gabriola .dvc { padding-left: 3pt; padding-right: 3pt; line-height: 120%; }
+.theme-gabriola .dvl { padding: 1px 4px; border-bottom: solid 0.8pt #000; margin-top: 2pt; margin-bottom: 2pt; }
+.theme-gabriola .dvl:last-child { border-bottom: none; }
+
+/* --- Radical --- */
+.theme-gabriola .radical-wrap {
+  display: inline-flex; align-items: stretch;
+  vertical-align: middle; padding-left: 0; line-height: 1;
+}
+.theme-gabriola .r0 {
+  background-image: none; width: auto; height: auto;
+  margin-left: 0; margin-top: 0; margin-right: 0;
+  font-family: Gabriola, 'Bell MT', 'STIX Two Math', serif;
+  font-size: 120%; display: flex; align-items: flex-end;
+}
+.theme-gabriola .r0::before { content: '\221A'; }
+.theme-gabriola .o0 {
+  display: inline-block; border-top: 0.8px solid #000;
+  padding: 2px 3px 0 2px; margin-top: 1px;
+  line-height: 1.2; vertical-align: baseline;
+}
+
+/* --- @{eq} elements --- */
+.theme-gabriola .eq-brace-l,
+.theme-gabriola .eq-brace-r { color: #000; }
+.theme-gabriola .eq-mat { color: #000; }
+.theme-gabriola .eq-mcell,
+.theme-gabriola .eq-cell { font-size: 11pt; }
+
+/* --- N-ary --- */
+.theme-gabriola .nary {
+  color: #000; font-size: 160%;
+  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-weight: normal; font-style: normal;
+  line-height: 0; display: block;
+  margin: 0; padding: 0.8em 0;
+  transform: scaleY(1.3);
+}
+.theme-gabriola .nary em { transform: scaleX(0.75) rotate(6deg); }
+
+/* --- Headings: Tahoma (Mathcad Prime style) --- */
+.theme-gabriola h1 {
+  font-family: Tahoma, sans-serif;
+  font-size: 16pt;
+  font-weight: normal;
+  color: #2E3192;
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+.theme-gabriola h2 {
+  font-family: Tahoma, sans-serif;
+  font-size: 13pt;
+  font-weight: normal;
+  color: #2E3192;
+}
+.theme-gabriola h3 {
+  font-family: Tahoma, sans-serif;
+  font-size: 12pt;
+  font-weight: normal;
+  color: #2E3192;
+}
+
+/* --- Design check colors --- */
+.theme-gabriola .ok { color: green; background-color: #F0FFF0; padding: 1px 4px; font-size: 9pt; }
+.theme-gabriola .err { color: red; background-color: #FFF0F0; padding: 1px 4px; font-size: 9pt; }
+
+/* --- Sym vec (lsolve) --- base brackets, font overrides */
+.theme-gabriola .lsolve-sym-vec .td {
+  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 12pt;
+}
+
+/* ─── Theme: Mathcad (UniMath Prime → Cambria Math fallback) ─── */
+.theme-mathcad {
+  background: #fff;
+  color: #1a1a1a;
+  font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.55;
+  padding: 18px 28px;
+}
+
+/* Equations / matrices — Cambria Math emulates Mathcad UniMath Prime */
+.theme-mathcad .eq,
+.theme-mathcad .matrix {
+  font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', serif;
+  font-size: 12pt;
+  line-height: 1.4;
+  color: #000;
+}
+
+.theme-mathcad .out-line {
+  padding: 2px 0;
+  margin: 1px 0;
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 12pt;
+}
+
+.theme-mathcad .eq-bold { font-weight: 600; }
+.theme-mathcad .eq-bold var { font-weight: 600; }
+.theme-mathcad .eq-bold .dvc,
+.theme-mathcad .eq-bold .dvr,
+.theme-mathcad .eq-bold .dvs { font-weight: 600; }
+.theme-mathcad .eq-bold .dvl { border-bottom-width: 1.2pt; }
+
+/* Variables: Italic, black (Mathcad Prime style) */
+.theme-mathcad .eq var {
+  font-style: italic;
+  color: #000;
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 12pt;
+}
+
+/* Italic elements */
+.theme-mathcad .eq i {
+  font-style: italic;
+  color: #000;
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+}
+
+/* Bold elements — functions */
+.theme-mathcad .eq b {
+  font-weight: normal;
+  font-style: normal;
+  color: #000;
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+}
+
+/* Subscripts */
+.theme-mathcad .eq sub {
+  font-size: 0.72em;
+  vertical-align: sub;
+  line-height: 0;
+  font-style: italic;
+  color: #000;
+}
+
+/* Superscripts */
+.theme-mathcad .eq sup {
+  font-size: 0.72em;
+  vertical-align: super;
+  line-height: 0;
+  font-style: italic;
+  color: #000;
+}
+
+/* Units: Bold Italic dark blue (Mathcad Prime #00008B) */
+.theme-mathcad .unit {
+  font-style: italic;
+  font-weight: bold;
+  color: #00008B;
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 12pt;
+}
+
+/* Values */
+.theme-mathcad .val {
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 12pt;
+  color: #000;
+}
+
+/* Matrix — Mathcad: base brackets [ ], font overrides */
+.theme-mathcad .matrix::before { border-color: #000; border-width: 1.5pt; }
+.theme-mathcad .matrix::after { border-color: #000; border-width: 1.5pt; }
+.theme-mathcad .matrix .td {
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 12pt;
+  color: #000;
+}
+
+/* mat-trunc (large matrices) */
+.theme-mathcad .mat-trunc {
+  padding: 2px 4px;
+}
+.theme-mathcad .mat-trunc .mat-row-idx {
+  font-size: 7pt; color: #888;
+}
+.theme-mathcad .mat-trunc .mat-col-idx {
+  font-size: 7pt; color: #888;
+}
+.theme-mathcad .mat-trunc .mat-cell {
+  padding: 1px 5px; text-align: center;
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 11pt;
+}
+.theme-mathcad .mat-trunc .mat-dots {
+  text-align: center; color: #666;
+}
+.theme-mathcad .mat-trunc .mat-bracket {
+  border-left: 1.5pt solid #000;
+  border-right: 1.5pt solid #000;
+  border-radius: 2px;
+}
+
+/* Cell arrays / vectors con indice */
+.theme-mathcad .cell-array {
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 12pt;
+}
+.theme-mathcad .cell-element {
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 12pt;
+}
+.theme-mathcad .cell-label {
+  font-family: 'Segoe UI', Calibri, sans-serif;
+  font-style: normal; color: #1565c0; font-size: 9pt;
+}
+.theme-mathcad .cell-label var { font-style: normal; }
+.theme-mathcad .cell-brace {
+  font-size: 160%; font-weight: 300; color: #333;
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+}
+.theme-mathcad .cell-sep { color: #888; }
+.theme-mathcad .idx-br { color: #1565c0; }
+
+/* Function definitions */
+.theme-mathcad .func-def {
+  color: #555; font-style: italic;
+  font-family: 'Cambria Math', 'STIX Two Math', serif; font-size: 12pt;
+}
+.theme-mathcad .func-keyword {
+  color: #7b1fa2; font-weight: 600; font-style: normal;
+  font-family: 'Segoe UI', Calibri, sans-serif; font-size: 10pt;
+}
+.theme-mathcad .func-name {
+  color: #1565c0; font-weight: 600; font-style: italic;
+  font-family: 'Cambria Math', 'STIX Two Math', serif; font-size: 12pt;
+}
+
+/* Comments/descriptions */
+.theme-mathcad .out-comment {
+  font-family: 'Segoe UI', Calibri, sans-serif;
+  font-size: 11pt; color: #444;
+}
+
+/* Fractions */
+.theme-mathcad .dvc { padding-left: 3pt; padding-right: 3pt; line-height: 120%; }
+.theme-mathcad .dvl { padding: 1px 4px; border-bottom: solid 0.8pt #000; margin-top: 2pt; margin-bottom: 2pt; }
+.theme-mathcad .dvl:last-child { border-bottom: none; }
+
+/* Radicals */
+.theme-mathcad .radical-wrap {
+  display: inline-flex; align-items: stretch; vertical-align: middle;
+}
+.theme-mathcad .r0 {
+  display: inline-flex; align-items: flex-end; font-size: 1.15em;
+  color: #000; margin-right: -1px;
+}
+.theme-mathcad .r0::before { content: '\221A'; }
+.theme-mathcad .o0 {
+  display: inline-block; border-top: 0.8pt solid #000;
+  padding: 0 3px 0 2px; margin-top: 2px;
+}
+
+/* Braces / eq-mat */
+.theme-mathcad .eq-brace-l,
+.theme-mathcad .eq-brace-r { color: #000; }
+.theme-mathcad .eq-mat { color: #000; }
+.theme-mathcad .eq-mcell,
+.theme-mathcad .eq-cell { font-size: 11pt; }
+
+/* N-ary (integrals, sums, products) */
+.theme-mathcad .nary {
+  display: inline-flex; flex-direction: column; align-items: center;
+  vertical-align: middle; margin: 0 3px;
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 12pt;
+}
+.theme-mathcad .nary em { transform: scaleX(0.75) rotate(6deg); }
+
+/* Headings — Segoe UI, Mathcad Prime dark style */
+.theme-mathcad h1 {
+  font-family: 'Segoe UI', Calibri, sans-serif;
+  font-size: 16pt;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 16px 0 8px 0;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 4px;
+}
+.theme-mathcad h2 {
+  font-family: 'Segoe UI', Calibri, sans-serif;
+  font-size: 13pt;
+  font-weight: 600;
+  color: #333;
+  margin: 12px 0 6px 0;
+}
+.theme-mathcad h3 {
+  font-family: 'Segoe UI', Calibri, sans-serif;
+  font-size: 11.5pt;
+  font-weight: 600;
+  color: #444;
+  margin: 10px 0 4px 0;
+}
+
+/* Messages */
+.theme-mathcad .ok { color: green; background-color: #F0FFF0; padding: 1px 4px; font-size: 9pt; }
+.theme-mathcad .err { color: red; background-color: #FFF0F0; padding: 1px 4px; font-size: 9pt; }
+
+/* lsolve symbolic vectors — base brackets, font overrides */
+.theme-mathcad .lsolve-sym-vec .td {
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 12pt;
+}
 
 /* ═══════════════════════════════════════════════════════════
    CAD FLOATING TOOLBAR - Estilo ifc-cli.html

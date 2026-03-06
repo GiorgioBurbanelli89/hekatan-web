@@ -2595,6 +2595,7 @@ function synHighlightLine(line: string): string {
     .replace(/\b(\d+\.?\d*([eE][+-]?\d+)?)\b/g, '<span class="syn-number">$1</span>')
     .replace(/\b(sin|cos|tan|asin|acos|atan|atan2|sqrt|cbrt|ln|log|exp|abs|round|floor|ceiling|min|max|mod|gcd|lcm|sum|product|integral|transpose|lsolve|det|inv|identity|matrix)\b/g, '<span class="syn-function">$1</span>');
 }
+let _foldGutterDirty = false;
 function updateSyntax() {
   const text = codeInput.value;
   const lines = text.split("\n");
@@ -2617,12 +2618,215 @@ function updateSyntax() {
   syntaxLayer.innerHTML = parts.join("\n");
   syntaxLayer.scrollTop = codeInput.scrollTop;
   syntaxLayer.scrollLeft = codeInput.scrollLeft;
+  // Also update fold gutter
+  _foldGutterDirty = true;
 }
 codeInput.addEventListener("input", updateSyntax);
 codeInput.addEventListener("scroll", () => {
   syntaxLayer.scrollTop = codeInput.scrollTop;
   syntaxLayer.scrollLeft = codeInput.scrollLeft;
 });
+
+// ─── Code Folding (AvalonEdit-style +/- in fold-gutter) ──
+const foldGutter = document.getElementById("foldGutter") as HTMLDivElement;
+// Map of collapsed regions: startLine → endLine (0-based)
+const foldedRegions = new Map<number, number>();
+
+interface FoldRegion { start: number; end: number; }
+
+/** Detect foldable regions: function/for/while/if...end and @{...}...@{end ...} */
+function detectFoldRegions(lines: string[]): FoldRegion[] {
+  const regions: FoldRegion[] = [];
+  const stack: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trimStart();
+    // @{block} openers (not @{end ...}, not single-line @{pagebreak} etc.)
+    if (/^@\{(?!end\b)(?!pagebreak)/.test(t)) {
+      stack.push(i);
+      continue;
+    }
+    // @{end ...} closers
+    if (/^@\{end\s/.test(t)) {
+      if (stack.length > 0) {
+        const start = stack.pop()!;
+        if (i > start) regions.push({ start, end: i });
+      }
+      continue;
+    }
+    // function ... (not inside @{} block detected by inBlock check — simplify: just push)
+    if (/^function\s/.test(t)) {
+      stack.push(i);
+      continue;
+    }
+    // for ..., while ..., if ...
+    if (/^(for|while|if)\s/.test(t)) {
+      stack.push(i);
+      continue;
+    }
+    // 'end' keyword (standalone or end of line)
+    if (/^end\s*$/.test(t) || /^end\s*\/\//.test(t) || /^end\s+'/.test(t)) {
+      // Find innermost non-@{} opener on stack
+      for (let j = stack.length - 1; j >= 0; j--) {
+        const openerTrimmed = lines[stack[j]].trimStart();
+        if (!/^@\{/.test(openerTrimmed)) {
+          const start = stack.splice(j, 1)[0];
+          if (i > start) regions.push({ start, end: i });
+          break;
+        }
+      }
+    }
+  }
+  return regions.sort((a, b) => a.start - b.start);
+}
+
+/** Build the fold gutter markers */
+function updateFoldGutter() {
+  const text = codeInput.value;
+  const lines = text.split("\n");
+  const regions = detectFoldRegions(lines);
+
+  // Build lookup: line → region (only for start lines)
+  const regionByStart = new Map<number, FoldRegion>();
+  for (const r of regions) regionByStart.set(r.start, r);
+
+  // Lines inside a region (not start/end)
+  const insideSet = new Set<number>();
+  for (const r of regions) {
+    for (let i = r.start + 1; i < r.end; i++) insideSet.add(i);
+  }
+
+  const markers: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const r = regionByStart.get(i);
+    if (r) {
+      const collapsed = foldedRegions.has(i);
+      const symbol = collapsed ? "+" : "\u2212"; // + or −
+      markers.push(`<span class="fold-marker fold-active" data-fold="${i}">${symbol}</span>`);
+    } else if (insideSet.has(i)) {
+      markers.push(`<span class="fold-marker fold-empty">\u2502</span>`); // │
+    } else {
+      markers.push(`<span class="fold-marker fold-empty">&nbsp;</span>`);
+    }
+  }
+
+  // Create inner container for scrolling sync
+  let inner = foldGutter.querySelector(".fold-inner") as HTMLDivElement;
+  if (!inner) {
+    inner = document.createElement("div");
+    inner.className = "fold-inner";
+    foldGutter.innerHTML = "";
+    foldGutter.appendChild(inner);
+  }
+  inner.innerHTML = markers.join("\n");
+}
+
+/** Toggle fold state and apply to textarea */
+function toggleFold(startLine: number) {
+  if (foldedRegions.has(startLine)) {
+    // Unfold: restore original text
+    unfoldRegion(startLine);
+  } else {
+    // Fold: hide lines
+    foldRegion(startLine);
+  }
+}
+
+function foldRegion(startLine: number) {
+  const text = codeInput.value;
+  const lines = text.split("\n");
+  const regions = detectFoldRegions(lines);
+  const r = regions.find(r => r.start === startLine);
+  if (!r) return;
+  foldedRegions.set(startLine, r.end);
+  applyFolds();
+}
+
+function unfoldRegion(startLine: number) {
+  foldedRegions.delete(startLine);
+  applyFolds();
+}
+
+// Store the full unfolded source (the "truth")
+let unfoldedSource = codeInput.value;
+
+/** Apply all folds: replace codeInput value, keeping original in unfoldedSource */
+function applyFolds() {
+  const lines = unfoldedSource.split("\n");
+  // Recalculate regions on unfoldedSource
+  const regions = detectFoldRegions(lines);
+  // Validate folds still exist
+  for (const [start] of foldedRegions) {
+    if (!regions.find(r => r.start === start)) {
+      foldedRegions.delete(start);
+    }
+  }
+
+  // Build visible line mapping
+  const visibleLines: string[] = [];
+  const hiddenLines = new Set<number>();
+  for (const [start, end] of foldedRegions) {
+    for (let i = start + 1; i <= end; i++) hiddenLines.add(i);
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    if (hiddenLines.has(i)) continue;
+    if (foldedRegions.has(i)) {
+      // Show first line with ... indicator
+      visibleLines.push(lines[i] + "  // ...");
+    } else {
+      visibleLines.push(lines[i]);
+    }
+  }
+
+  // Temporarily unhook input listener to avoid re-triggering
+  codeInput.value = visibleLines.join("\n");
+  updateSyntax();
+  updateFoldGutter();
+}
+
+// Sync fold gutter scroll with textarea
+codeInput.addEventListener("scroll", () => {
+  const inner = foldGutter.querySelector(".fold-inner") as HTMLDivElement;
+  if (inner) inner.style.transform = `translateY(-${codeInput.scrollTop}px)`;
+});
+
+// Click handler on fold gutter
+foldGutter.addEventListener("click", (e) => {
+  const target = e.target as HTMLElement;
+  if (!target.classList.contains("fold-marker") || target.classList.contains("fold-empty")) return;
+  const foldLine = parseInt(target.dataset.fold || "", 10);
+  if (isNaN(foldLine)) return;
+
+  // Map visible line back to source line
+  if (foldedRegions.size === 0) {
+    // No folds active, line numbers match
+    toggleFold(foldLine);
+  } else {
+    // When folds are active, the fold-line attr already references the unfolded source
+    toggleFold(foldLine);
+  }
+});
+
+// Hook into input to track source changes (unfold all on edit for simplicity)
+const _origInputHandler = () => {
+  // If user edits while folds exist, unfold all to avoid corruption
+  if (foldedRegions.size > 0) {
+    foldedRegions.clear();
+  }
+  unfoldedSource = codeInput.value;
+  updateFoldGutter();
+};
+codeInput.addEventListener("input", _origInputHandler);
+
+// Initial render + dirty-flag pump (syncs with updateSyntax)
+updateFoldGutter();
+setInterval(() => {
+  if (_foldGutterDirty) {
+    _foldGutterDirty = false;
+    unfoldedSource = codeInput.value;
+    updateFoldGutter();
+  }
+}, 200);
 
 // ─── MathEditor (WYSIWYG canvas) ────────────────────────
 const editor = new MathEditor(mathCanvasEl);
@@ -3417,7 +3621,11 @@ editor.onExecute = (code: string) => {
 
 // ─── Theme toggle (only affects Calculate mode HTML output) ──
 themeSelect.addEventListener("change", () => {
-  output.classList.toggle("theme-hekatan", themeSelect.value === "hekatan");
+  const v = themeSelect.value;
+  output.classList.toggle("theme-hekatan", v === "hekatan");
+  output.classList.toggle("theme-latex", v === "latex");
+  output.classList.toggle("theme-gabriola", v === "gabriola");
+  output.classList.toggle("theme-mathcad", v === "mathcad");
   if (currentMode === "code") runCode();
 });
 
@@ -3442,9 +3650,24 @@ async function runCode() {
     const pageContents = rawHTML.split("<!--PAGEBREAK-->");
     // Apply page background color from @{config bg:...}
     const bgColorMap: Record<string, string> = {
-      book: "#f2eced", bookwarm: "#f2eced", cream: "#fdf6e3",
-      white: "#ffffff", black: "#1a1a2e", dark: "#1a1a2e",
-      gray: "#e8e8e8", grey: "#e8e8e8", sepia: "#f4ecd8",
+      // Papeles y neutros
+      white: "#ffffff", cream: "#fdf6e3", ivory: "#fffff0",
+      paper: "#f5f0e8", parchment: "#f4e8c1", linen: "#faf0e6",
+      snow: "#fffafa", seashell: "#fff5ee", oldpaper: "#e8dcc8", antique: "#faebd7",
+      // Grises
+      light: "#f8f8f8", silver: "#f0f0f0", gray: "#e8e8e8", grey: "#e8e8e8", smoke: "#f5f5f5",
+      // Calidos
+      sand: "#f5e6ca", peach: "#ffdab9", wheat: "#f5deb3", beige: "#f5f5dc", honey: "#f0e68c",
+      sepia: "#f4ecd8",
+      // Frios
+      ice: "#f0f8ff", sky: "#e6f2ff", mint: "#f0fff0", lavender: "#f0e6ff", pearl: "#eae8e5",
+      // Libros / textbook
+      book: "#f0eae4", bookwarm: "#f2eced", textbook: "#ede6df", notebook: "#f7f2ec",
+      // Ingenieria
+      blueprint: "#e8eef7", grid: "#f0f4e8", graph: "#f8f8f0",
+      // Oscuros
+      black: "#1a1a2e", dark: "#1a1a2e", night: "#0d1117", midnight: "#191970",
+      charcoal: "#2c2c2c", slate: "#2f3640",
     };
     const rawBg = evaluator.pageBackground || "";
     const pageBg = bgColorMap[rawBg.toLowerCase()] || rawBg || "";
@@ -5802,7 +6025,9 @@ splitter.addEventListener("mousedown", (e) => {
           dbgPrint("help", "examples          - Listar ejemplos disponibles");
           dbgPrint("help", "load NOMBRE       - Cargar ejemplo por nombre");
           dbgPrint("help", "mode canvas|code  - Cambiar modo editor");
-          dbgPrint("help", "theme calcpad|hekatan - Cambiar tema");
+          dbgPrint("help", "theme NAME        - Cambiar tema (classic|hekatan|latex|gabriola|mathcad)");
+          dbgPrint("help", "theme next/prev   - Siguiente/anterior tema");
+          dbgPrint("help", "theme cycle [seg] - Ciclar todos los temas");
           dbgPrint("help", "autorun on|off    - Toggle AutoRun");
           dbgPrint("help", "run               - Ejecutar codigo (F5)");
           dbgPrint("help", "── Debug ──");
@@ -6249,17 +6474,61 @@ splitter.addEventListener("mousedown", (e) => {
 
         case "theme": {
           const t = (args[0] || "").toLowerCase();
-          if (t === "calcpad" || t === "c") {
-            themeSelect.value = "calcpad";
+          if (t === "classic" || t === "c") {
+            themeSelect.value = "classic";
             themeSelect.dispatchEvent(new Event("change"));
-            dbgPrint("ok", "Tema: Calcpad");
+            dbgPrint("ok", "Tema: Classic");
           } else if (t === "hekatan" || t === "h") {
             themeSelect.value = "hekatan";
             themeSelect.dispatchEvent(new Event("change"));
             dbgPrint("ok", "Tema: Hekatan");
+          } else if (t === "latex" || t === "l") {
+            themeSelect.value = "latex";
+            themeSelect.dispatchEvent(new Event("change"));
+            dbgPrint("ok", "Tema: LaTeX");
+          } else if (t === "gabriola" || t === "g") {
+            themeSelect.value = "gabriola";
+            themeSelect.dispatchEvent(new Event("change"));
+            dbgPrint("ok", "Tema: Gabriola");
+          } else if (t === "mathcad" || t === "m") {
+            themeSelect.value = "mathcad";
+            themeSelect.dispatchEvent(new Event("change"));
+            dbgPrint("ok", "Tema: Mathcad");
+          } else if (t === "cycle" || t === "test") {
+            const themes = ["classic", "hekatan", "latex", "gabriola", "mathcad"];
+            const delay = parseInt(args[1] || "2", 10) * 1000;
+            dbgPrint("info", `Ciclando temas cada ${delay / 1000}s...`);
+            let i = 0;
+            const step = () => {
+              if (i >= themes.length) {
+                dbgPrint("ok", "Ciclo de temas completado");
+                return;
+              }
+              const name = themes[i];
+              themeSelect.value = name;
+              themeSelect.dispatchEvent(new Event("change"));
+              dbgPrint("ok", `[${i + 1}/${themes.length}] Tema: ${name}`);
+              i++;
+              setTimeout(step, delay);
+            };
+            step();
+          } else if (t === "next" || t === "n") {
+            const themes = ["classic", "hekatan", "latex", "gabriola", "mathcad"];
+            const cur = themes.indexOf(themeSelect.value);
+            const next = (cur + 1) % themes.length;
+            themeSelect.value = themes[next];
+            themeSelect.dispatchEvent(new Event("change"));
+            dbgPrint("ok", `Tema: ${themes[next]}`);
+          } else if (t === "prev" || t === "p") {
+            const themes = ["classic", "hekatan", "latex", "gabriola", "mathcad"];
+            const cur = themes.indexOf(themeSelect.value);
+            const prev = (cur - 1 + themes.length) % themes.length;
+            themeSelect.value = themes[prev];
+            themeSelect.dispatchEvent(new Event("change"));
+            dbgPrint("ok", `Tema: ${themes[prev]}`);
           } else {
             dbgPrint("info", `Tema actual: ${themeSelect.value}`);
-            dbgPrint("help", "Uso: theme calcpad|hekatan");
+            dbgPrint("help", "Uso: theme classic|hekatan|latex|gabriola|mathcad|next|prev|cycle [seg]");
           }
           break;
         }
@@ -6441,6 +6710,35 @@ ${styles}
       case "selectall":
         codeInput.select();
         break;
+      case "find":
+        // Trigger find & replace (Ctrl+F)
+        (document.querySelector("#codeInput") as HTMLTextAreaElement)?.focus();
+        break;
+      case "help-ref":
+        window.open("/help.html", "_blank");
+        break;
+      case "help-about": {
+        const overlay = document.createElement("div");
+        overlay.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:9999;`;
+        overlay.innerHTML = `
+          <div style="background:#fff;border-radius:10px;padding:32px 44px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3);max-width:440px;">
+            <div style="font-size:36px;margin-bottom:8px;color:#00D4AA;">&#9773;</div>
+            <h2 style="margin:0 0 6px;font-size:18px;color:#00D4AA;">Hekatan Math Editor</h2>
+            <p style="margin:0 0 4px;color:#D4AF37;font-size:11px;font-style:italic;">The Magic of Calculation for Engineers</p>
+            <p style="margin:8px 0;color:#666;font-size:12px;line-height:1.5;">
+              Motor: <b>math.js</b> + <b>Eigen C++/WebAssembly</b><br>
+              Ecuaciones • Matrices • CAD 2D • Three.js 3D<br>
+              Funciones MATLAB-like • Documentos tipo libro
+            </p>
+            <p style="margin:8px 0 16px;color:#999;font-size:10px;">Version 1.0 &mdash; 2026</p>
+            <button style="background:#00D4AA;color:#fff;border:none;border-radius:6px;padding:8px 28px;font-size:14px;cursor:pointer;" id="_aboutClose">Cerrar</button>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.querySelector("#_aboutClose")!.addEventListener("click", () => overlay.remove());
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+        break;
+      }
     }
   });
 });
