@@ -7,6 +7,7 @@
 import { HekatanEvaluator, math } from "hekatan-math/mathEngine.js";
 import type { LineResult, CellResult } from "hekatan-math/mathEngine.js";
 import { renderEquationText } from "hekatan-math/renderer.js";
+
 import { handlePlotBlock, handleSvgBlock, processThreeDSL } from "hekatan-math/parser.js";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -2466,9 +2467,9 @@ function[KL, KM] = rlaxinfi(datos, nod, np, nr, E, icod)
   end
   % Condensacion estatica
   na = np
-  Kaa = subset(SS, index(1:na, 1:na))
-  Kab = subset(SS, index(1:na, (na+1):ngl))
-  Kbb = subset(SS, index((na+1):ngl, (na+1):ngl))
+  Kaa = submat(SS, 1, na, 1, na)
+  Kab = submat(SS, 1, na, na+1, ngl)
+  Kbb = submat(SS, na+1, ngl, na+1, ngl)
   KL = Kaa - Kab * inv(Kbb) * transpose(Kab)
 end
 

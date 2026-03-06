@@ -438,7 +438,17 @@ math.import({
     return (math as any).matrix([args]);
   },
 
-  // range(start, end[, step]) → column vector
+  // seq(start, end[, step]) → column vector (end-inclusive, like MATLAB 1:end)
+  seq: function (start: number, end: number, step?: number) {
+    const s = step ?? (end >= start ? 1 : -1);
+    if (s === 0) return (math as any).matrix([[start]]);
+    const arr: number[][] = [];
+    if (s > 0) { for (let i = start; i <= end + 1e-12; i += s) arr.push([i]); }
+    else       { for (let i = start; i >= end - 1e-12; i += s) arr.push([i]); }
+    return (math as any).matrix(arr);
+  },
+
+  // range(start, end[, step]) → column vector (end-inclusive, overrides math.js range)
   range: function (start: number, end: number, step?: number) {
     const s = step ?? (end >= start ? 1 : -1);
     if (s === 0) return (math as any).matrix([[start]]);
@@ -446,6 +456,16 @@ math.import({
     if (s > 0) { for (let i = start; i <= end + 1e-12; i += s) arr.push([i]); }
     else       { for (let i = start; i >= end - 1e-12; i += s) arr.push([i]); }
     return (math as any).matrix(arr);
+  },
+
+  // submat(M, r1, r2, c1, c2) → sub-matrix M[r1:r2, c1:c2] (1-based inclusive)
+  submat: function (M: any, r1: number, r2: number, c1: number, c2: number) {
+    const rows: number[] = [];
+    const cols: number[] = [];
+    // math.index uses 0-based indexing with plain arrays, so convert 1-based → 0-based
+    for (let i = Math.round(r1) - 1; i <= Math.round(r2) - 1; i++) rows.push(i);
+    for (let j = Math.round(c1) - 1; j <= Math.round(c2) - 1; j++) cols.push(j);
+    return (math as any).subset(M, (math as any).index(rows, cols));
   },
 
   // linspace(start, end, n) → column vector of n evenly spaced values
@@ -743,12 +763,14 @@ export class HekatanEvaluator {
       }
 
       // ── Assignment / expression ──────────
-      // Split by semicolons (suppresses output in MATLAB)
-      const stmts = trimmed.split(";").map(s => s.trim()).filter(Boolean);
+      // Split by semicolons (respecting brackets — don't split inside [] or ())
+      const stmts = this._splitBySemicolon(trimmed);
       for (const stmt of stmts) {
         try {
           // Convert cell reads: VAR{idx} → __cellget(VAR, idx)
-          const processed = stmt.replace(/(\w+)\{([^}]+)\}/g, '__cellget($1, $2)');
+          let processed = stmt.replace(/(\w+)\{([^}]+)\}/g, '__cellget($1, $2)');
+          // Convert semicolons inside brackets to commas (MATLAB→math.js matrix syntax)
+          processed = this._semicolonToCommaInBrackets(processed);
           math.evaluate(processed, scope);
         } catch {
           // Silently skip errors in function body
@@ -758,6 +780,44 @@ export class HekatanEvaluator {
       i++;
     }
     return undefined;
+  }
+
+  /** Convert semicolons inside brackets to commas (MATLAB [1,2;3,4] → math.js [1,2],[3,4]) */
+  private _semicolonToCommaInBrackets(line: string): string {
+    let depth = 0, inStr = false;
+    const chars = line.split('');
+    for (let i = 0; i < chars.length; i++) {
+      const c = chars[i];
+      if (c === "'" || c === '"') inStr = !inStr;
+      if (!inStr) {
+        if (c === '[' || c === '(') depth++;
+        else if (c === ']' || c === ')') depth--;
+        else if (c === ';' && depth > 0) chars[i] = ',';
+      }
+    }
+    return chars.join('');
+  }
+
+  /** Split line by semicolons, respecting brackets and strings */
+  private _splitBySemicolon(line: string): string[] {
+    const stmts: string[] = [];
+    let depth = 0, inStr = false, start = 0;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === "'" || c === '"') inStr = !inStr;
+      if (!inStr) {
+        if (c === '(' || c === '[' || c === '{') depth++;
+        else if (c === ')' || c === ']' || c === '}') depth--;
+        else if (c === ';' && depth === 0) {
+          const s = line.slice(start, i).trim();
+          if (s) stmts.push(s);
+          start = i + 1;
+        }
+      }
+    }
+    const last = line.slice(start).trim();
+    if (last) stmts.push(last);
+    return stmts;
   }
 
   /** Encuentra el 'end' correspondiente (respetando profundidad) */
