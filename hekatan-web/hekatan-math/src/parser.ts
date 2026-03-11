@@ -8,8 +8,8 @@
 import { parseExpression, evaluate, HekatanEnvironment, type ASTNode } from "./evaluator.js";
 import { renderNode, renderValue, renderValueRow, renderValueCol, renderInlineText, renderEquationText, renderVarName } from "./renderer.js";
 
-const BLOCK_OPEN_RE = /^@\{(plot|plotly|svg|three|eq)\b\s*([^}]*)\}\s*$/i;
-const BLOCK_CLOSE_RE = /^@\{end\s+(plot|plotly|svg|three|eq)\}\s*$/i;
+const BLOCK_OPEN_RE = /^@\{(plot|plotly|svg|three|eq|draw|text|columns)\b\s*([^}]*)\}\s*$/i;
+const BLOCK_CLOSE_RE = /^@\{end\s+(plot|plotly|svg|three|eq|draw|text|columns)\}\s*$/i;
 
 // ─── Main parse function ─────────────────────────────────
 export function parse(source: string, existingEnv?: HekatanEnvironment, compact?: boolean): { html: string; env: HekatanEnvironment } {
@@ -46,6 +46,15 @@ export function parse(source: string, existingEnv?: HekatanEnvironment, compact?
       parse(hideLines.join("\n"), env);
       continue;
     }
+
+    // @{config ...} — single-line directive, skip silently
+    if (/^@\{config\b[^}]*\}\s*$/i.test(trimmed)) { i++; continue; }
+
+    // @{pagebreak} — page break
+    if (/^@\{pagebreak\}\s*$/i.test(trimmed)) { html += '<div style="page-break-after:always"></div>'; i++; continue; }
+
+    // --- horizontal rule
+    if (/^---+\s*$/.test(trimmed)) { html += '<hr>'; i++; continue; }
 
     // Directive block @{plot} ... @{end plot}
     const blockMatch = trimmed.match(BLOCK_OPEN_RE);
@@ -276,6 +285,9 @@ function parseDirectiveBlock(type: string, lines: string[], args?: string, env?:
     case "plotly": return handlePlotlyBlock(lines);
     case "svg": return handleSvgBlock(lines);
     case "three": return handleThreeBlock(lines);
+    case "draw": return `<!-- draw block (${args || ""}) - rendered in GUI -->`;
+    case "text": return lines.map(l => `<p class="comment">${l.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p>`).join("");
+    case "columns": return `<!-- columns block -->`;
     default: return `<pre>${lines.join("\n")}</pre>`;
   }
 }
@@ -283,12 +295,18 @@ function parseDirectiveBlock(type: string, lines: string[], args?: string, env?:
 // ─── @{eq} block ─────────────────────────────────────────
 function handleEqBlock(lines: string[], args: string): string {
   if (lines.length === 0) return "";
-  const align = /^(left|right|center)$/i.test(args) ? args.toLowerCase() : "center";
-  let html = `<div class="eq-block" style="text-align:${align};margin:8px 0;">`;
+  const alignMatch = args.match(/(left|right|center)/i);
+  const align = alignMatch ? alignMatch[1].toLowerCase() : "center";
+  const sizeMatch = args.match(/size:(\d+)/i);
+  const fontSize = sizeMatch ? sizeMatch[1] : "";
+  const fsStyle = fontSize ? `font-size:${fontSize}px;` : "";
 
+  // Parse all lines: extract eq number, detect "=" for alignment
+  interface EqParsed { empty?: boolean; left?: string; right?: string; full?: string; hasEquals?: boolean; eqNum?: string; }
+  const parsed: EqParsed[] = [];
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed) { html += '<div style="height:4px"></div>'; continue; }
+    if (!trimmed) { parsed.push({ empty: true }); continue; }
 
     // Equation number at end: (1), (2a), (5.11)
     const numMatch = trimmed.match(/\((\d+(?:\.\d+)?[a-z]?)\)\s*$/);
@@ -299,6 +317,55 @@ function handleEqBlock(lines: string[], args: string): string {
       eqNum = numMatch[1];
     }
 
+    // Split at first " = " (main equality) — not >=, <=, !=, ==
+    const eqIdx = eqText.indexOf(" = ");
+    if (eqIdx >= 0) {
+      parsed.push({ left: eqText.slice(0, eqIdx).trim(), right: eqText.slice(eqIdx + 3).trim(), hasEquals: true, eqNum });
+    } else {
+      parsed.push({ full: eqText, hasEquals: false, eqNum });
+    }
+  }
+
+  // Use aligned table layout when: >1 non-empty line AND ≥50% have "="
+  const nonEmpty = parsed.filter(p => !p.empty);
+  const withEquals = nonEmpty.filter(p => p.hasEquals);
+  const useAligned = nonEmpty.length > 1 && withEquals.length >= nonEmpty.length * 0.5;
+
+  if (useAligned) {
+    // Aligned mode: 5-column table — spacer | LHS | = | RHS | num(right-aligned)
+    // Left/right spacers at 50% width center the equation columns; number goes to far right margin
+    let html = `<div class="eq-block" style="margin:8px 0;${fsStyle}">`;
+    html += `<table class="eq-align-tbl" style="width:100%;border-collapse:collapse;">`;
+    html += `<colgroup><col style="width:50%"><col><col><col><col style="width:50%"></colgroup>`;
+    for (const p of parsed) {
+      if (p.empty) { html += `<tr><td colspan="5" style="height:4px"></td></tr>`; continue; }
+      html += `<tr>`;
+      html += `<td></td>`; // left spacer
+      if (p.hasEquals) {
+        html += `<td class="eq" style="text-align:right;padding:2px 0;white-space:nowrap;line-height:2.2;">${renderEquationText(p.left!)}</td>`;
+        html += `<td class="eq" style="text-align:center;padding:2px 4px;white-space:nowrap;line-height:2.2;"> = </td>`;
+        html += `<td class="eq" style="text-align:left;padding:2px 0;white-space:nowrap;line-height:2.2;">${renderEquationText(p.right!)}</td>`;
+      } else {
+        html += `<td class="eq" colspan="3" style="text-align:left;padding:2px 0;white-space:nowrap;line-height:2.2;">${renderEquationText(p.full!)}</td>`;
+      }
+      html += p.eqNum
+        ? `<td style="text-align:right;white-space:nowrap;font-style:normal;line-height:2.2;">(${p.eqNum})</td>`
+        : `<td></td>`;
+      html += `</tr>`;
+    }
+    html += `</table></div>`;
+    return html;
+  }
+
+  // Single line or no alignment needed: original centered behavior
+  let html = `<div class="eq-block" style="text-align:${align};margin:8px 0;${fsStyle}">`;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) { html += '<div style="height:4px"></div>'; continue; }
+    const numMatch = trimmed.match(/\((\d+(?:\.\d+)?[a-z]?)\)\s*$/);
+    let eqText = trimmed;
+    let eqNum = "";
+    if (numMatch) { eqText = trimmed.slice(0, numMatch.index).trim(); eqNum = numMatch[1]; }
     html += '<p class="eq" style="margin:4px 0;line-height:2.2;">';
     html += renderEquationText(eqText);
     if (eqNum) html += `<span style="float:right;font-style:normal;margin-left:24px">(${eqNum})</span>`;
@@ -320,23 +387,56 @@ function heatColor(t: number): string {
 }
 
 export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment): string {
-  const W = 600, H = 400, PAD = 50;
+  let plotW = 600, plotH = 400;
+  const PAD = 50;
   let xMin = -5, xMax = 5, yMin = -2, yMax = 2;
-  const funcs: { expr: string; color: string; width: number; label: string }[] = [];
+  const funcs: { expr: string; color: string; width: number; label: string; style: string }[] = [];
   const annotations: string[] = [];
   let heatmapVar = "";
   let colorbarLabel = "";
   let showMesh = false;
+  let title = "", xlabel = "", ylabel = "";
+  let showGrid = true;
+
+  // ── Track "function:" numbered properties ──
+  // funcMap[n] stores properties for function N (1-based)
+  const funcMap: Record<number, { expr?: string; color?: string; linewidth?: number; legend?: string; style?: string }> = {};
+  let lastFuncIdx = 0;  // last function index defined via function:/functionN:
 
   for (const line of lines) {
     const t = line.trim();
     if (!t || t.startsWith("#") || t.startsWith("'")) continue;
 
-    // Range: x = -5 : 5
-    const xRange = t.match(/^x\s*=\s*([-\d.]+)\s*:\s*([-\d.]+)/);
+    // Title and axis labels
+    const titleMatch = t.match(/^title:\s*(.+)/i);
+    if (titleMatch) { title = titleMatch[1].trim(); continue; }
+    const xlabelMatch = t.match(/^xlabel:\s*(.+)/i);
+    if (xlabelMatch) { xlabel = xlabelMatch[1].trim(); continue; }
+    const ylabelMatch = t.match(/^ylabel:\s*(.+)/i);
+    if (ylabelMatch) { ylabel = ylabelMatch[1].trim(); continue; }
+
+    // Plot dimensions: width: 700, height: 450
+    const pwMatch = t.match(/^width:\s*(\d+)\s*$/i);
+    if (pwMatch) { plotW = +pwMatch[1]; continue; }
+    const phMatch = t.match(/^height:\s*(\d+)\s*$/i);
+    if (phMatch) { plotH = +phMatch[1]; continue; }
+
+    // Grid: true/false
+    const gridMatch = t.match(/^grid:\s*(true|false)\s*$/i);
+    if (gridMatch) { showGrid = gridMatch[1].toLowerCase() === "true"; continue; }
+
+    // showlegend: true/false (ignored for now — legend shows when label set)
+    if (/^showlegend:\s*(true|false)\s*$/i.test(t)) continue;
+
+    // Range: x = -5 : 5  OR  xlim: -5, 5
+    const xRange = t.match(/^x\s*=\s*([-\d.e]+)\s*:\s*([-\d.e]+)/);
     if (xRange) { xMin = +xRange[1]; xMax = +xRange[2]; continue; }
-    const yRange = t.match(/^y\s*=\s*([-\d.]+)\s*:\s*([-\d.]+)/);
+    const yRange = t.match(/^y\s*=\s*([-\d.e]+)\s*:\s*([-\d.e]+)/);
     if (yRange) { yMin = +yRange[1]; yMax = +yRange[2]; continue; }
+    const xlimMatch = t.match(/^xlim:\s*([-\d.e]+)\s*,\s*([-\d.e]+)/i);
+    if (xlimMatch) { xMin = +xlimMatch[1]; xMax = +xlimMatch[2]; continue; }
+    const ylimMatch = t.match(/^ylim:\s*([-\d.e]+)\s*,\s*([-\d.e]+)/i);
+    if (ylimMatch) { yMin = +ylimMatch[1]; yMax = +ylimMatch[2]; continue; }
 
     // Heatmap: heatmap VARNAME
     const hmMatch = t.match(/^heatmap\s+(\w+)\s*$/i);
@@ -349,11 +449,51 @@ export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment):
     // Mesh overlay
     if (/^mesh\s*$/i.test(t)) { showMesh = true; continue; }
 
-    // Function: y = sin(x) | color: #F00 | width: 2 | label: "f(x)"
+    // ── function: / functionN: syntax (Hekatan C# compatible) ──
+    const funcMatch = t.match(/^function(\d*):\s*(.+)/i);
+    if (funcMatch) {
+      const idx = funcMatch[1] ? +funcMatch[1] : (lastFuncIdx + 1);
+      if (!funcMap[idx]) funcMap[idx] = {};
+      funcMap[idx].expr = funcMatch[2].trim();
+      lastFuncIdx = idx;
+      continue;
+    }
+
+    // Per-function properties: colorN:, linewidthN:, legendN:, styleN:
+    const colorNMatch = t.match(/^color(\d*):\s*(#[0-9A-Fa-f]{3,8}|\w+)\s*$/i);
+    if (colorNMatch) {
+      const idx = colorNMatch[1] ? +colorNMatch[1] : lastFuncIdx || 1;
+      if (!funcMap[idx]) funcMap[idx] = {};
+      funcMap[idx].color = colorNMatch[2];
+      continue;
+    }
+    const lwNMatch = t.match(/^linewidth(\d*):\s*([\d.]+)\s*$/i);
+    if (lwNMatch) {
+      const idx = lwNMatch[1] ? +lwNMatch[1] : lastFuncIdx || 1;
+      if (!funcMap[idx]) funcMap[idx] = {};
+      funcMap[idx].linewidth = +lwNMatch[2];
+      continue;
+    }
+    const legNMatch = t.match(/^legend(\d*):\s*(.+)/i);
+    if (legNMatch) {
+      const idx = legNMatch[1] ? +legNMatch[1] : lastFuncIdx || 1;
+      if (!funcMap[idx]) funcMap[idx] = {};
+      funcMap[idx].legend = legNMatch[2].trim();
+      continue;
+    }
+    const styNMatch = t.match(/^style(\d*):\s*(\w+)\s*$/i);
+    if (styNMatch) {
+      const idx = styNMatch[1] ? +styNMatch[1] : lastFuncIdx || 1;
+      if (!funcMap[idx]) funcMap[idx] = {};
+      funcMap[idx].style = styNMatch[2].trim().toLowerCase();
+      continue;
+    }
+
+    // ── y = expr | color: ... | width: ... | label: "..." (inline syntax) ──
     const fMatch = t.match(/^y\s*=\s*(.+?)(\s*\|.*)?$/);
     if (fMatch) {
       const expr = fMatch[1].trim();
-      let color = "#2196f3", width = 2, label = "";
+      let color = "#2196f3", width = 2, label = "", style = "solid";
       if (fMatch[2]) {
         const attrs = fMatch[2];
         const cm = attrs.match(/color:\s*(#[0-9A-Fa-f]{3,8}|\w+)/);
@@ -362,8 +502,31 @@ export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment):
         if (wm) width = +wm[1];
         const lm = attrs.match(/label:\s*"([^"]+)"/);
         if (lm) label = lm[1];
+        const sm = attrs.match(/style:\s*(\w+)/);
+        if (sm) style = sm[1].toLowerCase();
       }
-      funcs.push({ expr, color, width, label });
+      funcs.push({ expr, color, width, label, style });
+      continue;
+    }
+
+    // ── Colon-comma annotations: rect: x, y, w, h, color, fill ──
+    const colonAnnMatch = t.match(/^(rect|point|text|eq|line|arrow|proj|hline|vline|dim):\s*(.+)/i);
+    if (colonAnnMatch) {
+      // Convert "cmd: a, b, c, ..." to "cmd a b c ..." for unified handling
+      const cmd = colonAnnMatch[1].toLowerCase();
+      const rest = colonAnnMatch[2];
+      // Keep quoted strings intact, split others by comma
+      const rebuilt: string[] = [cmd];
+      let inQuote = false;
+      let current = "";
+      for (let i = 0; i < rest.length; i++) {
+        const ch = rest[i];
+        if (ch === '"') { inQuote = !inQuote; current += ch; }
+        else if (ch === ',' && !inQuote) { rebuilt.push(current.trim()); current = ""; }
+        else { current += ch; }
+      }
+      if (current.trim()) rebuilt.push(current.trim());
+      annotations.push(rebuilt.join(" "));
       continue;
     }
 
@@ -371,22 +534,55 @@ export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment):
     annotations.push(t);
   }
 
+  // ── Merge funcMap entries into funcs array ──
+  const defaultColors = ["#0033CC", "#CC0000", "#006600", "#FF6600", "#9900CC", "#009999"];
+  const idxList = Object.keys(funcMap).map(Number).sort((a, b) => a - b);
+  for (const idx of idxList) {
+    const fm = funcMap[idx];
+    if (!fm.expr) continue;
+    funcs.push({
+      expr: fm.expr,
+      color: fm.color || defaultColors[(idx - 1) % defaultColors.length],
+      width: fm.linewidth ?? 2,
+      label: fm.legend || "",
+      style: fm.style || "solid",
+    });
+  }
+
   // Coordinate transforms
+  const W = plotW, H = plotH;
   const sx = (x: number) => PAD + (x - xMin) / (xMax - xMin) * (W - 2 * PAD);
   const sy = (y: number) => H - PAD - (y - yMin) / (yMax - yMin) * (H - 2 * PAD);
 
   const totalW = colorbarLabel ? W + 50 : W;
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${H}" style="max-width:${totalW}px;background:#fff;border:1px solid #ddd;">`;
 
-  // Grid
-  svg += `<g stroke="#e0e0e0" stroke-width="0.5">`;
-  for (let x = Math.ceil(xMin); x <= Math.floor(xMax); x++) {
-    svg += `<line x1="${sx(x)}" y1="${PAD}" x2="${sx(x)}" y2="${H - PAD}"/>`;
+  // Smart tick interval: aim for ~5-10 grid lines per axis
+  function niceStep(range: number): number {
+    const rough = range / 8;
+    const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+    const norm = rough / mag;
+    let nice: number;
+    if (norm < 1.5) nice = 1;
+    else if (norm < 3) nice = 2;
+    else if (norm < 7) nice = 5;
+    else nice = 10;
+    return nice * mag;
   }
-  for (let y = Math.ceil(yMin); y <= Math.floor(yMax); y++) {
-    svg += `<line x1="${PAD}" y1="${sy(y)}" x2="${W - PAD}" y2="${sy(y)}"/>`;
+  const xStep = niceStep(xMax - xMin);
+  const yStep = niceStep(yMax - yMin);
+
+  // Grid (conditional)
+  if (showGrid) {
+    svg += `<g stroke="#e0e0e0" stroke-width="0.5">`;
+    for (let x = Math.ceil(xMin / xStep) * xStep; x <= xMax; x += xStep) {
+      svg += `<line x1="${sx(x)}" y1="${PAD}" x2="${sx(x)}" y2="${H - PAD}"/>`;
+    }
+    for (let y = Math.ceil(yMin / yStep) * yStep; y <= yMax; y += yStep) {
+      svg += `<line x1="${PAD}" y1="${sy(y)}" x2="${W - PAD}" y2="${sy(y)}"/>`;
+    }
+    svg += `</g>`;
   }
-  svg += `</g>`;
 
   // ── Heatmap rendering (before axes, so axes draw on top) ──
   if (heatmapVar && outerEnv) {
@@ -457,21 +653,24 @@ export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment):
   if (yMin <= 0 && yMax >= 0) svg += `<line x1="${PAD}" y1="${sy(0)}" x2="${W - PAD}" y2="${sy(0)}" stroke="#666" stroke-width="1"/>`;
   if (xMin <= 0 && xMax >= 0) svg += `<line x1="${sx(0)}" y1="${PAD}" x2="${sx(0)}" y2="${H - PAD}" stroke="#666" stroke-width="1"/>`;
 
-  // Axis labels
+  // Axis labels (using smart tick steps)
+  const fmtTick = (v: number) => { const s = +v.toPrecision(10); return String(s); };
   svg += `<g font-size="10" fill="#888" text-anchor="middle">`;
-  for (let x = Math.ceil(xMin); x <= Math.floor(xMax); x++) {
-    if (x === 0) continue;
-    svg += `<text x="${sx(x)}" y="${H - PAD + 15}">${x}</text>`;
+  for (let x = Math.ceil(xMin / xStep) * xStep; x <= xMax; x += xStep) {
+    if (Math.abs(x) < xStep * 0.01) continue;
+    svg += `<text x="${sx(x)}" y="${H - PAD + 15}">${fmtTick(x)}</text>`;
   }
-  for (let y = Math.ceil(yMin); y <= Math.floor(yMax); y++) {
-    if (y === 0) continue;
-    svg += `<text x="${PAD - 10}" y="${sy(y) + 4}" text-anchor="end">${y}</text>`;
+  for (let y = Math.ceil(yMin / yStep) * yStep; y <= yMax; y += yStep) {
+    if (Math.abs(y) < yStep * 0.01) continue;
+    svg += `<text x="${PAD - 10}" y="${sy(y) + 4}" text-anchor="end">${fmtTick(y)}</text>`;
   }
   svg += `</g>`;
 
   // Plot functions
+  let legendY = PAD + 15;
   for (const f of funcs) {
     const env = new HekatanEnvironment();
+    if (outerEnv) { for (const [k, v] of outerEnv.variables) env.setVar(k, v); for (const [k, v] of outerEnv.userFunctions) env.userFunctions.set(k, v); }
     const N = 300;
     const points: string[] = [];
     for (let k = 0; k <= N; k++) {
@@ -486,10 +685,14 @@ export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment):
       } catch { /* skip */ }
     }
     if (points.length > 1) {
-      svg += `<polyline points="${points.join(" ")}" fill="none" stroke="${f.color}" stroke-width="${f.width}"/>`;
+      const dashAttr = f.style === "dashed" ? ` stroke-dasharray="8,4"` : f.style === "dot" || f.style === "dotted" ? ` stroke-dasharray="3,3"` : "";
+      svg += `<polyline points="${points.join(" ")}" fill="none" stroke="${f.color}" stroke-width="${f.width}"${dashAttr}/>`;
     }
     if (f.label) {
-      svg += `<text x="${W - PAD - 5}" y="${sy(0) - 5}" fill="${f.color}" font-size="12" text-anchor="end">${f.label}</text>`;
+      const dashAttr = f.style === "dashed" ? ` stroke-dasharray="8,4"` : f.style === "dot" || f.style === "dotted" ? ` stroke-dasharray="3,3"` : "";
+      svg += `<line x1="${W - PAD - 75}" y1="${legendY - 4}" x2="${W - PAD - 55}" y2="${legendY - 4}" stroke="${f.color}" stroke-width="${f.width}"${dashAttr}/>`;
+      svg += `<text x="${W - PAD - 50}" y="${legendY}" fill="${f.color}" font-size="11" text-anchor="start">${f.label}</text>`;
+      legendY += 18;
     }
   }
 
@@ -499,11 +702,24 @@ export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment):
     const cmd = parts[0];
 
     if (cmd === "rect" && parts.length >= 5) {
-      const [, x1, y1, x2, y2] = parts.map(Number);
-      const color = parts[5] || "#e3f2fd";
-      const px = Math.min(sx(x1), sx(x2)), py = Math.min(sy(y1), sy(y2));
-      const pw = Math.abs(sx(x2) - sx(x1)), ph = Math.abs(sy(y2) - sy(y1));
-      svg += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="${color}" opacity="0.3"/>`;
+      // Support both:  rect x y w h color fill  (width/height from origin y)
+      //           and:  rect x1 y1 x2 y2 color  (corner to corner)
+      const hasFill = parts[parts.length - 1] === "fill";
+      const color = hasFill ? (parts[5] || "#e3f2fd") : (parts[5] || "#e3f2fd");
+      if (hasFill) {
+        // rect: x, y_bottom, width, height, color, fill  (Riemann rectangles)
+        const rx = +parts[1], ry = +parts[2], rw = +parts[3], rh = +parts[4];
+        const px = sx(rx), py = sy(ry + rh);
+        const pw = sx(rx + rw) - sx(rx);
+        const ph = sy(ry) - sy(ry + rh);
+        svg += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="${color}" opacity="0.3"/>`;
+      } else {
+        // rect x1 y1 x2 y2 color  (corner to corner)
+        const [, x1, y1, x2, y2] = parts.map(Number);
+        const px = Math.min(sx(x1), sx(x2)), py = Math.min(sy(y1), sy(y2));
+        const pw = Math.abs(sx(x2) - sx(x1)), ph = Math.abs(sy(y2) - sy(y1));
+        svg += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="${color}" opacity="0.3"/>`;
+      }
     }
     else if (cmd === "point" && parts.length >= 3) {
       const x = +parts[1], y = +parts[2];
@@ -515,14 +731,22 @@ export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment):
       const x = +parts[1], y = +parts[2];
       const textMatch = ann.match(/"([^"]+)"/);
       const txt = textMatch ? textMatch[1] : parts.slice(3).join(" ");
-      const color = parts[parts.length - 1]?.startsWith("#") ? parts[parts.length - 1] : "#333";
-      svg += `<text x="${sx(x)}" y="${sy(y)}" fill="${color}" font-size="12">${txt}</text>`;
+      // Find color (#hex) and font-size (number) after the quoted text
+      const afterQuote = ann.slice(ann.lastIndexOf('"') + 1).trim();
+      const afterParts = afterQuote.split(/\s+/).filter(Boolean);
+      const color = afterParts.find(p => p.startsWith("#")) || "#333";
+      const fontSize = afterParts.find(p => /^\d+$/.test(p)) || "12";
+      svg += `<text x="${sx(x)}" y="${sy(y)}" fill="${color}" font-size="${fontSize}">${txt}</text>`;
     }
     else if (cmd === "eq" && parts.length >= 4) {
       const x = +parts[1], y = +parts[2];
       const textMatch = ann.match(/"([^"]+)"/);
       const txt = textMatch ? textMatch[1] : parts.slice(3).join(" ");
-      svg += `<text x="${sx(x)}" y="${sy(y)}" fill="#333" font-size="13" font-style="italic">${txt}</text>`;
+      const afterQuote = ann.slice(ann.lastIndexOf('"') + 1).trim();
+      const afterParts = afterQuote.split(/\s+/).filter(Boolean);
+      const color = afterParts.find(p => p.startsWith("#")) || "#333";
+      const fontSize = afterParts.find(p => /^\d+$/.test(p)) || "13";
+      svg += `<text x="${sx(x)}" y="${sy(y)}" fill="${color}" font-size="${fontSize}" font-style="italic">${txt}</text>`;
     }
     else if (cmd === "line" && parts.length >= 5) {
       const [, x1, y1, x2, y2] = parts.map(Number);
@@ -561,6 +785,11 @@ export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment):
     }
   }
 
+  // Title and axis labels
+  if (title) svg += `<text x="${W / 2}" y="${PAD - 15}" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">${title}</text>`;
+  if (xlabel) svg += `<text x="${W / 2}" y="${H - 5}" fill="#555" font-size="11" text-anchor="middle">${xlabel}</text>`;
+  if (ylabel) svg += `<text x="12" y="${H / 2}" fill="#555" font-size="11" text-anchor="middle" transform="rotate(-90, 12, ${H / 2})">${ylabel}</text>`;
+
   svg += "</svg>";
   return `<div class="plot-container">${svg}</div>`;
 }
@@ -583,7 +812,8 @@ const THREE_DSL_CMDS = new Set([
   "box","sphere","cylinder","cone","torus","plane","line","arrow","darrow",
   "plate","slab","tube","pipe","node","carc3d","dim3d","axes","axeslabeled",
   "axes_labeled","gridhelper","color","opacity","wireframe","metalness",
-  "roughness","reset","camera","background","light"
+  "roughness","reset","camera","background","light",
+  "beam","deck","pier","cable","hanger","water","text","fit"
 ]);
 
 function parseThreeOpts(tokens: string[]): { pos: number[], kv: Record<string,string>, text: string|null } {
@@ -592,6 +822,14 @@ function parseThreeOpts(tokens: string[]): { pos: number[], kv: Record<string,st
   for (let i = 1; i < tokens.length; i++) {
     const t = tokens[i];
     if (t.includes(":")) { const ci = t.indexOf(":"); kv[t.slice(0,ci).toLowerCase()] = t.slice(ci+1); }
+    else if (t.includes(",")) {
+      // Expand comma-separated coordinates: "x,y,z" → [x, y, z]
+      const parts = t.split(",");
+      let allNum = true;
+      for (const p of parts) { if (isNaN(parseFloat(p))) { allNum = false; break; } }
+      if (allNum) { for (const p of parts) pos.push(parseFloat(p)); }
+      else if (text === null) text = t;
+    }
     else { const n = parseFloat(t); if (!isNaN(n)) pos.push(n); else if (text === null) text = t; }
   }
   return { pos, kv, text };
@@ -865,6 +1103,126 @@ export function processThreeDSL(lines: string[]): string {
           js.push(`_s.position.copy(_mid);_s.position.y+=0.2;_s.scale.set(1,0.25,1);scene.add(_s);`);
         }
         js.push(`}`);
+        break;
+      }
+
+      // ── Engineering commands use Z-up convention (swap Y↔Z for Three.js Y-up) ──
+      // User writes (x, y, z) where Z=up → Three.js Vector3(x, z, y)
+
+      // ── Engineering: beam (cylinder between two 3D points) ──
+      case "beam": {
+        const r = kv["r"] || kv["radius"] || "0.3";
+        const c = makeMat(kv);
+        js.push(`{const _p1=new THREE.Vector3(${P(0)},${P(2)},${P(1)}),_p2=new THREE.Vector3(${P(3)},${P(5)},${P(4)});`);
+        js.push(`const _d=_p2.clone().sub(_p1),_l=_d.length(),_mid=_p1.clone().add(_p2).multiplyScalar(0.5);`);
+        js.push(`const _g=new THREE.CylinderGeometry(${r},${r},_l,12);`);
+        js.push(`const _m=new THREE.Mesh(_g,${c});_m.position.copy(_mid);`);
+        js.push(`_m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),_d.normalize());`);
+        js.push(`_m.castShadow=true;_m.receiveShadow=true;scene.add(_m);}`);
+        break;
+      }
+
+      // ── Engineering: deck (flat slab between two points) ──
+      case "deck": {
+        const w = kv["w"] || kv["width"] || "10";
+        const t = kv["t"] || kv["thickness"] || "1";
+        const c = makeMat(kv);
+        js.push(`{const _p1=new THREE.Vector3(${P(0)},${P(2)},${P(1)}),_p2=new THREE.Vector3(${P(3)},${P(5)},${P(4)});`);
+        js.push(`const _d=_p2.clone().sub(_p1),_l=_d.length(),_mid=_p1.clone().add(_p2).multiplyScalar(0.5);`);
+        js.push(`const _g=new THREE.BoxGeometry(_l,${t},${w});`);
+        js.push(`const _m=new THREE.Mesh(_g,${c});_m.position.copy(_mid);`);
+        js.push(`_m.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),_d.normalize());`);
+        js.push(`_m.castShadow=true;_m.receiveShadow=true;scene.add(_m);}`);
+        break;
+      }
+
+      // ── Engineering: pier (tapered concrete pier) ──
+      case "pier": {
+        const h = kv["h"] || kv["height"] || "10";
+        const wb = kv["wbot"] || kv["w"] || "4";
+        const wt = kv["wtop"] || kv["w"] || "3";
+        const d = kv["d"] || kv["depth"] || "4";
+        const c = makeMat(kv, threeColorHex(kv["color"] || "#8B7355"));
+        // Pier extrudes along Y (Three.js up) — Shape in XY plane, extrude in Z (depth)
+        js.push(`{const _hw1=${wb}/2,_hw2=${wt}/2,_h=${h};`);
+        js.push(`const _shape=new THREE.Shape();_shape.moveTo(-_hw1,0);_shape.lineTo(_hw1,0);_shape.lineTo(_hw2,_h);_shape.lineTo(-_hw2,_h);_shape.closePath();`);
+        js.push(`const _g=new THREE.ExtrudeGeometry(_shape,{depth:${d},bevelEnabled:false});`);
+        js.push(`const _m=new THREE.Mesh(_g,${c});`);
+        // Z-up swap: user (x,y,z) → Three.js position(x, z, y); pier base at user's z, extrude up
+        js.push(`_m.position.set(${P(0)}-${wb}/2,${P(2)},${P(1)}-${d}/2);`);
+        js.push(`_m.rotation.x=-Math.PI/2;`);
+        js.push(`_m.castShadow=true;_m.receiveShadow=true;scene.add(_m);}`);
+        break;
+      }
+
+      // ── Engineering: cable (smooth tube through multiple points) ──
+      case "cable": {
+        const r = kv["r"] || kv["radius"] || "0.15";
+        const c = makeMat(kv, threeColorHex(kv["color"] || "#cccccc"));
+        // Collect all coordinate triplets from positional args (Z-up → Y-up swap)
+        const nPts = Math.floor(pos.length / 3);
+        if (nPts >= 2) {
+          js.push(`{const _pts=[`);
+          for (let pi = 0; pi < nPts; pi++) {
+            js.push(`new THREE.Vector3(${pos[pi*3]},${pos[pi*3+2]},${pos[pi*3+1]}),`);
+          }
+          js.push(`];`);
+          js.push(`const _curve=new THREE.CatmullRomCurve3(_pts);`);
+          js.push(`const _g=new THREE.TubeGeometry(_curve,_pts.length*8,${r},8,false);`);
+          js.push(`const _m=new THREE.Mesh(_g,${c});_m.castShadow=true;scene.add(_m);}`);
+        }
+        break;
+      }
+
+      // ── Engineering: hanger (vertical cable/bar) ──
+      case "hanger": {
+        const r = kv["r"] || kv["radius"] || "0.1";
+        const c = makeMat(kv, threeColorHex(kv["color"] || "#aaaaaa"));
+        // hanger x y ztop zbot → Z-up swap: Three.js Vector3(x, ztop, y) to Vector3(x, zbot, y)
+        js.push(`{const _p1=new THREE.Vector3(${P(0)},${P(3)},${P(1)}),_p2=new THREE.Vector3(${P(0)},${P(2)},${P(1)});`);
+        js.push(`const _d=_p2.clone().sub(_p1),_l=_d.length(),_mid=_p1.clone().add(_p2).multiplyScalar(0.5);`);
+        js.push(`const _g=new THREE.CylinderGeometry(${r},${r},_l,8);`);
+        js.push(`const _m=new THREE.Mesh(_g,${c});_m.position.copy(_mid);`);
+        js.push(`_m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),_d.normalize());`);
+        js.push(`scene.add(_m);}`);
+        break;
+      }
+
+      // ── Engineering: water (semitransparent horizontal plane) ──
+      case "water": {
+        const w = kv["w"] || kv["width"] || "200";
+        const l = kv["l"] || kv["length"] || "200";
+        const c = threeColorHex(kv["color"] || "#1a5276");
+        // water z → Z-up: Three.js Y = user's Z
+        js.push(`{const _g=new THREE.PlaneGeometry(${l},${w});`);
+        js.push(`const _m=new THREE.Mesh(_g,new THREE.MeshStandardMaterial({color:${c},metalness:0.3,roughness:0.6,transparent:true,opacity:0.7,side:THREE.DoubleSide}));`);
+        js.push(`_m.rotation.x=-Math.PI/2;_m.position.set(0,${P(0)},0);scene.add(_m);}`);
+        break;
+      }
+
+      // ── Engineering: text (3D sprite label) ──
+      case "text": {
+        const txt = text || kv["text"] || kv["label"] || "";
+        const col = kv["color"] || "#00ff88";
+        const sc = kv["scale"] || "1";
+        if (txt) {
+          // Z-up swap: user (x,y,z) → Three.js (x, z, y)
+          js.push(`{const _c=document.createElement("canvas");_c.width=512;_c.height=128;`);
+          js.push(`const _cx=_c.getContext("2d");_cx.fillStyle="${col}";_cx.font="bold 48px Consolas,monospace";_cx.textAlign="center";_cx.fillText("${txt}",256,80);`);
+          js.push(`const _s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(_c)}));`);
+          js.push(`_s.position.set(${P(0)},${P(2)},${P(1)});_s.scale.set(${parseFloat(sc)*5},${parseFloat(sc)*1.2},1);scene.add(_s);}`);
+        }
+        break;
+      }
+
+      // ── Engineering: fit (auto-frame all objects) ──
+      case "fit": {
+        js.push(`{const _box=new THREE.Box3();scene.traverse(c=>{if(c.isMesh)_box.expandByObject(c);});`);
+        js.push(`if(!_box.isEmpty()){const _center=_box.getCenter(new THREE.Vector3());const _size=_box.getSize(new THREE.Vector3());`);
+        js.push(`const _maxDim=Math.max(_size.x,_size.y,_size.z);const _dist=_maxDim*1.8;`);
+        js.push(`camera.position.set(_center.x+_dist*0.6,_center.y+_dist*0.5,_center.z+_dist*0.4);`);
+        js.push(`if(typeof controls!=="undefined"){controls.target.copy(_center);controls.update();}`);
+        js.push(`else{camera.lookAt(_center);}}}`);
         break;
       }
 

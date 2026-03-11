@@ -1,0 +1,113 @@
+# Armado Longitudinal de Columna
+> Seccion transversal y elevacion usando comandos CAD CLI
+
+## Datos de la columna
+b_col = 40
+h_col = 40
+rec = 4
+n_x = 3
+n_y = 3
+phi_long = 2.0
+phi_est = 1.0
+s_est = 15
+L_col = 300
+
+## Area de acero longitudinal
+n_barras = 2*(n_x + n_y) - 4
+A_s = n_barras * pi * (phi_long / 2)^2
+
+## Seccion Transversal (CAD CLI: colsection)
+
+@{draw 500 450}
+grid off
+bg #ffffff
+# colsection cx cy bw bh rec dStirrup dLong nx ny
+colsection 20 20 40 40 4 1.0 2.0 3 3
+unit cm
+# Cotas
+hdim 0 0 40 0 -4
+vdim 40 0 40 40 4
+# Etiquetas
+color #333
+text 20 -6 b = 40 cm
+text 47 20 h = 40 cm
+color #dd3333
+text 20 44 8 phi 20 mm
+color #00aa66
+text 20 48 Est phi 10 @ 15 cm
+fit
+@{end draw}
+> **Fig. 1** Seccion transversal generada con colsection
+
+## Elevacion de la Columna
+
+@{draw 400 650}
+grid off
+bg #ffffff
+# Columna en elevacion - concreto
+color #ccc
+rect 0 0 40 300
+# Zona confinamiento inferior (lo=50cm, est@10cm)
+color #00aa66
+line 0 10 40 10
+line 0 20 40 20
+line 0 30 40 30
+line 0 40 40 40
+line 0 50 40 50
+# Zona central (est@15cm) desde 50 hasta 250
+line 0 65 40 65
+line 0 80 40 80
+line 0 95 40 95
+line 0 110 40 110
+line 0 125 40 125
+line 0 140 40 140
+line 0 155 40 155
+line 0 170 40 170
+line 0 185 40 185
+line 0 200 40 200
+line 0 215 40 215
+line 0 230 40 230
+line 0 245 40 245
+# Zona confinamiento superior (lo=50cm, est@10cm)
+line 0 250 40 250
+line 0 260 40 260
+line 0 270 40 270
+line 0 280 40 280
+line 0 290 40 290
+# Barras longitudinales
+color #dd3333
+line 6 0 6 300
+line 20 0 20 300
+line 34 0 34 300
+# Lineas separacion zonas (punteado)
+color #0066cc
+line -3 50 43 50
+line -3 250 43 250
+# Cotas
+unit cm
+vdim -5 0 -5 300 -10
+vdim -5 0 -5 50 -4
+vdim -5 250 -5 300 -4
+hdim 0 300 40 300 6
+# Etiquetas
+color #333
+text -20 150 L = 300 cm
+text 20 312 b = 40 cm
+color #0066cc
+text -12 25 lo = 50
+text -12 275 lo = 50
+color #00aa66
+text 48 25 @ 10 cm
+text 48 150 @ 15 cm
+text 48 275 @ 10 cm
+fit
+@{end draw}
+> **Fig. 2** Elevacion con zonas de confinamiento (NEC)
+
+## Zona de confinamiento (NEC)
+l_o1 = max(h_col, L_col/6)
+l_o = max(l_o1, 45)
+
+## Cuantia de Refuerzo
+A_g = b_col * h_col
+rho = A_s / A_g * 100

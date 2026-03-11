@@ -1,0 +1,26 @@
+# SVG Drawing DSL
+> Ejemplo del lenguaje de dibujo vectorial @{svg}
+
+## Viga simplemente apoyada
+@{svg 550 180}
+background #f0f8ff
+rect 10 10 530 160 fill:#e3f2fd stroke:#1565c0 width:2 rx:8
+line 80 110 470 110 stroke:#333 width:3
+circle 80 110 6 fill:#1565c0 stroke:#0d47a1 width:2
+circle 470 110 6 fill:#c62828 stroke:#b71c1c width:2
+arrow 275 50 275 105 stroke:#e65100 width:2
+text 275 40 "P = 10 kN" size:13 bold color:#e65100 anchor:middle
+text 80 135 "A" size:14 bold color:#1565c0 anchor:middle
+text 470 135 "B" size:14 bold color:#c62828 anchor:middle
+text 275 135 "L/2" size:12 italic color:#555 anchor:middle
+polygon 72,120 80,110 88,120 fill:#1565c0
+polygon 462,120 470,110 478,120 fill:#c62828
+line 462 120 478 120 stroke:#c62828 width:2
+@{end svg}
+
+## Datos
+L = 6
+P = 10
+R_A = P/2
+R_B = P/2
+M_max = P*L/4

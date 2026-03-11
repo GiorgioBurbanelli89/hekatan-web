@@ -107,6 +107,7 @@
     <a href="#calculus"><span class="es">14. C&aacute;lculo y an&aacute;lisis</span><span class="en">14. Calculus and analysis</span></a>
     <a href="#statistics"><span class="es">15. Estad&iacute;stica y regresi&oacute;n</span><span class="en">15. Statistics and regression</span></a>
     <a href="#numtheory"><span class="es">16. Teor&iacute;a de n&uacute;meros</span><span class="en">16. Number theory</span></a>
+    <a href="#units"><span class="es">17. Sistema de unidades</span><span class="en">17. Unit system</span></a>
 </div>
 
 <hr>
@@ -593,6 +594,8 @@ camera 5 3 5
     <tr><td><code>notation</code></td><td>auto / eng / sci</td><td><span class="es">Formato num&eacute;rico</span><span class="en">Number format</span></td></tr>
     <tr><td><code>comment</code></td><td>string</td><td><span class="es">Delimitador de comentario</span><span class="en">Comment delimiter</span></td></tr>
     <tr><td><code>hide</code></td><td>fn1,fn2,...</td><td><span class="es">Funciones a ocultar</span><span class="en">Functions to hide</span></td></tr>
+    <tr><td><code>units</code></td><td>force,length</td><td><span class="es">Sistema de unidades (ej: kip,inch o kN,m)</span><span class="en">Unit system (e.g.: kip,inch or kN,m)</span></td></tr>
+    <tr><td><code>decimals</code></td><td><span class="es">n&uacute;mero</span><span class="en">number</span></td><td><span class="es">D&iacute;gitos decimales (default: 4)</span><span class="en">Decimal digits (default: 4)</span></td></tr>
 </table>
 </div>
 
@@ -764,6 +767,71 @@ isprime(17)             // &rarr; true
 <div class="code-block">arithsum(1, 2, 10)      // &rarr; 100 (1+3+5+...+19)
 geomsum(1, 0.5, 10)    // &rarr; 1.998...
 geominf(1, 0.5)         // &rarr; 2</div>
+</div>
+
+<!-- ═══ 17. UNITS ═══ -->
+<h2 id="units"><span class="es">17. Sistema de unidades</span><span class="en">17. Unit system</span></h2>
+<p><span class="es">Hekatan soporta c&aacute;lculo con unidades f&iacute;sicas basado en <b>math.js</b>. Use <code class="tag">@{config units:fuerza,longitud}</code> para activar el sistema de unidades.</span>
+<span class="en">Hekatan supports physical unit calculations based on <b>math.js</b>. Use <code class="tag">@{config units:force,length}</code> to activate the unit system.</span></p>
+
+<h4><span class="es">Activar unidades</span><span class="en">Activate units</span></h4>
+<div class="code-block">@{config units:kip,inch}          // <span class="es">Sistema: kip + inch</span><span class="en">System: kip + inch</span>
+@{config units:kN,m}              // <span class="es">Sistema: kilonewton + metro</span><span class="en">System: kilonewton + meter</span>
+@{config units:lbf,ft}            // <span class="es">Sistema: libra-fuerza + pie</span><span class="en">System: pound-force + foot</span>
+@{config units:tonf,m}            // <span class="es">Sistema: ton-fuerza + metro</span><span class="en">System: ton-force + meter</span></div>
+
+<h4><span class="es">Asignar unidades a variables</span><span class="en">Assign units to variables</span></h4>
+<div class="code-block">L = 100 inch                      // <span class="es">Longitud con unidades</span><span class="en">Length with units</span>
+E = 29000 kip/inch^2              // <span class="es">M&oacute;dulo de elasticidad</span><span class="en">Modulus of elasticity</span>
+I = 882 inch^4                    // <span class="es">Momento de inercia</span><span class="en">Moment of inertia</span>
+A = 44.2 inch^2                   // <span class="es">&Aacute;rea</span><span class="en">Area</span></div>
+
+<h4><span class="es">Anotaci&oacute;n de unidades con &amp;</span><span class="en">Unit annotation with &amp;</span></h4>
+<div class="code-block">EI = E * I                        // <span class="es">Sin anotaci&oacute;n: muestra en unidades base</span><span class="en">No annotation: shows in base units</span>
+EI = E * I &amp; kip*inch^2           // <span class="es">Con &amp;: convierte y muestra en kip&middot;in&sup2;</span><span class="en">With &amp;: converts and displays in kip&middot;in&sup2;</span></div>
+<div class="note">
+    <span class="es"><b>Nota:</b> <code>&amp; unidad</code> no es solo una etiqueta &mdash; realiza conversi&oacute;n real de unidades. El resultado se convierte al sistema indicado.</span>
+    <span class="en"><b>Note:</b> <code>&amp; unit</code> is not just a label &mdash; it performs actual unit conversion. The result is converted to the indicated system.</span>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'unitperrow')">+</span> <span class="es">Unidades por fila (vectores/matrices)</span><span class="en">Per-row units (vectors/matrices)</span></h3>
+<div class="collapsible" id="unitperrow">
+<p><span class="es">Para vectores y matrices donde cada fila tiene unidades diferentes, use la sintaxis <code>&amp; [u1, u2, ...]</code>:</span>
+<span class="en">For vectors and matrices where each row has different units, use the syntax <code>&amp; [u1, u2, ...]</code>:</span></p>
+<div class="code-block">// <span class="es">Vector de fuerzas con DOFs mixtos</span><span class="en">Force vector with mixed DOFs</span>
+F = col(10, 500, -20) &amp; [kip, kip*in, kip]
+
+// <span class="es">Vector de desplazamientos</span><span class="en">Displacement vector</span>
+u = lsolve(K, F) &amp; [rad, rad, inch]
+
+// <span class="es">Separador | para unidades de salida diferentes</span><span class="en">Separator | for different output units</span>
+u = lsolve(K, F) &amp; [rad, rad, in] | [rad, rad, mm]</div>
+<div class="note">
+    <span class="es"><b>Alias de display:</b> <code>inch</code>&rarr;<code>in</code>, <code>foot</code>&rarr;<code>ft</code>, <code>kilonewton</code>&rarr;<code>kN</code>, <code>meter</code>&rarr;<code>m</code>, <code>millimeter</code>&rarr;<code>mm</code>. Las fracciones se simplifican autom&aacute;ticamente: <code>kip*in/in</code>&rarr;<code>kip</code>.</span>
+    <span class="en"><b>Display aliases:</b> <code>inch</code>&rarr;<code>in</code>, <code>foot</code>&rarr;<code>ft</code>, <code>kilonewton</code>&rarr;<code>kN</code>, <code>meter</code>&rarr;<code>m</code>, <code>millimeter</code>&rarr;<code>mm</code>. Fractions are automatically simplified: <code>kip*in/in</code>&rarr;<code>kip</code>.</span>
+</div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'unitexample')">+</span> <span class="es">Ejemplo completo con unidades</span><span class="en">Full example with units</span></h3>
+<div class="collapsible" id="unitexample">
+<div class="code-block"># <span class="es">An&aacute;lisis de Viga</span><span class="en">Beam Analysis</span>
+
+// <span class="es">Propiedades del material</span><span class="en">Material properties</span>
+E = 29000 kip/inch^2
+I = 882 inch^4
+L = 100 inch
+
+// <span class="es">Coeficientes</span><span class="en">Coefficients</span>
+a_4 = 4*E*I/L &amp; kip*inch
+c_12 = 12*E*I/L^3 &amp; kip/inch
+
+// <span class="es">Activar sistema de unidades</span><span class="en">Activate unit system</span>
+@{config units:kip,inch}
+
+// <span class="es">Resolver sistema</span><span class="en">Solve system</span>
+K = [[a_4, c_12]; [c_12, a_4]]
+F = col(100, -5) &amp; [kip*inch, kip]
+u = lsolve(K, F) &amp; [rad, inch]</div>
 </div>
 
 <!-- ═══ FOOTER ═══ -->

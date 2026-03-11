@@ -1,0 +1,35 @@
+# Cell Arrays - Notacion Matricial
+> Similar a cell arrays de MATLAB: {A, B, C}
+> Notacion: k{1} → [k]₁,  k~{1} → [k̄]₁ (barra superior)
+
+## 1. Matrices de Rigidez Local por Elemento
+E = 29000
+I = 882
+L = 100
+c = 12 * E * I / L^3
+
+k1 = [[c, -c], [-c, c]]
+k2 = [[2*c, -2*c], [-2*c, 2*c]]
+
+## 2. Cell Array de Rigidez
+> k = {k1, k2} agrupa matrices locales
+k = {k1, k2}
+
+## 3. Acceso con notacion matricial
+> k{1} se renderiza como [k]₁
+ke1 = k{1}
+ke2 = k{2}
+
+## 4. Matriz de Rigidez Global (con barra ~)
+> T = matriz de transformacion (identidad para ejemplo)
+T = [[1, 0], [0, 1]]
+
+> K~{1} = T' * k{1} * T  (rigidez global elem 1)
+Kg1 = transpose(T) * k{1} * T
+Kg2 = transpose(T) * k{2} * T
+
+> Cell array global
+K = {Kg1, Kg2, Kg1 + Kg2}
+
+> K{3} = ensamblaje total
+Ktotal = K{3}

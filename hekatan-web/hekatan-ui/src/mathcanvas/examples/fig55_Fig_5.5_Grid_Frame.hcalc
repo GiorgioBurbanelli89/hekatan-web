@@ -1,0 +1,99 @@
+# Test Fig 5.5
+> Grid frame with nodal coordinates u1-u9
+
+@{draw 900 700}
+grid off
+bg #ffffff
+proj oblique 45 0.5
+fontsize 14
+color #000
+lw 1.5
+
+# Ejes coordenados
+color #888
+arrow3d 0 0 0  0 0 10
+label3d 0 0 11 Z left
+arrow3d 0 0 0  25 0 0
+label3d 26 0 0 X left
+arrow3d 0 0 0  0 25 0
+label3d 0 26 0 Y left
+
+# Barras con espesor
+color #000
+lw 2
+beam3d 0 0 0  20 0 0  1.2
+beam3d 0 0 0  0 20 0  1.2
+
+# Grados de libertad
+lw 1
+
+# Nodo 1 (origen) - rotaciones: →→  desplazamiento: →
+arrow3d 3.5 0 -0.6  5.5 0 -0.6
+arrow3d 1.5 0 -0.6  3.5 0 -0.6
+label3d 6 0 -0.6 u1 left
+arrow3d 0 3.5 -0.6  0 5.5 -0.6
+arrow3d 0 1.5 -0.6  0 3.5 -0.6
+label3d 0 6 -0.6 u2 left
+dof3d 0 0 0.5  0 0 5  u3
+
+# Nodo 2 (20, 0, 0)
+arrow3d 23 0 -0.6  25 0 -0.6
+arrow3d 21 0 -0.6  23 0 -0.6
+label3d 25.5 0 -0.6 u4 left
+arrow3d 20 3.2 -0.6  20 5.2 -0.6
+arrow3d 20 1.2 -0.6  20 3.2 -0.6
+label3d 20 5.7 -0.6 u5 left
+dof3d 20 0 0.5  0 0 5  u6
+
+# Nodo 3 (0, 20, 0)
+arrow3d 3.2 20 -0.6  5.2 20 -0.6
+arrow3d 1.2 20 -0.6  3.2 20 -0.6
+label3d 5.7 20 -0.6 u7 left
+arrow3d 0 23 -0.6  0 25 -0.6
+arrow3d 0 21 -0.6  0 23 -0.6
+label3d 0 25.5 -0.6 u8 left
+dof3d 0 20 0.5  0 0 5  u9
+
+# Nodos (circulos numerados)
+node3d 0 0 -0.6 1 0.8
+node3d 20 0 -0.6 2 0.8
+node3d 0 20 -0.6 3 0.8
+
+# Arco 90° en Nodo 1
+lw 1
+color #333
+carc3d 0 0 0 4.5 0 1.5708
+label3d 3 3 -1.5 90° below
+
+# Triangulos de elementos
+color #333
+lw 1
+line3d 8.5 0 -3.5  11.5 0 -3.5
+line3d 11.5 0 -3.5  10 0 -1.5
+line3d 10 0 -1.5  8.5 0 -3.5
+label3d 10 0 -3 1 center
+
+line3d 2 9 -1  2 11 -1
+line3d 2 11 -1  2 10 1
+line3d 2 10 1  2 9 -1
+label3d 2 10 -0.3 2 center
+
+# Apoyos empotrados (hatching)
+line3d 20 0 -1.8  20 0 1.8
+line3d 20 0 1.8  21 0 1.2
+line3d 20 0 1.2  21 0 0.6
+line3d 20 0 0.6  21 0 0
+line3d 20 0 0  21 0 -0.6
+line3d 20 0 -0.6  21 0 -1.2
+line3d 20 0 -1.2  21 0 -1.8
+
+line3d 0 20 -1.8  0 20 1.8
+line3d 0 20 1.8  0 21 1.2
+line3d 0 20 1.2  0 21 0.6
+line3d 0 20 0.6  0 21 0
+line3d 0 20 0  0 21 -0.6
+line3d 0 20 -0.6  0 21 -1.2
+line3d 0 20 -1.2  0 21 -1.8
+
+fit
+@{end draw}

@@ -1,0 +1,531 @@
+@{config bg:book, align:right, header:on, startpage:217, color:black}
+---
+# 5 Grid Frames
+---
+@{config align:left}
+
+## 5.1 Introduccion
+
+@{text}
+En el Capitulo 4 se presento el analisis estructural de porticos planos con
+cargas aplicadas en el plano del portico. Cuando el portico plano esta sometido
+a cargas aplicadas normalmente a su plano, la estructura se denomina grid frame.
+Estas estructuras tambien podrian tratarse como porticos tridimensionales
+(Capitulo 6). Sin embargo, las estructuras modeladas como porticos planos o
+como grid frames se tratan como casos especiales porque se obtiene una reduccion
+inmediata en el numero de coordenadas nodales de la estructura. Al analizar el
+portico plano bajo la accion de cargas en su plano, los unicos desplazamientos
+nodales a considerar son las traslaciones en las direcciones X e Y y la rotacion
+respecto al eje Z, resultando en un total de tres coordenadas nodales en cada
+nodo de la estructura. Asimismo, para un grid frame ubicado en el plano X-Y y
+cargado normalmente al plano de la estructura, solo se consideran tres
+coordenadas nodales en cada nodo: la traslacion en la direccion Z y las
+rotaciones respecto a los ejes X e Y. En consecuencia, el analisis de
+estructuras modeladas como porticos planos o como grid frames requiere
+considerar solo tres coordenadas nodales en cada nodo de la estructura, mientras
+que tratar estas estructuras como porticos tridimensionales (presentados en el
+Capitulo 6) requeriria seis coordenadas nodales en cada nodo, un aumento
+considerable en el tamano del problema a analizar.
+@{end text}
+
+## 5.2 Efectos Torsionales
+
+@{text}
+El analisis de grid frames utilizando el metodo de rigidez, es decir, para
+porticos planos sometidos a cargas normales, requiere la determinacion de los
+coeficientes de rigidez torsional de un elemento del grid frame. La derivacion
+de estos coeficientes es esencialmente identica a la derivacion de los
+coeficientes de rigidez axial de un elemento de viga.
+@{end text}
+
+@{pagebreak}
+
+@{text}
+La similitud entre estas dos derivaciones ocurre porque la ecuacion
+diferencial para ambos problemas tiene la misma forma matematica.
+Para el problema axial, la ecuacion diferencial para la funcion de
+desplazamiento esta dada por la ec. (4.4) como:
+@{end text}
+
+@{eq}
+du/dx = P/(AE)  (5.1)
+@{end eq}
+
+@{text}
+Analogamente, la ecuacion diferencial para el desplazamiento
+angular torsional es:
+@{end text}
+
+@{eq}
+dθ/dx = T/(JG)  (5.2)
+@{end eq}
+
+> donde, u = desplazamiento lineal, θ = desplazamiento angular torsional, P = fuerza axial, T = momento torsor, E = modulo de elasticidad, G = modulo de rigidez al cortante, A = area de la seccion transversal, J = constante torsional (momento polar de inercia para secciones circulares).
+
+@{text}
+Como consecuencia de la analogia entre las ecs. (5.1) y (5.2), podemos
+expresar las funciones de desplazamiento para efectos torsionales como las
+funciones correspondientes para desplazamientos por efectos axiales; por lo
+tanto, por analogia con las ecs. (4.5) y (4.6) y con referencia a las
+coordenadas nodales mostradas en la Figura 5.1, tenemos:
+@{end text}
+
+@{eq}
+θ_1(x) = (1 - x/L)  (5.3)
+@{end eq}
+
+> y
+
+@{eq}
+θ_2(x) = x/L  (5.4)
+@{end eq}
+
+@{text}
+en donde la funcion de desplazamiento angular θ_1(x) corresponde a la
+funcion de desplazamiento lineal u_1(x) y la funcion de desplazamiento
+angular θ_2(x) corresponde a la funcion de desplazamiento lineal u_2(x).
+Tambien, analogamente a la ec. (4.7), los coeficientes de rigidez para
+efectos torsionales pueden calcularse a partir de:
+@{end text}
+
+@{eq}
+k_{ij} = ∫_0^L JG * θ_i'(x) * θ_j'(x) dx  (5.5)
+@{end eq}
+
+@{text}
+en donde θ_i(x) y θ_j(x) son las derivadas respecto a x de las funciones
+de desplazamiento angular θ_i(x) y θ_j(x) dadas por las ecs. (5.3) o (5.4).
+@{end text}
+
+@{pagebreak}
+
+## 5.4 Transformacion de Coordenadas
+
+@{text}
+La matriz de rigidez [ec. (5.7)] esta expresada en referencia al sistema
+local de coordenadas, como se muestra en la Figura 5.2(a).
+@{end text}
+
+@{draw 400 270 name:Fig 5.2}
+grid off
+bg book
+color black
+lw 1.0
+ff serif
+fi on
+
+# ═══════════════════════════════════════════
+# (a) Sistema de coordenadas local
+# ═══════════════════════════════════════════
+
+beam 60 115 280 35 6
+
+# Nodo 1
+fs 11
+arrow 60 115 30 126
+fs 9
+text 18 124 δ₁
+fs 11
+arrow 60 115 48 70
+text 43 62 δ₂
+text 36 68 y
+arrow 60 115 60 160
+fs 9
+text 65 153 δ₃
+fs 11
+text 48 168 z
+
+# Nodo 2
+arrow 280 35 322 22
+text 326 18 x
+fs 9
+text 296 42 δ₄
+fs 11
+arrow 280 35 268 -8
+fs 9
+text 262 -16 δ₅
+arrow 280 35 280 80
+text 285 74 δ₆
+
+# Label (a)
+fs 10
+fi off
+text 175 145 (a)
+fi on
+
+# ═══════════════════════════════════════════
+# (b) Sistema de coordenadas global
+# ═══════════════════════════════════════════
+
+beam 60 222 280 142 6
+
+# Nodo 1: Ejes globales
+lw 1.2
+arrow 60 222 60 160
+fs 11
+text 53 153 Y
+arrow 60 222 168 222
+text 173 218 X
+lw 1.0
+
+# y ↑ (local, corto)
+arrow 60 222 48 186
+fs 9
+text 38 182 y
+otext 53 196 δ₂
+
+# δ̄₁ → (a lo largo de X)
+arrow 60 222 100 222
+otext 83 234 δ₁
+
+# δ̄₃ ↓
+arrow 60 222 60 268
+otext 66 264 δ₃
+
+# z, Z label
+fs 11
+text 35 278 z, Z
+
+# Angulo θ
+carc 60 222 32 -20 0
+fs 9
+text 92 215 θ
+
+# Nodo 2
+lw 1.0
+fs 11
+arrow 280 142 322 128
+text 326 122 x
+arrow 280 142 342 142
+text 348 138 X
+
+# δ̄₅ ↑
+arrow 280 142 268 98
+fs 9
+otext 256 95 δ₅
+# δ̄₄ →
+otext 296 154 δ₄
+# δ̄₆ ↓
+arrow 280 142 280 190
+otext 286 186 δ₆
+
+# Label (b)
+fs 10
+fi off
+text 175 272 (b)
+fi on
+ff mono
+fi off
+@{end draw}
+
+> -Fig. 5.2- Componentes de desplazamientos nodales: (a) Local, (b) Global
+
+@{text}
+Por lo tanto, antes del ensamblaje de la matriz de rigidez de la estructura,
+es necesario transformar la referencia de la matriz de rigidez del elemento
+al sistema global de coordenadas como se muestra en la Figura 5.2(b). Dado
+que el eje z en el sistema de coordenadas local coincide con el eje Z del
+sistema global, solo es necesario realizar una transformacion de coordenadas
+en el plano x-y. La matriz de transformacion correspondiente puede obtenerse
+estableciendo la relacion entre las componentes en estos dos sistemas de
+coordenadas de las fuerzas y momentos en los nodos.
+Con referencia a la Figura 5.3, estas relaciones escritas para el nodo 1 son:
+@{end text}
+
+@{eq}
+P_1 = bar(P)_1 cos θ + bar(P)_2 sin θ
+P_2 = -bar(P)_1 sin θ + bar(P)_2 cos θ  (5.9)
+P_3 = bar(P)_3
+@{end eq}
+
+> y para el nodo 2
+
+@{eq}
+P_4 = bar(P)_4 cos θ + bar(P)_5 sin θ
+P_5 = -bar(P)_4 sin θ + bar(P)_5 cos θ  (5.10)
+P_6 = bar(P)_6
+@{end eq}
+
+@{draw 380 220 name:Fig 5.3}
+grid off
+bg book
+color black
+lw 1.0
+ff serif
+fi on
+
+# Viga inclinada (nodo1 abajo-izq → nodo2 arriba-der)
+beam 80 168 295 80 6
+
+# ── Nodo 1 ──
+fs 9
+cid 80 168 1 8
+
+fs 11
+# P₁ ← (local torsion, a lo largo de -x local)
+arrow 80 168 30 188
+text 14 196 P₁
+
+# P₂ ↓ (local, vertical abajo)
+arrow 80 168 80 218
+text 82 210 P₂
+
+# Y ↑ (eje global vertical, largo)
+lw 1.2
+arrow 80 168 80 62
+fs 13
+text 72 54 Y
+lw 1.0
+
+# y ↑ (eje local vertical, corto)
+fs 11
+arrow 80 168 66 118
+text 52 112 y
+
+# P̄₂ ↑ (global vertical, con overbar)
+otext 68 128 P̄₂
+
+# X → (eje global horizontal, largo)
+lw 1.2
+arrow 80 168 230 168
+fs 13
+text 234 164 X
+lw 1.0
+
+# P̄₁ → (global horizontal, con overbar)
+fs 11
+arrow 80 168 140 168
+otext 108 180 P̄₁
+
+# Angulo θ entre X y elemento
+carc 80 168 35 -20 0
+fs 10
+text 116 160 θ
+
+# ── Nodo 2 ──
+fs 9
+cid 295 80 2 8
+
+fs 11
+# P̄₅ ↑ (global Y, con overbar)
+arrow 295 80 295 14
+otext 306 10 P̄₅
+
+# P₄ → (local +x, a lo largo del elemento)
+arrow 295 80 350 58
+text 352 48 P₄
+
+# P̄₄ → (global X, con overbar)
+arrow 295 80 362 80
+otext 340 92 P̄₄
+
+# P₅ ↘ (local, perpendicular al elemento hacia abajo)
+arrow 295 80 318 138
+text 322 134 P₅
+
+ff mono
+fi off
+@{end draw}
+
+> -Fig. 5.3- Componentes en coordenadas locales y globales de los momentos nodales en un elemento de grid frame
+
+@{text}
+Es importante notar que las ecs. (5.9) y (5.10) son identicas a las ecs. (4.10)
+y (4.11) derivadas para la transformacion de coordenadas de las fuerzas nodales
+de un elemento de portico plano.
+Las ecuaciones (5.9) y (5.10) pueden escribirse en notacion matricial como
+@{end text}
+
+@{eq}
+{P_1; P_2; P_3; P_4; P_5; P_6} = [cos θ, sin θ, 0, 0, 0, 0; -sin θ, cos θ, 0, 0, 0, 0; 0, 0, 1, 0, 0, 0; 0, 0, 0, cos θ, sin θ, 0; 0, 0, 0, -sin θ, cos θ, 0; 0, 0, 0, 0, 0, 1] {bar(P)_1; bar(P)_2; bar(P)_3; bar(P)_4; bar(P)_5; bar(P)_6}    (5.11)
+@{end eq}
+
+> o en notacion abreviada
+
+@{eq}
+{P} = [T] {bar(P)}          bar(P) = [T]^T {P}  (5.12)
+@{end eq}
+
+@{text}
+donde {P} y {bar(P)} son los vectores de fuerzas nodales de un elemento de
+grid frame, en coordenadas locales y globales respectivamente, y [T] es la
+matriz de transformacion definida en la ec. (5.11). La misma matriz de
+transformacion tambien sirve para transformar las componentes nodales de los
+desplazamientos de un sistema global a uno local. En notacion condensada,
+esta transformacion esta dada por
+@{end text}
+
+@{eq}
+{delta} = [T] {bar(delta)}  (5.13)
+@{end eq}
+
+@{pagebreak}
+
+@{text}
+donde {δ} y {bar(δ)} son, respectivamente, las componentes de los
+desplazamientos nodales en coordenadas locales y globales.
+La sustitucion de las ecs. (5.12) y (5.13) en la ecuacion de rigidez,
+ec. (5.8) resulta en
+@{end text}
+
+@{eq}
+[T] {bar(P)} = [k] [T] {bar(δ)}
+@{end eq}
+
+@{text}
+o puesto que [T] es una matriz ortogonal ([T]^{-1} = [T]^T),
+se deduce que
+@{end text}
+
+@{eq}
+{bar(P)} = [T]^T [k] [T] {bar(δ)}
+@{end eq}
+
+> o
+
+@{eq}
+{bar(P)} = [bar(k)] {bar(δ)}  (5.14)
+@{end eq}
+
+> en donde
+
+@{eq}
+[bar(k)] = [T]^T [k] [T]  (5.15)
+@{end eq}
+
+@{text}
+es la matriz de rigidez del elemento en referencia al sistema de
+coordenadas global.
+@{end text}
+
+## 5.5 Analisis de Grid Frames
+
+@{text}
+El analisis estructural de grid frames es matematicamente identico al
+analisis de vigas o porticos planos presentado en los Capitulos 1 y 4,
+respectivamente. Estos analisis difieren unicamente en la seleccion de las
+coordenadas nodales y en las expresiones correspondientes a la matriz de
+rigidez para los elementos en cada estructura. El siguiente ejemplo numerico
+proporciona un analisis detallado de un grid frame simple.
+@{end text}
+
+@{pagebreak}
+
+### Ejemplo Ilustrativo 5.1
+
+@{text}
+Para el grid frame mostrado en la Figura 5.4, realizar el analisis
+estructural para determinar lo siguiente:
+(a) Desplazamientos en las juntas entre elementos
+(b) Fuerzas internas en los elementos
+(c) Reacciones en los apoyos
+
+Datos del problema:
+E = 30000 ksi, I_z = 100 in^4, G = 12000 ksi, J = 50 in^4, L = 336 in (28 ft)
+Carga: P_z = 10 kip en cada nodo intermedio
+Ref: Mario Paz - Matrix Structural Analysis, Cap. 5
+@{end text}
+
+@{draw 580 380}
+# Fig 5.4 - Diagrama Estructural (3D oblicuo)
+grid off
+bg #ffffff
+proj oblique 45 0.5
+# Ejes de referencia
+color #cc3333
+arrow3d -4 0 0 -1 0 0
+text3d -0.5 0 0 X
+color #33aa33
+arrow3d -4 0 0 -4 3 0
+text3d -4 3.5 0 Y
+color #3333cc
+arrow3d -4 0 0 -4 0 3
+text3d -4 0 3.5 Z
+# Elem 1: Node1(0,0,0) to Node2(20,0,0) along X
+color #333
+line3d 0 0 0 20 0 0
+# Elem 2: Node1(0,0,0) to Node3(0,20,0) along Y
+line3d 0 0 0 0 20 0
+# Nodos (circulos pequenos)
+circle3d 0 0 0 0.15 #333
+circle3d 20 0 0 0.15 #333
+circle3d 0 20 0 0.15 #333
+# Textos de nodos
+color #1565c0
+text3d 0.5 -1.5 0 1
+text3d 20 -1.5 0 2
+text3d 0 21.5 0 3
+# Etiquetas de longitud
+color #888
+text3d 10 -2.5 0 L1=12*28 ft
+text3d -3 10 0 L2=12*28 ft
+# Carga puntual en nodo 2
+color #cc0000
+arrow3d 20 0 3 20 0 0.3
+text3d 20.5 0 2.5 10 k
+# Carga puntual en nodo 3
+arrow3d 0 20 3 0 20 0.3
+text3d 0.5 20 2.5 10 k
+# Apoyos empotrados
+color #666
+text3d 0 -1.2 -0.5 (empotrado)
+# Propiedades
+color #444
+text3d 7 2 0 E=30000 ksi
+text3d 7 3.5 0 I=100 in^4
+text3d 7 5 0 J=50 in^4
+text3d 7 6.5 0 G=12000 ksi
+@{end draw}
+
+> -Fig. 5.4- Grid frame - Ejemplo Ilustrativo 5.1
+
+@{text}
+Solucion: Para este ejemplo, ambos elementos tienen propiedades identicas:
+E = 30,000 ksi, I_z = 100 in^4, G = 12,000 ksi, J = 50 in^4, L = 336 in (28 ft).
+El grid frame tiene 3 nodos con 3 GDL por nodo (δ_z, θ_x, θ_y), para un total de 9 GDL.
+Los nodos 2 y 3 estan empotrados, dejando 3 GDL libres en el nodo 1.
+@{end text}
+
+@{text}
+Paso 1 - Rigidez local: La matriz de rigidez local de un elemento de grid frame
+combina los efectos de flexion [ec. (5.6)] y torsion [ec. (5.5)] en una matriz 6x6.
+Para cada elemento (i = 1, 2), la matriz [k]^(i) tiene la forma:
+@{end text}
+
+@{eq}
+[k] = [12EI/L^3, 6EI/L^2, 0, -12EI/L^3, 6EI/L^2, 0; 6EI/L^2, 4EI/L, 0, -6EI/L^2, 2EI/L, 0; 0, 0, GJ/L, 0, 0, -GJ/L; -12EI/L^3, -6EI/L^2, 0, 12EI/L^3, -6EI/L^2, 0; 6EI/L^2, 2EI/L, 0, -6EI/L^2, 4EI/L, 0; 0, 0, -GJ/L, 0, 0, GJ/L]  (5.16)
+@{end eq}
+
+@{text}
+Paso 2 - Ensamblaje: Dado que ambos elementos son identicos y estan orientados
+a lo largo de los ejes globales, no se requiere transformacion de coordenadas.
+La matriz de rigidez global se obtiene ensamblando las contribuciones de cada
+elemento segun los grados de libertad correspondientes.
+@{end text}
+
+@{text}
+Condensando los GDL restringidos (nodos empotrados 2 y 3), la matriz de rigidez
+reducida [K]_R de 3x3 resulta de la superposicion de las contribuciones del
+nodo 1 de ambos elementos:
+@{end text}
+
+@{eq}
+[K]_R = [k^(1)_{11} + k^(2)_{11}, k^(1)_{12}, k^(2)_{12}; k^(1)_{21}, k^(1)_{22} + k^(2)_{55}, 0; k^(2)_{21}, 0, k^(2)_{22} + k^(1)_{55}]  (5.17)
+@{end eq}
+
+@{text}
+Paso 3 - Vector de fuerzas: Las cargas externas son P_z = 10 kip aplicadas
+verticalmente en los nodos 2 y 3, resultando en una carga total de 20 kip
+en el nodo 1 (por equilibrio):
+@{end text}
+
+@{eq}
+{F}_R = {20; 0; 0} kip  (5.18)
+@{end eq}
+
+@{text}
+Paso 4 - Solucion: Resolviendo el sistema [K]_R {u} = {F}_R se obtienen los
+desplazamientos en el nodo central. Las reacciones en los apoyos se calculan
+multiplicando las submatrices correspondientes por el vector de desplazamientos.
+La solucion numerica completa se presenta en el Ejemplo 5.1 computacional.
+@{end text}

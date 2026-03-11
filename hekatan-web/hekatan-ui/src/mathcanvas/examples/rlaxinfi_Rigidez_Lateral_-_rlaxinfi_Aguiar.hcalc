@@ -1,0 +1,149 @@
+# Rigidez Lateral de Portico Plano
+> Programa rlaxinfi - Roberto Aguiar Falconi, CEINCI-ESPE
+> Elementos axialmente rigidos, condensacion estatica
+
+@{eq}
+K_L = K_{aa} - K_{ab} * K_{bb}^{-1} * K_{ba}
+@{end eq}
+
+function[KL, KM] = rlaxinfi(datos, nod, np, nr, E, icod)
+  ncol = np * nr
+  mbr = ncol + (nr - 1) * np
+  KM = rigidez(datos, ncol, E, icod)
+  % Coordenadas Generalizadas
+  CG = zeros(nod, 2)
+  ngl = 0
+  kk = nr
+  for i = 1:np
+    ngl = ngl + 1
+    for j = 1:nr
+      kk = kk + 1
+      CG[kk, 1] = ngl
+    end
+  end
+  for i = 1:(nod - nr)
+    ngl = ngl + 1
+    kk = nr + i
+    CG[kk, 2] = ngl
+  end
+  % Conectividad
+  ini = zeros(mbr, 1)
+  fin = zeros(mbr, 1)
+  ici = 0
+  icf = nr
+  for i = 1:ncol
+    ici = ici + 1
+    icf = icf + 1
+    ini[i, 1] = ici
+    fin[i, 1] = icf
+  end
+  ii = ncol
+  for j = 1:np
+    ici = j * nr
+    for i = 1:(nr - 1)
+      ii = ii + 1
+      ici = ici + 1
+      ini[ii, 1] = ici
+      fin[ii, 1] = ici + 1
+    end
+  end
+  % Vector de colocacion
+  VC = zeros(mbr, 4)
+  for i = 1:mbr
+    ni = ini[i, 1]
+    nf = fin[i, 1]
+    for kv = 1:2
+      VC[i, kv] = CG[ni, kv]
+      VC[i, kv + 2] = CG[nf, kv]
+    end
+  end
+  % Ensamblaje global
+  SS = zeros(ngl, ngl)
+  for i = 1:mbr
+    km = KM{i}
+    for j = 1:4
+      jj = VC[i, j]
+      if jj == 0
+        continue
+      end
+      for m = 1:4
+        mm = VC[i, m]
+        if mm == 0
+          continue
+        end
+        SS[jj, mm] = SS[jj, mm] + km[j, m]
+      end
+    end
+  end
+  % Condensacion estatica
+  na = np
+  Kaa = submat(SS, 1, na, 1, na)
+  Kab = submat(SS, 1, na, na+1, ngl)
+  Kbb = submat(SS, na+1, ngl, na+1, ngl)
+  KL = Kaa - Kab * inv(Kbb) * transpose(Kab)
+end
+
+function[KM] = rigidez(datos, ncol, E, icod)
+  mbr = size(datos)[1]
+  for i = 1:mbr
+    bb = datos[i, 1]
+    hh = datos[i, 2]
+    lon = datos[i, 3]
+    iner = bb * hh^3 / 12
+    ei = E * iner
+    km = zeros(4, 4)
+    if i <= ncol
+      if icod == 1
+        iner = 0.8 * iner; ei = E * iner
+      end
+      km[1,1] = 12*ei/lon^3
+      km[1,2] = -6*ei/lon^2
+      km[1,3] = -km[1,1]
+      km[1,4] = km[1,2]
+      km[2,1] = km[1,2]
+      km[2,2] = 4*ei/lon
+      km[2,3] = -km[1,2]
+      km[2,4] = 2*ei/lon
+      km[3,1] = km[1,3]
+      km[3,2] = km[2,3]
+      km[3,3] = km[1,1]
+      km[3,4] = 6*ei/lon^2
+      km[4,1] = km[1,4]
+      km[4,2] = km[2,4]
+      km[4,3] = km[3,4]
+      km[4,4] = km[2,2]
+    else
+      if icod == 1
+        iner = 0.5 * iner; ei = E * iner
+      end
+      km[2,2] = 4*ei/lon
+      km[2,4] = 2*ei/lon
+      km[4,2] = km[2,4]
+      km[4,4] = km[2,2]
+    end
+    KM{i} = km
+  end
+end
+
+---
+## Datos: Portico 2 pisos, 3 columnas
+> 6 columnas (0.20x0.30, L=3m) + 4 vigas (0.25x0.25, L=4m y 5m)
+
+casa = [[0.20, 0.30, 3.0], [0.20, 0.30, 3.0], [0.20, 0.30, 3.0], [0.20, 0.30, 3.0], [0.20, 0.30, 3.0], [0.20, 0.30, 3.0], [0.25, 0.25, 4.0], [0.25, 0.25, 5.0], [0.25, 0.25, 4.0], [0.25, 0.25, 5.0]]
+E = 1738965.21
+ncol = 6
+
+## Matrices de Rigidez por Elemento
+KM = rigidez(casa, ncol, E, 0)
+> Columna 1:
+km_1 = KM{1}
+> Viga 7:
+km_7 = KM{7}
+
+## Rigidez Lateral (icod=0)
+R_0 = rlaxinfi(casa, 9, 2, 3, E, 0)
+KL_0 = R_0{1}
+
+## Rigidez Lateral (icod=1)
+R_1 = rlaxinfi(casa, 9, 2, 3, E, 1)
+KL_1 = R_1{1}

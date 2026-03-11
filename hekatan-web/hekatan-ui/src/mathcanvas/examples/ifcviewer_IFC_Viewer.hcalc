@@ -1,0 +1,10 @@
+# Visor IFC - Three.js WebGL
+> Filtros: all, structural, columns, beams, slabs, rebar,
+> plates, members, fasteners, connections, walls, openings
+
+## Modelo Completo
+@{import:ifc:FINAL.ifc 700 500}
+
+## Detalle: Conexion Columna-Pedestal
+> Columnas + Placas base + Refuerzo + Miembros + Pernos
+@{import:ifc:FINAL.ifc 700 500 connections}

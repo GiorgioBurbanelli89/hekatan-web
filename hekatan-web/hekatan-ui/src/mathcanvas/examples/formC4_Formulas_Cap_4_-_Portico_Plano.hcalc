@@ -1,0 +1,35 @@
+@{config bg:bookwarm, align:right, header:on, startpage:148, color:black}
+---
+### Formulas de Referencia - Porticos Planos
+---
+@{config align:left}
+
+> Matriz de rigidez del elemento de portico plano:
+
+@{eq}
+{P_1; P_2; P_3; P_4; P_5; P_6} = EI/L^3 * [AL^2/I, 0, 0, -AL^2/I, 0, 0; 0, 12, 6L, 0, -12, 6L; 0, 6L, 4L^2, 0, -6L, 2L^2; -AL^2/I, 0, 0, AL^2/I, 0, 0; 0, -12, -6L, 0, 12, -6L; 0, 6L, 2L^2, 0, -6L, 4L^2] * {δ_1; δ_2; δ_3; δ_4; δ_5; δ_6}    (4.8)
+@{end eq}
+
+> o en notacion condensada,
+
+@{eq}
+{P} = [k]{δ}    (4.9)
+@{end eq}
+
+> Matriz de transformacion de coordenadas:
+
+@{eq}
+{P_1; P_2; P_3; P_4; P_5; P_6} = [cos θ, sin θ, 0, 0, 0, 0; -sin θ, cos θ, 0, 0, 0, 0; 0, 0, 1, 0, 0, 0; 0, 0, 0, cos θ, sin θ, 0; 0, 0, 0, -sin θ, cos θ, 0; 0, 0, 0, 0, 0, 1] * {bar(P)_1; bar(P)_2; bar(P)_3; bar(P)_4; bar(P)_5; bar(P)_6}    (4.12)
+@{end eq}
+
+> o en notacion condensada,
+
+@{eq}
+{P} = [T]{bar(P)}    (4.13)
+@{end eq}
+
+> Matriz de rigidez en coordenadas globales:
+
+@{eq}
+[bar(k)] = [T]^T [k] [T]    (4.18)
+@{end eq}

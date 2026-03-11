@@ -1,0 +1,140 @@
+[
+  {
+    "key": "basico",
+    "name": "Basico",
+    "filename": "basico_Basico.hcalc",
+    "size": 137
+  },
+  {
+    "key": "svgdemo",
+    "name": "SVG Drawing Demo",
+    "filename": "svgdemo_SVG_Drawing_Demo.hcalc",
+    "size": 817
+  },
+  {
+    "key": "cellarrays",
+    "name": "Cell Arrays (Matrices)",
+    "filename": "cellarrays_Cell_Arrays_Matrices.hcalc",
+    "size": 777
+  },
+  {
+    "key": "funciones",
+    "name": "Funciones (function...end)",
+    "filename": "funciones_Funciones_function...end.hcalc",
+    "size": 701
+  },
+  {
+    "key": "plotdemo",
+    "name": "Plot 2D (Funciones)",
+    "filename": "plotdemo_Plot_2D_Funciones.hcalc",
+    "size": 441
+  },
+  {
+    "key": "threedemo",
+    "name": "Three.js 3D Demo",
+    "filename": "threedemo_Three.js_3D_Demo.hcalc",
+    "size": 458
+  },
+  {
+    "key": "libroC4",
+    "name": "Cap 4 - Porticos Planos (Libro)",
+    "filename": "libroC4_Cap_4_-_Porticos_Planos_Libro.hcalc",
+    "size": 689306
+  },
+  {
+    "key": "formC4",
+    "name": "Formulas Cap 4 - Portico Plano",
+    "filename": "formC4_Formulas_Cap_4_-_Portico_Plano.hcalc",
+    "size": 1012
+  },
+  {
+    "key": "ejC4_1",
+    "name": "Ejemplo 4.1 - Portico Plano",
+    "filename": "ejC4_1_Ejemplo_4.1_-_Portico_Plano.hcalc",
+    "size": 8315
+  },
+  {
+    "key": "libroC5",
+    "name": "Cap 5 - Grid Frames (Libro)",
+    "filename": "libroC5_Cap_5_-_Grid_Frames_Libro.hcalc",
+    "size": 13750
+  },
+  {
+    "key": "gridframe",
+    "name": "Ej 5.1 - Grid Frame (Paz)",
+    "filename": "gridframe_Ej_5.1_-_Grid_Frame_Paz.hcalc",
+    "size": 7070
+  },
+  {
+    "key": "algebralineal",
+    "name": "Algebra Lineal",
+    "filename": "algebralineal_Algebra_Lineal.hcalc",
+    "size": 1491
+  },
+  {
+    "key": "vectores",
+    "name": "Vectores y Matrices",
+    "filename": "vectores_Vectores_y_Matrices.hcalc",
+    "size": 339
+  },
+  {
+    "key": "drawdemo",
+    "name": "Draw / CAD",
+    "filename": "drawdemo_Draw_CAD.hcalc",
+    "size": 521
+  },
+  {
+    "key": "calculo",
+    "name": "Calculo",
+    "filename": "calculo_Calculo.hcalc",
+    "size": 266
+  },
+  {
+    "key": "armadoColumna",
+    "name": "Armado Columna",
+    "filename": "armadoColumna_Armado_Columna.hcalc",
+    "size": 2120
+  },
+  {
+    "key": "draw3d",
+    "name": "CAD 3D (Three.js)",
+    "filename": "draw3d_CAD_3D_Three.js.hcalc",
+    "size": 780
+  },
+  {
+    "key": "fig55",
+    "name": "Fig 5.5 Grid Frame",
+    "filename": "fig55_Fig_5.5_Grid_Frame.hcalc",
+    "size": 1992
+  },
+  {
+    "key": "ifcviewer",
+    "name": "IFC Viewer",
+    "filename": "ifcviewer_IFC_Viewer.hcalc",
+    "size": 336
+  },
+  {
+    "key": "cadTest",
+    "name": "CAD Draw - Pruebas",
+    "filename": "cadTest_CAD_Draw_-_Pruebas.hcalc",
+    "size": 4332
+  },
+  {
+    "key": "rlaxinfi",
+    "name": "Rigidez Lateral - rlaxinfi (Aguiar)",
+    "filename": "rlaxinfi_Rigidez_Lateral_-_rlaxinfi_Aguiar.hcalc",
+    "size": 3174
+  },
+  {
+    "key": "matTrunc",
+    "name": "Matrices Grandes (Truncado)",
+    "filename": "matTrunc_Matrices_Grandes_Truncado.hcalc",
+    "size": 460
+  },
+  {
+    "key": "newtonNL",
+    "name": "Newton-Raphson No Lineal",
+    "filename": "newtonNL_Newton-Raphson_No_Lineal.hcalc",
+    "size": 2869
+  }
+]

@@ -1,0 +1,339 @@
+@{config bg:bookwarm, align:left, header:on, startpage:151, color:black, notation:eng}
+---
+### Ejemplo Ilustrativo 4.1
+---
+
+@{text}
+Para el portico plano cargado mostrado en la Figura 4.5 determinar:
+(a) Desplazamientos en el nodo 2
+(b) Fuerzas en los extremos de los elementos
+(c) Reacciones en los apoyos
+@{end text}
+
+@{draw 480 380 name:Fig 4.5}
+grid off
+bg book
+color black
+ff serif
+fi on
+
+# ── Members ──
+lw 1.5
+line 80 50 224 242
+line 224 242 370 242
+
+# ── Fixed support at node 1 (ground) ──
+lw 1.0
+line 60 48 100 48
+lw 0.6
+line 64 48 58 40
+line 71 48 65 40
+line 78 48 72 40
+line 85 48 79 40
+line 92 48 86 40
+line 99 48 93 40
+
+# ── Fixed support at node 3 (wall to the right) ──
+lw 0.8
+line 382 228 382 258
+line 382 254 392 248
+line 382 248 392 242
+line 382 242 392 236
+line 382 236 392 230
+line 382 230 392 224
+
+# ── Distributed load 1.0 k/in along column ──
+lw 0.5
+arrow 46 60 86 60
+arrow 58 77 99 77
+arrow 70 94 112 94
+arrow 82 111 125 111
+arrow 94 128 138 128
+arrow 106 145 151 145
+arrow 118 162 164 162
+arrow 130 179 177 179
+arrow 142 196 190 196
+arrow 154 213 203 213
+arrow 166 230 215 230
+line 46 60 166 230
+lw 0.3
+line 52 65 58 72
+line 64 82 70 89
+line 76 99 82 106
+line 88 116 94 123
+line 100 133 106 140
+line 112 150 118 157
+line 124 167 130 174
+line 136 184 142 191
+line 148 201 154 208
+line 160 218 166 225
+fs 9
+text 8 142 1.0 k/in
+
+# ── Moment 108 (k-in) at node 2 ──
+lw 1.2
+moment 224 242 18
+fs 9
+text 182 260 108 (k-in)
+
+# ── Concentrated load 100 k at midspan ──
+lw 1.2
+arrow 297 280 297 244
+fs 10
+text 280 290 100 k
+
+# ── Node labels ──
+lw 1.0
+cid 80 50 1 10
+cid 224 242 2 10
+cid 370 242 3 10
+
+# ── Dimensions ──
+lw 0.6
+fs 9
+hdim 224 230 297 230 -16 6 ft
+hdim 297 230 370 230 -16 6 ft
+vdim 385 242 385 50 22 8 ft
+hdim 80 35 224 35 -16 6 ft
+
+# ── Properties box ──
+lw 0.8
+rect 340 290 136 72
+fs 8
+fi off
+text 408 354 All Members
+fi on
+text 408 342 E = 30,000 ksi
+text 408 330 W14X82 or
+text 408 318 I = 882 in⁴
+text 408 306 A = 24.1 in²
+
+# ── Coordinate axes ──
+lw 1.0
+fi on
+fs 10
+arrow 80 50 80 340
+text 66 348 Y
+arrow 80 50 456 50
+text 460 56 X
+
+ff mono
+fi off
+@{end draw}
+
+> -Fig. 4.5- Portico plano para el Ejemplo Ilustrativo 4.1
+
+### Solucion:
+
+> Datos del problema - Variables de calculo:
+
+E = 30000
+> E | Modulo de elasticidad (ksi)
+I = 882
+> I | Momento de inercia (in⁴)
+A = 24.1
+> A | Area de la seccion (in²)
+
+> 1. Modelacion de la estructura.
+
+@{text}
+El portico plano mostrado en la Figura 4.5 se modela, como se muestra en la Figura
+4.6, con dos elementos de viga, tres nodos y nueve coordenadas nodales del sistema. Las
+primeras tres coordenadas nodales del sistema corresponden a las coordenadas nodales
+libres y las ultimas seis a las coordenadas nodales fijas, como se muestra en la Figura 4.6.
+@{end text}
+
+@{draw 380 320 name:Fig 4.6}
+grid off
+bg book
+color black
+lw 1.2
+ff serif
+fi on
+fs 10
+
+# ── Members ──
+line 80 40 200 210
+line 200 210 340 210
+
+# ── Element triangles ──
+tid 140 115 1 14
+tid 270 200 2 14
+
+# ── Node circles ──
+cid 80 40 1 12
+cid 200 210 2 12
+cid 340 210 3 12
+
+# ── Coordinate axes ──
+lw 1.0
+arrow 80 40 80 290
+fs 11
+text 68 298 Y
+arrow 80 40 370 40
+text 374 46 X
+
+# ── DOF arrows at node 1 ──
+lw 0.8
+fs 9
+arrow 38 40 68 40
+text 20 46 u₄
+arrow 80 18 80 28
+text 68 8 u₅
+moment 80 40 16 left
+text 56 66 u₆
+
+# ── DOF arrows at node 2 ──
+arrow 160 210 188 210
+text 142 216 u₁
+arrow 200 186 200 198
+text 188 176 u₂
+moment 200 210 16
+text 214 236 u₃
+
+# ── DOF arrows at node 3 ──
+arrow 352 210 378 210
+text 382 216 u₇
+arrow 340 186 340 198
+text 328 176 u₈
+moment 340 210 16
+text 354 236 u₉
+
+ff mono
+fi off
+@{end draw}
+
+> -Fig. 4.6- Portico plano modelado para el Ejemplo Ilustrativo 4.1 mostrando las coordenadas nodales del sistema u_1 a u_9
+
+> 2. Matrices de rigidez de los elementos (coordenadas locales).
+
+> Sustituyendo los valores numericos en la ec. (4.8):
+
+> **ELEMENTO 1** (nodo 1 a nodo 2):
+
+L_1 = sqrt((6*12)^2 + (8*12)^2)
+> L_1 | Longitud del Elemento 1 (in)
+
+> Coeficientes de rigidez:
+f_1 = E*I/L_1^3
+> EI/L_1^3 | Factor de rigidez
+a_1 = f_1*A*L_1^2/I
+b_1 = 12*f_1
+c_1 = 6*f_1*L_1
+d_1 = 4*f_1*L_1^2
+e_1 = 2*f_1*L_1^2
+
+> Matriz de rigidez local [k]_1 — DOFs: (4, 5, 6, 1, 2, 3):
+k_1 = [[a_1, 0, 0, -a_1, 0, 0],[0, b_1, c_1, 0, -b_1, c_1],[0, c_1, d_1, 0, -c_1, e_1],[-a_1, 0, 0, a_1, 0, 0],[0, -b_1, -c_1, 0, b_1, -c_1],[0, c_1, e_1, 0, -c_1, d_1]]
+
+> **ELEMENTO 2** (nodo 2 a nodo 3):
+
+L_2 = 12*12
+> L_2 | Longitud del Elemento 2 (in)
+
+> Coeficientes de rigidez:
+f_2 = E*I/L_2^3
+> EI/L_2^3 | Factor de rigidez
+a_2 = f_2*A*L_2^2/I
+b_2 = 12*f_2
+c_2 = 6*f_2*L_2
+d_2 = 4*f_2*L_2^2
+e_2 = 2*f_2*L_2^2
+
+> Matriz de rigidez local [k]_2 — DOFs: (1, 2, 3, 7, 8, 9):
+k_2 = [[a_2, 0, 0, -a_2, 0, 0],[0, b_2, c_2, 0, -b_2, c_2],[0, c_2, d_2, 0, -c_2, e_2],[-a_2, 0, 0, a_2, 0, 0],[0, -b_2, -c_2, 0, b_2, -c_2],[0, c_2, e_2, 0, -c_2, d_2]]
+
+> 3. Matrices de transformacion, ec. (4.12).
+
+> **ELEMENTO 1**: cos θ = 0.60, sin θ = 0.80
+
+cos_1 = (6*12)/L_1
+> cos θ_1 | Coseno del angulo Elem 1
+sin_1 = (8*12)/L_1
+> sin θ_1 | Seno del angulo Elem 1
+
+T_1 = [[cos_1, sin_1, 0, 0, 0, 0],[-sin_1, cos_1, 0, 0, 0, 0],[0, 0, 1, 0, 0, 0],[0, 0, 0, cos_1, sin_1, 0],[0, 0, 0, -sin_1, cos_1, 0],[0, 0, 0, 0, 0, 1]]
+
+> **ELEMENTO 2**: cos θ = 1.0, sin θ = 0.0 (viga horizontal)
+
+T_2 = [[1, 0, 0, 0, 0, 0],[0, 1, 0, 0, 0, 0],[0, 0, 1, 0, 0, 0],[0, 0, 0, 1, 0, 0],[0, 0, 0, 0, 1, 0],[0, 0, 0, 0, 0, 1]]
+
+> 4. Matrices de rigidez de los elementos (coordenadas globales).
+
+@{text}
+La matriz de rigidez del elemento en referencia al sistema global de coordenadas se obtiene sustituyendo en la ec. (4.18) la matriz de rigidez del elemento y la matriz de transformacion, respectivamente de las ecs. (a) y (c). Al realizar la multiplicacion de matrices como se indica en la ec. (4.18), obtenemos:
+@{end text}
+
+> **ELEMENTO 1** — DOFs: (4, 5, 6, 1, 2, 3):
+
+kb_1 = transpose(T_1)*k_1*T_1
+
+> **ELEMENTO 2** — DOFs: (1, 2, 3, 7, 8, 9):
+
+@{text}
+Como la matriz de transformacion para este elemento es la matriz unitaria [T]₂ = [I] ya que θ₂ = 0, la matriz de rigidez en coordenadas globales es identica a la matriz en coordenadas locales.
+@{end text}
+
+kb_2 = k_2
+
+> 5. Ensamblaje de la matriz de rigidez reducida del sistema.
+
+@{text}
+Para ensamblar la matriz de rigidez reducida del sistema para la estructura (considerando solo las coordenadas nodales libres), se procede a transferir cada coeficiente de las dos matrices de rigidez de los elementos, ecs. (d) y (b), a la matriz de rigidez del sistema. Para este objetivo, se escriben en la parte superior y al lado derecho de estas dos matrices las coordenadas nodales asignadas a estos elementos en coordenadas globales como se indica en la Figura 4.6.
+@{end text}
+
+@{text}
+Procediendo sistematicamente a transferir los coeficientes de las matrices de rigidez de los elementos, ecs. (d) y (b), de acuerdo con las filas y columnas indicadas a la derecha y arriba de estas dos matrices, resulta la matriz de rigidez reducida del sistema:
+@{end text}
+
+> [K]_R = contribucion Elem 1 (DOFs 1,2,3 = filas 4-6 de kb_1) + contribucion Elem 2 (DOFs 1,2,3 = filas 1-3 de kb_2):
+
+K_R = [[7307.4333, 2803.8, 8820],[2803.8, 4028.4868, 1041.25],[8820, 1041.25, 1617000]]
+
+> 6. Fuerzas equivalentes en los nodos (coordenadas locales).
+
+> **ELEMENTO 1**:
+
+@{text}
+La Figura 4.7 muestra la carga distribuida verticalmente sobre el elemento 1 descompuesta en la superposicion de las componentes normal y axial de esta carga. Las fuerzas equivalentes nodales para el elemento 1 se calculan usando las formulas del Apendice I como sigue (L = 120 in):
+@{end text}
+
+w = 1.0
+> w | Carga distribuida (k/in)
+
+> Componente normal: w_n = -0.8 w, Componente axial: w_a = -0.6 w
+
+@{columns 2}
+Q_1 = -0.8*w*L_1/2
+Q_4 = -0.8*w*L_1/2
+Q_2 = -0.6*w*L_1/2
+Q_5 = -0.6*w*L_1/2
+Q_3 = -0.6*w*L_1^2/12
+Q_6 = 0.6*w*L_1^2/12
+@{end columns}
+
+> o en notacion vectorial:
+
+Qe_1 = [[-48],[-36],[-720],[-48],[-36],[720]]
+
+> **ELEMENTO 2**:
+
+@{text}
+Las fuerzas equivalentes nodales para el elemento 2 se calculan usando las formulas para una carga concentrada en el punto medio, Caso (a) del Apendice I (W = 100 kip, L₂ = 144 in):
+@{end text}
+
+W_2 = 100
+> W_2 | Carga concentrada en el Elemento 2 (kip)
+
+@{columns 2}
+Q_1 = 0
+Q_4 = 0
+Q_2 = -W_2/2
+Q_5 = -W_2/2
+Q_3 = -W_2*L_2/8
+Q_6 = W_2*L_2/8
+@{end columns}
+
+> o en notacion vectorial:
+
+Qe_2 = [[0],[-50],[-1800],[0],[-50],[1800]]

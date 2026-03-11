@@ -58,7 +58,7 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
 .toolbar {
   height: 32px; background: linear-gradient(to bottom, #FCFCFC, #F2F2F2);
   border-bottom: 1px solid #DDD; display: flex; align-items: center;
-  padding: 0 6px; gap: 3px; flex-shrink: 0;
+  padding: 0 6px; gap: 3px; flex-shrink: 0; overflow-x: auto; overflow-y: hidden;
 }
 .tab-btn {
   padding: 4px 12px; border: 1px solid #bbb; border-radius: 4px;
@@ -89,9 +89,17 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   padding: 3px 6px; border: 1px solid #bbb; border-radius: 4px;
   font-size: 0.78rem; background: white; min-width: 180px;
 }
+.toolbar-label {
+  font-size: 0.7rem; color: #777; font-weight: 600; margin-left: 6px;
+  cursor: default; user-select: none;
+}
 .theme-select {
   padding: 3px 6px; border: 1px solid #bbb; border-radius: 4px;
   font-size: 0.78rem; background: white;
+}
+.size-input {
+  width: 38px; padding: 3px 2px; border: 1px solid #bbb; border-radius: 4px;
+  font-size: 0.72rem; background: white; text-align: center;
 }
 .auto-toggle {
   font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer; color: #555;
@@ -113,6 +121,27 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
 }
 .splitter:hover, .splitter.dragging {
   background: #90caf9;
+}
+
+/* ─── Layout Toggle States ─── */
+.layout-btn { font-size: 0.72rem !important; white-space: nowrap; }
+
+.split-layout.output-only > .editor-panel,
+.split-layout.output-only > .splitter {
+  display: none !important;
+}
+.split-layout.output-only > .output-panel {
+  flex: 1 1 100%;
+}
+
+.split-layout.code-only > .output-panel {
+  display: none !important;
+}
+.split-layout.code-only > .splitter {
+  display: none !important;
+}
+.split-layout.code-only > .editor-panel {
+  flex: 1 1 100%;
 }
 
 /* ─── Canvas Container (inside editor-panel, toggled with textarea) ─── */
@@ -169,12 +198,12 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   padding: 12px 14px 12px 34px; pointer-events: none; z-index: 1;
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   font-size: 13px; line-height: 1.6; tab-size: 2;
-  white-space: pre-wrap; word-wrap: break-word;
-  overflow-y: scroll; overflow-x: hidden; color: #1A1A25;
+  white-space: pre; word-wrap: normal;
+  overflow-y: scroll; overflow-x: auto; color: #1A1A25;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent; /* reserve space, invisible */
 }
-.syntax-layer::-webkit-scrollbar { width: 8px; }
+.syntax-layer::-webkit-scrollbar { width: 8px; height: 8px; }
 .syntax-layer::-webkit-scrollbar-thumb { background: transparent; }
 .syntax-layer::-webkit-scrollbar-track { background: transparent; }
 .editor-panel textarea {
@@ -183,8 +212,8 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   font-size: 13px; line-height: 1.6; resize: none; outline: none;
   background: transparent; color: transparent; caret-color: #1A1A25;
   tab-size: 2; position: relative; z-index: 2;
-  white-space: pre-wrap; word-wrap: break-word;
-  overflow-y: scroll; scrollbar-width: thin;
+  white-space: pre; word-wrap: normal;
+  overflow-y: scroll; overflow-x: auto; scrollbar-width: thin;
 }
 
 /* ─── Syntax Highlighting Colors ─── */
@@ -289,14 +318,17 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   padding: 10mm 10mm 10mm 12mm;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   box-sizing: border-box;
-  font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif;
-  font-size: 12pt; line-height: 135%;
+  font-family: var(--font-text, 'Segoe UI', 'Arial Nova', Helvetica, sans-serif);
+  font-size: var(--page-font-size, 12pt); line-height: 135%;
 }
+/* ─── Images: default centered via container text-align, supports align:left/right/center ─── */
+.out-image64 { text-align: center; margin: 8px 0; }
+.out-image64 img { display: inline-block; }
 
 /* ─── Page header (top: page number + section title) ─── */
 .page-header {
   margin: -2mm 0 4mm 0;
-  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-family: var(--font-text);
   font-size: 9pt;
   color: #555;
 }
@@ -320,7 +352,7 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   bottom: 4mm;
   left: 12mm;
   right: 10mm;
-  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-family: var(--font-text);
   font-size: 9pt;
   color: #555;
 }
@@ -373,7 +405,7 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
 
 /* ─── Headings (from template.html) ─── */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Arial Nova', Helvetica, sans-serif;
+  font-family: var(--font-text, 'Arial Nova', Helvetica, sans-serif);
   margin: 0.5em 0;
   padding: 0;
   line-height: 150%;
@@ -389,7 +421,7 @@ h6 { font-size: 1.0em; }
 .output-content h1.chapter-heading {
   padding: 0.3em 0;
   margin: 0;
-  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-family: var(--font-text);
   font-weight: normal;
   color: #3a2a1a;
 }
@@ -406,7 +438,7 @@ h6 { font-size: 1.0em; }
 
 /* ─── Book-style section heading (h2 in output) ─── */
 .output-content h2.section-heading {
-  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-family: var(--font-text);
   font-weight: bold;
   color: #3a2a1a;
   margin: 1em 0 0.5em 0;
@@ -425,9 +457,14 @@ p, li {
    EQUATION STYLES - From template.html (identical to WPF)
    ═══════════════════════════════════════════════════════════ */
 
-.eq, .matrix {
-  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+.eq, .matrix, .mat-trunc, .mat-with-unit {
+  font-family: var(--font-expr, 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif);
+  font-size: var(--expr-font-size);
 }
+
+/* ─── @{eq} multi-line "=" alignment table ─── */
+.eq-align-tbl { font-family: var(--font-expr); }
+.eq-align-tbl td { vertical-align: baseline; }
 
 .eq var {
   color: #06d;
@@ -453,12 +490,30 @@ p, li {
 i.unit {
   color: #043 !important;
   font-size: 90% !important;
-  vertical-align: -1pt;
+  vertical-align: baseline;
+  font-style: normal;
+}
+
+i.unit sup {
+  font-family: Calibri, Candara, Corbel, sans-serif;
+  font-size: 75%;
+  vertical-align: super;
+  line-height: 0;
 }
 
 sup.unit {
   font-family: Calibri, Candara, Corbel, sans-serif;
   font-size: 70% !important;
+}
+
+/* --- Unit annotations on substituted values in procedure step --- */
+.sub-unit {
+  font-size: 75%;
+  font-style: italic;
+  color: #666;
+  font-family: Calibri, Candara, Corbel, sans-serif;
+  vertical-align: baseline;
+  opacity: 0.8;
 }
 
 .eq b {
@@ -485,12 +540,12 @@ sup.unit {
 }
 
 .eq small var {
-  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-family: var(--font-expr);
   font-size: 8.5pt;
 }
 
 .eq small i {
-  font-family: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+  font-family: var(--font-expr);
   font-size: 6pt;
 }
 
@@ -534,11 +589,21 @@ sup.unit {
 
 .matrix .td {
   white-space: nowrap;
-  padding: 0 2pt 0 2pt;
+  padding: 0 2pt;
   min-width: 10pt;
   display: table-cell;
-  font-size: 10pt;
+  font-size: inherit;
   text-align: center;
+  vertical-align: middle;
+}
+/* Primera celda visible: pegar al bracket izquierdo */
+.matrix .td:nth-child(2) {
+  text-align: left;
+  padding-left: 1pt;
+}
+/* Ultima celda visible: pegar al bracket derecho */
+.matrix .td:nth-last-child(2) {
+  padding-right: 1pt;
 }
 
 /* Hide empty bracket cells — brackets done via border on .matrix */
@@ -585,6 +650,33 @@ sup.unit {
 }
 .mat-trunc .mat-hdr-corner {
   /* esquina vacia header */
+}
+
+/* --- Matrix/Vector con unidad: unidad centrada en la mitad del corchete --- */
+.mat-with-unit {
+  display: inline-flex;
+  align-items: stretch;
+  vertical-align: middle;
+}
+.mat-unit-sticky {
+  display: flex;
+  align-items: center;
+  padding-left: 2pt;
+}
+/* mat-unit-sticky centering: padding-top set dynamically by fixExpressionLayout()
+   to match col-idx row height, so unit text centers with data area */
+
+/* Per-row unit labels from & [unit1, unit2, ...] — inside mat-trunc grid */
+.mat-row-unit {
+  display: flex;
+  align-items: center;
+  padding-left: 3pt;
+  white-space: nowrap;
+}
+.mat-row-unit.mat-dots {
+  color: #999;
+  justify-content: center;
+  padding-left: 3pt;
 }
 
 /* ─── Fractions / Division (from template.html) ─── */
@@ -758,6 +850,21 @@ sup.unit {
 
 /* ─── Output line wrappers ─── */
 .out-line { margin: 0.05em 0; line-height: 120%; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; }
+/* Lines with fractions: tighter spacing — the fraction height is enough */
+.out-line:has(.dvc) {
+  line-height: 110%;
+  margin: 0 0;
+}
+/* Center = sign and variable name vertically with tall matrix/vector */
+.out-line:has(.matrix),
+.out-line:has(.mat-trunc) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 2px;
+}
+/* mat-trunc centering: handled by fixExpressionLayout() in JS
+   which dynamically sets padding-bottom based on actual col-idx height */
 .out-empty { height: 1em; }
 .out-comment { color: #444; margin: 0.05em 0; line-height: 120%; }
 .out-error { color: Crimson; background-color: #FEE; font-size: 0.88em; margin: 2px 0; padding: 2px 4px; border-radius: 3px; }
@@ -1074,6 +1181,31 @@ sup.unit {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   FONT & COLOR SYSTEM — CSS Custom Properties
+   3 independent axes: text font, expression font, color mode
+   ═══════════════════════════════════════════════════════════ */
+
+/* --- Default font variables (output-content scope) --- */
+.output-content {
+  --font-text: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif;
+  --font-expr: 'Georgia Pro', 'Century Schoolbook', 'Times New Roman', Times, serif;
+}
+
+/* --- Text font classes (.ft-*) --- */
+.ft-segoeui   { --font-text: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; }
+.ft-georgia   { --font-text: Georgia, 'Georgia Pro', 'Century Schoolbook', serif; }
+.ft-tahoma    { --font-text: Tahoma, 'Trebuchet MS', Verdana, sans-serif; }
+.ft-cambria   { --font-text: Cambria, 'Palatino Linotype', serif; }
+.ft-times     { --font-text: 'Times New Roman', Times, serif; }
+
+/* --- Expression font classes (.fe-*) --- */
+.fe-stix      { --font-expr: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif; }
+.fe-cambria   { --font-expr: 'Cambria Math', 'STIX Two Math', serif; }
+.fe-gabriola  { --font-expr: Gabriola, 'Cambria Math', 'STIX Two Math', serif; }
+.fe-georgiapro{ --font-expr: 'Georgia Pro', 'Century Schoolbook', Georgia, serif; }
+.fe-century   { --font-expr: 'Century Schoolbook', 'Georgia Pro', Georgia, serif; }
+
+/* ═══════════════════════════════════════════════════════════
    THEME: Hekatan (from pyhekatan display.py)
    Fuentes tipo LaTeX: STIX Two Math, Cambria Math
    Variables negras italicas, matrices con border grid
@@ -1081,9 +1213,11 @@ sup.unit {
 
 /* --- Ecuaciones: fuente LaTeX --- */
 .theme-hekatan .eq,
-.theme-hekatan .matrix {
-  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
-  font-size: 12pt;
+.theme-hekatan .matrix,
+.theme-hekatan .mat-trunc,
+.theme-hekatan .mat-with-unit {
+  font-family: var(--font-expr);
+  font-size: var(--expr-font-size, 12pt);
   line-height: 1.5;
   color: #000;
 }
@@ -1092,6 +1226,11 @@ sup.unit {
 .theme-hekatan .out-line {
   line-height: 160%;
   margin: 0.15em 0;
+}
+/* Lineas con fracciones: la fraccion ya da altura, no necesita line-height extra */
+.theme-hekatan .out-line:has(.dvc) {
+  line-height: 110%;
+  margin: 0 0;
 }
 
 /* --- Bold mode: @{config bold:on} — ecuaciones y calculos en negrita --- */
@@ -1112,7 +1251,7 @@ sup.unit {
 
 /* --- Variables: negro italic (estilo LaTeX puro) --- */
 .theme-hekatan .eq var {
-  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
+  font-family: var(--font-expr);
   color: #000;
   font-size: 100%;
   font-style: italic;
@@ -1135,7 +1274,7 @@ sup.unit {
 
 /* --- Subindices: estilo LaTeX --- */
 .theme-hekatan .eq sub {
-  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
+  font-family: var(--font-expr);
   font-size: 70.7%;
   vertical-align: -0.25em;
   margin-left: 1pt;
@@ -1151,11 +1290,18 @@ sup.unit {
   line-height: 0;
 }
 
-/* --- Unidades --- */
+/* --- Unidades: mismo tamaño y fuente que las expresiones --- */
 .theme-hekatan .unit {
-  font-size: 0.85em;
-  color: #666;
+  font-size: 1em !important;
+  color: #666 !important;
+  font-family: inherit;
+}
+.theme-hekatan .sub-unit {
+  font-size: 1em !important;
+  color: #888;
+  font-style: italic;
   font-family: Calibri, Candara, Corbel, sans-serif;
+  opacity: 0.85;
 }
 
 /* --- Valores resaltados --- */
@@ -1164,22 +1310,49 @@ sup.unit {
   color: #1a1a1a;
 }
 
-/* --- Matriz: grid con border-left/right (corchetes CSS) --- */
+/* --- Matriz: corchetes [ ] via ::before/::after (linea vertical + serifs) --- */
 .theme-hekatan .matrix {
   display: inline-grid !important;
   grid-template-columns: repeat(var(--mat-cols, 2), auto);
   gap: 0;
-  margin: 4px 2px;
+  margin: 4px 4pt;
   vertical-align: middle;
-  border-left: solid 1.5pt black;
-  border-right: solid 1.5pt black;
-  border-radius: 3px;
-  padding: 2pt 5pt;
+  border: none;
+  border-radius: 0;
+  padding: 1pt 0;
+  position: relative;
 }
-/* Quitar pseudo-brackets del tema base (ya usamos border en .matrix) */
-.theme-hekatan .matrix::before,
+/* Bracket izquierdo [ */
+.theme-hekatan .matrix::before {
+  content: '';
+  position: absolute;
+  left: -4pt;
+  top: -1.5pt;
+  bottom: -1.5pt;
+  width: 4pt;
+  border-left: solid 1.5pt black;
+  border-top: solid 1.5pt black;
+  border-bottom: solid 1.5pt black;
+  border-right: none;
+  border-radius: 0;
+  pointer-events: none;
+  display: block;
+}
+/* Bracket derecho ] */
 .theme-hekatan .matrix::after {
-  display: none;
+  content: '';
+  position: absolute;
+  right: -4pt;
+  top: -1.5pt;
+  bottom: -1.5pt;
+  width: 4pt;
+  border-right: solid 1.5pt black;
+  border-top: solid 1.5pt black;
+  border-bottom: solid 1.5pt black;
+  border-left: none;
+  border-radius: 0;
+  pointer-events: none;
+  display: block;
 }
 
 .theme-hekatan .matrix .tr {
@@ -1188,15 +1361,24 @@ sup.unit {
 
 .theme-hekatan .matrix .td {
   display: block;
+  vertical-align: middle;
   white-space: nowrap;
-  padding: 1pt 5pt;
+  padding: 1pt 3pt;
   min-width: 10pt;
   text-align: center;
-  font-size: 10pt;
+  font-size: inherit;
   border: none;
   width: auto;
-  min-width: auto;
   max-width: none;
+}
+/* Primera celda visible: alinear a la izquierda, sin padding-left */
+.theme-hekatan .matrix .td:nth-child(2) {
+  text-align: left;
+  padding-left: 1pt;
+}
+/* Ultima celda visible: sin padding-right */
+.theme-hekatan .matrix .td:nth-last-child(2) {
+  padding-right: 1pt;
 }
 
 /* Quitar brackets de celdas vacias (template.html usa .td:first/last-child) */
@@ -1305,15 +1487,17 @@ sup.unit {
   margin-bottom: 2pt;
 }
 
-.theme-hekatan .dvl:last-child {
+/* Solo quitar border al último dvl cuando tiene contenido (denominador de fracción apilada).
+   Los dvl vacíos son separadores de fracción en unidades y SIEMPRE necesitan border. */
+.theme-hekatan .dvl:last-child:not(:empty) {
   border-bottom: none;
 }
 
 /* --- Radical: ocultar SVG, usar Unicode √ --- */
 .theme-hekatan .radical-wrap {
   display: inline-flex;
-  align-items: stretch;
-  vertical-align: middle;
+  align-items: flex-end;
+  vertical-align: baseline;
   padding-left: 0;
   line-height: 1;
 }
@@ -1322,13 +1506,14 @@ sup.unit {
   background-image: none;
   width: auto;
   height: auto;
-  margin-left: 0;
-  margin-top: 0;
-  margin-right: 0;
-  font-family: 'Bell MT', 'STIX Two Math', 'Cambria Math', 'Times New Roman', serif;
-  font-size: 120%;
+  margin: 0;
+  padding: 0;
+  font-family: 'STIX Two Math', 'Cambria Math', serif;
+  font-size: 140%;
   display: flex;
   align-items: flex-end;
+  line-height: 0.9;
+  overflow: hidden;
 }
 
 .theme-hekatan .r0::before {
@@ -1338,10 +1523,10 @@ sup.unit {
 .theme-hekatan .o0 {
   display: inline-block;
   border-top: 0.8px solid #000;
-  padding: 2px 3px 0 2px;
-  margin-top: 1px;
+  padding: 1px 3px 0 0;
+  margin-top: 0;
   line-height: 1.2;
-  vertical-align: baseline;
+  align-self: flex-end;
 }
 
 /* --- @{eq} Vector/Matrix: negro --- */
@@ -1361,7 +1546,7 @@ sup.unit {
 .theme-hekatan .nary {
   color: #000;
   font-size: 160%;
-  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
+  font-family: var(--font-expr);
   font-weight: normal;
   font-style: normal;
   line-height: 0;
@@ -1378,13 +1563,13 @@ sup.unit {
 
 /* --- Headings: Segoe UI, gold underline on h1 --- */
 .theme-hekatan h1 {
-  font-family: 'Segoe UI', sans-serif;
+  font-family: var(--font-text);
   border-bottom: 2px solid #e0c060;
   padding-bottom: 4px;
 }
 
 .theme-hekatan h2 {
-  font-family: 'Segoe UI', sans-serif;
+  font-family: var(--font-text);
 }
 
 /* --- Design check: colores pyhekatan --- */
@@ -1479,7 +1664,7 @@ sup.unit {
 /* --- Output panel: fondo blanco puro, márgenes paper --- */
 .theme-latex {
   background: #fff;
-  font-family: Georgia, 'Times New Roman', 'Palatino Linotype', serif;
+  font-family: var(--font-text);
   font-size: 11pt;
   line-height: 1.45;
   color: #111;
@@ -1488,9 +1673,11 @@ sup.unit {
 
 /* --- Ecuaciones: serif grande --- */
 .theme-latex .eq,
-.theme-latex .matrix {
-  font-family: 'Cambria Math', Georgia, 'Times New Roman', serif;
-  font-size: 11.5pt;
+.theme-latex .matrix,
+.theme-latex .mat-trunc,
+.theme-latex .mat-with-unit {
+  font-family: var(--font-expr);
+  font-size: var(--expr-font-size, 11.5pt);
   line-height: 1.5;
   color: #111;
 }
@@ -1499,6 +1686,10 @@ sup.unit {
 .theme-latex .out-line {
   line-height: 155%;
   margin: 0.12em 0;
+}
+.theme-latex .out-line:has(.dvc) {
+  line-height: 110%;
+  margin: 0 0;
 }
 
 /* --- Bold mode --- */
@@ -1511,7 +1702,7 @@ sup.unit {
 
 /* --- Variables: italic serif --- */
 .theme-latex .eq var {
-  font-family: 'Cambria Math', Georgia, 'Times New Roman', serif;
+  font-family: var(--font-expr);
   color: #111;
   font-size: 100%;
   font-style: italic;
@@ -1533,7 +1724,7 @@ sup.unit {
 
 /* --- Sub/superindices --- */
 .theme-latex .eq sub {
-  font-family: 'Cambria Math', Georgia, 'Times New Roman', serif;
+  font-family: var(--font-expr);
   font-size: 70%;
   vertical-align: -0.25em;
   margin-left: 1pt;
@@ -1563,7 +1754,7 @@ sup.unit {
 
 /* --- Matrices: square brackets [ ] --- */
 .theme-latex .matrix {
-  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+  font-family: var(--font-expr);
   font-size: 10pt;
 }
 .theme-latex .matrix::before {
@@ -1575,8 +1766,8 @@ sup.unit {
   border-width: 1.2pt;
 }
 .theme-latex .matrix .td {
-  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
-  font-size: 10pt;
+  font-family: var(--font-expr);
+  font-size: inherit;
 }
 
 /* --- Matrices truncadas --- */
@@ -1597,7 +1788,7 @@ sup.unit {
 }
 .theme-latex .mat-trunc .mat-cell {
   text-align: right; padding: 0 3pt; position: relative; z-index: 1;
-  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+  font-family: var(--font-expr);
   font-size: 11pt;
 }
 .theme-latex .mat-trunc .mat-dots {
@@ -1614,21 +1805,21 @@ sup.unit {
 
 /* --- Cell arrays / vectors con indice --- */
 .theme-latex .cell-array {
-  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+  font-family: var(--font-expr);
   font-size: 11pt;
 }
 .theme-latex .cell-element {
-  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+  font-family: var(--font-expr);
   font-size: 11pt;
 }
 .theme-latex .cell-label {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-text);
   font-style: normal; color: #1a3c6e; font-size: 9pt;
 }
 .theme-latex .cell-label var { font-style: normal; }
 .theme-latex .cell-brace {
   font-size: 160%; font-weight: 300; color: #333;
-  font-family: 'Cambria Math', 'Latin Modern Math', serif;
+  font-family: var(--font-expr);
 }
 .theme-latex .cell-sep { color: #888; }
 .theme-latex .idx-br { color: #1a3c6e; }
@@ -1636,20 +1827,20 @@ sup.unit {
 /* --- Function definitions --- */
 .theme-latex .func-def {
   color: #555; font-style: italic;
-  font-family: 'Cambria Math', Georgia, serif; font-size: 11pt;
+  font-family: var(--font-expr); font-size: 11pt;
 }
 .theme-latex .func-keyword {
   color: #7b1fa2; font-weight: 600; font-style: normal;
-  font-family: Georgia, 'Times New Roman', serif; font-size: 10pt;
+  font-family: var(--font-text); font-size: 10pt;
 }
 .theme-latex .func-name {
   color: #1a3c6e; font-weight: 600; font-style: italic;
-  font-family: 'Cambria Math', Georgia, serif; font-size: 11pt;
+  font-family: var(--font-expr); font-size: 11pt;
 }
 
 /* --- Comments/descriptions --- */
 .theme-latex .out-comment {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-text);
   font-size: 10.5pt; color: #333;
 }
 
@@ -1682,7 +1873,7 @@ sup.unit {
   background-image: none;
   width: auto; height: auto;
   margin-left: 0; margin-top: 0; margin-right: 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-expr);
   font-size: 120%;
   display: flex;
   align-items: flex-end;
@@ -1710,7 +1901,7 @@ sup.unit {
 .theme-latex .nary {
   color: #111;
   font-size: 160%;
-  font-family: 'Cambria Math', Georgia, 'Times New Roman', serif;
+  font-family: var(--font-expr);
   font-weight: normal; font-style: normal;
   line-height: 0;
   display: block;
@@ -1724,7 +1915,7 @@ sup.unit {
 
 /* --- Headings: serif con linea sutil --- */
 .theme-latex h1 {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-text);
   font-size: 18pt;
   font-weight: 700;
   letter-spacing: -0.3px;
@@ -1734,14 +1925,14 @@ sup.unit {
 }
 
 .theme-latex h2 {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-text);
   font-size: 14pt;
   font-weight: 700;
   margin-top: 12px;
 }
 
 .theme-latex h3 {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-text);
   font-size: 12pt;
   font-weight: 600;
   font-style: italic;
@@ -1786,7 +1977,7 @@ sup.unit {
 
 .theme-gabriola {
   background: #fff;
-  font-family: Tahoma, 'Segoe UI', Calibri, sans-serif;
+  font-family: var(--font-text);
   font-size: 11pt;
   line-height: 1.45;
   color: #000;
@@ -1795,9 +1986,11 @@ sup.unit {
 
 /* --- Ecuaciones: Gabriola grande --- */
 .theme-gabriola .eq,
-.theme-gabriola .matrix {
-  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif;
-  font-size: 14pt;
+.theme-gabriola .matrix,
+.theme-gabriola .mat-trunc,
+.theme-gabriola .mat-with-unit {
+  font-family: var(--font-expr);
+  font-size: var(--expr-font-size, 14pt);
   line-height: 1.6;
   color: #000;
 }
@@ -1805,6 +1998,10 @@ sup.unit {
 .theme-gabriola .out-line {
   line-height: 160%;
   margin: 0.15em 0;
+}
+.theme-gabriola .out-line:has(.dvc) {
+  line-height: 110%;
+  margin: 0 0;
 }
 
 /* --- Bold mode --- */
@@ -1817,7 +2014,7 @@ sup.unit {
 
 /* --- Variables: italic negro (Mathcad style) --- */
 .theme-gabriola .eq var {
-  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   color: #000;
   font-size: 100%;
   font-style: italic;
@@ -1839,7 +2036,7 @@ sup.unit {
 
 /* --- Subindices --- */
 .theme-gabriola .eq sub {
-  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 70%;
   vertical-align: -0.25em;
   margin-left: 1pt;
@@ -1861,7 +2058,7 @@ sup.unit {
   color: #00008B;
   font-weight: bold;
   font-style: italic;
-  font-family: Gabriola, 'Cambria Math', serif;
+  font-family: var(--font-expr);
 }
 
 /* --- Valores resaltados --- */
@@ -1872,7 +2069,7 @@ sup.unit {
 
 /* --- Matrices: square brackets [ ] --- */
 .theme-gabriola .matrix {
-  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
 }
 .theme-gabriola .matrix::before {
   border-color: #000;
@@ -1883,8 +2080,8 @@ sup.unit {
   border-width: 1.5pt;
 }
 .theme-gabriola .matrix .td {
-  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
-  font-size: 11pt;
+  font-family: var(--font-expr);
+  font-size: inherit;
 }
 
 /* --- Matrices truncadas --- */
@@ -1905,7 +2102,7 @@ sup.unit {
 }
 .theme-gabriola .mat-trunc .mat-cell {
   text-align: right; padding: 0 3pt; position: relative; z-index: 1;
-  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 12pt;
 }
 .theme-gabriola .mat-trunc .mat-dots {
@@ -1922,21 +2119,21 @@ sup.unit {
 
 /* --- Cell arrays / vectors con indice --- */
 .theme-gabriola .cell-array {
-  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 14pt;
 }
 .theme-gabriola .cell-element {
-  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 14pt;
 }
 .theme-gabriola .cell-label {
-  font-family: Tahoma, 'Segoe UI', sans-serif;
+  font-family: var(--font-text);
   font-style: normal; color: #2E3192; font-size: 10pt;
 }
 .theme-gabriola .cell-label var { font-style: normal; }
 .theme-gabriola .cell-brace {
   font-size: 160%; font-weight: 300; color: #333;
-  font-family: Gabriola, 'Cambria Math', serif;
+  font-family: var(--font-expr);
 }
 .theme-gabriola .cell-sep { color: #888; }
 .theme-gabriola .idx-br { color: #2E3192; }
@@ -1944,20 +2141,20 @@ sup.unit {
 /* --- Function definitions --- */
 .theme-gabriola .func-def {
   color: #555; font-style: italic;
-  font-family: Gabriola, 'Cambria Math', serif; font-size: 14pt;
+  font-family: var(--font-expr); font-size: 14pt;
 }
 .theme-gabriola .func-keyword {
   color: #7b1fa2; font-weight: 600; font-style: normal;
-  font-family: Tahoma, 'Segoe UI', sans-serif; font-size: 10pt;
+  font-family: var(--font-text); font-size: 10pt;
 }
 .theme-gabriola .func-name {
   color: #2E3192; font-weight: 600; font-style: italic;
-  font-family: Gabriola, 'Cambria Math', serif; font-size: 14pt;
+  font-family: var(--font-expr); font-size: 14pt;
 }
 
 /* --- Comments/descriptions --- */
 .theme-gabriola .out-comment {
-  font-family: Tahoma, 'Segoe UI', Calibri, sans-serif;
+  font-family: var(--font-text);
   font-size: 11pt; color: #333;
 }
 
@@ -1974,7 +2171,7 @@ sup.unit {
 .theme-gabriola .r0 {
   background-image: none; width: auto; height: auto;
   margin-left: 0; margin-top: 0; margin-right: 0;
-  font-family: Gabriola, 'Bell MT', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 120%; display: flex; align-items: flex-end;
 }
 .theme-gabriola .r0::before { content: '\221A'; }
@@ -1990,11 +2187,13 @@ sup.unit {
 .theme-gabriola .eq-mat { color: #000; }
 .theme-gabriola .eq-mcell,
 .theme-gabriola .eq-cell { font-size: 11pt; }
+.theme-gabriola .eq-align-tbl { font-family: var(--font-expr); }
+.theme-gabriola .eq-align-tbl td { vertical-align: baseline; }
 
 /* --- N-ary --- */
 .theme-gabriola .nary {
   color: #000; font-size: 160%;
-  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-weight: normal; font-style: normal;
   line-height: 0; display: block;
   margin: 0; padding: 0.8em 0;
@@ -2004,7 +2203,7 @@ sup.unit {
 
 /* --- Headings: Tahoma (Mathcad Prime style) --- */
 .theme-gabriola h1 {
-  font-family: Tahoma, sans-serif;
+  font-family: var(--font-text);
   font-size: 16pt;
   font-weight: normal;
   color: #2E3192;
@@ -2012,13 +2211,13 @@ sup.unit {
   padding-bottom: 4px;
 }
 .theme-gabriola h2 {
-  font-family: Tahoma, sans-serif;
+  font-family: var(--font-text);
   font-size: 13pt;
   font-weight: normal;
   color: #2E3192;
 }
 .theme-gabriola h3 {
-  font-family: Tahoma, sans-serif;
+  font-family: var(--font-text);
   font-size: 12pt;
   font-weight: normal;
   color: #2E3192;
@@ -2030,7 +2229,7 @@ sup.unit {
 
 /* --- Sym vec (lsolve) --- base brackets, font overrides */
 .theme-gabriola .lsolve-sym-vec .td {
-  font-family: Gabriola, 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 12pt;
 }
 
@@ -2038,7 +2237,7 @@ sup.unit {
 .theme-mathcad {
   background: #fff;
   color: #1a1a1a;
-  font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+  font-family: var(--font-text);
   font-size: 11pt;
   line-height: 1.55;
   padding: 18px 28px;
@@ -2046,9 +2245,11 @@ sup.unit {
 
 /* Equations / matrices — Cambria Math emulates Mathcad UniMath Prime */
 .theme-mathcad .eq,
-.theme-mathcad .matrix {
-  font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', serif;
-  font-size: 12pt;
+.theme-mathcad .matrix,
+.theme-mathcad .mat-trunc,
+.theme-mathcad .mat-with-unit {
+  font-family: var(--font-expr);
+  font-size: var(--expr-font-size, 12pt);
   line-height: 1.4;
   color: #000;
 }
@@ -2056,7 +2257,7 @@ sup.unit {
 .theme-mathcad .out-line {
   padding: 2px 0;
   margin: 1px 0;
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 12pt;
 }
 
@@ -2071,7 +2272,7 @@ sup.unit {
 .theme-mathcad .eq var {
   font-style: italic;
   color: #000;
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 12pt;
 }
 
@@ -2079,7 +2280,7 @@ sup.unit {
 .theme-mathcad .eq i {
   font-style: italic;
   color: #000;
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
 }
 
 /* Bold elements — functions */
@@ -2087,7 +2288,7 @@ sup.unit {
   font-weight: normal;
   font-style: normal;
   color: #000;
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
 }
 
 /* Subscripts */
@@ -2113,13 +2314,13 @@ sup.unit {
   font-style: italic;
   font-weight: bold;
   color: #00008B;
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 12pt;
 }
 
 /* Values */
 .theme-mathcad .val {
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 12pt;
   color: #000;
 }
@@ -2128,8 +2329,8 @@ sup.unit {
 .theme-mathcad .matrix::before { border-color: #000; border-width: 1.5pt; }
 .theme-mathcad .matrix::after { border-color: #000; border-width: 1.5pt; }
 .theme-mathcad .matrix .td {
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
-  font-size: 12pt;
+  font-family: var(--font-expr);
+  font-size: inherit;
   color: #000;
 }
 
@@ -2145,7 +2346,7 @@ sup.unit {
 }
 .theme-mathcad .mat-trunc .mat-cell {
   padding: 1px 5px; text-align: center;
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 11pt;
 }
 .theme-mathcad .mat-trunc .mat-dots {
@@ -2159,21 +2360,21 @@ sup.unit {
 
 /* Cell arrays / vectors con indice */
 .theme-mathcad .cell-array {
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 12pt;
 }
 .theme-mathcad .cell-element {
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 12pt;
 }
 .theme-mathcad .cell-label {
-  font-family: 'Segoe UI', Calibri, sans-serif;
+  font-family: var(--font-text);
   font-style: normal; color: #1565c0; font-size: 9pt;
 }
 .theme-mathcad .cell-label var { font-style: normal; }
 .theme-mathcad .cell-brace {
   font-size: 160%; font-weight: 300; color: #333;
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
 }
 .theme-mathcad .cell-sep { color: #888; }
 .theme-mathcad .idx-br { color: #1565c0; }
@@ -2181,20 +2382,20 @@ sup.unit {
 /* Function definitions */
 .theme-mathcad .func-def {
   color: #555; font-style: italic;
-  font-family: 'Cambria Math', 'STIX Two Math', serif; font-size: 12pt;
+  font-family: var(--font-expr); font-size: 12pt;
 }
 .theme-mathcad .func-keyword {
   color: #7b1fa2; font-weight: 600; font-style: normal;
-  font-family: 'Segoe UI', Calibri, sans-serif; font-size: 10pt;
+  font-family: var(--font-text); font-size: 10pt;
 }
 .theme-mathcad .func-name {
   color: #1565c0; font-weight: 600; font-style: italic;
-  font-family: 'Cambria Math', 'STIX Two Math', serif; font-size: 12pt;
+  font-family: var(--font-expr); font-size: 12pt;
 }
 
 /* Comments/descriptions */
 .theme-mathcad .out-comment {
-  font-family: 'Segoe UI', Calibri, sans-serif;
+  font-family: var(--font-text);
   font-size: 11pt; color: #444;
 }
 
@@ -2228,14 +2429,14 @@ sup.unit {
 .theme-mathcad .nary {
   display: inline-flex; flex-direction: column; align-items: center;
   vertical-align: middle; margin: 0 3px;
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 12pt;
 }
 .theme-mathcad .nary em { transform: scaleX(0.75) rotate(6deg); }
 
 /* Headings — Segoe UI, Mathcad Prime dark style */
 .theme-mathcad h1 {
-  font-family: 'Segoe UI', Calibri, sans-serif;
+  font-family: var(--font-text);
   font-size: 16pt;
   font-weight: 600;
   color: #1a1a1a;
@@ -2244,14 +2445,14 @@ sup.unit {
   padding-bottom: 4px;
 }
 .theme-mathcad h2 {
-  font-family: 'Segoe UI', Calibri, sans-serif;
+  font-family: var(--font-text);
   font-size: 13pt;
   font-weight: 600;
   color: #333;
   margin: 12px 0 6px 0;
 }
 .theme-mathcad h3 {
-  font-family: 'Segoe UI', Calibri, sans-serif;
+  font-family: var(--font-text);
   font-size: 11.5pt;
   font-weight: 600;
   color: #444;
@@ -2264,7 +2465,7 @@ sup.unit {
 
 /* lsolve symbolic vectors — base brackets, font overrides */
 .theme-mathcad .lsolve-sym-vec .td {
-  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-family: var(--font-expr);
   font-size: 12pt;
 }
 
@@ -2469,6 +2670,15 @@ sup.unit {
   font-size: 11px;
   font-family: 'Segoe UI', sans-serif;
 }
+.keypad-section-hdr {
+  font-size: 10px;
+  font-weight: 700;
+  color: #B8960C;
+  padding: 0 4px;
+  line-height: 24px;
+  white-space: nowrap;
+  user-select: none;
+}
 
 /* ═══════════════════════════════════════════════════════════
    STATUS BAR — Bottom bar
@@ -2571,6 +2781,430 @@ sup.unit {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   THEME: CLASSIC BLACK (expresiones y texto todo negro, fondo blanco)
+   Como un libro impreso: monocromo, sin colores en variables/funciones
+   ═══════════════════════════════════════════════════════════ */
+.cm-black .eq,
+.cm-black .matrix { color: #000; }
+.cm-black .out-line { color: #000; }
+.cm-black .eq var { color: #000; }
+.cm-black .eq i { color: #000; font-style: italic; }
+.cm-black .eq b { color: #000; }
+.cm-black .eq sub { color: #000; }
+.cm-black .eq sup { color: #000; }
+.cm-black .unit { color: #000 !important; }
+.cm-black .val { color: #000; }
+.cm-black .matrix::before,
+.cm-black .matrix::after { border-color: #000; }
+.cm-black .matrix .td { color: #000; }
+.cm-black .mat-trunc { color: #000; }
+.cm-black .mat-trunc .mat-row-idx { color: #666; }
+.cm-black .mat-trunc .mat-col-idx { color: #666; }
+.cm-black .mat-trunc .mat-cell { color: #000; }
+.cm-black .mat-trunc .mat-dots { color: #666; }
+.cm-black .mat-trunc .mat-bracket { border-color: #000; }
+.cm-black .cell-brace { color: #000; }
+.cm-black .cell-sep { color: #000; }
+.cm-black .idx-br { color: #000; }
+.cm-black .func-def { color: #000; }
+.cm-black .func-keyword { color: #000; font-weight: 600; }
+.cm-black .func-name { color: #000; font-weight: 600; }
+.cm-black .out-comment { color: #333; }
+.cm-black .description { color: #333; }
+.cm-black .dvc { color: #000; }
+.cm-black .dvl { border-bottom-color: #000; }
+.cm-black .radical-wrap { color: #000; }
+.cm-black .r0 { border-color: #000; }
+.cm-black .o0 { border-color: #000; }
+.cm-black .eq-brace-l,
+.cm-black .eq-brace-r { color: #000; }
+.cm-black .eq-mat { color: #000; }
+.cm-black .nary { color: #000; }
+.cm-black h1 { color: #000; }
+.cm-black h2 { color: #000; }
+.cm-black h3 { color: #000; }
+.cm-black .output-content h1.chapter-heading { color: #000; }
+.cm-black .output-content h2.section-heading { color: #000; }
+.cm-black .ok { color: #000; background-color: #F0F0F0; }
+.cm-black .err { color: Crimson; background-color: #FEE; }
+.cm-black .block { border-left-color: #000; background: none; }
+.cm-black .cond { color: #000; }
+.cm-black .out-symbolic { color: #333; }
+.cm-black .cas-badge { color: #666; background: #eee; }
+.cm-black .lsolve-sym-vec .td { color: #000; border-color: #000; }
+
+/* ═══════════════════════════════════════════════════════════
+   THEME: CLASSIC DARK (fondo negro, texto claro — tema de ventana)
+   ═══════════════════════════════════════════════════════════ */
+.cm-dark {
+  color: #e0e0e0 !important;
+}
+.cm-dark .output-page {
+  background: #1e1e1e !important;
+  color: #e0e0e0 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+.cm-dark .page-header { color: #888 !important; }
+.cm-dark .page-header .header-rule { border-color: #444; }
+
+/* === Override .eq-black for dark mode === */
+/* .eq-black sets color:#000 !important on everything — must override with higher specificity */
+.cm-dark .eq-black,
+.cm-dark .eq-black var,
+.cm-dark .eq-black i,
+.cm-dark .eq-black b,
+.cm-dark .eq-black em,
+.cm-dark .eq-black sub,
+.cm-dark .eq-black sup,
+.cm-dark .eq-black small,
+.cm-dark .eq-black span,
+.cm-dark .eq-black p,
+.cm-dark .eq-black .val,
+.cm-dark .eq-black .nary,
+.cm-dark .eq-black .cell-brace,
+.cm-dark .eq-black .cell-label,
+.cm-dark .eq-black .cell-sep,
+.cm-dark .eq-black h1,
+.cm-dark .eq-black h2,
+.cm-dark .eq-black h3,
+.cm-dark .eq-black h4,
+.cm-dark .eq-black .chapter-heading,
+.cm-dark .eq-black .chapter-heading .chapter-num,
+.cm-dark .eq-black .chapter-heading .chapter-title,
+.cm-dark .eq-black .section-heading,
+.cm-dark .eq-black .section-heading .section-num,
+.cm-dark .eq-black .section-heading .section-title,
+.cm-dark .eq-black .out-comment,
+.cm-dark .eq-black .out-text {
+  color: inherit !important;
+}
+
+/* Equations & math */
+.cm-dark .eq,
+.cm-dark .matrix {
+  color: #e0e0e0 !important;
+}
+.cm-dark .out-line {
+  color: #e0e0e0 !important;
+}
+.cm-dark .eq var {
+  color: #6cb4ff !important;
+}
+.cm-dark .eq i {
+  color: #5ec9a0 !important;
+  font-style: normal;
+}
+.cm-dark .eq b {
+  font-weight: 600;
+  color: #e0e0e0 !important;
+}
+.cm-dark .eq sub,
+.cm-dark .eq sup,
+.cm-dark .eq em,
+.cm-dark .eq small,
+.cm-dark .eq span,
+.cm-dark .eq p {
+  color: #e0e0e0 !important;
+}
+
+/* Units */
+.cm-dark .unit {
+  color: #4ec9a0 !important;
+}
+.cm-dark .sub-unit {
+  color: #4ec9a0 !important;
+  opacity: 0.7;
+}
+
+/* Values */
+.cm-dark .val {
+  color: #e0e0e0 !important;
+}
+
+/* Matrix brackets — white so they're clearly visible */
+.cm-dark .matrix {
+  border-color: #fff !important;
+}
+.cm-dark .matrix::before,
+.cm-dark .matrix::after {
+  border-color: #fff !important;
+}
+.cm-dark .matrix .td {
+  color: #e0e0e0 !important;
+}
+
+/* Truncated matrices */
+.cm-dark .mat-trunc {
+  color: #e0e0e0 !important;
+}
+.cm-dark .mat-trunc .mat-row-idx {
+  color: #888 !important;
+}
+.cm-dark .mat-trunc .mat-col-idx {
+  color: #888 !important;
+}
+.cm-dark .mat-trunc .mat-cell {
+  color: #e0e0e0 !important;
+}
+.cm-dark .mat-trunc .mat-dots {
+  color: #888 !important;
+}
+.cm-dark .mat-trunc .mat-bracket {
+  border-color: #fff !important;
+}
+
+/* Cell arrays */
+.cm-dark .cell-brace { color: #fff !important; }
+.cm-dark .cell-sep { color: #999 !important; }
+.cm-dark .cell-label { color: #7bb8f0 !important; }
+.cm-dark .idx-br { color: #7bb8f0 !important; }
+
+/* Function definitions */
+.cm-dark .func-def { color: #e0e0e0 !important; }
+.cm-dark .func-keyword { color: #c792ea !important; }
+.cm-dark .func-name { color: #6cb4ff !important; }
+
+/* Comments & descriptions */
+.cm-dark .out-comment { color: #a0a0a0 !important; }
+.cm-dark .out-text { color: #ddd !important; }
+.cm-dark .description { color: #bbb !important; font-style: italic; }
+
+/* Fractions */
+.cm-dark .dvc { color: #e0e0e0 !important; }
+.cm-dark .dvl { border-bottom-color: #fff !important; }
+
+/* Radicals */
+.cm-dark .radical-wrap { color: #e0e0e0 !important; }
+.cm-dark .r0 { color: #e0e0e0 !important; border-color: #fff; }
+.cm-dark .o0 { border-color: #fff !important; }
+
+/* Braces & n-ary */
+.cm-dark .eq-brace-l,
+.cm-dark .eq-brace-r { color: #fff !important; }
+.cm-dark .eq-mat { color: #fff !important; }
+.cm-dark .nary { color: #e0e0e0 !important; }
+
+/* Headings */
+.cm-dark h1 {
+  color: #e8c84a !important;
+  border-bottom-color: #555 !important;
+}
+.cm-dark h2 {
+  color: #e0c044 !important;
+}
+.cm-dark h3 {
+  color: #d8b83e !important;
+}
+.cm-dark h4 {
+  color: #ddd !important;
+}
+.cm-dark .chapter-heading,
+.cm-dark .chapter-heading .chapter-num,
+.cm-dark .chapter-heading .chapter-title { color: #e8c84a !important; border-bottom-color: #555; }
+.cm-dark .section-heading,
+.cm-dark .section-heading .section-num,
+.cm-dark .section-heading .section-title { color: #e0c044 !important; }
+
+/* Messages */
+.cm-dark .ok { color: #4ec9a0 !important; background-color: rgba(78, 201, 160, 0.1); }
+.cm-dark .err { color: #ff6b6b !important; background-color: rgba(255, 107, 107, 0.1); }
+.cm-dark .out-error { color: #ff6b6b !important; background-color: rgba(255, 107, 107, 0.1); }
+
+/* Conditional blocks */
+.cm-dark .block {
+  border-left-color: #5b8fd4;
+  background: linear-gradient(to right, rgba(0, 192, 255, 0.08), rgba(0, 192, 255, 0.03));
+}
+.cm-dark .cond { color: #c792ea !important; }
+
+/* Value tooltip */
+.cm-dark .value { background-color: rgba(100, 160, 255, 0.08); }
+
+/* CAS */
+.cm-dark .out-symbolic { color: #c792ea !important; }
+.cm-dark .cas-badge { color: #bbb; background: #2a2a2a; }
+
+/* lsolve symbolic vectors */
+.cm-dark .lsolve-sym-vec .td {
+  color: #e0e0e0 !important;
+  border-color: #fff !important;
+}
+.cm-dark .lsolve-sym-vec .td:first-child { border-color: #fff !important; }
+.cm-dark .lsolve-sym-vec .td:last-child { border-color: #fff !important; }
+
+/* @{eq} vector/matrix brackets */
+.cm-dark .eq-vec .eq-mat { color: #fff !important; }
+
+/* Page number in header */
+.cm-dark .header-pagenum { color: #999 !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   DARK MODE — Full GUI (body.cm-dark)
+   ═══════════════════════════════════════════════════════════ */
+body.cm-dark {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+/* Menu bar */
+body.cm-dark .menu-bar {
+  background: #252525;
+  border-bottom-color: #333;
+  color: #e0e0e0;
+}
+body.cm-dark .menu-label { color: #ccc; }
+body.cm-dark .menu-label:hover { color: #fff; }
+body.cm-dark .menu-item:hover { background: #333; }
+body.cm-dark .menu-dropdown {
+  background: #2a2a2a;
+  border-color: #444;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+body.cm-dark .menu-dropdown button { color: #ccc; }
+body.cm-dark .menu-dropdown button:hover { background: #3a3a3a; color: #fff; }
+body.cm-dark .menu-dropdown hr { border-color: #444; }
+body.cm-dark .menu-title { color: #888; }
+body.cm-dark .submenu {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+/* Toolbar */
+body.cm-dark .toolbar {
+  background: #252525;
+  border-bottom-color: #333;
+}
+body.cm-dark .tab-btn { background: #333; color: #ccc; border-color: #444; }
+body.cm-dark .tab-btn:hover { background: #3a3a3a; color: #fff; }
+body.cm-dark .tab-btn.active { background: #444; color: #fff; }
+body.cm-dark .tool-btn { color: #ccc; }
+body.cm-dark .tool-btn:hover { background: #3a3a3a; }
+body.cm-dark .tool-btn { background: #333; color: #ccc; border-color: #444; }
+body.cm-dark .tool-btn:hover { background: #3a3a3a; color: #fff; }
+body.cm-dark .tool-btn.primary { background: #2d6b3a; color: #fff; }
+body.cm-dark .tool-btn.primary:hover { background: #3a8a4a; }
+body.cm-dark .layout-btn { background: #333; color: #ccc; border-color: #444; }
+body.cm-dark .layout-btn:hover { background: #3a3a3a; color: #fff; }
+body.cm-dark .cad-btn { background: #333; color: #888; border-color: #444; }
+body.cm-dark .fmt-btn { background: #333; color: #ccc; border-color: #444; }
+body.cm-dark .fmt-btn:hover { background: #3a3a3a; color: #fff; }
+body.cm-dark .toolbar-sep { background: #444; }
+body.cm-dark .theme-select,
+body.cm-dark .example-select,
+body.cm-dark .size-input {
+  background: #333; color: #ccc; border-color: #444;
+}
+body.cm-dark .auto-toggle { color: #ccc; }
+body.cm-dark .toolbar-label { color: #999; }
+
+/* Editor panel */
+body.cm-dark .editor-panel {
+  background: #1e1e1e;
+  border-color: #333;
+}
+body.cm-dark .editor-header {
+  background: #252525;
+  color: #aaa;
+  border-bottom-color: #333;
+}
+body.cm-dark .code-editor-wrap {
+  background: #1e1e1e;
+}
+body.cm-dark .editor-panel textarea {
+  background: transparent;
+  color: transparent;
+  caret-color: #fff;
+}
+body.cm-dark .editor-panel textarea::selection {
+  background: rgba(100, 150, 255, 0.3);
+}
+body.cm-dark .editor-panel textarea::-webkit-scrollbar-track { background: #1e1e1e; }
+body.cm-dark .editor-panel textarea::-webkit-scrollbar-thumb { background: #555; }
+body.cm-dark .editor-panel textarea::-webkit-scrollbar-thumb:hover { background: #777; }
+body.cm-dark .fold-gutter {
+  background: #1e1e1e;
+  border-right-color: #333;
+}
+body.cm-dark .fold-marker { color: #888; }
+body.cm-dark .fold-marker:hover:not(.fold-empty) { color: #ccc; background: rgba(255,255,255,0.06); }
+body.cm-dark .fold-marker.fold-active { color: #569CD6; }
+
+/* Syntax highlighting — dark mode */
+body.cm-dark .syntax-layer { color: #d4d4d4; }
+body.cm-dark .syntax-layer .syn-heading { color: #e8c84a; font-weight: 600; }
+body.cm-dark .syntax-layer .syn-comment { color: #6A9955; }
+body.cm-dark .syntax-layer .syn-dim { color: #888; font-style: italic; }
+body.cm-dark .syntax-layer .syn-block { color: #C586C0; font-weight: 600; }
+body.cm-dark .syntax-layer .syn-keyword { color: #569CD6; }
+body.cm-dark .syntax-layer .syn-number { color: #b5cea8; }
+body.cm-dark .syntax-layer .syn-function { color: #dcdcaa; }
+body.cm-dark .syntax-layer .syn-operator { color: #d4d4d4; }
+
+/* Splitter */
+body.cm-dark .splitter {
+  background: #333;
+}
+body.cm-dark .splitter:hover,
+body.cm-dark .splitter.dragging {
+  background: #555;
+}
+
+/* Output panel */
+body.cm-dark .output-panel {
+  background: #1a1a1a;
+  border-color: #333;
+}
+body.cm-dark .output-header {
+  background: #252525;
+  color: #aaa;
+  border-bottom-color: #333;
+}
+
+/* Custom scrollbar */
+body.cm-dark .custom-scrollbar { background: #1e1e1e; }
+body.cm-dark .custom-scrollbar-thumb { background: #555; }
+body.cm-dark .custom-scrollbar-up,
+body.cm-dark .custom-scrollbar-down { color: #888; background: #252525; }
+
+/* Keypad bar */
+body.cm-dark .keypad-bar {
+  background: #252525;
+  border-top-color: #333;
+}
+body.cm-dark .keypad-tab { background: #333; color: #ccc; border-color: #444; }
+body.cm-dark .keypad-tab:hover { background: #3a3a3a; }
+body.cm-dark .keypad-tab.active { background: #444; color: #fff; }
+body.cm-dark .keypad-content button {
+  background: #333; color: #ccc; border-color: #444;
+}
+body.cm-dark .keypad-content button:hover {
+  background: #3a3a3a; color: #fff;
+}
+
+/* Status bar */
+body.cm-dark .status-bar {
+  background: #252525;
+  border-top-color: #333;
+  color: #aaa;
+}
+body.cm-dark .sb-label { color: #888; }
+body.cm-dark .sb-input {
+  background: #333; color: #ccc; border-color: #444;
+}
+body.cm-dark .sb-sep { background: #444; }
+body.cm-dark .sb-version { color: #666; }
+
+/* Debug panel */
+body.cm-dark .debug-panel {
+  background: #1a1a1a;
+  border-color: #444;
+}
+body.cm-dark .debug-header { background: #252525; color: #ccc; }
+body.cm-dark .debug-output { background: #1a1a1a; color: #ccc; }
+body.cm-dark .debug-input { background: #1e1e1e; color: #ccc; border-color: #444; }
+body.cm-dark .debug-btn { background: #333; color: #ccc; }
+
+/* ═══════════════════════════════════════════════════════════
    PRINT / EXPORT PDF
    ═══════════════════════════════════════════════════════════ */
 @media print {
@@ -2603,6 +3237,7 @@ sup.unit {
     margin: 0 !important;
     width: 100% !important;
     min-height: auto !important;
+    font-size: 12pt !important;
     page-break-after: always;
     break-after: page;
   }
@@ -2623,42 +3258,37 @@ sup.unit {
   /* Canvas/SVG: ensure they print */
   canvas, svg { max-width: 100%; }
 
-  /* Hide figure toolbar and nav in print */
-  .draw-toolbar, .fig-nav-bar { display: none !important; }
+  /* Hide zoom button and nav in print, keep caption */
+  .draw-zoom-btn, .fig-nav-bar { display: none !important; }
 }
 
-/* ─── Figure toolbar & zoom ─────────────────────── */
-.draw-toolbar {
+/* ─── Figure caption (below canvas, book style) ─── */
+.draw-caption {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 3px 6px;
-  background: #f5f5f5;
-  border: 1px solid #ccc;
-  border-bottom: none;
-  border-radius: 4px 4px 0 0;
-  font-family: 'Segoe UI', sans-serif;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 6px 2px;
+  font-family: 'Times New Roman', 'Georgia', serif;
 }
 .draw-fig-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: #555;
-  flex: 1;
+  font-size: 11px;
+  color: #333;
+  text-align: center;
 }
 .draw-zoom-btn {
-  font-size: 10px;
-  padding: 2px 8px;
-  border: 1px solid #aaa;
+  font-size: 12px;
+  padding: 1px 4px;
+  border: none;
   border-radius: 3px;
-  background: #fff;
+  background: transparent;
   cursor: pointer;
-  color: #333;
-  transition: background 0.15s;
+  color: #999;
+  transition: color 0.15s;
+  line-height: 1;
 }
 .draw-zoom-btn:hover {
-  background: #4488ff;
-  color: #fff;
-  border-color: #3366cc;
+  color: #4488ff;
 }
 
 /* ─── Figure navigation bar ─────────────────────── */
@@ -2695,4 +3325,572 @@ sup.unit {
   background: #4488ff;
   color: #fff;
   border-color: #3366cc;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CUSTOM COLOR MODE
+   ═══════════════════════════════════════════════════════════ */
+
+/* --- Custom colors bar --- */
+.custom-colors-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 12px;
+  background: #f0f0f0;
+  border-bottom: 1px solid #ddd;
+  font-size: 12px;
+  font-family: 'Segoe UI', sans-serif;
+}
+.custom-colors-bar label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #444;
+}
+.custom-colors-bar input[type="color"] {
+  width: 30px;
+  height: 22px;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 1px;
+}
+body.cm-custom-dark .custom-colors-bar,
+body.cm-dark .custom-colors-bar {
+  background: #252525;
+  border-color: #333;
+}
+body.cm-custom-dark .custom-colors-bar label,
+body.cm-dark .custom-colors-bar label {
+  color: #ccc;
+}
+
+/* --- Functions Library Panel --- */
+.fn-lib-btn {
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+  font-size: 0.8rem;
+  font-style: italic;
+  min-width: 36px;
+}
+.fn-lib-panel {
+  border-bottom: 1px solid #ddd;
+  background: #fafafa;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 12px;
+  max-height: 320px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.fn-lib-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  background: #f0f0f0;
+  border-bottom: 1px solid #e0e0e0;
+  font-weight: 600;
+  font-size: 12px;
+}
+.fn-lib-hint {
+  font-weight: 400;
+  color: #888;
+  font-size: 11px;
+  flex: 1;
+}
+.fn-lib-add {
+  padding: 2px 10px;
+  border: 1px solid #4caf50;
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+.fn-lib-add:hover { background: #c8e6c9; }
+.fn-lib-close {
+  padding: 2px 8px;
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.fn-lib-close:hover { background: #e0e0e0; }
+
+.fn-lib-list {
+  overflow-y: auto;
+  max-height: 120px;
+  padding: 4px 8px;
+}
+.fn-lib-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.fn-lib-item:hover { background: #e8f0fe; }
+.fn-lib-item-name {
+  font-weight: 600;
+  color: #1565c0;
+  font-family: 'Consolas', 'Fira Code', monospace;
+  font-size: 12px;
+  flex: 1;
+}
+.fn-lib-item-sig {
+  color: #888;
+  font-size: 11px;
+  font-family: 'Consolas', monospace;
+}
+.fn-lib-item-del {
+  padding: 1px 6px;
+  border: 1px solid #e0e0e0;
+  background: transparent;
+  color: #999;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.fn-lib-item:hover .fn-lib-item-del { opacity: 1; }
+.fn-lib-item-del:hover { border-color: #e57373; color: #c62828; background: #ffebee; }
+.fn-lib-empty {
+  color: #aaa;
+  text-align: center;
+  padding: 12px;
+  font-style: italic;
+}
+
+.fn-lib-editor {
+  border-top: 1px solid #e0e0e0;
+  padding: 6px 8px;
+}
+.fn-lib-editor-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.fn-lib-name-input {
+  flex: 1;
+  padding: 3px 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+}
+.fn-lib-save {
+  padding: 3px 12px;
+  border: 1px solid #1976d2;
+  background: #e3f2fd;
+  color: #1565c0;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+.fn-lib-save:hover { background: #bbdefb; }
+.fn-lib-cancel {
+  padding: 3px 10px;
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.fn-lib-cancel:hover { background: #e0e0e0; }
+.fn-lib-code {
+  width: 100%;
+  height: 80px;
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Fira Code', monospace;
+  font-size: 12px;
+  resize: vertical;
+  tab-size: 2;
+}
+
+/* Dark mode for fn-lib */
+body.cm-dark .fn-lib-panel,
+body.cm-custom-dark .fn-lib-panel {
+  background: #1e1e1e;
+  border-color: #333;
+}
+body.cm-dark .fn-lib-header,
+body.cm-custom-dark .fn-lib-header {
+  background: #252525;
+  border-color: #333;
+  color: #ddd;
+}
+body.cm-dark .fn-lib-hint,
+body.cm-custom-dark .fn-lib-hint { color: #777; }
+body.cm-dark .fn-lib-add,
+body.cm-custom-dark .fn-lib-add {
+  background: #1b3a1b;
+  border-color: #2e7d32;
+  color: #66bb6a;
+}
+body.cm-dark .fn-lib-close,
+body.cm-custom-dark .fn-lib-close {
+  background: #333;
+  border-color: #555;
+  color: #ccc;
+}
+body.cm-dark .fn-lib-item:hover,
+body.cm-custom-dark .fn-lib-item:hover { background: #2a2d35; }
+body.cm-dark .fn-lib-item-name,
+body.cm-custom-dark .fn-lib-item-name { color: #64b5f6; }
+body.cm-dark .fn-lib-item-sig,
+body.cm-custom-dark .fn-lib-item-sig { color: #777; }
+body.cm-dark .fn-lib-item-del,
+body.cm-custom-dark .fn-lib-item-del { border-color: #444; color: #666; }
+body.cm-dark .fn-lib-empty,
+body.cm-custom-dark .fn-lib-empty { color: #666; }
+body.cm-dark .fn-lib-name-input,
+body.cm-custom-dark .fn-lib-name-input {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #ddd;
+}
+body.cm-dark .fn-lib-save,
+body.cm-custom-dark .fn-lib-save {
+  background: #1a2a4a;
+  border-color: #1976d2;
+  color: #64b5f6;
+}
+body.cm-dark .fn-lib-code,
+body.cm-custom-dark .fn-lib-code {
+  background: #1e1e1e;
+  border-color: #555;
+  color: #ddd;
+}
+body.cm-dark .fn-lib-cancel,
+body.cm-custom-dark .fn-lib-cancel {
+  background: #333;
+  border-color: #555;
+  color: #ccc;
+}
+
+/* --- CSS custom properties (defaults) --- */
+.cm-custom {
+  --cm-bg: #1e1e1e;
+  --cm-text: #e0e0e0;
+  --cm-expr: #6cb4ff;
+}
+
+/* --- Output page background & text --- */
+.cm-custom .output-page {
+  background: var(--cm-bg) !important;
+  color: var(--cm-text) !important;
+}
+
+/* --- Headings --- */
+.cm-custom h1,
+.cm-custom h2,
+.cm-custom h3,
+.cm-custom h4 {
+  color: var(--cm-text) !important;
+}
+.cm-custom .chapter-heading,
+.cm-custom .chapter-heading .chapter-num,
+.cm-custom .chapter-heading .chapter-title,
+.cm-custom .section-heading,
+.cm-custom .section-heading .section-num,
+.cm-custom .section-heading .section-title {
+  color: var(--cm-text) !important;
+}
+
+/* --- Comments, descriptions, text blocks --- */
+.cm-custom .out-comment {
+  color: var(--cm-text) !important;
+  opacity: 0.7;
+}
+.cm-custom .out-text,
+.cm-custom .description {
+  color: var(--cm-text) !important;
+  opacity: 0.85;
+}
+
+/* --- Equation lines --- */
+.cm-custom .eq,
+.cm-custom .out-line {
+  color: var(--cm-text) !important;
+}
+
+/* --- Variables, values, units (expressions) --- */
+.cm-custom .eq var {
+  color: var(--cm-expr) !important;
+}
+.cm-custom .val {
+  color: var(--cm-expr) !important;
+}
+.cm-custom .unit {
+  color: var(--cm-expr) !important;
+}
+.cm-custom .nary {
+  color: var(--cm-text) !important;
+}
+
+/* --- Matrix brackets --- */
+.cm-custom .matrix {
+  border-color: var(--cm-text) !important;
+}
+.cm-custom .matrix::before,
+.cm-custom .matrix::after {
+  border-color: var(--cm-text) !important;
+}
+.cm-custom .mat-trunc .mat-bracket {
+  border-color: var(--cm-text) !important;
+}
+
+/* --- Braces, brackets, parentheses --- */
+.cm-custom .cell-brace {
+  color: var(--cm-text) !important;
+}
+.cm-custom .eq-brace-l,
+.cm-custom .eq-brace-r {
+  color: var(--cm-text) !important;
+}
+.cm-custom .eq-mat {
+  color: var(--cm-text) !important;
+}
+.cm-custom .eq-vec .eq-mat {
+  color: var(--cm-text) !important;
+}
+
+/* --- Fraction divider --- */
+.cm-custom .dvl {
+  border-bottom-color: var(--cm-text) !important;
+}
+
+/* --- Radical --- */
+.cm-custom .r0 {
+  border-color: var(--cm-text) !important;
+}
+.cm-custom .o0 {
+  border-color: var(--cm-text) !important;
+}
+
+/* --- lsolve vector borders --- */
+.cm-custom .lsolve-sym-vec .td {
+  border-color: var(--cm-text) !important;
+}
+
+/* --- Page number --- */
+.cm-custom .header-pagenum {
+  color: var(--cm-text) !important;
+  opacity: 0.5;
+}
+
+/* --- eq-black override (same as cm-dark) --- */
+.cm-custom .eq-black,
+.cm-custom .eq-black * {
+  color: inherit !important;
+}
+
+/* --- Horizontal rule --- */
+.cm-custom hr {
+  border-color: var(--cm-text) !important;
+  opacity: 0.3;
+}
+
+/* ═══ body.cm-custom-dark — GUI dark mode for custom dark backgrounds ═══ */
+body.cm-custom-dark {
+  background: #1e1e1e;
+}
+body.cm-custom-dark .menu-bar {
+  background: #1e1e1e;
+  border-color: #333;
+  color: #ccc;
+}
+body.cm-custom-dark .menu-label { color: #ccc; }
+body.cm-custom-dark .menu-dropdown {
+  background: #2a2a2a;
+  border-color: #444;
+}
+body.cm-custom-dark .menu-dropdown button {
+  color: #ccc;
+}
+body.cm-custom-dark .menu-dropdown button:hover {
+  background: #3a3a3a;
+}
+body.cm-custom-dark .menu-title { color: #888; }
+
+body.cm-custom-dark .toolbar {
+  background: #252525;
+  border-color: #333;
+}
+body.cm-custom-dark .tab-btn {
+  background: #333;
+  color: #ccc;
+  border-color: #444;
+}
+body.cm-custom-dark .tab-btn.active {
+  background: #444;
+  color: #fff;
+}
+body.cm-custom-dark .tool-btn {
+  background: #333;
+  color: #ccc;
+  border-color: #444;
+}
+body.cm-custom-dark .tool-btn.primary {
+  background: #2a6e2a;
+  color: #fff;
+  border-color: #3a8a3a;
+}
+body.cm-custom-dark .layout-btn {
+  background: #333;
+  color: #ccc;
+  border-color: #444;
+}
+body.cm-custom-dark .cad-btn {
+  background: #333;
+  color: #888;
+  border-color: #444;
+}
+body.cm-custom-dark .fmt-btn {
+  color: #ccc;
+  border-color: #444;
+}
+body.cm-custom-dark .fmt-btn:hover {
+  background: #444;
+}
+body.cm-custom-dark .toolbar-sep {
+  border-color: #444;
+}
+body.cm-custom-dark .theme-select,
+body.cm-custom-dark .example-select,
+body.cm-custom-dark .size-input {
+  background: #333;
+  color: #ccc;
+  border-color: #444;
+}
+body.cm-custom-dark .auto-toggle {
+  color: #ccc;
+}
+
+/* Editor panel */
+body.cm-custom-dark .editor-panel {
+  background: #1e1e1e;
+  border-color: #333;
+}
+body.cm-custom-dark .editor-header {
+  background: #252525;
+  color: #ccc;
+  border-color: #333;
+}
+body.cm-custom-dark .code-editor-wrap {
+  background: #1e1e1e;
+}
+body.cm-custom-dark .editor-panel textarea {
+  background: transparent;
+  color: transparent;
+  caret-color: #fff;
+}
+body.cm-custom-dark .syntax-layer {
+  color: #d4d4d4;
+}
+body.cm-custom-dark .syntax-layer .syn-heading { color: #e8c84a; font-weight: 600; }
+body.cm-custom-dark .syntax-layer .syn-comment { color: #6A9955; }
+body.cm-custom-dark .syntax-layer .syn-dim { color: #888; font-style: italic; }
+body.cm-custom-dark .syntax-layer .syn-block { color: #C586C0; font-weight: 600; }
+body.cm-custom-dark .syntax-layer .syn-keyword { color: #569CD6; }
+body.cm-custom-dark .syntax-layer .syn-number { color: #b5cea8; }
+body.cm-custom-dark .syntax-layer .syn-function { color: #dcdcaa; }
+body.cm-custom-dark .syntax-layer .syn-operator { color: #d4d4d4; }
+
+body.cm-custom-dark .fold-gutter {
+  background: #1e1e1e;
+  color: #555;
+  border-color: #333;
+}
+
+/* Output panel */
+body.cm-custom-dark .output-panel {
+  background: #1e1e1e;
+  border-color: #333;
+}
+body.cm-custom-dark .output-header {
+  background: #252525;
+  color: #ccc;
+  border-color: #333;
+}
+body.cm-custom-dark .splitter {
+  background: #333;
+}
+
+/* Keypad */
+body.cm-custom-dark .keypad-bar {
+  background: #1e1e1e;
+  border-color: #333;
+}
+body.cm-custom-dark .keypad-tab {
+  background: #333;
+  color: #ccc;
+  border-color: #444;
+}
+body.cm-custom-dark .keypad-tab.active {
+  background: #444;
+  color: #fff;
+}
+body.cm-custom-dark .keypad-content button {
+  background: #333;
+  color: #ccc;
+  border-color: #444;
+}
+body.cm-custom-dark .keypad-content button:hover {
+  background: #555;
+}
+
+/* Status bar */
+body.cm-custom-dark .status-bar {
+  background: #1e1e1e;
+  border-color: #333;
+  color: #999;
+}
+body.cm-custom-dark .sb-label { color: #999; }
+body.cm-custom-dark .sb-input {
+  background: #333;
+  color: #ccc;
+  border-color: #444;
+}
+body.cm-custom-dark .sb-chk { color: #999; }
+body.cm-custom-dark .sb-version { color: #666; }
+
+/* Scrollbar */
+body.cm-custom-dark .custom-scrollbar {
+  background: #252525;
+}
+body.cm-custom-dark .custom-scrollbar-thumb {
+  background: #555;
+}
+body.cm-custom-dark .custom-scrollbar-up,
+body.cm-custom-dark .custom-scrollbar-down {
+  color: #888;
+}
+
+/* Debug panel */
+body.cm-custom-dark .debug-panel {
+  background: #1e1e1e;
+  border-color: #444;
+}
+body.cm-custom-dark .debug-header {
+  background: #252525;
+  color: #ccc;
+}
+body.cm-custom-dark .debug-input {
+  background: #252525;
+  color: #ccc;
+  border-color: #444;
+}
+body.cm-custom-dark .debug-output {
+  color: #ccc;
 }

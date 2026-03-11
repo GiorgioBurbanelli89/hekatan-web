@@ -1,0 +1,53 @@
+# CAD 3D - Three.js WebGL
+> Mismo CLI que CAD 2D pero con coordenadas 3D
+
+## Portico 3D
+@{draw:3D 700 450}
+bg #1a1a2e
+camera 18 14 18
+views front side top
+
+# Columnas
+color #999999
+box 0 2.5 0 size:1,5,1
+box 10 2.5 0 size:1,5,1
+box 10 2.5 8 size:1,5,1
+
+# Vigas
+color #888888
+box 5 5.5 0 size:12,1,1
+box 10 5.5 4 size:1,1,10
+
+# Losa (rect plano en xz)
+color #aaaacc
+rect 0 6 0 12 10 fill:#dde
+
+# Flechas de carga
+color #ff4444
+arrow 5 9 4 5 6.5 4
+text 5 9.5 4 "P = 200 kN"
+
+# Cota
+color #666666
+dim 0 0 0 10 0 0 -2
+
+# Circulo en planta
+color #33aa66
+circle 5 0.01 4 2
+
+# Nodos esfericos
+color #ff6600
+sphere 0 5 0 r:0.25
+sphere 10 5 0 r:0.25
+sphere 10 5 8 r:0.25
+
+# Piso
+color #336633
+box 0 -0.15 0 size:14,0.3,12
+@{end draw}
+
+## Datos
+P = 200
+L_x = 10
+L_z = 8
+M_base = P * L_x / 4

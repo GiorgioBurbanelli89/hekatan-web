@@ -1,0 +1,276 @@
+# 5.5 Analisis de Grid Frames
+> El analisis estructural de grid frames es matematicamente identico al
+> analisis de vigas o porticos planos presentado en los capitulos 1 y 4.
+> Estos analisis difieren solamente en la seleccion de coordenadas nodales
+> y las expresiones correspondientes a la matriz de rigidez para los
+> elementos de cada estructura.
+
+## Ejemplo Ilustrativo 5.1
+> Para el grid frame mostrado en la Figura 5.4, realizar el analisis
+> estructural para determinar lo siguiente:
+> (a) Desplazamientos en las juntas entre elementos
+> (b) Fuerzas internas en los elementos
+> (c) Reacciones en los apoyos
+> Ref: Mario Paz - Matrix Structural Analysis, 2 elementos, 3 nodos, 9 GDL
+> Unidades: kip, inch, rad
+
+@{draw 580 380}
+# Fig 5.4 - Diagrama Estructural (3D oblicuo)
+grid off
+bg #ffffff
+proj oblique 45 0.5
+# Ejes de referencia
+color #cc3333
+arrow3d -4 0 0 -1 0 0
+text3d -0.5 0 0 X
+color #33aa33
+arrow3d -4 0 0 -4 3 0
+text3d -4 3.5 0 Y
+color #3333cc
+arrow3d -4 0 0 -4 0 3
+text3d -4 0 3.5 Z
+# Elem 1: Node1(0,0,0) to Node2(20,0,0) along X
+color #333
+line3d 0 0 0 20 0 0
+# Elem 2: Node1(0,0,0) to Node3(0,20,0) along Y
+line3d 0 0 0 0 20 0
+# Nodos (circulos pequenos)
+circle3d 0 0 0 0.15 #333
+circle3d 20 0 0 0.15 #333
+circle3d 0 20 0 0.15 #333
+# Carga distribuida peine sobre Elem 2 (lineas cortas perpendiculares -Z)
+color #cc0000
+line3d 0 2 0 0 18 0
+line3d 0 2 0 0 2 -2.5
+line3d 0 4 0 0 4 -2.5
+line3d 0 6 0 0 6 -2.5
+line3d 0 8 0 0 8 -2.5
+line3d 0 10 0 0 10 -2.5
+line3d 0 12 0 0 12 -2.5
+line3d 0 14 0 0 14 -2.5
+line3d 0 16 0 0 16 -2.5
+line3d 0 18 0 0 18 -2.5
+line3d 0 2 -2.5 0 18 -2.5
+text3d 0 11 -4 w = 0.1 k/in
+# Fuerza puntual en Node 1 hacia -Z
+arrow3d 0 0 5 0 0 0.5
+text3d 1 0 5.5 10 k
+# Momento en L/2 del Elem 1
+color #9900cc
+carc3d 10 0 0 1.5 0.3 5.2
+text3d 10 0 2.5 200 k-in
+# Apoyo empotrado en Node 2 (muro + rayado)
+color #333
+line3d 20 0 -1.5 20 0 1.5
+line3d 20 0 1.5 21 0 1
+line3d 20 0 1 21 0 0.5
+line3d 20 0 0.5 21 0 0
+line3d 20 0 0 21 0 -0.5
+line3d 20 0 -0.5 21 0 -1
+line3d 20 0 -1 21 0 -1.5
+# Apoyo empotrado en Node 3 (muro + rayado)
+line3d 0 20 -1.5 0 20 1.5
+line3d 0 20 1.5 0 21 1
+line3d 0 20 1 0 21 0.5
+line3d 0 20 0.5 0 21 0
+line3d 0 20 0 0 21 -0.5
+line3d 0 20 -0.5 0 21 -1
+line3d 0 20 -1 0 21 -1.5
+# Labels nodos
+color #333
+text3d -1.5 0 -1 1
+text3d 20.5 0 -1 2
+text3d 0.5 21 0.5 3
+# Labels elementos
+color #0066cc
+text3d 10 0 1.5 Elem 1
+text3d 0 10 1.5 Elem 2
+# Propiedades
+color #666
+text3d 12 0 -6 I=100 in^4, J=50 in^4
+text3d 12 0 -7.5 E=30000, G=12000 ksi
+text3d 12 0 -9 L1=L2=20 ft
+fit
+@{end draw}
+> **Fig. 5.4** Grid frame - Ejemplo Ilustrativo 5.1
+
+@{draw 900 700}
+grid off
+bg #ffffff
+proj oblique 45 0.5
+fontsize 14
+color #000
+lw 1.5
+
+# Ejes coordenados
+color #888
+arrow3d 0 0 0  0 0 10
+label3d 0 0 11 Z left
+arrow3d 0 0 0  25 0 0
+label3d 26 0 0 X left
+arrow3d 0 0 0  0 25 0
+label3d 0 26 0 Y left
+
+# Barras con espesor
+color #000
+lw 2
+beam3d 0 0 0  20 0 0  1.2
+beam3d 0 0 0  0 20 0  1.2
+
+# Grados de libertad
+lw 1
+
+# Nodo 1 (origen) - rotaciones + desplazamiento
+arrow3d 3.5 0 -0.6  5.5 0 -0.6
+arrow3d 1.5 0 -0.6  3.5 0 -0.6
+label3d 6 0 -0.6 u1 left
+arrow3d 0 3.5 -0.6  0 5.5 -0.6
+arrow3d 0 1.5 -0.6  0 3.5 -0.6
+label3d 0 6 -0.6 u2 left
+dof3d 0 0 0.5  0 0 5  u3
+
+# Nodo 2 (20, 0, 0)
+arrow3d 23 0 -0.6  25 0 -0.6
+arrow3d 21 0 -0.6  23 0 -0.6
+label3d 25.5 0 -0.6 u4 left
+arrow3d 20 3.2 -0.6  20 5.2 -0.6
+arrow3d 20 1.2 -0.6  20 3.2 -0.6
+label3d 20 5.7 -0.6 u5 left
+dof3d 20 0 0.5  0 0 5  u6
+
+# Nodo 3 (0, 20, 0)
+arrow3d 3.2 20 -0.6  5.2 20 -0.6
+arrow3d 1.2 20 -0.6  3.2 20 -0.6
+label3d 5.7 20 -0.6 u7 left
+arrow3d 0 23 -0.6  0 25 -0.6
+arrow3d 0 21 -0.6  0 23 -0.6
+label3d 0 25.5 -0.6 u8 left
+dof3d 0 20 0.5  0 0 5  u9
+
+# Nodos (circulos numerados)
+node3d 0 0 -0.6 1 0.8
+node3d 20 0 -0.6 2 0.8
+node3d 0 20 -0.6 3 0.8
+
+# Arco 90 en Nodo 1
+lw 1
+color #333
+carc3d 0 0 0 4.5 0 1.5708
+label3d 3 3 -1.5 90° below
+
+# Triangulos de elementos
+color #333
+lw 1
+line3d 8.5 0 -3.5  11.5 0 -3.5
+line3d 11.5 0 -3.5  10 0 -1.5
+line3d 10 0 -1.5  8.5 0 -3.5
+label3d 10 0 -3 1 center
+
+line3d 2 9 -1  2 11 -1
+line3d 2 11 -1  2 10 1
+line3d 2 10 1  2 9 -1
+label3d 2 10 -0.3 2 center
+
+# Apoyos empotrados (hatching)
+line3d 20 0 -1.8  20 0 1.8
+line3d 20 0 1.8  21 0 1.2
+line3d 20 0 1.2  21 0 0.6
+line3d 20 0 0.6  21 0 0
+line3d 20 0 0  21 0 -0.6
+line3d 20 0 -0.6  21 0 -1.2
+line3d 20 0 -1.2  21 0 -1.8
+
+line3d 0 20 -1.8  0 20 1.8
+line3d 0 20 1.8  0 21 1.2
+line3d 0 20 1.2  0 21 0.6
+line3d 0 20 0.6  0 21 0
+line3d 0 20 0  0 21 -0.6
+line3d 0 20 -0.6  0 21 -1.2
+line3d 0 20 -1.2  0 21 -1.8
+
+fit
+@{end draw}
+> **Fig. 5.5** Grid frame modelado con coordenadas nodales u_1 a u_9
+
+## 1. Propiedades
+> W 14 x 82 - Todos los miembros
+@{cells} |L = 100 & in|I_z = 882 & in^4|J_t = 5.08 & in^4|
+@{cells} |E_s = 29000 & kip/in^2|G_s = 11600 & kip/in^2|
+
+
+## 2. Coeficientes de Rigidez
+@{cells} |t_1 = G_s*J_t/L & kip*in|a_4 = 4*E_s*I_z/L & kip*in|a_2 = 2*E_s*I_z/L & kip*in|
+@{cells} |b_6 = 6*E_s*I_z/L^2 & kip|c_12 = 12*E_s*I_z/L^3 & kip/in|
+
+## 3. Matriz de Rigidez Local [k] (eq 5.7)
+> DOF: [theta_x, theta_z, delta_y] por nodo
+k = [[t_1,0,0,-t_1,0,0],[0,a_4,b_6,0,a_2,-b_6],[0,b_6,c_12,0,b_6,-c_12],[-t_1,0,0,t_1,0,0],[0,a_2,b_6,0,a_4,-b_6],[0,-b_6,-c_12,0,-b_6,c_12]]
+
+
+
+## 4. Transformacion Elemento 2
+> Elem 2: theta=90 grados (eq 5.11)
+T_2 = [[0,-1,0,0,0,0],[1,0,0,0,0,0],[0,0,1,0,0,0],[0,0,0,0,-1,0],[0,0,0,1,0,0],[0,0,0,0,0,1]]
+
+## 5. Rigidez Global Elemento 2
+> kb2 = T2' * k * T2 (eq 5.15)
+kb2 = transpose(T_2) * k * T_2
+
+## 6. Ensamblaje [K]_R
+> Nodo 2 (libre) = extremo j Elem 1 (DOFs 4:6) + extremo i Elem 2 (DOFs 1:3)
+k1R = k[4:6, 4:6]
+k2R = kb2[1:3, 1:3]
+K_R = k1R + k2R
+
+
+
+## 7. Fuerzas de Empotramiento
+> Elem 1: M_0=200 kip*in a L/2, Apendice I Caso (b) (eq e)
+@{cells} |L_1 = L/2 & in|L_2 = L/2 & in|M_0 = 200 & kip*in|
+> Q_1=6*M_0*L_1*L_2/L^3, Q_2=M_0*L_2*(2*L_1-L_2)/L^2, Q_3=-Q_1, Q_4=M_0*L_1*(2*L_2-L_1)/L^2
+@{cells} |Q_1 = 6*M_0*L_1*L_2/L^3 & kip|Q_2 = M_0*L_2*(2*L_1 - L_2)/L^2 & kip*in|
+@{cells} |Q_3 = -Q_1 & kip|Q_4 = M_0*L_1*(2*L_2 - L_1)/L^2 & kip*in|
+> DOF grid [theta_x, theta_z, delta_y]: Q_f = [0, Q2, Q1, 0, Q4, Q3]
+Q_f1 = [[0], [Q_2], [Q_1], [0], [Q_4], [Q_3]]
+> Elem 2: w=0.1 kip/in, Apendice I Caso (a) (eq f)
+@{cells} |w_0 = 0.1 & kip/in|
+> M_i=wL^2/12, V_i=wL/2, M_j=-wL^2/12, V_j=wL/2
+Q_f2L = [[0], [w_0*L^2/12], [w_0*L/2], [0], [-w_0*L^2/12], [w_0*L/2]]
+> Q_f global via T_2'
+Q_f2 = transpose(T_2) * Q_f2L
+
+
+
+## 8. Vector de Fuerzas Reducido
+> {F}_R = P - Q_f1(4:6) - Q_f2(1:3) (eq g)
+P_d = [[0], [0], [-10]] & kip
+F_R = P_d - Q_f1[4:6, 1:1] - Q_f2[1:3, 1:1]
+
+## 9. Solucion de Desplazamientos
+> [K]_R {u} = {F}_R
+u = lusolve(K_R, F_R)
+
+
+
+## 10. Desplazamientos Locales
+> Componentes: theta_x, theta_z, delta_y
+@{cells} |u_1 = u[1,1] & rad|u_2 = u[2,1] & rad|u_3 = u[3,1] & in|
+> Elem 1 (T_1=I): nodo 2 libre, nodo 1 empotrado
+d_1 = [[u_1], [u_2], [u_3], [0], [0], [0]]
+> Elem 2: d_2 = T_2 * d_1 (T_1=I, mismo vector global)
+d_2 = T_2 * d_1
+
+## 11. Fuerzas en Elementos (eq 4.20)
+> {P} = [k]{d} + {Q_f}
+P_1 = k * d_1 + Q_f1
+> Elem 2 (Q_f en locales):
+P_2 = k * d_2 + Q_f2L
+
+
+
+## 12. Reacciones en Apoyos
+> Nodo 1 (empotrado):
+@{cells} |R_1 = P_1[4,1] & kip*in|R_2 = P_1[5,1] & kip*in|R_3 = P_1[6,1] & kip|
+> Nodo 3 (empotrado):
+Pb2 = transpose(T_2) * P_2
+@{cells} |R_7 = Pb2[4,1] & kip*in|R_8 = Pb2[5,1] & kip*in|R_9 = Pb2[6,1] & kip|

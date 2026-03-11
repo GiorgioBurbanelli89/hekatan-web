@@ -1,0 +1,231 @@
+@{config bg:white, align:left, color:black}
+---
+# Pruebas de Herramientas CAD @{draw}
+---
+
+@{text}
+Catalogo de comandos en @{draw}:
+- Geometria: line, rect, rrect, circle, ellipse, arc, carc, pline
+- Texto: text, otext (overbar)
+- Flechas: arrow, darrow
+- Estructural: beam, stirrup, colsection, moment, axes
+- Nodos: cid/cnode, tid/tnode
+- Cotas: dim, hdim, vdim
+- Transf: move, copy, mirror, rotate, array, polararray
+- Estilo: color, lw, fs, ff, fi, bg, grid
+- Coord: yflip on/off (Y cartesiano vs canvas)
+@{end text}
+
+---
+## 1. Primitivas basicas
+---
+
+@{draw 500 180 name:Primitivas}
+grid off
+bg white
+color black
+lw 1.0
+
+line 20 40 100 40
+fs 8
+fi off
+text 40 30 line
+
+rect 120 20 200 60
+text 140 12 rect
+
+rrect 220 20 300 60 8
+text 225 12 rrect
+
+circle 350 40 20
+text 335 12 circle
+
+ellipse 440 40 40 18
+text 420 12 ellipse
+
+arc 60 140 30 30 180
+text 50 100 arc
+
+pline 140 100 180 100 200 130 180 160 140 160
+text 145 92 pline
+
+carc 280 130 25 0 270
+text 262 95 carc
+
+arrow 340 150 340 100
+text 335 90 arrow
+
+darrow 400 100 460 100
+text 405 90 darrow
+
+@{end draw}
+
+---
+## 2. Elementos estructurales
+---
+
+@{draw 500 200 name:Estructurales}
+grid off
+bg white
+color black
+
+lw 1.2
+beam 30 100 170 100 16
+fs 9
+fi off
+text 70 82 beam (horizontal)
+
+beam 220 160 290 60 14
+text 240 46 beam (inclinada)
+
+stirrup 350 50 440 150
+text 350 42 stirrup
+
+lw 1.0
+moment 500 100 18 top
+text 475 72 moment top
+
+@{end draw}
+
+---
+## 3. yflip on — Coordenadas cartesianas
+---
+
+@{text}
+Con yflip on: Y=0 es abajo, Y crece hacia arriba (como plano cartesiano).
+Sin yflip (default): Y=0 arriba, crece hacia abajo (canvas).
+@{end text}
+
+@{draw 420 560 name:Mensula}
+grid off
+bg white
+color black
+lw 2
+yflip on
+
+# ── Geometria ──
+# Columna: x=150 a x=230 (ancho=80 ≈ 50cm), y=20 a y=540
+# Mensula: x=230 a x=345 (vuelo=115)
+#   Tope: y=400, Fondo cara: y=265 (peralte=135), Fondo punta: y=340
+# rec=18
+
+# ── Contorno de concreto ──
+color #999999
+lw 2
+pline 150 20 230 20 230 265 345 340 345 400 230 400 230 540 150 540 150 20
+
+# ── Eje de columna ──
+color #cccccc
+lw 0.5
+line 190 20 190 265
+line 190 400 190 540
+
+# ══════════════════════════════════════════════════════
+# ARMADO — basado en offset interior del contorno
+# ══════════════════════════════════════════════════════
+# Contorno interior (offset rec=18 hacia adentro):
+#   Columna: x=168..212, y=38..522
+#   Esquina col→inclinacion: (212, 275)
+#   Inclinacion interior: (212,275) → (327,350)
+#   Punta interior: x=327, y=350..382
+#   Tope interior: y=382, x=327..212
+#
+# x_right(y) del contorno interior:
+#   y<275 o y>382: 212
+#   275<=y<=350: 212 + (y-275)*115/75
+#   350<y<=382: 327
+
+# ── Contorno interior (linea fina gris, referencia visual) ──
+color #cccccc
+lw 0.5
+pline 168 38 212 38 212 275 327 350 327 382 212 382 212 522 168 522 168 38
+
+# ── Barras verticales columna ──
+color #333333
+lw 2
+line 168 38 168 522
+line 212 38 212 522
+
+# ── As — Refuerzo principal mensula (L-shape con gancho) ──
+color #333333
+lw 3
+# Barra 1: anclaje vertical en columna + horizontal + gancho 90° en punta
+line 172 120 172 380
+line 172 380 325 380
+line 325 380 325 355
+# Barra 2 (segunda capa):
+lw 2.5
+line 178 150 178 368
+line 178 368 320 368
+line 320 368 320 345
+
+# ── Barra diagonal (inclinacion interior) ──
+color #333333
+lw 2
+line 215 278 325 348
+
+# ── Estribos — espaciado uniforme cada 30, UN SOLO sistema ──
+# En zona mensula: mismos estribos, solo mas anchos (x_right segun offset)
+color #333333
+lw 2
+line 168 45 212 45
+line 168 75 212 75
+line 168 105 212 105
+line 168 135 212 135
+line 168 165 212 165
+line 168 195 212 195
+line 168 225 212 225
+line 168 255 212 255
+# mensula: x_right = 212+(y-275)*1.53, max 327
+line 168 285 227 285
+line 168 315 273 315
+line 168 345 319 345
+line 168 375 327 375
+# columna superior
+line 168 405 212 405
+line 168 435 212 435
+line 168 465 212 465
+line 168 495 212 495
+
+# ── Placa de apoyo ──
+color #444444
+lw 2
+rect 290 400 42 10
+
+# ── Cargas ──
+color #cc0000
+lw 2
+# V* (vertical)
+arrow 311 450 311 410
+# N* (horizontal)
+lw 1.5
+arrow 345 405 380 405
+
+# ── Etiquetas ──
+color black
+fs 11
+ff serif
+fi on
+text 122 375 As
+text 348 355 Ah
+text 120 100 Av
+fi off
+ff mono
+
+# ── Cotas ──
+color #d4a017
+lw 0.8
+hdim 150 20 230 20 -25
+hdim 230 340 345 340 -25
+vdim 352 265 352 400 18
+
+# ── Textos carga ──
+color #cc0000
+fs 10
+text 315 458 V*
+text 383 408 N*
+
+fit
+
+@{end draw}
+

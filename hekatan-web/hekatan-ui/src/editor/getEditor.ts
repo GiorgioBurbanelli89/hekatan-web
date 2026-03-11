@@ -4,38 +4,201 @@
  */
 import { parse } from "hekatan-math/parser.js";
 import { GRID_FRAME_CODE } from "./examples/gridframe.js";
+import { MODAL_CODE } from "./examples/modal.js";
+import { VECTOR_TRIG_CODE } from "./examples/vector_trig.js";
+import { MAMPOSTERIA_CODE } from "./examples/mamposteria.js";
+import { FEM_ASSEMBLY_CODE } from "./examples/fem_assembly.js";
+import { CELL_ARRAYS_CODE } from "./examples/cell_arrays.js";
+import { PORTICO_CODE } from "./examples/portico.js";
+import { UNITS_VECTORS_CODE } from "./examples/units_vectors.js";
+import { UNITS_ENGINEERING_CODE } from "./examples/units_engineering.js";
 
 // ─── Examples ────────────────────────────────────────────
-const CALCULO_CODE = `# Calculo Basico
-> Definicion de variables
-a = 3
+const CALCULO_CODE = `# Calculo - Integrales y Derivadas
+> Visualizacion grafica con @{plot} - anotaciones, cotas y ecuaciones
+
+## 1. Integral Definida - Area bajo la curva
+> La integral definida es el area bajo la curva entre a y b
+
+f(x) = x^2
+a = 0
 b = 4
-c = sqrt(a^2 + b^2)
 
-> Funciones trigonometricas
-alpha = atan(b/a)
-sin_a = sin(alpha)
-cos_a = cos(alpha)
+> Resultado exacto: b^3/3 - a^3/3
+Area = b^3/3 - a^3/3
 
-> Funcion de usuario
-f(x) = x^3 - 2*x + 1
-f(0)
-f(1)
-f(2)
+## 1.1 Suma de Riemann Izquierda (n=8)
 
-> Area de circulo
-r = 5
-A = pi*r^2`;
+@{plot}
+function: x^2
+color: #0033CC
+linewidth: 2.5
+legend: f(x) = x^2
+xlim: 0, 4
+ylim: -1, 17
+width: 700
+height: 450
+title: Suma de Riemann Izquierda - f(x) = x^2
+xlabel: x
+ylabel: f(x)
 
-const PLOT_CODE = `# Grafico con anotaciones
+rect: 0, 0, 0.5, 0, #3366CC, fill
+rect: 0.5, 0, 0.5, 0.25, #3366CC, fill
+rect: 1.0, 0, 0.5, 1.0, #3366CC, fill
+rect: 1.5, 0, 0.5, 2.25, #3366CC, fill
+rect: 2.0, 0, 0.5, 4.0, #3366CC, fill
+rect: 2.5, 0, 0.5, 6.25, #3366CC, fill
+rect: 3.0, 0, 0.5, 9.0, #3366CC, fill
+rect: 3.5, 0, 0.5, 12.25, #3366CC, fill
+
+eq: 0.5, 15, "S_8 = 17.5", #CC0000, 13
+eq: 0.5, 13.5, "Integral x^2 dx = 64/3 = 21.33", #003366, 12
+text: 2.5, -0.7, "dx = 0.5", #666666, 11
+
+dim: 0, -0.5, 4, -0.5, "a=0 a b=4", #333333
+@{end plot}
+
+## 2. Derivada - Pendiente de la Tangente
+> f'(a) = pendiente de la recta tangente en (a, f(a))
+
+## 2.1 Derivada de f(x) = x^2 en x=1.5
+
+@{plot}
+function: x^2
+color: #0033CC
+linewidth: 2.5
+legend: f(x) = x^2
+xlim: -0.5, 4
+ylim: -2, 14
+width: 700
+height: 450
+title: Derivada de f(x)=x^2 en x=1.5
+xlabel: x
+ylabel: f(x)
+
+line: -0.5, -3.75, 3.5, 8.25, #CC0000
+point: 1.5, 2.25, #CC0000, 7, filled
+
+proj: 1.5, 2.25, #999999
+eq: 2.2, 1.5, "f'(1.5) = 2*1.5 = 3", #CC0000, 12
+eq: 2.2, 0.5, "Pendiente m = 3", #003366, 11
+text: 1.6, 2.5, "(1.5, 2.25)", #333333, 10
+text: 2.5, 6, "Tangente", #CC0000, 11
+@{end plot}
+
+## 3. Comparacion Numerica
+> Suma de Riemann con N=100 vs resultado exacto
+N_r = 100
+dx = (b - a) / N_r
+g_R(i) = f(a + (i - 0.5)*dx) * dx
+Area_R = summation(g_R, 1, N_r)
+Area_exacta = b^3/3 - a^3/3
+
+> Regla de Simpson 1/3
+h_s = (b - a) / 2
+m = (a + b) / 2
+Simpson = (h_s/3) * (f(a) + 4*f(m) + f(b))
+
+@{cells} |Area_R| |Area_exacta| |Simpson|`;
+
+const PLOT_CODE = `# Graficas con @{plot}
+> Graficas SVG - sintaxis compatible con Hekatan Calc C#
+
+## 1. Funcion Simple (function:)
+@{plot}
+function: sin(x)
+color: #0033CC
+linewidth: 2.5
+legend: sin(x)
+xlim: -6.28, 6.28
+ylim: -1.5, 1.5
+title: Funcion Seno
+xlabel: x
+ylabel: y
+grid: true
+@{end plot}
+
+## 2. Multiples Series (numbered)
+@{plot}
+title: Funciones Trigonometricas
+xlabel: x
+ylabel: y
+xlim: -6.28, 6.28
+ylim: -1.5, 1.5
+grid: true
+
+function: sin(x)
+color: #0033CC
+legend: sin(x)
+linewidth: 2.5
+
+function2: cos(x)
+color2: #CC0000
+legend2: cos(x)
+linewidth2: 2
+style2: dashed
+
+function3: sin(2*x)/2
+color3: #006600
+legend3: sin(2x)/2
+linewidth3: 1.5
+style3: dot
+@{end plot}
+
+## 3. Con Anotaciones
+@{plot}
+function: x^2
+color: #0033CC
+linewidth: 2.5
+legend: f(x) = x^2
+xlim: -1, 4
+ylim: -2, 16
+title: Derivada en x=2
+xlabel: x
+ylabel: f(x)
+width: 650
+height: 420
+grid: true
+
+line: -0.5, -4, 3.5, 12, #CC0000
+point: 2, 4, #CC0000, 6, filled
+proj: 2, 4, #AAAAAA
+eq: 2.3, 3, "f'(2) = 2*2 = 4", #CC0000, 12
+text: 2.8, 9, "Tangente", #CC0000, 11
+@{end plot}
+
+## 4. Con Variables del Scope
+A_p = 2
+w_p = 3
+@{plot}
+title: Amplitud y Frecuencia
+xlabel: x
+ylabel: y
+xlim: 0, 6.28
+ylim: -2.5, 2.5
+grid: true
+
+function: A_p*sin(w_p*x)
+color: #0033CC
+legend: A*sin(w*x)
+linewidth: 2
+
+function2: A_p*cos(w_p*x)
+color2: #CC0000
+legend2: A*cos(w*x)
+linewidth2: 2
+style2: dashed
+
+hline: 0, #999999
+@{end plot}
+
+## 5. Sintaxis Inline (y =)
 @{plot}
 x = -3.14 : 3.14
 y = -1.5 : 1.5
 y = sin(x) | color: #2196f3 | width: 2 | label: "sin(x)"
-y = cos(x) | color: #f44336 | width: 2 | label: "cos(x)"
+y = cos(x) | color: #f44336 | width: 2 | label: "cos(x)" | style: dashed
 point 0 0 #333
-point 1.5708 1 #2196f3 5
-text 1.7 1.1 "pi/2, 1"
 hline 1 #4caf50
 hline -1 #4caf50
 vline 0 #999
@@ -124,24 +287,48 @@ scene.add(sphere);
 scene.add(new THREE.GridHelper(10, 10));
 @{end three}`;
 
-const CONTROL_CODE = `# Control de Flujo
-for i = 1 to 5
-x = i^2
-next
+const CONTROL_CODE = `# Funciones y Operaciones Avanzadas
+> Funciones de usuario, sumatorias, productos
 
-valor = 42
-if valor > 100
-resultado = 1
-else if valor > 10
-resultado = 2
-else
-resultado = 3
-end if
+## 1. Funciones de Usuario
+f(x) = x^3 - 2*x + 1
+f(0)
+f(1)
+f(2)
+f(3)
 
-S = 0
-for k = 1 to 100
-S = S + 1/k^2
-next`;
+g(x,y) = x^2 + y^2
+g(3, 4)
+
+## 2. Sumatoria Numerica
+> summation(f, a, b) = Σ f(i) para i = a hasta b
+h(i) = i^2
+S_10 = summation(h, 1, 10)
+
+> Factorial via producto
+p(k) = k
+fact_6 = nproduct(p, 1, 6)
+
+## 3. Derivada Numerica
+> nderivative(f, x) calcula f'(x) numericamente
+df_1 = nderivative(f, 1)
+df_2 = nderivative(f, 2)
+
+## 4. Integral Numerica
+> integral(f, a, b) calcula la integral definida
+Area = integral(f, 0, 3)
+
+## 5. Matrices con Funciones
+k_col(ei, l) = [[12*ei/l^3, -6*ei/l^2], [-6*ei/l^2, 4*ei/l]]
+EI = 2100000 * (0.30 * 0.40^3 / 12)
+h = 3.0
+K = k_col(EI, h)
+
+## 6. Operaciones con Vectores
+v = [1, 4, 9, 16, 25]
+v_sqrt = sqrt(v)
+v_sum = sum(v)
+v_norm = norm(v)`;
 
 const INTEGRAL_CODE = `# Integracion Numerica (Gauss-Legendre)
 > Cuadratura de Gauss para integrales simples, dobles y triples
@@ -184,16 +371,23 @@ q(x,y,z) = x*y*z
 I_6 = integral3(q, 0, 2, 0, 2, 0, 2)`;
 
 const EXAMPLES: Record<string, { name: string; code: string }> = {
-  calculo:      { name: "Calculo Basico",       code: CALCULO_CODE },
-  plot:         { name: "@{plot} Graficos",      code: PLOT_CODE },
-  eq_demo:      { name: "@{eq} Ecuaciones",      code: EQ_DEMO_CODE },
-  integral:     { name: "Integrales",            code: INTEGRAL_CODE },
-  fem:          { name: "FEM Assembly",          code: FEM_CODE },
-  vectores:     { name: "Vectores",              code: VECTOR_CODE },
-  control:      { name: "Control de Flujo",      code: CONTROL_CODE },
-  three:        { name: "@{three} 3D",           code: THREE_CODE },
-  svg:          { name: "@{svg} Dibujo",         code: SVG_CODE },
-  grid_frame:   { name: "Grid Frame (Paz 5.1)", code: GRID_FRAME_CODE },
+  calculo:      { name: "Calculo - Integrales/Derivadas",code: CALCULO_CODE },
+  plot:         { name: "@{plot} Graficas 2D",     code: PLOT_CODE },
+  eq_demo:      { name: "@{eq} Ecuaciones",        code: EQ_DEMO_CODE },
+  integral:     { name: "Integrales (Gauss)",      code: INTEGRAL_CODE },
+  vectores:     { name: "Vectores y Trig",         code: VECTOR_TRIG_CODE },
+  control:      { name: "Control de Flujo (#for, #if)", code: CONTROL_CODE },
+  cell_arrays:  { name: "Cell Arrays",             code: CELL_ARRAYS_CODE },
+  fem:          { name: "FEM Basico",              code: FEM_CODE },
+  fem_assembly: { name: "FEM Ensamblaje",          code: FEM_ASSEMBLY_CODE },
+  portico:      { name: "Portico k{i} (Aguiar)",   code: PORTICO_CODE },
+  mamposteria:  { name: "Mamposteria (Aguiar)",    code: MAMPOSTERIA_CODE },
+  modal:        { name: "Analisis Modal (Eigen WASM)", code: MODAL_CODE },
+  grid_frame:   { name: "Grid Frame (Paz 5.1)",   code: GRID_FRAME_CODE },
+  three:        { name: "@{three} 3D",             code: THREE_CODE },
+  svg:          { name: "@{svg} Dibujo",           code: SVG_CODE },
+  units_vec:    { name: "Vectores con Unidades",   code: UNITS_VECTORS_CODE },
+  units_eng:    { name: "Ingenieria Estructural (&)", code: UNITS_ENGINEERING_CODE },
 };
 
 // ─── DOM ─────────────────────────────────────────────────
@@ -921,6 +1115,24 @@ const KEYPAD_DATA: Record<string, { label: string; insert: string }[]> = {
     { label: "@{columns}", insert: "@{columns 2}\\n\\n@{end columns}" },
     { label: "for", insert: "for i = 1 to 10\\n\\nnext" },
     { label: "if", insert: "if x > 0\\n\\nelse\\n\\nend if" },
+  ],
+  matrices: [
+    // MATLAB syntax
+    { label: "[1,2,3]", insert: "v = [1, 2, 3]" },
+    { label: "[1;2;3]", insert: "v = [1; 2; 3]" },
+    { label: "[;|]", insert: "M = [1, 2; 3, 4]" },
+    // Python syntax
+    { label: "[[r]]", insert: "v = [[1, 2, 3]]" },
+    { label: "[[M]]", insert: "M = [[1, 2], [3, 4]]" },
+    // Calcpad syntax
+    { label: "[|]cp", insert: "M = [1; 2| 3; 4]" },
+    // Operations
+    { label: "det", insert: "det(" },
+    { label: "transp", insert: "transpose(" },
+    { label: "lsolve", insert: "lsolve(" },
+    { label: "M[i,j]", insert: "M[1,1]" },
+    { label: "zeros", insert: "matrix(3; 3)" },
+    { label: "ident", insert: "identity(3)" },
   ],
 };
 

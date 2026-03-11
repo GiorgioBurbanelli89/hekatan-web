@@ -1,0 +1,45 @@
+# Funciones Multilinea
+> Definicion estilo MATLAB: function [out] = nombre(args) ... end
+
+## 1. Funcion simple: factorial
+function resultado = factorial(n)
+  resultado = 1
+  for i = 2:n
+    resultado = resultado * i
+  end
+end
+
+factorial(5)
+factorial(10)
+
+## 2. Funcion con if/else: valor absoluto
+function y = miabs(x)
+  if x >= 0
+    y = x
+  else
+    y = -x
+  end
+end
+
+miabs(-7)
+miabs(3.5)
+
+## 3. Funcion matricial: crear diagonal
+function D = diagonal(n, val)
+  D = zeros(n, n)
+  for i = 1:n
+    D[i, i] = val
+  end
+end
+
+diagonal(3, 5)
+
+## 4. Multiples salidas
+function [area, perim] = rectangulo(b, h)
+  area = b * h
+  perim = 2 * (b + h)
+end
+
+resultado = rectangulo(4, 6)
+resultado{1}
+resultado{2}

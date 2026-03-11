@@ -175,21 +175,93 @@
     <div class="toolbar-sep"></div>
     <button class="fmt-btn" data-insert="function resultado = nombre(x)\n  resultado = x\nend" title="Insertar funcion"><i>f</i>(x)</button>
 
+    <div class="toolbar-sep"></div>
+    <button id="btnLayout" class="tool-btn layout-btn" title="Toggle layout: Both | Output | Code">&#9636; Both</button>
+
+    <div class="toolbar-sep"></div>
+    <button id="btnFnLib" class="tool-btn fn-lib-btn" title="Biblioteca de Funciones: funciones reutilizables disponibles en cualquier script">&#402;(x)</button>
+
     <div class="toolbar-spacer"></div>
 
-    <select id="exampleSelect" class="example-select">
+    <select id="exampleSelect" class="example-select" title="Ejemplos: Cargar ejemplo predefinido">
       <option value="">-- Ejemplo --</option>
     </select>
-    <select id="themeSelect" class="theme-select">
-      <option value="classic">Tema: Classic</option>
-      <option value="hekatan">Tema: Hekatan</option>
-      <option value="latex">Tema: LaTeX</option>
-      <option value="gabriola">Tema: Gabriola</option>
-      <option value="mathcad">Tema: Mathcad</option>
+    <span class="toolbar-label" title="Estilo predefinido (fuentes + colores)">Tema:</span>
+    <select id="presetSelect" class="theme-select" title="Estilo predefinido (fuentes + colores)">
+      <option value="hekatan">Hekatan</option>
+      <option value="latex">LaTeX</option>
+      <option value="gabriola">Gabriola</option>
+      <option value="mathcad">Mathcad</option>
+      <option value="classic">Classic</option>
+      <option value="black">Black</option>
+      <option value="dark">Dark</option>
+    </select>
+    <span class="toolbar-label" title="Fuente y tamaño de texto">Txt:</span>
+    <select id="fontTextSelect" class="theme-select" title="Fuente para títulos, descripciones y comentarios">
+      <option value="segoeui">Segoe UI</option>
+      <option value="georgia">Georgia</option>
+      <option value="tahoma">Tahoma</option>
+      <option value="cambria">Cambria</option>
+      <option value="times">Times New Roman</option>
+    </select>
+    <input type="number" id="fontTextSize" class="size-input" value="12" min="8" max="24" step="1" title="Tamaño de texto (pt)">
+    <span class="toolbar-label" title="Fuente y tamaño de ecuaciones">Eq:</span>
+    <select id="fontExprSelect" class="theme-select" title="Fuente para ecuaciones, variables y valores">
+      <option value="stix">STIX Two Math</option>
+      <option value="cambria">Cambria Math</option>
+      <option value="gabriola">Gabriola</option>
+      <option value="georgiapro">Georgia Pro</option>
+      <option value="century">Century Schoolbook</option>
+    </select>
+    <input type="number" id="fontExprSize" class="size-input" value="12" min="8" max="24" step="1" title="Tamaño de expresiones (pt)">
+    <span class="toolbar-label" title="Esquema de colores del output">Color:</span>
+    <select id="colorModeSelect" class="theme-select" title="Esquema de colores del output">
+      <option value="classic">Clásico</option>
+      <option value="black">Negro</option>
+      <option value="dark">Oscuro</option>
+      <option value="custom">Custom</option>
+    </select>
+    <span class="toolbar-label" title="Filas y columnas visibles en matrices grandes">Mat:</span>
+    <select id="matVisSelect" class="theme-select" title="Filas/columnas visibles en matrices truncadas">
+      <option value="1">1×1</option>
+      <option value="2">2×2</option>
+      <option value="3" selected>3×3</option>
+      <option value="4">4×4</option>
+      <option value="5">5×5</option>
+      <option value="6">6×6</option>
+      <option value="0">Todo</option>
     </select>
     <label class="auto-toggle">
       <input type="checkbox" id="chkAutoRun" checked> AutoRun
     </label>
+  </div>
+
+  <!-- ═══ Custom Colors Bar ═══ -->
+  <div class="custom-colors-bar" id="customColorsBar" style="display:none;">
+    <label>Fondo: <input type="color" id="customBg" value="#1e1e1e"></label>
+    <label>Texto: <input type="color" id="customText" value="#e0e0e0"></label>
+    <label>Expresiones: <input type="color" id="customExpr" value="#6cb4ff"></label>
+  </div>
+
+  <!-- ═══ Functions Library Panel ═══ -->
+  <div class="fn-lib-panel" id="fnLibPanel" style="display:none;">
+    <div class="fn-lib-header">
+      <span>&#128194; Biblioteca de Funciones</span>
+      <span class="fn-lib-hint">Las funciones se cargan automaticamente antes de cada ejecucion</span>
+      <button id="fnLibAdd" class="fn-lib-add" title="Nueva funcion">+ Nueva</button>
+      <button id="fnLibClose" class="fn-lib-close" title="Cerrar">&times;</button>
+    </div>
+    <div class="fn-lib-list" id="fnLibList">
+      <!-- Populated by JS -->
+    </div>
+    <div class="fn-lib-editor" id="fnLibEditor" style="display:none;">
+      <div class="fn-lib-editor-header">
+        <input type="text" id="fnLibName" class="fn-lib-name-input" placeholder="nombre_funcion" spellcheck="false">
+        <button id="fnLibSave" class="fn-lib-save">Guardar</button>
+        <button id="fnLibCancel" class="fn-lib-cancel">Cancelar</button>
+      </div>
+      <textarea id="fnLibCode" class="fn-lib-code" spellcheck="false" wrap="off" placeholder="function resultado = nombre(x)&#10;  resultado = x^2&#10;end"></textarea>
+    </div>
   </div>
 
   <!-- ═══ Main Content ═══ -->
@@ -226,6 +298,7 @@
       <button class="keypad-tab" data-tab="operators">Operators</button>
       <button class="keypad-tab" data-tab="functions">Functions</button>
       <button class="keypad-tab" data-tab="blocks">Blocks</button>
+      <button class="keypad-tab" data-tab="matrices">Matrices</button>
     </div>
     <div class="keypad-content" id="keypadContent">
       <!-- Populated by JS -->
@@ -239,6 +312,7 @@
     <div class="sb-sep"></div>
     <label class="sb-chk"><input type="checkbox" id="chkSubstitute" checked> Substitute</label>
     <label class="sb-chk"><input type="checkbox" id="chkZeroSmall" checked> Zero small</label>
+    <label class="sb-chk"><input type="checkbox" id="chkFractions" checked> Fractions</label>
     <div class="sb-sep"></div>
     <span class="sb-label">Plot:</span>
     <label class="sb-chk"><input type="checkbox" id="chkAdaptive" checked> Adaptive</label>

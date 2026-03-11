@@ -195,6 +195,12 @@ namespace Hekatan.Core
                             }
                             break;
                         }
+                        case ';':
+                            // MATLAB syntax: semicolons inside top-level [...] = row separator
+                            // [1,2;3,4] → [1;2|3;4] (2x2 matrix)
+                            // [1;2;3]   → [1|2|3]   (column vector)
+                            sb.Append(sqDepth == 1 ? '|' : c);
+                            break;
                         case ',':
                             sb.Append(sqDepth > 0 || rdDepth > 0 || idxDepth > 0 ? ';' : c);
                             break;

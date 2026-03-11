@@ -1,0 +1,120 @@
+# Newton-Raphson para Sistemas No Lineales
+> Metodo iterativo para resolver sistemas de ecuaciones no lineales F(x) = 0
+
+## Sistema 2x2
+> f1(x1, x2) = x1^2 + x2^2 - 4 = 0 (circulo de radio 2)
+> f2(x1, x2) = x1 * x2 - 1 = 0 (hiperbola)
+> Interseccion = solucion del sistema
+
+@{plot}
+title: Sistema No Lineal 2x2
+x = -2.5 : 2.5
+y = -2.5 : 2.5
+y = sqrt(4 - x^2) | color: #2196f3 | width: 2 | label: "x²+y²=4 (sup)"
+y = -sqrt(4 - x^2) | color: #2196f3 | width: 2 | label: "x²+y²=4 (inf)"
+y = 1/x | color: #f44336 | width: 2 | label: "x·y=1"
+hline 0 #ccc
+vline 0 #ccc
+point 1.93185 0.51764 #4caf50 | size: 8 | label: "Solucion"
+point 1.5 0.5 #ff9800 | size: 6 | label: "Punto inicial"
+@{end plot}
+
+---
+
+## Implementacion Newton-Raphson
+
+> Funcion que ejecuta N iteraciones de Newton-Raphson
+> Jacobiano analitico: J = [2*x1, 2*x2; x2, x1]
+function[x1, x2] = newtonNL(x1_0, x2_0, nIter)
+  x1 = x1_0
+  x2 = x2_0
+  for k = 1:nIter
+    f1 = x1^2 + x2^2 - 4
+    f2 = x1 * x2 - 1
+    J = [[2*x1, 2*x2], [x2, x1]]
+    rhs = [[-f1], [-f2]]
+    dx = lusolve(J, rhs)
+    x1 = x1 + dx.(1)
+    x2 = x2 + dx.(2)
+  end
+end
+
+> Punto inicial: (1.5, 0.5) — 6 iteraciones
+[sol_x1, sol_x2] = newtonNL(1.5, 0.5, 6)
+
+## Verificacion
+> Los residuos deben ser ~0
+residuo_f1 = sol_x1^2 + sol_x2^2 - 4
+residuo_f2 = sol_x1 * sol_x2 - 1
+
+---
+
+## Sistema 3x3
+> g1(x,y,z) = x^2 + y + z - 3 = 0
+> g2(x,y,z) = x + y^2 + z - 3 = 0
+> g3(x,y,z) = x + y + z^2 - 3 = 0
+> Solucion exacta: x = y = z = 1
+
+function[x, y, z] = newton3x3(x0, y0, z0, nIter)
+  x = x0
+  y = y0
+  z = z0
+  for k = 1:nIter
+    g1 = x^2 + y + z - 3
+    g2 = x + y^2 + z - 3
+    g3 = x + y + z^2 - 3
+    J = [[2*x, 1, 1], [1, 2*y, 1], [1, 1, 2*z]]
+    rhs = [[-g1], [-g2], [-g3]]
+    dx = lusolve(J, rhs)
+    x = x + dx.(1)
+    y = y + dx.(2)
+    z = z + dx.(3)
+  end
+end
+
+> Punto inicial: (0.5, 1.5, 0.8) — 10 iteraciones
+[sx, sy, sz] = newton3x3(0.5, 1.5, 0.8, 10)
+
+## Verificacion 3x3
+check_g1 = sx^2 + sy + sz - 3
+check_g2 = sx + sy^2 + sz - 3
+check_g3 = sx + sy + sz^2 - 3
+
+---
+
+## Sistema con Exponencial
+> h1(x,y) = e^x + y - 2 = 0
+> h2(x,y) = x + e^y - 2 = 0
+
+@{plot}
+title: Sistema con Exponencial
+x = -1 : 2.5
+y = -1 : 3
+y = 2 - exp(x) | color: #9c27b0 | width: 2 | label: "e^x + y = 2"
+y = ln(2 - x) | color: #ff9800 | width: 2 | label: "x + e^y = 2"
+hline 0 #ccc
+vline 0 #ccc
+point 0.4429 0.4429 #4caf50 | size: 8 | label: "Solucion"
+point 0.5 1.0 #f44336 | size: 6 | label: "Punto inicial"
+@{end plot}
+
+function[x, y] = newtonExp(x0, y0, nIter)
+  x = x0
+  y = y0
+  for k = 1:nIter
+    h1 = exp(x) + y - 2
+    h2 = x + exp(y) - 2
+    J = [[exp(x), 1], [1, exp(y)]]
+    rhs = [[-h1], [-h2]]
+    dx = lusolve(J, rhs)
+    x = x + dx.(1)
+    y = y + dx.(2)
+  end
+end
+
+> Punto inicial: (0.5, 1.0) — 8 iteraciones
+[ex, ey] = newtonExp(0.5, 1.0, 8)
+
+## Verificacion Exponencial
+check_h1 = exp(ex) + ey - 2
+check_h2 = ex + exp(ey) - 2

@@ -469,6 +469,88 @@ export const eigenSolver = {
   },
 
   /**
+   * Synchronous eigenvalues.
+   */
+  eigenvaluesSync(A: number[][]): { real: number[]; imag: number[] } | null {
+    if (!mod) return null;
+    const n = A.length;
+    const ptrs: number[] = [];
+
+    const aPtr = allocF64(mod, flatten(A)); ptrs.push(aPtr);
+    const realPtr = mod._malloc(n * 8); ptrs.push(realPtr);
+    const imagPtr = mod._malloc(n * 8); ptrs.push(imagPtr);
+
+    const status = mod._eigenvalues(n, aPtr, realPtr, imagPtr);
+    if (status !== 0) {
+      freeAll(mod, ptrs);
+      return null;
+    }
+
+    const real = readF64(mod, realPtr, n);
+    const imag = readF64(mod, imagPtr, n);
+    freeAll(mod, ptrs);
+    return { real, imag };
+  },
+
+  /**
+   * Synchronous eigen decomposition: eigenvalues + eigenvectors.
+   */
+  eigenDecomposeSync(A: number[][]): {
+    real: number[];
+    imag: number[];
+    vectors: number[][];
+  } | null {
+    if (!mod) return null;
+    const n = A.length;
+    const ptrs: number[] = [];
+
+    const aPtr = allocF64(mod, flatten(A)); ptrs.push(aPtr);
+    const realPtr = mod._malloc(n * 8); ptrs.push(realPtr);
+    const imagPtr = mod._malloc(n * 8); ptrs.push(imagPtr);
+    const vecsPtr = mod._malloc(n * n * 8); ptrs.push(vecsPtr);
+
+    const status = mod._eigen_decompose(n, aPtr, realPtr, imagPtr, vecsPtr);
+    if (status !== 0) {
+      freeAll(mod, ptrs);
+      return null;
+    }
+
+    const real = readF64(mod, realPtr, n);
+    const imag = readF64(mod, imagPtr, n);
+    const vectors = unflatten(readF64(mod, vecsPtr, n * n), n, n);
+    freeAll(mod, ptrs);
+    return { real, imag, vectors };
+  },
+
+  /**
+   * Synchronous SVD: A = U · diag(S) · V^T
+   */
+  svdSync(A: number[][]): {
+    U: number[][];
+    S: number[];
+    V: number[][];
+  } | null {
+    if (!mod) return null;
+    const rows = A.length;
+    const cols = A[0].length;
+    const k = Math.min(rows, cols);
+    const ptrs: number[] = [];
+
+    const aPtr = allocF64(mod, flatten(A)); ptrs.push(aPtr);
+    const uPtr = mod._malloc(rows * rows * 8); ptrs.push(uPtr);
+    const sPtr = mod._malloc(k * 8); ptrs.push(sPtr);
+    const vPtr = mod._malloc(cols * cols * 8); ptrs.push(vPtr);
+
+    mod._svd(rows, cols, aPtr, uPtr, sPtr, vPtr);
+
+    const U = unflatten(readF64(mod, uPtr, rows * rows), rows, rows);
+    const S = readF64(mod, sPtr, k);
+    const V = unflatten(readF64(mod, vPtr, cols * cols), cols, cols);
+    freeAll(mod, ptrs);
+    return { U, S, V };
+  },
+
+  /**
    * Synchronous matrix multiply: C = A · B
    */
   multiplySync(A: number[][], B: number[][]): number[][] | null {

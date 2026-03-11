@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hekatan Math Editor</title>
-  <script type="module" crossorigin src="/assets/mathcanvas-Cz8YES3L.js"></script>
+  <script type="module" crossorigin src="/assets/mathcanvas-BdCtId_V.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
   <link rel="modulepreload" crossorigin href="/assets/casManager-GTGDkSkn.js">
-  <link rel="modulepreload" crossorigin href="/assets/renderer-CEmmTYE1.js">
-  <link rel="stylesheet" crossorigin href="/assets/mathcanvas-B5z4HUsd.css">
+  <link rel="modulepreload" crossorigin href="/assets/parser-C_EzRoS9.js">
+  <link rel="stylesheet" crossorigin href="/assets/mathcanvas-CyFgf7X8.css">
 </head>
 <body>
   <!-- ═══ Menu Bar ═══ -->
@@ -55,6 +55,17 @@
               <button data-insert="@{columns 2}\n\n@{end columns}">@{columns 2} - Two Columns</button>
               <button data-insert="@{pagebreak}">@{pagebreak} - Page Break</button>
               <button data-insert="\n---\n">--- Horizontal Rule</button>
+            </div>
+          </div>
+          <div class="submenu-item">
+            <span>Funciones</span>
+            <div class="submenu">
+              <button data-insert="function resultado = nombre(x)\n  resultado = x\nend">function...end - Plantilla</button>
+              <button data-insert="function [a, b] = nombre(x, y)\n  a = x\n  b = y\nend">function [a,b]...end - Multi-salida</button>
+              <hr>
+              <button data-insert="for i = 1:n\n  \nend">for...end</button>
+              <button data-insert="while condicion\n  \nend">while...end</button>
+              <button data-insert="if condicion\n  \nelse\n  \nend">if...else...end</button>
             </div>
           </div>
           <div class="submenu-item">
@@ -106,7 +117,7 @@
             </div>
           </div>
           <div class="submenu-item">
-            <span>Funciones</span>
+            <span>Func. Matematicas</span>
             <div class="submenu">
               <button data-insert="sqrt(x)">sqrt(x)</button>
               <button data-insert="sin(x)">sin(x)</button>
@@ -135,6 +146,14 @@
           </div>
         </div>
       </div>
+      <div class="menu-item" data-menu="help">
+        <span class="menu-label">Help</span>
+        <div class="menu-dropdown">
+          <button data-action="help-ref">Quick Reference</button>
+          <hr>
+          <button data-action="help-about">About Hekatan</button>
+        </div>
+      </div>
     </div>
     <span class="menu-title">Hekatan Math Editor v1.0</span>
   </div>
@@ -157,19 +176,94 @@
     <button class="fmt-btn" data-insert="@{text}\n\n@{end text}" title="Text block">T</button>
     <button class="fmt-btn" data-insert="@{draw 500 400}\n\n@{end draw}" title="CAD 2D">&#9998;</button>
     <button class="fmt-btn" data-insert="@{three 600 400}\n\n@{end three}" title="3D Scene">&#9830;</button>
+    <div class="toolbar-sep"></div>
+    <button class="fmt-btn" data-insert="function resultado = nombre(x)\n  resultado = x\nend" title="Insertar funcion"><i>f</i>(x)</button>
+
+    <div class="toolbar-sep"></div>
+    <button id="btnLayout" class="tool-btn layout-btn" title="Toggle layout: Both | Output | Code">&#9636; Both</button>
+
+    <div class="toolbar-sep"></div>
+    <button id="btnFnLib" class="tool-btn fn-lib-btn" title="Biblioteca de Funciones: funciones reutilizables disponibles en cualquier script">&#402;(x)</button>
 
     <div class="toolbar-spacer"></div>
 
-    <select id="exampleSelect" class="example-select">
+    <select id="exampleSelect" class="example-select" title="Ejemplos: Cargar ejemplo predefinido">
       <option value="">-- Ejemplo --</option>
     </select>
-    <select id="themeSelect" class="theme-select">
-      <option value="calcpad">Tema: Calcpad</option>
-      <option value="hekatan">Tema: Hekatan</option>
+    <span class="toolbar-label" title="Estilo predefinido (fuentes + colores)">Tema:</span>
+    <select id="presetSelect" class="theme-select" title="Estilo predefinido (fuentes + colores)">
+      <option value="hekatan">Hekatan</option>
+      <option value="latex">LaTeX</option>
+      <option value="gabriola">Gabriola</option>
+      <option value="mathcad">Mathcad</option>
+      <option value="classic">Classic</option>
+      <option value="black">Black</option>
+      <option value="dark">Dark</option>
+    </select>
+    <span class="toolbar-label" title="Fuente para títulos, descripciones y comentarios">Texto:</span>
+    <select id="fontTextSelect" class="theme-select" title="Fuente para títulos, descripciones y comentarios">
+      <option value="segoeui">Segoe UI</option>
+      <option value="georgia">Georgia</option>
+      <option value="tahoma">Tahoma</option>
+      <option value="cambria">Cambria</option>
+      <option value="times">Times New Roman</option>
+    </select>
+    <span class="toolbar-label" title="Fuente para ecuaciones, variables y valores">Expr:</span>
+    <select id="fontExprSelect" class="theme-select" title="Fuente para ecuaciones, variables y valores">
+      <option value="stix">STIX Two Math</option>
+      <option value="cambria">Cambria Math</option>
+      <option value="gabriola">Gabriola</option>
+      <option value="georgiapro">Georgia Pro</option>
+      <option value="century">Century Schoolbook</option>
+    </select>
+    <span class="toolbar-label" title="Esquema de colores del output">Color:</span>
+    <select id="colorModeSelect" class="theme-select" title="Esquema de colores del output">
+      <option value="classic">Clásico</option>
+      <option value="black">Negro</option>
+      <option value="dark">Oscuro</option>
+      <option value="custom">Custom</option>
+    </select>
+    <span class="toolbar-label" title="Filas y columnas visibles en matrices grandes">Mat:</span>
+    <select id="matVisSelect" class="theme-select" title="Filas/columnas visibles en matrices truncadas">
+      <option value="1">1×1</option>
+      <option value="2">2×2</option>
+      <option value="3" selected>3×3</option>
+      <option value="4">4×4</option>
+      <option value="5">5×5</option>
+      <option value="6">6×6</option>
+      <option value="0">Todo</option>
     </select>
     <label class="auto-toggle">
       <input type="checkbox" id="chkAutoRun" checked> AutoRun
     </label>
+  </div>
+
+  <!-- ═══ Custom Colors Bar ═══ -->
+  <div class="custom-colors-bar" id="customColorsBar" style="display:none;">
+    <label>Fondo: <input type="color" id="customBg" value="#1e1e1e"></label>
+    <label>Texto: <input type="color" id="customText" value="#e0e0e0"></label>
+    <label>Expresiones: <input type="color" id="customExpr" value="#6cb4ff"></label>
+  </div>
+
+  <!-- ═══ Functions Library Panel ═══ -->
+  <div class="fn-lib-panel" id="fnLibPanel" style="display:none;">
+    <div class="fn-lib-header">
+      <span>&#128194; Biblioteca de Funciones</span>
+      <span class="fn-lib-hint">Las funciones se cargan automaticamente antes de cada ejecucion</span>
+      <button id="fnLibAdd" class="fn-lib-add" title="Nueva funcion">+ Nueva</button>
+      <button id="fnLibClose" class="fn-lib-close" title="Cerrar">&times;</button>
+    </div>
+    <div class="fn-lib-list" id="fnLibList">
+      <!-- Populated by JS -->
+    </div>
+    <div class="fn-lib-editor" id="fnLibEditor" style="display:none;">
+      <div class="fn-lib-editor-header">
+        <input type="text" id="fnLibName" class="fn-lib-name-input" placeholder="nombre_funcion" spellcheck="false">
+        <button id="fnLibSave" class="fn-lib-save">Guardar</button>
+        <button id="fnLibCancel" class="fn-lib-cancel">Cancelar</button>
+      </div>
+      <textarea id="fnLibCode" class="fn-lib-code" spellcheck="false" wrap="off" placeholder="function resultado = nombre(x)&#10;  resultado = x^2&#10;end"></textarea>
+    </div>
   </div>
 
   <!-- ═══ Main Content ═══ -->
@@ -219,6 +313,7 @@
     <div class="sb-sep"></div>
     <label class="sb-chk"><input type="checkbox" id="chkSubstitute" checked> Substitute</label>
     <label class="sb-chk"><input type="checkbox" id="chkZeroSmall" checked> Zero small</label>
+    <label class="sb-chk"><input type="checkbox" id="chkFractions" checked> Fractions</label>
     <div class="sb-sep"></div>
     <span class="sb-label">Plot:</span>
     <label class="sb-chk"><input type="checkbox" id="chkAdaptive" checked> Adaptive</label>

@@ -287,6 +287,57 @@ npm run build          # Outputs to hekatan-ui/dist/
 | `@{ifc-create}` | Generate IFC geometry from DSL |
 | `@{mcdx}` | Import Mathcad Prime files |
 
+### Display Modes — `@{cells}` & `@{mode}`
+
+Control how math results are displayed: full procedure, formula only, result only, or formula + result.
+
+#### `@{cells}` — Inline variable rows
+
+Renders variables in a compact horizontal row. Supports 4 display modes:
+
+```
+@{cells}    |a = x+1|b = 2*x|       Full procedure (default)
+@{cells f}  |a = x+1|b = 2*x|       Formula only
+@{cells r}  |a = x+1|b = 2*x|       Result only
+@{cells fr} |a = x+1|b = 2*x|       Formula + result
+```
+
+| Mode | Syntax | Output |
+|------|--------|--------|
+| **Default** | `@{cells}` | `a = x+1 = 5+1 = 6` |
+| **Formula** | `@{cells f}` | `a = x+1` |
+| **Result** | `@{cells r}` | `a = 6` |
+| **Formula + Result** | `@{cells fr}` | `a = x+1 = 6` |
+
+#### `@{mode}` — Display mode for regular math lines
+
+Sets the display mode for all subsequent assignment lines until changed:
+
+```
+@{mode f}       Formula only for subsequent lines
+@{mode r}       Result only
+@{mode fr}      Formula + result (no substitution)
+@{mode}         Reset to default (full procedure)
+```
+
+Example:
+
+```
+E = 29000
+I = 882
+EI = E*I                  // default: EI = E·I = 29000·882 = 25578000
+
+@{mode fr}
+EI = E*I                  // formula + result: EI = E·I = 25578000
+
+@{mode r}
+EI = E*I                  // result only: EI = 25578000
+
+@{mode}                   // reset to default
+```
+
+> **Note:** `@{mode}` also applies to `@{cells}` blocks that don't specify their own inline mode. Inline mode (`@{cells f}`) takes priority over `@{mode}`.
+
 ---
 
 ## Installation

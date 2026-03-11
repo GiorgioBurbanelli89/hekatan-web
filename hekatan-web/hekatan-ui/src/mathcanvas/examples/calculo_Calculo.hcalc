@@ -1,0 +1,22 @@
+# Calculo Basico
+> Operaciones aritmeticas y funciones
+
+a = 3
+b = 4
+c = sqrt(a^2 + b^2)
+
+> Trigonometria
+alpha = atan2(b, a)
+sin_a = sin(alpha)
+cos_a = cos(alpha)
+
+> Funcion personalizada
+f(x) = x^3 - 2*x + 1
+f(0)
+f(1)
+f(2)
+f(3)
+
+> Area de circulo
+r = 5
+A = pi * r^2

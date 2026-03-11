@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Hekatan Math Editor — Quick Reference</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-size: 11pt;
+            font-family: 'Segoe UI', Calibri, sans-serif;
+            margin: 0; padding: 16px 24px;
+            background: #F5F5F5; color: #1a1a2e;
+            line-height: 1.5;
+        }
+        a { color: #06c; text-decoration: none; }
+        a:hover { background: #dff2ff; border-radius: 2px; }
+        h1 { font-size: 18pt; color: #00D4AA; margin: 0 0 4px 0; }
+        h1 span { font-size: 10pt; color: #D4AF37; font-weight: normal; }
+        h2 { font-size: 14pt; color: #00D4AA; margin: 18px 0 6px 0; border-bottom: 2px solid #00D4AA; padding-bottom: 4px; }
+        h3 { font-size: 12pt; color: #D4AF37; margin: 14px 0 4px 0; }
+        h4 { font-size: 11pt; color: #555; margin: 10px 0 3px 0; }
+        p { margin: 3px 0 6px 0; }
+        ul, ol { margin: 2px 0 8px 0; padding-left: 2em; }
+        li { margin-bottom: 2px; }
+        code {
+            font-family: 'Cascadia Code', 'Consolas', monospace;
+            background: #eef; padding: 1px 5px; border-radius: 3px;
+            font-size: 10pt; color: #333;
+        }
+        .code-block {
+            background: #f0f0f5; border: 1px solid #ddd; border-radius: 6px;
+            padding: 8px 14px; margin: 6px 0 10px 0; font-family: 'Cascadia Code', Consolas, monospace;
+            font-size: 10pt; line-height: 1.6; white-space: pre-wrap; overflow-x: auto;
+        }
+        .section { margin-bottom: 16px; }
+        .fn-table { width: 100%; border-collapse: collapse; margin: 6px 0 12px 0; font-size: 10pt; }
+        .fn-table th { background: #e8e8e8; padding: 5px 10px; text-align: left; border: 1px solid #ddd; font-weight: 600; }
+        .fn-table td { padding: 4px 10px; border: 1px solid #eee; vertical-align: top; }
+        .fn-table tr:nth-child(even) { background: #fafafa; }
+        .fn-table code { background: none; padding: 0; }
+        var { font-family: 'Times New Roman', serif; font-size: 11.5pt; color: #06c; font-style: italic; }
+        .tag { color: magenta; font-weight: 600; }
+        .note { background: #fff8e1; border-left: 3px solid #D4AF37; padding: 6px 12px; margin: 6px 0; font-size: 10pt; }
+        .kbd { display: inline-block; background: #eee; border: 1px solid #ccc; border-radius: 3px; padding: 1px 6px; font-size: 9pt; font-family: monospace; }
+
+        /* Expandable sections */
+        .exp {
+            display: inline-block; line-height: 90%; font-size: 11pt; font-weight: bold;
+            border: solid 1px #ccc; padding: 0 4px 1px 4px; margin-right: 4px;
+            border-radius: 3px; cursor: pointer; user-select: none; color: #555;
+        }
+        .exp:hover { box-shadow: #ccc 0 0 3px; background: #f0f0f0; }
+        .collapsible { display: none; margin-left: 10px; }
+
+        /* Print-friendly */
+        @media print {
+            body { background: #fff; }
+            .exp { display: none; }
+            .collapsible { display: block !important; }
+        }
+
+        /* Two-column TOC */
+        .toc { columns: 2; column-gap: 24px; font-size: 10pt; margin: 8px 0 16px 0; }
+        .toc a { display: block; padding: 2px 0; }
+        hr { border: none; border-top: 1px solid #ddd; margin: 12px 0; }
+
+        /* Bilingual: hide English by default, show with body.lang-en */
+        .en { display: none; }
+        body.lang-en .es { display: none !important; }
+        body.lang-en .en { display: inline !important; }
+    </style>
+</head>
+<body>
+
+<div style="display:flex;align-items:center;justify-content:space-between;">
+    <h1>&#9773; Hekatan Math Editor <span><span class="es">— Referencia r&aacute;pida</span><span class="en">— Quick Reference</span></span></h1>
+    <select id="langSwitch" onchange="switchLang(this.value)" style="font-size:10pt;padding:3px 8px;border-radius:4px;border:1px solid #ccc;">
+        <option value="es">Espa&ntilde;ol</option>
+        <option value="en">English</option>
+    </select>
+</div>
+<p style="font-size:10pt; color:#666;">
+    <span class="es">Motor de c&aacute;lculo: <b>math.js</b> + <b>Eigen C++/WebAssembly</b>. Matrices, funciones MATLAB-like,
+    ecuaciones simb&oacute;licas, diagramas CAD 2D/3D, y documentos tipo libro.</span>
+    <span class="en">Calculation engine: <b>math.js</b> + <b>Eigen C++/WebAssembly</b>. Matrices, MATLAB-like functions,
+    symbolic equations, CAD 2D/3D diagrams, and book-style documents.</span>
+</p>
+
+<hr>
+
+<!-- ═══ TABLE OF CONTENTS ═══ -->
+<h3 style="margin-top:8px;"><span class="es">Contenido</span><span class="en">Contents</span></h3>
+<div class="toc">
+    <a href="#basics"><span class="es">1. C&oacute;mo funciona</span><span class="en">1. How it works</span></a>
+    <a href="#syntax"><span class="es">2. Sintaxis del lenguaje</span><span class="en">2. Language syntax</span></a>
+    <a href="#operators"><span class="es">3. Operadores</span><span class="en">3. Operators</span></a>
+    <a href="#functions"><span class="es">4. Funciones matem&aacute;ticas</span><span class="en">4. Math functions</span></a>
+    <a href="#matrices"><span class="es">5. Matrices y vectores</span><span class="en">5. Matrices and vectors</span></a>
+    <a href="#multiline"><span class="es">6. Funciones multilinea</span><span class="en">6. Multiline functions</span></a>
+    <a href="#control"><span class="es">7. Control de flujo</span><span class="en">7. Control flow</span></a>
+    <a href="#eq"><span class="es">8. @{eq} — Ecuaciones</span><span class="en">8. @{eq} — Equations</span></a>
+    <a href="#draw"><span class="es">9. @{draw} — Dibujo CAD 2D</span><span class="en">9. @{draw} — CAD 2D Drawing</span></a>
+    <a href="#three"><span class="es">10. @{three} — Escenas 3D</span><span class="en">10. @{three} — 3D Scenes</span></a>
+    <a href="#config"><span class="es">11. @{config} — Configuraci&oacute;n</span><span class="en">11. @{config} — Configuration</span></a>
+    <a href="#layout"><span class="es">12. Layout y formato</span><span class="en">12. Layout and formatting</span></a>
+    <a href="#shortcuts"><span class="es">13. Atajos de teclado</span><span class="en">13. Keyboard shortcuts</span></a>
+    <a href="#calculus"><span class="es">14. C&aacute;lculo y an&aacute;lisis</span><span class="en">14. Calculus and analysis</span></a>
+    <a href="#statistics"><span class="es">15. Estad&iacute;stica y regresi&oacute;n</span><span class="en">15. Statistics and regression</span></a>
+    <a href="#numtheory"><span class="es">16. Teor&iacute;a de n&uacute;meros</span><span class="en">16. Number theory</span></a>
+    <a href="#units"><span class="es">17. Sistema de unidades</span><span class="en">17. Unit system</span></a>
+</div>
+
+<hr>
+
+<!-- ═══ 1. BASICS ═══ -->
+<h2 id="basics"><span class="es">1. C&oacute;mo funciona</span><span class="en">1. How it works</span></h2>
+<ol>
+    <li><span class="es">Escriba f&oacute;rmulas, texto y bloques de c&oacute;digo en el panel <b>Code</b> (izquierda).</span><span class="en">Write formulas, text and code blocks in the <b>Code</b> panel (left).</span></li>
+    <li><span class="es">Presione <span class="kbd">F5</span> o haga clic en <b>&#9654; Calculate</b> para evaluar.</span><span class="en">Press <span class="kbd">F5</span> or click <b>&#9654; Calculate</b> to evaluate.</span></li>
+    <li><span class="es">Los resultados aparecen en el panel <b>Output</b> (derecha).</span><span class="en">Results appear in the <b>Output</b> panel (right).</span></li>
+    <li><span class="es">Use <b>Insert</b> para insertar bloques, funciones y comandos CAD.</span><span class="en">Use <b>Insert</b> to insert blocks, functions and CAD commands.</span></li>
+</ol>
+<div class="note">
+    <span class="es"><b>AutoRun:</b> Si est&aacute; activado, el output se actualiza autom&aacute;ticamente al escribir.</span>
+    <span class="en"><b>AutoRun:</b> When enabled, output updates automatically as you type.</span>
+</div>
+
+<!-- ═══ 2. SYNTAX ═══ -->
+<h2 id="syntax"><span class="es">2. Sintaxis del lenguaje</span><span class="en">2. Language syntax</span></h2>
+
+<h4><span class="es">Comentarios</span><span class="en">Comments</span></h4>
+<div class="code-block">// <span class="es">Esto es un comentario</span><span class="en">This is a comment</span>
+x = 5          // <span class="es">Comentario al final de l&iacute;nea</span><span class="en">End-of-line comment</span></div>
+
+<h4><span class="es">Headings y texto</span><span class="en">Headings and text</span></h4>
+<div class="code-block"># <span class="es">T&iacute;tulo principal</span><span class="en">Main title</span>
+## <span class="es">Subt&iacute;tulo</span><span class="en">Subtitle</span>
+### Sub-<span class="es">subt&iacute;tulo</span><span class="en">subtitle</span>
+> <span class="es">Este texto es descriptivo (sin evaluar)</span><span class="en">This text is descriptive (not evaluated)</span></div>
+
+<h4><span class="es">Variables y asignaciones</span><span class="en">Variables and assignments</span></h4>
+<div class="code-block">x = 42
+nombre = "texto"
+E = 29000      // Young's modulus (ksi)
+I = 882        // Moment of inertia (in&sup4;)
+EI = E * I     // &rarr; <span class="es">muestra</span><span class="en">shows</span>: EI = E&middot;I = 29000&middot;882 = 25578000</div>
+
+<h4><span class="es">Expresiones</span><span class="en">Expressions</span></h4>
+<div class="code-block">2 + 3 * 4          // &rarr; 14
+sin(pi/4)          // &rarr; 0.7071...
+sqrt(2)^3          // &rarr; 2.8284...</div>
+
+<h4><span class="es">L&iacute;nea horizontal</span><span class="en">Horizontal rule</span></h4>
+<div class="code-block">---                // <span class="es">Genera una l&iacute;nea horizontal</span><span class="en">Generates a horizontal rule</span> &lt;hr&gt;</div>
+
+<!-- ═══ 3. OPERATORS ═══ -->
+<h2 id="operators"><span class="es">3. Operadores</span><span class="en">3. Operators</span></h2>
+<table class="fn-table">
+    <tr><th><span class="es">Operador</span><span class="en">Operator</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th><th><span class="es">Ejemplo</span><span class="en">Example</span></th></tr>
+    <tr><td><code>+</code> <code>-</code> <code>*</code> <code>/</code></td><td><span class="es">Aritm&eacute;tica b&aacute;sica</span><span class="en">Basic arithmetic</span></td><td><code>3 + 4 * 2</code> &rarr; 11</td></tr>
+    <tr><td><code>^</code></td><td><span class="es">Potencia</span><span class="en">Power</span></td><td><code>2^10</code> &rarr; 1024</td></tr>
+    <tr><td><code>%</code></td><td><span class="es">M&oacute;dulo</span><span class="en">Modulo</span></td><td><code>17 % 5</code> &rarr; 2</td></tr>
+    <tr><td><code>!</code></td><td><span class="es">Factorial</span><span class="en">Factorial</span></td><td><code>5!</code> &rarr; 120</td></tr>
+    <tr><td><code>==</code></td><td><span class="es">Igualdad</span><span class="en">Equality</span></td><td><code>3 == 3</code> &rarr; true</td></tr>
+    <tr><td><code>!=</code></td><td><span class="es">Desigualdad</span><span class="en">Inequality</span></td><td><code>3 != 4</code> &rarr; true</td></tr>
+    <tr><td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td><td><span class="es">Comparaci&oacute;n</span><span class="en">Comparison</span></td><td><code>5 &gt; 3</code> &rarr; true</td></tr>
+    <tr><td><code>and</code> <code>or</code> <code>not</code> <code>xor</code></td><td><span class="es">L&oacute;gicos</span><span class="en">Logical</span></td><td><code>true and false</code></td></tr>
+    <tr><td><code>? :</code></td><td><span class="es">Ternario</span><span class="en">Ternary</span></td><td><code>x &gt; 0 ? x : -x</code></td></tr>
+    <tr><td><code>=</code></td><td><span class="es">Asignaci&oacute;n</span><span class="en">Assignment</span></td><td><code>a = 5</code></td></tr>
+    <tr><td><code>:</code></td><td><span class="es">Rango</span><span class="en">Range</span></td><td><code>1:5</code> &rarr; [1,2,3,4,5]</td></tr>
+</table>
+
+<h4><span class="es">Ejemplos</span><span class="en">Examples</span></h4>
+<div class="code-block">// <span class="es">Aritm&eacute;tica</span><span class="en">Arithmetic</span>
+a = 3 + 4 * 2       // &rarr; 11
+b = 2^10             // &rarr; 1024
+c = 17 % 5           // &rarr; 2
+d = 5!               // &rarr; 120
+
+// <span class="es">Ternario</span><span class="en">Ternary</span>
+x = -3
+y = x &gt; 0 ? x : -x  // &rarr; 3
+
+// <span class="es">Rango</span><span class="en">Range</span>
+v = 1:5              // &rarr; [1, 2, 3, 4, 5]</div>
+
+<!-- ═══ 4. FUNCTIONS ═══ -->
+<h2 id="functions"><span class="es">4. Funciones matem&aacute;ticas</span><span class="en">4. Math functions</span></h2>
+
+<h3><span class="exp" onclick="toggle(this,'trig')">+</span> <span class="es">Trigonom&eacute;tricas</span><span class="en">Trigonometric</span></h3>
+<div class="collapsible" id="trig">
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>sin(x)</code>, <code>cos(x)</code>, <code>tan(x)</code></td><td><span class="es">Seno, coseno, tangente</span><span class="en">Sine, cosine, tangent</span></td></tr>
+    <tr><td><code>asin(x)</code>, <code>acos(x)</code>, <code>atan(x)</code></td><td><span class="es">Inversas</span><span class="en">Inverse</span></td></tr>
+    <tr><td><code>atan2(y, x)</code></td><td><span class="es">Arcotangente de 2 argumentos</span><span class="en">Two-argument arctangent</span></td></tr>
+    <tr><td><code>csc(x)</code>, <code>sec(x)</code>, <code>cot(x)</code></td><td><span class="es">Cosecante, secante, cotangente</span><span class="en">Cosecant, secant, cotangent</span></td></tr>
+    <tr><td><code>sinh(x)</code>, <code>cosh(x)</code>, <code>tanh(x)</code></td><td><span class="es">Hiperb&oacute;licas</span><span class="en">Hyperbolic</span></td></tr>
+    <tr><td><code>asinh(x)</code>, <code>acosh(x)</code>, <code>atanh(x)</code></td><td><span class="es">Inversas hiperb&oacute;licas</span><span class="en">Inverse hyperbolic</span></td></tr>
+</table>
+<div class="code-block">sin(pi/6)        // &rarr; 0.5
+cos(0)           // &rarr; 1
+atan2(1, 1)      // &rarr; 0.7854 (&pi;/4)
+sinh(1)          // &rarr; 1.1752</div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'explog')">+</span> <span class="es">Exponenciales y logar&iacute;tmicas</span><span class="en">Exponentials and logarithms</span></h3>
+<div class="collapsible" id="explog">
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>exp(x)</code></td><td>e<sup>x</sup></td></tr>
+    <tr><td><code>log(x)</code></td><td><span class="es">Logaritmo natural (ln)</span><span class="en">Natural logarithm (ln)</span></td></tr>
+    <tr><td><code>log2(x)</code></td><td><span class="es">Logaritmo base 2</span><span class="en">Base-2 logarithm</span></td></tr>
+    <tr><td><code>log10(x)</code></td><td><span class="es">Logaritmo base 10</span><span class="en">Base-10 logarithm</span></td></tr>
+    <tr><td><code>ln(x)</code></td><td><span class="es">Alias de log(x)</span><span class="en">Alias for log(x)</span></td></tr>
+    <tr><td><code>sqrt(x)</code></td><td><span class="es">Ra&iacute;z cuadrada</span><span class="en">Square root</span></td></tr>
+    <tr><td><code>cbrt(x)</code></td><td><span class="es">Ra&iacute;z c&uacute;bica</span><span class="en">Cube root</span></td></tr>
+    <tr><td><code>pow(x, n)</code></td><td>x<sup>n</sup></td></tr>
+</table>
+<div class="code-block">exp(1)           // &rarr; 2.7183
+log(e)           // &rarr; 1
+log10(1000)      // &rarr; 3
+sqrt(144)        // &rarr; 12
+cbrt(27)         // &rarr; 3</div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'rounding')">+</span> <span class="es">Redondeo y valor absoluto</span><span class="en">Rounding and absolute value</span></h3>
+<div class="collapsible" id="rounding">
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>abs(x)</code></td><td><span class="es">Valor absoluto</span><span class="en">Absolute value</span></td></tr>
+    <tr><td><code>round(x)</code></td><td><span class="es">Redondear al entero m&aacute;s cercano</span><span class="en">Round to nearest integer</span></td></tr>
+    <tr><td><code>ceil(x)</code></td><td><span class="es">Redondear hacia arriba</span><span class="en">Round up</span></td></tr>
+    <tr><td><code>floor(x)</code></td><td><span class="es">Redondear hacia abajo</span><span class="en">Round down</span></td></tr>
+    <tr><td><code>sign(x)</code></td><td><span class="es">Signo (-1, 0, +1)</span><span class="en">Sign (-1, 0, +1)</span></td></tr>
+    <tr><td><code>min(a, b, ...)</code></td><td><span class="es">M&iacute;nimo</span><span class="en">Minimum</span></td></tr>
+    <tr><td><code>max(a, b, ...)</code></td><td><span class="es">M&aacute;ximo</span><span class="en">Maximum</span></td></tr>
+</table>
+<div class="code-block">abs(-7)          // &rarr; 7
+round(3.7)       // &rarr; 4
+ceil(2.1)        // &rarr; 3
+floor(2.9)       // &rarr; 2
+max(3, 7, 1)     // &rarr; 7
+min(3, 7, 1)     // &rarr; 1</div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'constants')">+</span> <span class="es">Constantes</span><span class="en">Constants</span></h3>
+<div class="collapsible" id="constants">
+<table class="fn-table">
+    <tr><th><span class="es">Constante</span><span class="en">Constant</span></th><th><span class="es">Valor</span><span class="en">Value</span></th></tr>
+    <tr><td><code>pi</code></td><td>3.14159265358979...</td></tr>
+    <tr><td><code>e</code></td><td>2.71828182845905...</td></tr>
+    <tr><td><code>i</code></td><td><span class="es">Unidad imaginaria &radic;(-1)</span><span class="en">Imaginary unit &radic;(-1)</span></td></tr>
+    <tr><td><code>Infinity</code></td><td><span class="es">Infinito</span><span class="en">Infinity</span></td></tr>
+    <tr><td><code>true</code> / <code>false</code></td><td><span class="es">Booleanos</span><span class="en">Booleans</span></td></tr>
+</table>
+</div>
+
+<!-- ═══ 5. MATRICES ═══ -->
+<h2 id="matrices"><span class="es">5. Matrices y vectores</span><span class="en">5. Matrices and vectors</span></h2>
+
+<h4><span class="es">Definici&oacute;n</span><span class="en">Definition</span></h4>
+<div class="code-block">v = [1, 2, 3]                      // <span class="es">Vector fila</span><span class="en">Row vector</span>
+c = col(1, 2, 3)                    // <span class="es">Vector columna</span><span class="en">Column vector</span>
+M = [[1, 2]; [3, 4]]                // <span class="es">Matriz 2&times;2 (estilo MATLAB)</span><span class="en">2&times;2 matrix (MATLAB style)</span>
+M = [[1, 2, 3]; [4, 5, 6]]          // <span class="es">Matriz 2&times;3</span><span class="en">2&times;3 matrix</span></div>
+
+<h4><span class="es">Funciones de creaci&oacute;n</span><span class="en">Creation functions</span></h4>
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>col(1, 2, 3)</code></td><td><span class="es">Vector columna</span><span class="en">Column vector</span></td></tr>
+    <tr><td><code>row(1, 2, 3)</code></td><td><span class="es">Vector fila</span><span class="en">Row vector</span></td></tr>
+    <tr><td><code>range(1, 5)</code></td><td><span class="es">Secuencia [1,2,3,4,5] (columna)</span><span class="en">Sequence [1,2,3,4,5] (column)</span></td></tr>
+    <tr><td><code>range(0, 1, 0.25)</code></td><td><span class="es">Con paso: [0, 0.25, 0.5, 0.75, 1.0]</span><span class="en">With step: [0, 0.25, 0.5, 0.75, 1.0]</span></td></tr>
+    <tr><td><code>seq(1, 5)</code></td><td><span class="es">Alias de range (end-inclusive)</span><span class="en">Alias for range (end-inclusive)</span></td></tr>
+    <tr><td><code>linspace(0, 10, 5)</code></td><td><span class="es">5 valores equidistantes de 0 a 10</span><span class="en">5 equally spaced values from 0 to 10</span></td></tr>
+    <tr><td><code>zeros(m, n)</code></td><td><span class="es">Matriz m&times;n de ceros</span><span class="en">m&times;n matrix of zeros</span></td></tr>
+    <tr><td><code>ones(m, n)</code></td><td><span class="es">Matriz m&times;n de unos</span><span class="en">m&times;n matrix of ones</span></td></tr>
+    <tr><td><code>identity(n)</code></td><td><span class="es">Matriz identidad n&times;n</span><span class="en">n&times;n identity matrix</span></td></tr>
+</table>
+<div class="code-block">r = range(1, 5)        // &rarr; [1, 2, 3, 4, 5]
+z = zeros(2, 3)        // &rarr; [[0,0,0]; [0,0,0]]
+I = identity(3)        // <span class="es">Matriz identidad 3&times;3</span><span class="en">3&times;3 identity matrix</span>
+v = linspace(0, 1, 5)  // &rarr; [0, 0.25, 0.5, 0.75, 1]</div>
+
+<h3><span class="exp" onclick="toggle(this,'matops')">+</span> <span class="es">Operaciones matriciales</span><span class="en">Matrix operations</span></h3>
+<div class="collapsible" id="matops">
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>transpose(M)</code></td><td><span class="es">Transpuesta</span><span class="en">Transpose</span></td></tr>
+    <tr><td><code>inv(M)</code></td><td><span class="es">Inversa</span><span class="en">Inverse</span></td></tr>
+    <tr><td><code>det(M)</code></td><td><span class="es">Determinante</span><span class="en">Determinant</span></td></tr>
+    <tr><td><code>lsolve(K, F)</code></td><td><span class="es">Resolver K&middot;x = F (sistema lineal)</span><span class="en">Solve K&middot;x = F (linear system)</span></td></tr>
+    <tr><td><code>submat(M, r1, r2, c1, c2)</code></td><td><span class="es">Sub-matriz M[r1:r2, c1:c2] (1-based)</span><span class="en">Sub-matrix M[r1:r2, c1:c2] (1-based)</span></td></tr>
+    <tr><td><code>size(M)</code></td><td><span class="es">Dimensiones [filas, columnas]</span><span class="en">Dimensions [rows, columns]</span></td></tr>
+    <tr><td><code>trace(M)</code></td><td><span class="es">Traza (suma diagonal)</span><span class="en">Trace (diagonal sum)</span></td></tr>
+    <tr><td><code>cross(u, v)</code></td><td><span class="es">Producto cruz</span><span class="en">Cross product</span></td></tr>
+    <tr><td><code>dot(u, v)</code></td><td><span class="es">Producto punto</span><span class="en">Dot product</span></td></tr>
+    <tr><td><code>norm(v)</code></td><td><span class="es">Norma euclidiana</span><span class="en">Euclidean norm</span></td></tr>
+    <tr><td><code>inverse(M)</code></td><td><span class="es">Alias de inv(M)</span><span class="en">Alias for inv(M)</span></td></tr>
+</table>
+<div class="code-block">A = [[1, 2]; [3, 4]]
+d = det(A)              // &rarr; -2
+B = transpose(A)        // &rarr; [[1,3]; [2,4]]
+C = inv(A)              // &rarr; [[-2, 1]; [1.5, -0.5]]
+
+// <span class="es">Sistema lineal K&middot;u = F</span><span class="en">Linear system K&middot;u = F</span>
+K = [[2, -1]; [-1, 2]]
+F = col(1, 0)
+u = lsolve(K, F)        // &rarr; <span class="es">resuelve</span><span class="en">solves</span> K&middot;u = F
+
+n = norm(col(3, 4))     // &rarr; 5
+dp = dot([1,2,3], [4,5,6])  // &rarr; 32</div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'mateig')">+</span> <span class="es">Eigenvalores y descomposiciones</span><span class="en">Eigenvalues and decompositions</span></h3>
+<div class="collapsible" id="mateig">
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>eigenvalues(M)</code></td><td><span class="es">Vector de eigenvalores</span><span class="en">Eigenvalue vector</span></td></tr>
+    <tr><td><code>eigenvectors(M)</code></td><td><span class="es">Matriz de eigenvectores (columnas)</span><span class="en">Eigenvector matrix (columns)</span></td></tr>
+    <tr><td><code>svd_vals(M)</code></td><td><span class="es">Valores singulares (SVD)</span><span class="en">Singular values (SVD)</span></td></tr>
+</table>
+<div class="code-block">M = [[4, 1]; [2, 3]]
+eigenvalues(M)          // &rarr; [5, 2]
+eigenvectors(M)         // <span class="es">Matriz de eigenvectores</span><span class="en">Matrix of eigenvectors</span></div>
+</div>
+
+<h4><span class="es">Indexaci&oacute;n (1-based)</span><span class="en">Indexing (1-based)</span></h4>
+<div class="code-block">M = [[1,2,3]; [4,5,6]; [7,8,9]]
+Kaa = submat(M, 1, 2, 1, 2)   // Sub-matrix <span class="es">filas</span><span class="en">rows</span> 1-2, cols 1-2 &rarr; [[1,2];[4,5]]</div>
+
+<!-- ═══ 6. MULTILINE FUNCTIONS ═══ -->
+<h2 id="multiline"><span class="es">6. Funciones multilinea (MATLAB-like)</span><span class="en">6. Multiline functions (MATLAB-like)</span></h2>
+<div class="code-block">function resultado = miFuncion(x, y)
+  a = x^2 + y^2
+  resultado = sqrt(a)
+end
+
+r = miFuncion(3, 4)    // &rarr; 5</div>
+
+<h4><span class="es">M&uacute;ltiples salidas</span><span class="en">Multiple outputs</span></h4>
+<div class="code-block">function [area, perim] = rectangulo(b, h)
+  area = b * h
+  perim = 2 * (b + h)
+end
+
+[A, P] = rectangulo(5, 3)   // A=15, P=16</div>
+
+<div class="note">
+    <span class="es"><b>Sintaxis MATLAB:</b> Dentro de funciones, <code>;</code> dentro de <code>[]</code> separa filas de matrices:
+    <code>M = [[1,2;3,4]]</code> crea una matriz 2&times;2.</span>
+    <span class="en"><b>MATLAB syntax:</b> Inside functions, <code>;</code> within <code>[]</code> separates matrix rows:
+    <code>M = [[1,2;3,4]]</code> creates a 2&times;2 matrix.</span>
+</div>
+
+<!-- ═══ 7. CONTROL FLOW ═══ -->
+<h2 id="control"><span class="es">7. Control de flujo</span><span class="en">7. Control flow</span></h2>
+<div class="code-block">// For loop
+for i = 1:5
+  x = i^2
+end
+
+// While loop
+n = 1
+while n &lt; 100
+  n = n * 2
+end
+
+// If-else
+if x &gt; 0
+  resultado = "positivo"
+else
+  resultado = "no positivo"
+end</div>
+
+<!-- ═══ 8. @{eq} ═══ -->
+<h2 id="eq"><span class="es">8. @{eq} — Ecuaciones simb&oacute;licas (display-only)</span><span class="en">8. @{eq} — Symbolic equations (display-only)</span></h2>
+<p><span class="es">Los bloques <code class="tag">@{eq}</code> renderizan ecuaciones con formato tipogr&aacute;fico. <b>No eval&uacute;an</b> — son solo visualizaci&oacute;n.</span>
+<span class="en"><code class="tag">@{eq}</code> blocks render equations with typographic formatting. They <b>do not evaluate</b> — display only.</span></p>
+
+<h4><span class="es">Sintaxis b&aacute;sica</span><span class="en">Basic syntax</span></h4>
+<div class="code-block">@{eq}
+F = m * a
+E = 1/2 * m * v^2
+@{end eq}</div>
+
+<h3><span class="exp" onclick="toggle(this,'eqsyntax')">+</span> <span class="es">Fracciones, sub&iacute;ndices, super&iacute;ndices</span><span class="en">Fractions, subscripts, superscripts</span></h3>
+<div class="collapsible" id="eqsyntax">
+<table class="fn-table">
+    <tr><th><span class="es">Sintaxis</span><span class="en">Syntax</span></th><th><span class="es">Resultado</span><span class="en">Result</span></th></tr>
+    <tr><td><code>a/b</code></td><td><span class="es">Fracci&oacute;n vertical (NO poner espacios alrededor de /)</span><span class="en">Vertical fraction (NO spaces around /)</span></td></tr>
+    <tr><td><code>X_a</code></td><td><span class="es">X con sub&iacute;ndice a</span><span class="en">X with subscript a</span></td></tr>
+    <tr><td><code>X_{abc}</code></td><td><span class="es">X con sub&iacute;ndice abc</span><span class="en">X with subscript abc</span></td></tr>
+    <tr><td><code>X^2</code></td><td><span class="es">X al cuadrado</span><span class="en">X squared</span></td></tr>
+    <tr><td><code>X^{n+1}</code></td><td><span class="es">X super&iacute;ndice n+1</span><span class="en">X superscript n+1</span></td></tr>
+    <tr><td><code>&radic;(x)</code> o <code>sqrt(x)</code></td><td><span class="es">Ra&iacute;z cuadrada</span><span class="en">Square root</span></td></tr>
+</table>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'eqmatrix')">+</span> <span class="es">Matrices en @{eq}</span><span class="en">Matrices in @{eq}</span></h3>
+<div class="collapsible" id="eqmatrix">
+<div class="code-block">@{eq}
+[K] = [k_{11}, k_{12}; k_{21}, k_{22}]    // ; = <span class="es">nueva fila</span><span class="en">new row</span>, , = <span class="es">nueva columna</span><span class="en">new column</span>
+@{end eq}</div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'eqspecial')">+</span> <span class="es">Funciones especiales en @{eq}</span><span class="en">Special functions in @{eq}</span></h3>
+<div class="collapsible" id="eqspecial">
+<table class="fn-table">
+    <tr><th><span class="es">Sintaxis</span><span class="en">Syntax</span></th><th><span class="es">Resultado</span><span class="en">Result</span></th></tr>
+    <tr><td><code>&int;_a^b f(x) dx</code></td><td><span class="es">Integral definida</span><span class="en">Definite integral</span></td></tr>
+    <tr><td><code>&sum;_{i=1}^n a_i</code></td><td><span class="es">Sumatoria</span><span class="en">Summation</span></td></tr>
+    <tr><td><code>&prod;_{i=1}^n a_i</code></td><td><span class="es">Productoria</span><span class="en">Product</span></td></tr>
+    <tr><td><code>&part;f/&part;x</code></td><td><span class="es">Derivada parcial</span><span class="en">Partial derivative</span></td></tr>
+    <tr><td><code>(5.7)</code> <span class="es">al final</span><span class="en">at end</span></td><td><span class="es">N&uacute;mero de ecuaci&oacute;n a la derecha</span><span class="en">Equation number on the right</span></td></tr>
+    <tr><td><code>f = {x&gt;0: x; x&lt;=0: -x}</code></td><td><span class="es">Funci&oacute;n a trozos (piecewise)</span><span class="en">Piecewise function</span></td></tr>
+    <tr><td><code>symbol | <span class="es">descripci&oacute;n</span><span class="en">description</span></code></td><td><span class="es">Definici&oacute;n con pipe</span><span class="en">Definition with pipe</span></td></tr>
+</table>
+<div class="code-block">@{eq}
+&int;_0^L w(x) dx                      // <span class="es">Integral</span><span class="en">Integral</span>
+&sum;_{i=1}^n F_i = 0                   // <span class="es">Sumatoria</span><span class="en">Summation</span>
+&part;u/&part;x + &part;v/&part;y = 0   // <span class="es">Derivadas parciales</span><span class="en">Partial derivatives</span>
+E*I*d^4y/dx^4 = w(x)              (5.7)
+f = {x&gt;0: x; x&lt;=0: -x}            // <span class="es">Piecewise</span><span class="en">Piecewise</span>
+E | <span class="es">M&oacute;dulo de elasticidad (ksi)</span><span class="en">Modulus of elasticity (ksi)</span>
+@{end eq}</div>
+</div>
+
+<h4><span class="es">Alineaci&oacute;n</span><span class="en">Alignment</span></h4>
+<div class="code-block">@{eq}         // <span class="es">Centro (default)</span><span class="en">Center (default)</span>
+@{eq left}    // <span class="es">Alineaci&oacute;n izquierda</span><span class="en">Left alignment</span>
+@{eq right}   // <span class="es">Alineaci&oacute;n derecha</span><span class="en">Right alignment</span></div>
+
+<!-- ═══ 9. @{draw} ═══ -->
+<h2 id="draw"><span class="es">9. @{draw} — Dibujo CAD 2D</span><span class="en">9. @{draw} — CAD 2D Drawing</span></h2>
+<p><span class="es">Diagramas 2D con comandos CAD. Sintaxis: <code class="tag">@{draw W H}</code></span>
+<span class="en">2D diagrams with CAD commands. Syntax: <code class="tag">@{draw W H}</code></span></p>
+
+<div class="code-block">@{draw 500 400}
+line 50 50 450 50
+rect 100 100 300 200
+circle 250 300 40
+text 250 350 Centro
+@{end draw}</div>
+
+<h3><span class="exp" onclick="toggle(this,'drawcmds')">+</span> <span class="es">Comandos de dibujo</span><span class="en">Drawing commands</span></h3>
+<div class="collapsible" id="drawcmds">
+<table class="fn-table">
+    <tr><th><span class="es">Comando</span><span class="en">Command</span></th><th><span class="es">Par&aacute;metros</span><span class="en">Parameters</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>line</code></td><td>x1 y1 x2 y2</td><td><span class="es">L&iacute;nea</span><span class="en">Line</span></td></tr>
+    <tr><td><code>rect</code></td><td>x1 y1 x2 y2</td><td><span class="es">Rect&aacute;ngulo</span><span class="en">Rectangle</span></td></tr>
+    <tr><td><code>rrect</code></td><td>x1 y1 x2 y2 r</td><td><span class="es">Rect&aacute;ngulo redondeado</span><span class="en">Rounded rectangle</span></td></tr>
+    <tr><td><code>circle</code></td><td>cx cy r</td><td><span class="es">C&iacute;rculo</span><span class="en">Circle</span></td></tr>
+    <tr><td><code>ellipse</code></td><td>cx cy rx ry</td><td><span class="es">Elipse</span><span class="en">Ellipse</span></td></tr>
+    <tr><td><code>arc</code></td><td>cx cy r start end</td><td><span class="es">Arco</span><span class="en">Arc</span></td></tr>
+    <tr><td><code>pline</code></td><td>x1 y1 x2 y2 ...</td><td><span class="es">Polil&iacute;nea</span><span class="en">Polyline</span></td></tr>
+    <tr><td><code>arrow</code></td><td>x1 y1 x2 y2</td><td><span class="es">Flecha</span><span class="en">Arrow</span></td></tr>
+    <tr><td><code>darrow</code></td><td>x1 y1 x2 y2</td><td><span class="es">Flecha doble</span><span class="en">Double arrow</span></td></tr>
+    <tr><td><code>text</code></td><td>x y <span class="es">contenido</span><span class="en">content</span></td><td><span class="es">Texto</span><span class="en">Text</span></td></tr>
+    <tr><td><code>otext</code></td><td>x y <span class="es">contenido</span><span class="en">content</span></td><td><span class="es">Texto con barra</span><span class="en">Text with overline</span></td></tr>
+    <tr><td><code>dim</code></td><td>x1 y1 x2 y2 offset</td><td><span class="es">Cota inclinada</span><span class="en">Aligned dimension</span></td></tr>
+    <tr><td><code>hdim</code></td><td>x1 y1 x2 y2 offset</td><td><span class="es">Cota horizontal</span><span class="en">Horizontal dimension</span></td></tr>
+    <tr><td><code>vdim</code></td><td>x1 y1 x2 y2 offset</td><td><span class="es">Cota vertical</span><span class="en">Vertical dimension</span></td></tr>
+</table>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'drawstruct')">+</span> <span class="es">Comandos estructurales</span><span class="en">Structural commands</span></h3>
+<div class="collapsible" id="drawstruct">
+<table class="fn-table">
+    <tr><th><span class="es">Comando</span><span class="en">Command</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>beam x1 y1 x2 y2 h</code></td><td><span class="es">Viga (doble l&iacute;nea)</span><span class="en">Beam (double line)</span></td></tr>
+    <tr><td><code>stirrup x1 y1 x2 y2</code></td><td><span class="es">Estribo</span><span class="en">Stirrup</span></td></tr>
+    <tr><td><code>moment cx cy r pos</code></td><td><span class="es">Momento flector</span><span class="en">Bending moment</span></td></tr>
+    <tr><td><code>colsection x y w h</code></td><td><span class="es">Secci&oacute;n de columna</span><span class="en">Column section</span></td></tr>
+    <tr><td><code>axes x y size dim X Y</code></td><td><span class="es">Ejes coordenados (2d/3d)</span><span class="en">Coordinate axes (2d/3d)</span></td></tr>
+    <tr><td><code>cid x y r</code></td><td><span class="es">Nodo circular</span><span class="en">Circular node</span></td></tr>
+    <tr><td><code>tid x y size</code></td><td><span class="es">Nodo triangular</span><span class="en">Triangular node</span></td></tr>
+</table>
+<div class="code-block">@{draw 500 300}
+grid off
+bg book
+// <span class="es">Viga con carga</span><span class="en">Beam with load</span>
+beam 50 150 450 150 14
+arrow 250 50 250 140
+text 250 35 P
+// <span class="es">Apoyos</span><span class="en">Supports</span>
+tid 50 160 12
+cid 450 160 6
+// <span class="es">Cotas</span><span class="en">Dimensions</span>
+hdim 50 150 450 150 30
+@{end draw}</div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'drawstyle')">+</span> <span class="es">Estilo y transformaciones</span><span class="en">Style and transformations</span></h3>
+<div class="collapsible" id="drawstyle">
+<table class="fn-table">
+    <tr><th><span class="es">Comando</span><span class="en">Command</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>color #hex</code></td><td><span class="es">Color de trazo</span><span class="en">Stroke color</span></td></tr>
+    <tr><td><code>lw valor</code></td><td><span class="es">Ancho de l&iacute;nea</span><span class="en">Line width</span></td></tr>
+    <tr><td><code>fs <span class="es">tama&ntilde;o</span><span class="en">size</span></code></td><td><span class="es">Tama&ntilde;o de fuente</span><span class="en">Font size</span></td></tr>
+    <tr><td><code>ff <span class="es">familia</span><span class="en">family</span></code></td><td><span class="es">Familia de fuente (serif, sans-serif)</span><span class="en">Font family (serif, sans-serif)</span></td></tr>
+    <tr><td><code>fi on/off</code></td><td><span class="es">It&aacute;lica on/off</span><span class="en">Italic on/off</span></td></tr>
+    <tr><td><code>bg color</code></td><td><span class="es">Color de fondo (book, white, cream)</span><span class="en">Background color (book, white, cream)</span></td></tr>
+    <tr><td><code>grid off</code></td><td><span class="es">Desactivar cuadr&iacute;cula</span><span class="en">Disable grid</span></td></tr>
+    <tr><td><code>yflip on</code></td><td><span class="es">Y cartesiano (+arriba)</span><span class="en">Cartesian Y (+up)</span></td></tr>
+    <tr><td><code>yflip off</code></td><td><span class="es">Y canvas (+abajo, default)</span><span class="en">Canvas Y (+down, default)</span></td></tr>
+    <tr><td><code>mirror mx1 my1 mx2 my2</code></td><td><span class="es">Espejo</span><span class="en">Mirror</span></td></tr>
+    <tr><td><code>rotate cx cy angle</code></td><td><span class="es">Rotar</span><span class="en">Rotate</span></td></tr>
+    <tr><td><code>array rows cols dx dy</code></td><td><span class="es">Array de copias</span><span class="en">Array of copies</span></td></tr>
+</table>
+<div class="code-block">@{draw 400 300}
+grid off
+bg white
+color #0066cc
+lw 2.0
+fs 12
+ff serif
+// <span class="es">Rect&aacute;ngulo con estilo</span><span class="en">Styled rectangle</span>
+rect 50 50 350 250
+color #cc0000
+fi on
+text 200 150 <span class="es">Secci&oacute;n</span><span class="en">Section</span>
+fi off
+// <span class="es">Ejes coordenados</span><span class="en">Coordinate axes</span>
+axes 30 270 40 2d X Y
+@{end draw}</div>
+</div>
+
+<h4><span class="es">Figuras con nombre</span><span class="en">Named figures</span></h4>
+<div class="code-block">@{draw 500 300 name:Fig 4.2 &mdash; <span class="es">Diagrama de cortante</span><span class="en">Shear diagram</span>}
+...
+@{end draw}</div>
+
+<!-- ═══ 10. @{three} ═══ -->
+<h2 id="three"><span class="es">10. @{three} — Escenas 3D (Three.js)</span><span class="en">10. @{three} — 3D Scenes (Three.js)</span></h2>
+<p><span class="es">Escenas 3D interactivas con Three.js. Sintaxis: <code class="tag">@{three W H}</code></span>
+<span class="en">Interactive 3D scenes with Three.js. Syntax: <code class="tag">@{three W H}</code></span></p>
+
+<div class="code-block">@{three 600 400}
+box 0 0 0 size:2,1,3 color:#4488ff
+sphere 3 1 0 radius:0.5 color:#ff4444
+cylinder 0 2 0 radius:0.3 height:2 color:#44ff44
+light 5 5 5 intensity:1.5
+camera 5 3 5
+@{end three}</div>
+
+<h3><span class="exp" onclick="toggle(this,'threecmds')">+</span> <span class="es">Objetos 3D disponibles</span><span class="en">Available 3D objects</span></h3>
+<div class="collapsible" id="threecmds">
+<table class="fn-table">
+    <tr><th><span class="es">Objeto</span><span class="en">Object</span></th><th><span class="es">Par&aacute;metros clave</span><span class="en">Key parameters</span></th></tr>
+    <tr><td><code>box</code></td><td>x y z <code>size:w,h,d</code> color:#hex</td></tr>
+    <tr><td><code>sphere</code></td><td>x y z <code>radius:r</code> color:#hex</td></tr>
+    <tr><td><code>cylinder</code></td><td>x y z <code>radius:r</code> <code>height:h</code> color:#hex</td></tr>
+    <tr><td><code>plane</code></td><td>x y z <code>width:w</code> <code>height:h</code> color:#hex</td></tr>
+    <tr><td><code>line3d</code></td><td>x1 y1 z1 x2 y2 z2 color:#hex</td></tr>
+    <tr><td><code>arrow3d</code></td><td>x1 y1 z1 x2 y2 z2 color:#hex</td></tr>
+    <tr><td><code>text3d</code></td><td>x y z <span class="es">contenido</span><span class="en">content</span> size:n color:#hex</td></tr>
+    <tr><td><code>light</code></td><td>x y z intensity:n</td></tr>
+    <tr><td><code>camera</code></td><td>x y z target:tx,ty,tz</td></tr>
+    <tr><td><code>grid</code></td><td>size divisions color:#hex</td></tr>
+</table>
+<div class="note"><span class="es"><b>Nota:</b> <code>box</code> usa <code>size:w,h,d</code> como par&aacute;metro nombrado, NO posicional. Sin <code>size:</code>, el cubo es 1&times;1&times;1.</span>
+<span class="en"><b>Note:</b> <code>box</code> uses <code>size:w,h,d</code> as a named parameter, NOT positional. Without <code>size:</code>, the cube defaults to 1&times;1&times;1.</span></div>
+</div>
+
+<!-- ═══ 11. @{config} ═══ -->
+<h2 id="config"><span class="es">11. @{config} — Configuraci&oacute;n del documento</span><span class="en">11. @{config} — Document configuration</span></h2>
+<div class="code-block">@{config bg:book, header:on, startpage:1, headertitle:<span class="es">An&aacute;lisis Estructural</span><span class="en">Structural Analysis</span>}
+@{config eq:$, text:"}       // <span class="es">Delimitadores inline</span><span class="en">Inline delimiters</span>
+@{config color:black}        // <span class="es">Ecuaciones en negro</span><span class="en">Equations in black</span>
+@{config bold:on}            // <span class="es">Ecuaciones en negrita</span><span class="en">Bold equations</span>
+@{config frac:off}           // <span class="es">Fracciones inline (no verticales)</span><span class="en">Inline fractions (not vertical)</span>
+@{config notation:eng}       // <span class="es">Notaci&oacute;n ingenieril</span><span class="en">Engineering notation</span>
+@{config footer:on}          // <span class="es">Pie de p&aacute;gina con n&uacute;mero</span><span class="en">Footer with page number</span>
+@{config comment:#}          // <span class="es">Cambiar delimitador de comentario</span><span class="en">Change comment delimiter</span>
+@{config hide:fn1,fn2}       // <span class="es">Ocultar funciones en output</span><span class="en">Hide functions from output</span>
+@{end config}</div>
+
+<h3><span class="exp" onclick="toggle(this,'configopts')">+</span> <span class="es">Opciones de configuraci&oacute;n</span><span class="en">Configuration options</span></h3>
+<div class="collapsible" id="configopts">
+<table class="fn-table">
+    <tr><th><span class="es">Opci&oacute;n</span><span class="en">Option</span></th><th><span class="es">Valores</span><span class="en">Values</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>bg</code></td><td>book, cream, white, dark, gray, sepia, #hex</td><td><span class="es">Color de fondo de p&aacute;gina</span><span class="en">Page background color</span></td></tr>
+    <tr><td><code>header</code></td><td>on / off</td><td><span class="es">Encabezado con n&uacute;mero de p&aacute;gina</span><span class="en">Header with page number</span></td></tr>
+    <tr><td><code>footer</code></td><td>on / off</td><td><span class="es">Pie de p&aacute;gina con n&uacute;mero</span><span class="en">Footer with page number</span></td></tr>
+    <tr><td><code>startpage</code></td><td><span class="es">n&uacute;mero</span><span class="en">number</span></td><td><span class="es">N&uacute;mero de p&aacute;gina inicial</span><span class="en">Starting page number</span></td></tr>
+    <tr><td><code>headertitle</code></td><td><span class="es">texto</span><span class="en">text</span></td><td><span class="es">T&iacute;tulo en el encabezado</span><span class="en">Header title</span></td></tr>
+    <tr><td><code>eq</code></td><td><span class="es">delimitador (ej: $)</span><span class="en">delimiter (e.g.: $)</span></td><td><span class="es">Ecuaci&oacute;n inline: $F=ma$</span><span class="en">Inline equation: $F=ma$</span></td></tr>
+    <tr><td><code>text</code></td><td><span class="es">delimitador (ej: ")</span><span class="en">delimiter (e.g.: ")</span></td><td><span class="es">Texto inline: "hola"</span><span class="en">Inline text: "hello"</span></td></tr>
+    <tr><td><code>color</code></td><td>black / default</td><td><span class="es">Color de ecuaciones</span><span class="en">Equation color</span></td></tr>
+    <tr><td><code>bold</code></td><td>on / off</td><td><span class="es">Ecuaciones en negrita</span><span class="en">Bold equations</span></td></tr>
+    <tr><td><code>frac</code></td><td>on / off</td><td><span class="es">Fracciones verticales</span><span class="en">Vertical fractions</span></td></tr>
+    <tr><td><code>notation</code></td><td>auto / eng / sci</td><td><span class="es">Formato num&eacute;rico</span><span class="en">Number format</span></td></tr>
+    <tr><td><code>comment</code></td><td>string</td><td><span class="es">Delimitador de comentario</span><span class="en">Comment delimiter</span></td></tr>
+    <tr><td><code>hide</code></td><td>fn1,fn2,...</td><td><span class="es">Funciones a ocultar</span><span class="en">Functions to hide</span></td></tr>
+    <tr><td><code>units</code></td><td>force,length</td><td><span class="es">Sistema de unidades (ej: kip,inch o kN,m)</span><span class="en">Unit system (e.g.: kip,inch or kN,m)</span></td></tr>
+    <tr><td><code>decimals</code></td><td><span class="es">n&uacute;mero</span><span class="en">number</span></td><td><span class="es">D&iacute;gitos decimales (default: 4)</span><span class="en">Decimal digits (default: 4)</span></td></tr>
+</table>
+</div>
+
+<!-- ═══ 12. LAYOUT ═══ -->
+<h2 id="layout"><span class="es">12. Layout y formato</span><span class="en">12. Layout and formatting</span></h2>
+
+<h4><span class="es">Bloques disponibles</span><span class="en">Available blocks</span></h4>
+<table class="fn-table">
+    <tr><th><span class="es">Bloque</span><span class="en">Block</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code class="tag">@{text}...@{end text}</code></td><td><span class="es">Bloque de texto (no evaluar)</span><span class="en">Text block (not evaluated)</span></td></tr>
+    <tr><td><code class="tag">@{eq}...@{end eq}</code></td><td><span class="es">Ecuaciones simb&oacute;licas</span><span class="en">Symbolic equations</span></td></tr>
+    <tr><td><code class="tag">@{draw W H}...@{end draw}</code></td><td><span class="es">Diagrama CAD 2D</span><span class="en">CAD 2D diagram</span></td></tr>
+    <tr><td><code class="tag">@{three W H}...@{end three}</code></td><td><span class="es">Escena 3D</span><span class="en">3D scene</span></td></tr>
+    <tr><td><code class="tag">@{columns N}...@{end columns}</code></td><td><span class="es">Layout multi-columna</span><span class="en">Multi-column layout</span></td></tr>
+    <tr><td><code class="tag">@{css}...@{end css}</code></td><td><span class="es">Estilos CSS personalizados</span><span class="en">Custom CSS styles</span></td></tr>
+    <tr><td><code class="tag">@{config}...@{end config}</code></td><td><span class="es">Configuraci&oacute;n del documento</span><span class="en">Document configuration</span></td></tr>
+    <tr><td><code class="tag">@{pagebreak}</code></td><td><span class="es">Salto de p&aacute;gina</span><span class="en">Page break</span></td></tr>
+    <tr><td><code>---</code></td><td><span class="es">L&iacute;nea horizontal</span><span class="en">Horizontal rule</span></td></tr>
+</table>
+
+<h4><span class="es">Im&aacute;genes base64</span><span class="en">Base64 images</span></h4>
+<div class="code-block">@{image64 name:<span class="es">Foto del puente</span><span class="en">Bridge photo</span>}
+data:image/png;base64,iVBORw0KGgo...
+@{end image64}</div>
+
+<!-- ═══ 13. SHORTCUTS ═══ -->
+<h2 id="shortcuts"><span class="es">13. Atajos de teclado</span><span class="en">13. Keyboard shortcuts</span></h2>
+<table class="fn-table">
+    <tr><th><span class="es">Tecla</span><span class="en">Key</span></th><th><span class="es">Acci&oacute;n</span><span class="en">Action</span></th></tr>
+    <tr><td><span class="kbd">F5</span></td><td><span class="es">Calcular (Run)</span><span class="en">Calculate (Run)</span></td></tr>
+    <tr><td><span class="kbd">Ctrl+S</span></td><td><span class="es">Guardar archivo</span><span class="en">Save file</span></td></tr>
+    <tr><td><span class="kbd">Ctrl+O</span></td><td><span class="es">Abrir archivo</span><span class="en">Open file</span></td></tr>
+    <tr><td><span class="kbd">Ctrl+F</span></td><td><span class="es">Buscar y reemplazar</span><span class="en">Find and replace</span></td></tr>
+    <tr><td><span class="kbd">Ctrl+Z</span></td><td><span class="es">Deshacer</span><span class="en">Undo</span></td></tr>
+    <tr><td><span class="kbd">Ctrl+Y</span></td><td><span class="es">Rehacer</span><span class="en">Redo</span></td></tr>
+    <tr><td><span class="kbd">Ctrl+A</span></td><td><span class="es">Seleccionar todo</span><span class="en">Select all</span></td></tr>
+    <tr><td><span class="kbd">Ctrl+P</span></td><td><span class="es">Imprimir</span><span class="en">Print</span></td></tr>
+    <tr><td><span class="kbd">F12</span></td><td><span class="es">Consola de depuraci&oacute;n</span><span class="en">Debug CLI</span></td></tr>
+    <tr><td><span class="kbd">Tab</span></td><td><span class="es">Indentar</span><span class="en">Indent</span></td></tr>
+    <tr><td><span class="kbd">Shift+Tab</span></td><td><span class="es">Des-indentar</span><span class="en">Unindent</span></td></tr>
+</table>
+
+<!-- ═══ 14. CALCULUS ═══ -->
+<h2 id="calculus"><span class="es">14. C&aacute;lculo y an&aacute;lisis num&eacute;rico</span><span class="en">14. Calculus and numerical analysis</span></h2>
+
+<h3><span class="exp" onclick="toggle(this,'integrals')">+</span> <span class="es">Integrales num&eacute;ricas</span><span class="en">Numerical integrals</span></h3>
+<div class="collapsible" id="integrals">
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>integral(f, a, b)</code></td><td><span class="es">Integral definida (Gauss-Legendre 10 pts)</span><span class="en">Definite integral (Gauss-Legendre 10 pts)</span></td></tr>
+    <tr><td><code>integral(f, a, b, n)</code></td><td><span class="es">Integral con n puntos de cuadratura</span><span class="en">Integral with n quadrature points</span></td></tr>
+    <tr><td><code>integral2(f, xa, xb, ya, yb)</code></td><td><span class="es">Integral doble</span><span class="en">Double integral</span></td></tr>
+    <tr><td><code>integral3(f, xa, xb, ya, yb, za, zb)</code></td><td><span class="es">Integral triple</span><span class="en">Triple integral</span></td></tr>
+    <tr><td><code>trapezoid(f, a, b, n)</code> / <code>trap(...)</code></td><td><span class="es">Regla del trapecio</span><span class="en">Trapezoidal rule</span></td></tr>
+    <tr><td><code>simpson(f, a, b, n)</code></td><td><span class="es">Regla de Simpson</span><span class="en">Simpson's rule</span></td></tr>
+</table>
+<div class="code-block">f(x) = x^2
+integral(f, 0, 1)       // &rarr; 0.3333...
+integral2((x,y) =&gt; x*y, 0, 1, 0, 2)   // &rarr; 1.0</div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'derivatives')">+</span> <span class="es">Derivadas y l&iacute;mites</span><span class="en">Derivatives and limits</span></h3>
+<div class="collapsible" id="derivatives">
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>nderiv(f, x)</code></td><td><span class="es">Derivada num&eacute;rica f'(x)</span><span class="en">Numerical derivative f'(x)</span></td></tr>
+    <tr><td><code>nderiv(f, x, 2)</code></td><td><span class="es">Segunda derivada f''(x)</span><span class="en">Second derivative f''(x)</span></td></tr>
+    <tr><td><code>nlimit(f, x0)</code> / <code>lim(f, x0)</code></td><td><span class="es">L&iacute;mite num&eacute;rico</span><span class="en">Numerical limit</span></td></tr>
+</table>
+<div class="code-block">f(x) = x^3
+nderiv(f, 2)            // &rarr; 12 (= 3&middot;2&sup2;)
+nderiv(f, 2, 2)         // &rarr; 12 (= 6&middot;2)
+lim(x =&gt; sin(x)/x, 0)  // &rarr; 1</div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'ode')">+</span> <span class="es">Ecuaciones diferenciales</span><span class="en">Differential equations</span></h3>
+<div class="collapsible" id="ode">
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>odesolve(f, y0, t0, tf)</code></td><td><span class="es">Resolver ODE dy/dt = f(t,y), Runge-Kutta 4</span><span class="en">Solve ODE dy/dt = f(t,y), Runge-Kutta 4</span></td></tr>
+    <tr><td><code>odesolve(f, y0, t0, tf, steps)</code></td><td><span class="es">Con n&uacute;mero de pasos</span><span class="en">With number of steps</span></td></tr>
+    <tr><td><code>euler(f, y0, t0, tf, steps)</code></td><td><span class="es">M&eacute;todo de Euler</span><span class="en">Euler method</span></td></tr>
+</table>
+<div class="code-block">// dy/dt = -y, y(0)=1 &rarr; y = e^(-t)
+f(t, y) = -y
+sol = odesolve(f, 1, 0, 2, 100)
+// sol.<span class="es">t y sol.y son vectores de tiempo y soluci&oacute;n</span><span class="en">t and sol.y are time and solution vectors</span></div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'rootfinding')">+</span> <span class="es">B&uacute;squeda de ra&iacute;ces</span><span class="en">Root finding</span></h3>
+<div class="collapsible" id="rootfinding">
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>nsolve(f, x0)</code></td><td>Newton-Raphson <span class="es">desde</span><span class="en">from</span> x0</td></tr>
+    <tr><td><code>bisect(f, a, b)</code></td><td><span class="es">Bisecci&oacute;n en [a, b]</span><span class="en">Bisection on [a, b]</span></td></tr>
+    <tr><td><code>secant(f, x0, x1)</code></td><td><span class="es">M&eacute;todo de la secante</span><span class="en">Secant method</span></td></tr>
+</table>
+<div class="code-block">f(x) = x^2 - 4
+nsolve(f, 3)            // &rarr; 2
+bisect(f, 0, 5)         // &rarr; 2
+secant(f, 1, 3)         // &rarr; 2</div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'sums')">+</span> <span class="es">Sumatorias y productorias</span><span class="en">Summations and products</span></h3>
+<div class="collapsible" id="sums">
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>summation(f, a, b)</code></td><td>&Sigma; f(k) <span class="es">para</span><span class="en">for</span> k = a..b</td></tr>
+    <tr><td><code>nproduct(f, a, b)</code></td><td>&Pi; f(k) <span class="es">para</span><span class="en">for</span> k = a..b</td></tr>
+</table>
+<div class="code-block">summation(k =&gt; 1/k^2, 1, 1000)    // &rarr; &asymp; &pi;&sup2;/6</div>
+</div>
+
+<!-- ═══ 15. STATISTICS ═══ -->
+<h2 id="statistics"><span class="es">15. Estad&iacute;stica y regresi&oacute;n</span><span class="en">15. Statistics and regression</span></h2>
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>mean(data)</code></td><td><span class="es">Media aritm&eacute;tica</span><span class="en">Arithmetic mean</span></td></tr>
+    <tr><td><code>median(data)</code></td><td><span class="es">Mediana</span><span class="en">Median</span></td></tr>
+    <tr><td><code>std(data)</code> / <code>stdev(data)</code></td><td><span class="es">Desviaci&oacute;n est&aacute;ndar</span><span class="en">Standard deviation</span></td></tr>
+    <tr><td><code>variance(data)</code></td><td><span class="es">Varianza</span><span class="en">Variance</span></td></tr>
+    <tr><td><code>sum(data)</code></td><td><span class="es">Suma</span><span class="en">Sum</span></td></tr>
+    <tr><td><code>prod(data)</code></td><td><span class="es">Producto</span><span class="en">Product</span></td></tr>
+    <tr><td><code>interp(xd, yd, x)</code></td><td><span class="es">Interpolaci&oacute;n lineal</span><span class="en">Linear interpolation</span></td></tr>
+    <tr><td><code>lagrange(xd, yd, x)</code></td><td><span class="es">Interpolaci&oacute;n de Lagrange</span><span class="en">Lagrange interpolation</span></td></tr>
+    <tr><td><code>linreg(xd, yd)</code> / <code>linfit(xd, yd)</code></td><td><span class="es">Regresi&oacute;n lineal &rarr; {slope, intercept, r2}</span><span class="en">Linear regression &rarr; {slope, intercept, r2}</span></td></tr>
+</table>
+
+<div class="code-block">data = [4, 8, 6, 5, 3, 7, 9, 1]
+mean(data)              // &rarr; 5.375
+median(data)            // &rarr; 5.5
+std(data)               // <span class="es">Desviaci&oacute;n est&aacute;ndar</span><span class="en">Standard deviation</span>
+sum(data)               // &rarr; 43
+
+// <span class="es">Interpolaci&oacute;n lineal</span><span class="en">Linear interpolation</span>
+xd = [0, 1, 2, 3]
+yd = [0, 1, 4, 9]
+interp(xd, yd, 1.5)    // &rarr; 2.5
+
+// <span class="es">Regresi&oacute;n lineal</span><span class="en">Linear regression</span>
+r = linreg(xd, yd)     // r.slope, r.intercept, r.r2</div>
+
+<!-- ═══ 16. NUMBER THEORY ═══ -->
+<h2 id="numtheory"><span class="es">16. Teor&iacute;a de n&uacute;meros</span><span class="en">16. Number theory</span></h2>
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>gcd(a, b)</code></td><td><span class="es">M&aacute;ximo com&uacute;n divisor</span><span class="en">Greatest common divisor</span></td></tr>
+    <tr><td><code>lcm(a, b)</code></td><td><span class="es">M&iacute;nimo com&uacute;n m&uacute;ltiplo</span><span class="en">Least common multiple</span></td></tr>
+    <tr><td><code>factorial(n)</code> / <code>n!</code></td><td><span class="es">Factorial</span><span class="en">Factorial</span></td></tr>
+    <tr><td><code>fibonacci(n)</code> / <code>fib(n)</code></td><td><span class="es">N&uacute;mero de Fibonacci</span><span class="en">Fibonacci number</span></td></tr>
+    <tr><td><code>isprime(n)</code></td><td><span class="es">&iquest;Es primo? (true/false)</span><span class="en">Is prime? (true/false)</span></td></tr>
+    <tr><td><code>mod(a, b)</code></td><td><span class="es">M&oacute;dulo</span><span class="en">Modulo</span></td></tr>
+</table>
+
+<div class="code-block">gcd(12, 18)             // &rarr; 6
+lcm(4, 6)              // &rarr; 12
+fibonacci(10)           // &rarr; 55
+isprime(17)             // &rarr; true
+7!                      // &rarr; 5040</div>
+
+<h3><span class="exp" onclick="toggle(this,'series')">+</span> <span class="es">Series y progresiones</span><span class="en">Series and progressions</span></h3>
+<div class="collapsible" id="series">
+<table class="fn-table">
+    <tr><th><span class="es">Funci&oacute;n</span><span class="en">Function</span></th><th><span class="es">Descripci&oacute;n</span><span class="en">Description</span></th></tr>
+    <tr><td><code>arithsum(a, d, n)</code></td><td><span class="es">Suma aritm&eacute;tica: n/2&middot;(2a + (n-1)d)</span><span class="en">Arithmetic sum: n/2&middot;(2a + (n-1)d)</span></td></tr>
+    <tr><td><code>geomsum(a, r, n)</code></td><td><span class="es">Suma geom&eacute;trica: a&middot;(1-r^n)/(1-r)</span><span class="en">Geometric sum: a&middot;(1-r^n)/(1-r)</span></td></tr>
+    <tr><td><code>geominf(a, r)</code></td><td><span class="es">Serie geom&eacute;trica infinita: a/(1-r)</span><span class="en">Infinite geometric series: a/(1-r)</span></td></tr>
+</table>
+<div class="code-block">arithsum(1, 2, 10)      // &rarr; 100 (1+3+5+...+19)
+geomsum(1, 0.5, 10)    // &rarr; 1.998...
+geominf(1, 0.5)         // &rarr; 2</div>
+</div>
+
+<!-- ═══ 17. UNITS ═══ -->
+<h2 id="units"><span class="es">17. Sistema de unidades</span><span class="en">17. Unit system</span></h2>
+<p><span class="es">Hekatan soporta c&aacute;lculo con unidades f&iacute;sicas basado en <b>math.js</b>. Use <code class="tag">@{config units:fuerza,longitud}</code> para activar el sistema de unidades.</span>
+<span class="en">Hekatan supports physical unit calculations based on <b>math.js</b>. Use <code class="tag">@{config units:force,length}</code> to activate the unit system.</span></p>
+
+<h4><span class="es">Activar unidades</span><span class="en">Activate units</span></h4>
+<div class="code-block">@{config units:kip,inch}          // <span class="es">Sistema: kip + inch</span><span class="en">System: kip + inch</span>
+@{config units:kN,m}              // <span class="es">Sistema: kilonewton + metro</span><span class="en">System: kilonewton + meter</span>
+@{config units:lbf,ft}            // <span class="es">Sistema: libra-fuerza + pie</span><span class="en">System: pound-force + foot</span>
+@{config units:tonf,m}            // <span class="es">Sistema: ton-fuerza + metro</span><span class="en">System: ton-force + meter</span></div>
+
+<h4><span class="es">Asignar unidades a variables</span><span class="en">Assign units to variables</span></h4>
+<div class="code-block">L = 100 inch                      // <span class="es">Longitud con unidades</span><span class="en">Length with units</span>
+E = 29000 kip/inch^2              // <span class="es">M&oacute;dulo de elasticidad</span><span class="en">Modulus of elasticity</span>
+I = 882 inch^4                    // <span class="es">Momento de inercia</span><span class="en">Moment of inertia</span>
+A = 44.2 inch^2                   // <span class="es">&Aacute;rea</span><span class="en">Area</span></div>
+
+<h4><span class="es">Anotaci&oacute;n de unidades con &amp;</span><span class="en">Unit annotation with &amp;</span></h4>
+<div class="code-block">EI = E * I                        // <span class="es">Sin anotaci&oacute;n: muestra en unidades base</span><span class="en">No annotation: shows in base units</span>
+EI = E * I &amp; kip*inch^2           // <span class="es">Con &amp;: convierte y muestra en kip&middot;in&sup2;</span><span class="en">With &amp;: converts and displays in kip&middot;in&sup2;</span></div>
+<div class="note">
+    <span class="es"><b>Nota:</b> <code>&amp; unidad</code> no es solo una etiqueta &mdash; realiza conversi&oacute;n real de unidades. El resultado se convierte al sistema indicado.</span>
+    <span class="en"><b>Note:</b> <code>&amp; unit</code> is not just a label &mdash; it performs actual unit conversion. The result is converted to the indicated system.</span>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'unitperrow')">+</span> <span class="es">Unidades por fila (vectores/matrices)</span><span class="en">Per-row units (vectors/matrices)</span></h3>
+<div class="collapsible" id="unitperrow">
+<p><span class="es">Para vectores y matrices donde cada fila tiene unidades diferentes, use la sintaxis <code>&amp; [u1, u2, ...]</code>:</span>
+<span class="en">For vectors and matrices where each row has different units, use the syntax <code>&amp; [u1, u2, ...]</code>:</span></p>
+<div class="code-block">// <span class="es">Vector de fuerzas con DOFs mixtos</span><span class="en">Force vector with mixed DOFs</span>
+F = col(10, 500, -20) &amp; [kip, kip*in, kip]
+
+// <span class="es">Vector de desplazamientos</span><span class="en">Displacement vector</span>
+u = lsolve(K, F) &amp; [rad, rad, inch]
+
+// <span class="es">Separador | para unidades de salida diferentes</span><span class="en">Separator | for different output units</span>
+u = lsolve(K, F) &amp; [rad, rad, in] | [rad, rad, mm]</div>
+<div class="note">
+    <span class="es"><b>Alias de display:</b> <code>inch</code>&rarr;<code>in</code>, <code>foot</code>&rarr;<code>ft</code>, <code>kilonewton</code>&rarr;<code>kN</code>, <code>meter</code>&rarr;<code>m</code>, <code>millimeter</code>&rarr;<code>mm</code>. Las fracciones se simplifican autom&aacute;ticamente: <code>kip*in/in</code>&rarr;<code>kip</code>.</span>
+    <span class="en"><b>Display aliases:</b> <code>inch</code>&rarr;<code>in</code>, <code>foot</code>&rarr;<code>ft</code>, <code>kilonewton</code>&rarr;<code>kN</code>, <code>meter</code>&rarr;<code>m</code>, <code>millimeter</code>&rarr;<code>mm</code>. Fractions are automatically simplified: <code>kip*in/in</code>&rarr;<code>kip</code>.</span>
+</div>
+</div>
+
+<h3><span class="exp" onclick="toggle(this,'unitexample')">+</span> <span class="es">Ejemplo completo con unidades</span><span class="en">Full example with units</span></h3>
+<div class="collapsible" id="unitexample">
+<div class="code-block"># <span class="es">An&aacute;lisis de Viga</span><span class="en">Beam Analysis</span>
+
+// <span class="es">Propiedades del material</span><span class="en">Material properties</span>
+E = 29000 kip/inch^2
+I = 882 inch^4
+L = 100 inch
+
+// <span class="es">Coeficientes</span><span class="en">Coefficients</span>
+a_4 = 4*E*I/L &amp; kip*inch
+c_12 = 12*E*I/L^3 &amp; kip/inch
+
+// <span class="es">Activar sistema de unidades</span><span class="en">Activate unit system</span>
+@{config units:kip,inch}
+
+// <span class="es">Resolver sistema</span><span class="en">Solve system</span>
+K = [[a_4, c_12]; [c_12, a_4]]
+F = col(100, -5) &amp; [kip*inch, kip]
+u = lsolve(K, F) &amp; [rad, inch]</div>
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<hr style="border-top: 2px solid #00D4AA; margin-top: 24px;">
+<p style="font-size: 9pt; color: #999; text-align: center;">
+    Hekatan Math Editor v1.0 — math.js + Eigen C++/WebAssembly | Equations | CAD 2D | Three.js 3D<br>
+    &copy; 2026 Hekatan Project
+</p>
+
+<script>
+function toggle(btn, id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.style.display === 'block') {
+        el.style.display = 'none';
+        btn.textContent = '+';
+    } else {
+        el.style.display = 'block';
+        btn.textContent = '\u2212';
+    }
+}
+function switchLang(lang) {
+    document.body.classList.toggle('lang-en', lang === 'en');
+    localStorage.setItem('hekatan-help-lang', lang);
+}
+// Restore saved language preference
+(function() {
+    const saved = localStorage.getItem('hekatan-help-lang');
+    if (saved === 'en') {
+        document.getElementById('langSwitch').value = 'en';
+        switchLang('en');
+    }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+@{config bg:book, align:center, color:black}
+---
+# Algebra Lineal
+---
+@{config align:left}
+
+## 1 Operaciones con Matrices
+
+> Definicion de matrices
+A = [[1, 2, 3],[4, 5, 6],[7, 8, 10]]
+B = [[2, 0, 1],[0, 3, 0],[1, 0, 2]]
+
+> Suma
+C = A + B
+
+> Resta
+D = A - B
+
+> Multiplicacion
+E = A * B
+
+> Transpuesta
+At = transpose(A)
+
+> Determinante
+detA = det(A)
+
+> Inversa
+Ainv = inverse(A)
+
+> Verificacion: A * Ainv = I
+Check = A * Ainv
+
+## 2 Sistema de Ecuaciones Lineales
+
+> Resolver: K * u = F
+> Matriz de coeficientes (rigidez)
+K = [[10, -5, 0],[-5, 10, -5],[0, -5, 5]]
+
+> Vector de cargas
+F = [[20],[10],[5]]
+
+> Solucion
+u = lsolve(K, F)
+
+> Verificacion
+R = K * u
+
+## 3 Ensamblaje de Matriz de Rigidez
+
+> Elemento 1: nodos 1-2, rigidez k=100
+k_e1 = [[100, -100],[-100, 100]]
+
+> Elemento 2: nodos 2-3, rigidez k=200
+k_e2 = [[200, -200],[-200, 200]]
+
+> Elemento 3: nodos 1-3, rigidez k=50
+k_e3 = [[50, -50],[-50, 50]]
+
+> Ensamblaje directo en matriz global 3x3
+> K_G(1,1) = k_e1(1,1) + k_e3(1,1)
+> K_G(1,2) = k_e1(1,2)
+> K_G(1,3) = k_e3(1,2)
+> K_G(2,2) = k_e1(2,2) + k_e2(1,1)
+> K_G(2,3) = k_e2(1,2)
+> K_G(3,3) = k_e2(2,2) + k_e3(2,2)
+K_G = [[100+50, -100, -50],[-100, 100+200, -200],[-50, -200, 200+50]]
+
+> Vector de fuerzas nodales
+F_G = [[0],[10],[5]]
+
+## 4 Solucion del Sistema
+
+> Condiciones de frontera: nodo 1 fijo (u_1 = 0)
+> Reducir: eliminar fila/columna 1
+K_R = [[300, -200],[-200, 250]]
+F_R = [[10],[5]]
+
+> Desplazamientos libres
+u_R = lsolve(K_R, F_R)
+
+> Verificacion
+R_check = K_R * u_R

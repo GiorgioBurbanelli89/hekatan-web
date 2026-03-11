@@ -338,33 +338,74 @@ class Parser {
         this.expect("rbracket"); // consume outer ]
         return { type: "matrix", rows };
       }
-      // Vector [a, b, c] or MATLAB-style matrix [a, b; c, d]
-      // Parse first row: elements separated by commas
-      const firstRow: ASTNode[] = [];
-      firstRow.push(this.parseExpr());
-      while (this.peek().type === "comma") {
-        this.advance();
-        firstRow.push(this.parseExpr());
-      }
-      // Semicolons → additional rows (MATLAB-style matrix)
-      if (this.peek().type === "semicolon") {
-        const rows: ASTNode[][] = [firstRow];
-        while (this.peek().type === "semicolon") {
-          this.advance(); // consume ;
-          const row: ASTNode[] = [];
-          row.push(this.parseExpr());
-          while (this.peek().type === "comma") {
+      // Vector [a, b, c] or MATLAB-style [a, b; c, d] or Calcpad-style [a; b| c; d]
+      // Parse first element
+      const firstEl: ASTNode[] = [];
+      firstEl.push(this.parseExpr());
+
+      // Detect separator style: comma → MATLAB cols, semicolon could be either
+      if (this.peek().type === "comma") {
+        // Comma-separated: [a, b, c] vector or [a, b; c, d] MATLAB matrix
+        while (this.peek().type === "comma") {
+          this.advance();
+          firstEl.push(this.parseExpr());
+        }
+        // Semicolons → additional rows (MATLAB-style: comma=cols, semicolon=rows)
+        if (this.peek().type === "semicolon") {
+          const rows: ASTNode[][] = [firstEl];
+          while (this.peek().type === "semicolon") {
             this.advance();
+            const row: ASTNode[] = [];
             row.push(this.parseExpr());
+            while (this.peek().type === "comma") {
+              this.advance();
+              row.push(this.parseExpr());
+            }
+            rows.push(row);
           }
-          rows.push(row);
+          this.expect("rbracket");
+          return { type: "matrix", rows };
         }
         this.expect("rbracket");
-        // Semicolons always produce a matrix (column vector if single-col)
+        return { type: "vector", elements: firstEl };
+      }
+
+      if (this.peek().type === "semicolon") {
+        // Semicolon after first element: could be MATLAB row-sep or Calcpad col-sep
+        // Peek ahead to see if there's a pipe → Calcpad style [a; b| c; d]
+        // Collect elements separated by semicolons for first "row"
+        const calcpadFirstRow: ASTNode[] = [firstEl[0]];
+        while (this.peek().type === "semicolon") {
+          this.advance();
+          calcpadFirstRow.push(this.parseExpr());
+          // If we hit pipe → confirmed Calcpad style (semicolon=cols, pipe=rows)
+          if (this.peek().type === "pipe") {
+            const rows: ASTNode[][] = [calcpadFirstRow];
+            while (this.peek().type === "pipe") {
+              this.advance();
+              const row: ASTNode[] = [];
+              row.push(this.parseExpr());
+              while (this.peek().type === "semicolon") {
+                this.advance();
+                row.push(this.parseExpr());
+              }
+              rows.push(row);
+            }
+            this.expect("rbracket");
+            return { type: "matrix", rows };
+          }
+        }
+        // No pipe found → MATLAB style (semicolon=rows, each row has single element)
+        const rows: ASTNode[][] = [[firstEl[0]]];
+        for (let ci = 1; ci < calcpadFirstRow.length; ci++) {
+          rows.push([calcpadFirstRow[ci]]);
+        }
+        this.expect("rbracket");
         return { type: "matrix", rows };
       }
+
       this.expect("rbracket");
-      return { type: "vector", elements: firstRow };
+      return { type: "vector", elements: firstEl };
     }
 
     // Cell array: {a; b; c}
@@ -475,8 +516,10 @@ export class HekatanEnvironment {
   }
 
   getVar(name: string): EnvVal | undefined {
+    const userVal = this.variables.get(name);
+    if (userVal !== undefined) return userVal;
     if (CONSTANTS[name] !== undefined) return CONSTANTS[name];
-    return this.variables.get(name);
+    return undefined;
   }
 
   setVar(name: string, value: EnvVal): void {
@@ -564,10 +607,31 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
           const res = matMul(toMat(l), mv);
           return res.map(row => row[0]);
         }
+        if (l1 && r1) {
+          // Vector * Vector → element-wise multiplication
+          return (l as number[]).map((v, i) => v * ((r as number[])[i] ?? 0));
+        }
         if (l2 && rScalar) return matScale(toMat(l), r as number);
         if (lScalar && r2) return matScale(toMat(r), l as number);
         if (lScalar && r1) return (r as number[]).map(v => (l as number) * v);
         if (l1 && rScalar) return (l as number[]).map(v => v * (r as number));
+      }
+      if (node.op === "/") {
+        // Element-wise division for vectors/matrices
+        if (l1 && r1) return (l as number[]).map((v, i) => v / ((r as number[])[i] || NaN));
+        if (l1 && rScalar) return (l as number[]).map(v => v / (r as number));
+        if (lScalar && r1) return (r as number[]).map(v => (l as number) / v);
+        if (l2 && rScalar) return toMat(l).map(row => row.map(v => v / (r as number)));
+        if (lScalar && r2) return toMat(r).map(row => row.map(v => (l as number) / v));
+        if (l2 && r2) return toMat(l).map((row, i) => row.map((v, j) => v / (toMat(r)[i]?.[j] || NaN)));
+      }
+      if (node.op === "^") {
+        // Element-wise power for vectors/matrices
+        if (l1 && rScalar) return (l as number[]).map(v => Math.pow(v, r as number));
+        if (l1 && r1) return (l as number[]).map((v, i) => Math.pow(v, (r as number[])[i] ?? 1));
+        if (lScalar && r1) return (r as number[]).map(v => Math.pow(l as number, v));
+        if (l2 && rScalar) return toMat(l).map(row => row.map(v => Math.pow(v, r as number)));
+        if (l2 && r2) return toMat(l).map((row, i) => row.map((v, j) => Math.pow(v, toMat(r)[i]?.[j] ?? 1)));
       }
       if (node.op === "+" || node.op === "-") {
         const sign = node.op === "+" ? 1 : -1;
@@ -575,6 +639,8 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
         if (l1 && r1) return (l as number[]).map((v, i) => v + sign * ((r as number[])[i] ?? 0));
         if (l2 && rScalar) return toMat(l).map(row => row.map(v => v + sign * (r as number)));
         if (lScalar && r2) return toMat(r).map(row => row.map(v => (l as number) + sign * v));
+        if (l1 && rScalar) return (l as number[]).map(v => v + sign * (r as number));
+        if (lScalar && r1) return (r as number[]).map(v => (l as number) + sign * v);
       }
 
       // Scalar fallback
@@ -601,10 +667,17 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
 
     case "unary": {
       const v = evaluate(node.operand, env);
-      const nv = typeof v === "number" ? v : NaN;
       switch (node.op) {
-        case "-": return -nv;
-        case "!": return nv ? 0 : 1;
+        case "-": {
+          if (typeof v === "number") return -v;
+          if (Array.isArray(v) && !is2D(v)) return (v as number[]).map(x => -x);
+          if (is2D(v)) return (v as number[][]).map(row => row.map(x => -x));
+          return NaN;
+        }
+        case "!": {
+          const nv = typeof v === "number" ? v : NaN;
+          return nv ? 0 : 1;
+        }
         default: throw new Error(`Unknown unary operator: ${node.op}`);
       }
     }
@@ -630,13 +703,31 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
         return executeMultilineFunction(mlFn, evalArgs, env);
       }
 
-      // Built-in functions
+      // Built-in functions (element-wise on vectors/matrices for single-arg functions)
       const fn = BUILTINS[node.name];
       if (fn) {
-        const args = node.args.map(a => {
-          const v = evaluate(a, env);
-          return typeof v === "number" ? v : NaN;
-        });
+        const rawArgs = node.args.map(a => evaluate(a, env));
+        // Single-arg BUILTINS: apply element-wise on vectors/matrices
+        if (rawArgs.length === 1) {
+          const arg = rawArgs[0];
+          if (Array.isArray(arg) && !is2D(arg)) {
+            return (arg as number[]).map(v => fn(v));
+          }
+          if (is2D(arg)) {
+            return (arg as number[][]).map(row => row.map(v => fn(v)));
+          }
+        }
+        // Multi-arg: check if any arg is a vector → element-wise (e.g. pow, atan2, max, min)
+        if (rawArgs.length === 2) {
+          const a0 = rawArgs[0], a1 = rawArgs[1];
+          const a0v = Array.isArray(a0) && !is2D(a0), a1v = Array.isArray(a1) && !is2D(a1);
+          const a0s = typeof a0 === "number", a1s = typeof a1 === "number";
+          if (a0v && a1v) return (a0 as number[]).map((v, i) => fn(v, (a1 as number[])[i] ?? 0));
+          if (a0v && a1s) return (a0 as number[]).map(v => fn(v, a1 as number));
+          if (a0s && a1v) return (a1 as number[]).map(v => fn(a0 as number, v));
+        }
+        // Scalar fallback
+        const args = rawArgs.map(a => typeof a === "number" ? a : NaN);
         return fn(...args);
       }
 
@@ -774,6 +865,187 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
           // Fallback: JS Gaussian elimination
           const x = gaussianSolve(mat, bVec);
           return x.map(v => [v]);
+        }
+        return NaN;
+      }
+
+      // ─── Eigenvalues ──────────────────────────────────────────
+      // eigenvalues(A)    — eigenvalues of square matrix A (returns vector)
+      // eigenvalues(K, M) — generalized: eigenvalues of inv(M)*K
+      if (node.name === "eigenvalues" || node.name === "eig") {
+        if (node.args.length < 1) throw new Error("eigenvalues(A) requires 1 arg");
+        const A = evaluate(node.args[0], env);
+        if (!is2D(A)) throw new Error("eigenvalues: argument must be a matrix");
+        let mat = toMat(A);
+
+        if (node.args.length >= 2) {
+          // Generalized: eigenvalues(K, M) → eigenvalues of inv(M)*K
+          const M = evaluate(node.args[1], env);
+          if (!is2D(M)) throw new Error("eigenvalues: second argument must be a matrix");
+          const Mmat = toMat(M);
+          const Minv = eigenSolver.ready ? eigenSolver.inverseSync(Mmat) : matInverse(Mmat);
+          if (!Minv) throw new Error("eigenvalues: M matrix is singular");
+          mat = eigenSolver.ready && eigenSolver.multiplySync(Minv, mat) || matMul(Minv, mat);
+        }
+
+        if (eigenSolver.ready) {
+          const result = eigenSolver.eigenvaluesSync(mat);
+          if (result) return result.real;
+        }
+        // JS fallback: small matrices via QR iteration (simplified)
+        throw new Error("eigenvalues: WASM module not loaded — call eigenSolver.init() first");
+      }
+
+      // ─── Eigenvectors ─────────────────────────────────────────
+      // eigenvectors(A)    — eigenvectors of A (columns of result matrix)
+      // eigenvectors(K, M) — generalized + mass-normalized
+      if (node.name === "eigenvectors" || node.name === "eigvecs") {
+        if (node.args.length < 1) throw new Error("eigenvectors(A) requires 1 arg");
+        const A = evaluate(node.args[0], env);
+        if (!is2D(A)) throw new Error("eigenvectors: argument must be a matrix");
+        let mat = toMat(A);
+        let Mmat: number[][] | null = null;
+
+        if (node.args.length >= 2) {
+          const M = evaluate(node.args[1], env);
+          if (!is2D(M)) throw new Error("eigenvectors: second argument must be a matrix");
+          Mmat = toMat(M);
+          const Minv = eigenSolver.ready ? eigenSolver.inverseSync(Mmat) : matInverse(Mmat);
+          if (!Minv) throw new Error("eigenvectors: M matrix is singular");
+          mat = eigenSolver.ready && eigenSolver.multiplySync(Minv, mat) || matMul(Minv, mat);
+        }
+
+        if (eigenSolver.ready) {
+          const result = eigenSolver.eigenDecomposeSync(mat);
+          if (result) {
+            // result.vectors rows are eigenvectors → transpose so columns are eigenvectors
+            let vecs = matTranspose(result.vectors);
+            // Mass-normalize if M provided: φᵢ / √(φᵢᵀ·M·φᵢ)
+            if (Mmat) {
+              const n = vecs.length;
+              for (let c = 0; c < vecs[0].length; c++) {
+                const col = vecs.map(row => row[c]);
+                const Mphi = matMulVec(Mmat, col);
+                const mii = col.reduce((s, v, j) => s + v * Mphi[j], 0);
+                const scale = 1 / Math.sqrt(Math.abs(mii));
+                for (let j = 0; j < n; j++) vecs[j][c] *= scale;
+              }
+            }
+            return vecs;
+          }
+        }
+        throw new Error("eigenvectors: WASM module not loaded — call eigenSolver.init() first");
+      }
+
+      // ─── SVD ──────────────────────────────────────────────────
+      // svd(A) → returns cell array {U; S; V} where A = U*diag(S)*transpose(V)
+      if (node.name === "svd") {
+        if (node.args.length < 1) throw new Error("svd(A) requires 1 arg");
+        const A = evaluate(node.args[0], env);
+        if (!is2D(A)) throw new Error("svd: argument must be a matrix");
+        const mat = toMat(A);
+        if (eigenSolver.ready) {
+          const result = eigenSolver.svdSync(mat);
+          if (result) {
+            return { __cell: true, elements: [result.U, result.S, result.V] } as CellArray;
+          }
+        }
+        throw new Error("svd: WASM module not loaded — call eigenSolver.init() first");
+      }
+
+      // ─── Cell Array Functions ────────────────────────────────
+      // cell(n) — create empty cell array of size n
+      if (node.name === "cell") {
+        const n = Math.round(evaluate(node.args[0], env) as number);
+        const elements: HVal[] = new Array(n).fill(0);
+        return { __cell: true, elements } as CellArray;
+      }
+      // cells(a, b, c, ...) — create cell array from values
+      if (node.name === "cells") {
+        const elements: HVal[] = node.args.map(a => {
+          const v = evaluate(a, env);
+          if (isCellArray(v)) throw new Error("Nested cell arrays not supported");
+          return v as HVal;
+        });
+        return { __cell: true, elements } as CellArray;
+      }
+      // cset(V, i, val) — set element i of cell array V
+      if (node.name === "cset") {
+        if (node.args.length < 3) throw new Error("cset(V, i, val) requires 3 args");
+        const vName = node.args[0].type === "variable" ? node.args[0].name : null;
+        if (!vName) throw new Error("cset: first arg must be a variable name");
+        const cellVal = env.getVar(vName);
+        if (!isCellArray(cellVal)) throw new Error(`cset: '${vName}' is not a cell array`);
+        const idx = Math.round(evaluate(node.args[1], env) as number) - 1; // 1-based
+        const val = evaluate(node.args[2], env) as HVal;
+        cellVal.elements[idx] = val;
+        env.setVar(vName, cellVal);
+        return val;
+      }
+      // clen(V) — length of cell array
+      if (node.name === "clen") {
+        const v = evaluate(node.args[0], env);
+        if (isCellArray(v)) return v.elements.length;
+        return NaN;
+      }
+
+      // ─── dotMultiply — explicit element-wise multiplication ──
+      if (node.name === "dotMultiply" || node.name === "emul") {
+        if (node.args.length < 2) throw new Error("dotMultiply(a, b) requires 2 args");
+        const a = evaluate(node.args[0], env);
+        const b = evaluate(node.args[1], env);
+        const a1 = Array.isArray(a) && !is2D(a), b1 = Array.isArray(b) && !is2D(b);
+        const aS = typeof a === "number", bS = typeof b === "number";
+        if (a1 && b1) return (a as number[]).map((v, i) => v * ((b as number[])[i] ?? 0));
+        if (a1 && bS) return (a as number[]).map(v => v * (b as number));
+        if (aS && b1) return (b as number[]).map(v => (a as number) * v);
+        if (is2D(a) && is2D(b)) return toMat(a).map((row, i) => row.map((v, j) => v * (toMat(b)[i]?.[j] ?? 0)));
+        if (is2D(a) && bS) return matScale(toMat(a), b as number);
+        if (aS && is2D(b)) return matScale(toMat(b), a as number);
+        if (aS && bS) return (a as number) * (b as number);
+        return NaN;
+      }
+
+      // ─── diag — create diagonal matrix or extract diagonal ───
+      if (node.name === "diag") {
+        if (node.args.length < 1) throw new Error("diag(v) requires 1 arg");
+        const v = evaluate(node.args[0], env);
+        // Vector → diagonal matrix
+        if (Array.isArray(v) && !is2D(v)) {
+          const vec = v as number[];
+          const n = vec.length;
+          return Array.from({ length: n }, (_, i) =>
+            Array.from({ length: n }, (_, j) => i === j ? vec[i] : 0));
+        }
+        // Matrix → extract diagonal as vector
+        if (is2D(v)) {
+          const mat = v as number[][];
+          const n = Math.min(mat.length, mat[0].length);
+          return Array.from({ length: n }, (_, i) => mat[i][i]);
+        }
+        return [v as number];
+      }
+
+      // ─── size — dimensions of matrix/vector ──────────────────
+      if (node.name === "size") {
+        const v = evaluate(node.args[0], env);
+        if (is2D(v)) {
+          const mat = v as number[][];
+          return [mat.length, mat[0].length];
+        }
+        if (Array.isArray(v)) return [v.length];
+        return [1];
+      }
+
+      // ─── trace — sum of diagonal elements ────────────────────
+      if (node.name === "trace" || node.name === "tr") {
+        const v = evaluate(node.args[0], env);
+        if (is2D(v)) {
+          const mat = v as number[][];
+          const n = Math.min(mat.length, mat[0].length);
+          let s = 0;
+          for (let i = 0; i < n; i++) s += mat[i][i];
+          return s;
         }
         return NaN;
       }
@@ -1362,6 +1634,52 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
         }
         return NaN;
       }
+      // sort(v) — sort vector ascending, sort(v, -1) descending
+      if (node.name === "sort") {
+        const v = evaluate(node.args[0], env);
+        const dir = node.args[1] ? (evaluate(node.args[1], env) as number) : 1;
+        if (Array.isArray(v) && !is2D(v)) {
+          const sorted = [...(v as number[])].sort((a, b) => dir >= 0 ? a - b : b - a);
+          return sorted;
+        }
+        return v;
+      }
+      // flatten(M) — flatten matrix to 1D vector (row-major)
+      if (node.name === "flatten" || node.name === "flat") {
+        const v = evaluate(node.args[0], env);
+        if (is2D(v)) {
+          const result: number[] = [];
+          for (const row of v as number[][]) result.push(...row);
+          return result;
+        }
+        if (Array.isArray(v)) return v;
+        return [v as number];
+      }
+      // concat(a, b, ...) — concatenate vectors
+      if (node.name === "concat") {
+        const result: number[] = [];
+        for (const a of node.args) {
+          const v = evaluate(a, env);
+          if (Array.isArray(v) && !is2D(v)) result.push(...(v as number[]));
+          else if (typeof v === "number") result.push(v);
+        }
+        return result;
+      }
+      // reshape(v, rows, cols) — reshape 1D to matrix
+      if (node.name === "reshape") {
+        const v = evaluate(node.args[0], env);
+        const rows = Math.round(evaluate(node.args[1], env) as number);
+        const cols = Math.round(evaluate(node.args[2], env) as number);
+        let flat: number[];
+        if (is2D(v)) { flat = []; for (const row of v as number[][]) flat.push(...row); }
+        else if (Array.isArray(v)) flat = v as number[];
+        else flat = [v as number];
+        const result: number[][] = [];
+        for (let i = 0; i < rows; i++) {
+          result.push(flat.slice(i * cols, i * cols + cols));
+        }
+        return result;
+      }
       // dot(u, v) — dot product
       if (node.name === "dot") {
         const u = evaluate(node.args[0], env) as number[];
@@ -1400,6 +1718,23 @@ export function evaluate(node: ASTNode, env: HekatanEnvironment): EnvVal {
         return evaluate(dAST, childEnv);
       }
 
+      // Dot-notation element access: variable.(row,col) or variable.(index)
+      // The tokenizer skips '.', so k1.(1,1) parses as call{name:"k1", args:[1,1]}
+      const dotVar = env.getVar(node.name);
+      if (dotVar !== undefined) {
+        const args = node.args.map(a => Math.round(evaluate(a, env) as number));
+        if (is2D(dotVar)) {
+          // Matrix element: k1.(row,col) — 1-based
+          const mat = dotVar as number[][];
+          if (args.length >= 2) return mat[args[0] - 1]?.[args[1] - 1] ?? NaN;
+          // Single index on matrix: row access or linear index
+          if (args.length === 1) return mat[args[0] - 1]?.[0] ?? NaN;
+        }
+        if (Array.isArray(dotVar) && !is2D(dotVar)) {
+          // Vector element: u.(index) — 1-based
+          if (args.length === 1) return (dotVar as number[])[args[0] - 1] ?? NaN;
+        }
+      }
       throw new Error(`Unknown function: ${node.name}`);
     }
 

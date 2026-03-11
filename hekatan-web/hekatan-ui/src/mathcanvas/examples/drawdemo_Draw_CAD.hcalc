@@ -1,0 +1,35 @@
+# CAD Drawing Demo
+> Bloques @{draw} para dibujo tecnico con comandos CLI
+
+## Seccion transversal de viga
+
+@{draw 500 350}
+rect 0 0 30 50
+rect 2.5 2.5 25 45
+circle 5 5 1.2
+circle 25 5 1.2
+circle 5 45 1.2
+circle 25 45 1.2
+circle 15 25 1.2
+hdim 0 0 30 0 -5
+vdim 30 0 30 50 5
+@{end draw}
+
+## Planta de columnas
+
+@{draw 500 300}
+rect 0 0 20 8
+rect 0 12 20 8
+rect 0 0 8 20
+rect 12 0 8 20
+circle 4 4 1
+circle 16 4 1
+circle 4 16 1
+circle 16 16 1
+hdim 0 0 20 0 -3
+vdim 20 0 20 20 3
+@{end draw}
+
+b = 30
+h = 50
+A_s = pi * 1.2^2 * 4

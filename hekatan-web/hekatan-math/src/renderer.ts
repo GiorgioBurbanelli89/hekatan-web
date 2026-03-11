@@ -7,19 +7,40 @@ let _decimals = 4;
 export function setDecimals(n: number): void { _decimals = n; }
 export function getDecimals(): number { return _decimals; }
 
+let _fractions = true;
+export function setFractions(on: boolean): void { _fractions = on; }
+export function getFractions(): boolean { return _fractions; }
+
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-/** Render variable name with subscript support: I_z → I<sub>z</sub>, K_R → K<sub>R</sub> */
+const GREEK: Record<string, string> = {
+  alpha: "α", beta: "β", gamma: "γ", delta: "δ", epsilon: "ε", zeta: "ζ",
+  eta: "η", theta: "θ", iota: "ι", kappa: "κ", lambda: "λ", mu: "μ",
+  nu: "ν", xi: "ξ", omicron: "ο", pi: "π", rho: "ρ", sigma: "σ", tau: "τ",
+  upsilon: "υ", phi: "φ", chi: "χ", psi: "ψ", omega: "ω",
+  Alpha: "Α", Beta: "Β", Gamma: "Γ", Delta: "Δ", Epsilon: "Ε", Zeta: "Ζ",
+  Eta: "Η", Theta: "Θ", Lambda: "Λ", Xi: "Ξ", Pi: "Π", Sigma: "Σ", Phi: "Φ",
+  Psi: "Ψ", Omega: "Ω",
+};
+
+/** Convert Greek letter name to Unicode symbol (skip constants like pi, e) */
+const GREEK_SKIP = new Set(["e", "E", "I"]);  // reserved constants (pi renders as π)
+function greekify(s: string): string {
+  if (GREEK_SKIP.has(s)) return esc(s);
+  return GREEK[s] ?? esc(s);
+}
+
+/** Render variable name with subscript + Greek support: phi_p → φ<sub>p</sub> */
 export function renderVarName(name: string): string {
   const idx = name.indexOf("_");
   if (idx > 0 && idx < name.length - 1) {
-    const base = esc(name.slice(0, idx));
-    const sub = esc(name.slice(idx + 1));
+    const base = greekify(name.slice(0, idx));
+    const sub = greekify(name.slice(idx + 1));
     return `${base}<sub>${sub}</sub>`;
   }
-  return esc(name);
+  return greekify(name);
 }
 
 // ─── renderNode: AST → HTML ──────────────────────────────
@@ -38,8 +59,19 @@ export function renderNode(node: ASTNode): string {
         return `${renderNode(left)}<sup>${renderNode(right)}</sup>`;
       }
       if (op === "/") {
-        // Wrap numerator and denominator in <span> so they stay as single flex items
-        return `<span class="dvc"><span>${renderNode(left)}</span><span class="dvl"></span><span>${renderNode(right)}</span></span>`;
+        if (_fractions) {
+          // Fraction mode: numerator over denominator with dividing line
+          return `<span class="dvc"><span>${renderNode(left)}</span><span class="dvl"></span><span>${renderNode(right)}</span></span>`;
+        }
+        // Inline mode: (num)/(den) — parens only when numeric expressions
+        const lh = renderNode(left), rh = renderNode(right);
+        const hasNum = (n: ASTNode): boolean =>
+          n.type === "number" || (n.type === "binary" && (hasNum((n as any).left) || hasNum((n as any).right)))
+          || (n.type === "unary" && hasNum((n as any).operand));
+        if (hasNum(left) || hasNum(right)) {
+          return `(${lh})/(${rh})`;
+        }
+        return `${lh}/${rh}`;
       }
       // Implicit multiplication: juxtaposition when right side is variable/call
       if (op === "*") {
@@ -91,7 +123,15 @@ function opSymbol(op: string): string {
 function formatNum(v: number): string {
   if (typeof v !== "number") return String(v);
   if (!isFinite(v)) return v > 0 ? "∞" : v < 0 ? "−∞" : "NaN";
-  const s = v.toFixed(_decimals);
+  let s = v.toFixed(_decimals);
+  // Smart decimals: if non-zero value rounds to 0.00, show enough digits
+  if (v !== 0 && parseFloat(s) === 0) {
+    // Find how many decimals needed to show first significant digit + 1
+    const abs = Math.abs(v);
+    const mag = Math.floor(Math.log10(abs));     // e.g. 0.0034 → -3
+    const need = Math.max(_decimals, -mag + 1);  // show at least 2 sig digits
+    s = v.toFixed(Math.min(need, 15));
+  }
   return s.replace(/\.?0+$/, "") || "0";
 }
 
@@ -222,16 +262,6 @@ export function renderInlineText(text: string): string {
 }
 
 // ─── renderEquationText: @{eq} block content → HTML ──────
-const GREEK: Record<string, string> = {
-  alpha: "α", beta: "β", gamma: "γ", delta: "δ", epsilon: "ε", zeta: "ζ",
-  eta: "η", theta: "θ", iota: "ι", kappa: "κ", lambda: "λ", mu: "μ",
-  nu: "ν", xi: "ξ", omicron: "ο", rho: "ρ", sigma: "σ", tau: "τ",
-  upsilon: "υ", phi: "φ", chi: "χ", psi: "ψ", omega: "ω",
-  Alpha: "Α", Beta: "Β", Gamma: "Γ", Delta: "Δ", Epsilon: "Ε", Zeta: "Ζ",
-  Eta: "Η", Theta: "Θ", Lambda: "Λ", Xi: "Ξ", Sigma: "Σ", Phi: "Φ",
-  Psi: "Ψ", Omega: "Ω",
-};
-
 const EQ_FN_NAMES = new Set([
   "sin","cos","tan","cot","sec","csc","asin","acos","atan","acot",
   "sinh","cosh","tanh","coth","ln","log","exp","sqrt","abs","sgn","sign",

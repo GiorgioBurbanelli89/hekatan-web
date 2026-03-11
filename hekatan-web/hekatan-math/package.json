@@ -12,7 +12,12 @@
   "scripts": {
     "test": "tsx src/wasm/cli.ts",
     "bench": "tsx src/wasm/cli.ts bench",
-    "cli": "tsx src/wasm/cli.ts"
+    "cli": "tsx src/wasm/cli.ts",
+    "mathcanvas": "tsx src/mathcanvas-cli.ts",
+    "mc": "tsx src/mathcanvas-cli.ts",
+    "mc:repl": "tsx src/mathcanvas-cli.ts --repl",
+    "gpu": "tsx src/gpu/cli-gpu.ts",
+    "gpu:bench": "tsx src/gpu/cli-gpu.ts bench"
   },
   "dependencies": {
     "mathjs": "^13.2.3",

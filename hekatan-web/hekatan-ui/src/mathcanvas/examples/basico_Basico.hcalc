@@ -1,0 +1,11 @@
+# Hekatan Math Editor
+> Ejemplo basico de ecuaciones
+
+a = 3
+b = 4
+c = sqrt(a^2 + b^2)
+
+d = (a + b) / (a - b)
+
+M = [[1, 2], [3, 4]]
+det(M)

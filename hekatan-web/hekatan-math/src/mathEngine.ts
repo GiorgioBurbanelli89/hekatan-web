@@ -13,6 +13,12 @@ const math: MathJsInstance = create(all, {
   precision: 14,
 });
 
+// ─── Custom units for structural engineering ────────────
+// kgf (kilogram-force) and tonf (metric ton-force) are essential
+// in Latin American structural engineering practice
+try { math.createUnit("kgf", "9.80665 N"); } catch {}
+try { math.createUnit("tonf", "9806.65 N"); } catch {}
+
 // ─── Gauss-Legendre quadrature ──────────────────────────
 function gaussLegendre(n: number): { pts: number[]; wts: number[] } {
   const tables: Record<number, { pts: number[]; wts: number[] }> = {
@@ -478,6 +484,47 @@ math.import({
   },
 }, { override: true });
 
+// ─── Fix sqrt/cbrt of Unit values with fractional exponents ─────────
+// Engineering formulas like Ec = 15100*sqrt(f'c) expect sqrt to operate on the
+// numeric value only.  math.js sqrt of a Unit propagates units (e.g. sqrt(kgf/cm²)
+// → kgf^0.5/cm) creating fractional dimension exponents that break all downstream
+// conversions.  Fix: when sqrt/cbrt would produce fractional exponents, strip units
+// and return the dimensionless numeric root.
+const _origSqrt = math.sqrt.bind(math);
+const _origCbrt = math.cbrt.bind(math);
+math.import({
+  sqrt: function (x: any) {
+    if (x && typeof x === "object" && x.type === "Unit") {
+      const result = _origSqrt(x);
+      // Check for fractional exponents in result units
+      if (result.type === "Unit" && result.units) {
+        const hasFrac = result.units.some((u: any) => u.power % 1 !== 0);
+        if (hasFrac) {
+          // Return numeric sqrt of value in user's unit representation
+          try { return Math.sqrt(x.toNumber(x.formatUnits())); } catch {}
+          try { return Math.sqrt(x.value); } catch {}
+        }
+      }
+      return result;
+    }
+    return _origSqrt(x);
+  },
+  cbrt: function (x: any) {
+    if (x && typeof x === "object" && x.type === "Unit") {
+      const result = _origCbrt(x);
+      if (result.type === "Unit" && result.units) {
+        const hasFrac = result.units.some((u: any) => u.power % 1 !== 0);
+        if (hasFrac) {
+          try { return Math.cbrt(x.toNumber(x.formatUnits())); } catch {}
+          try { return Math.cbrt(x.value); } catch {}
+        }
+      }
+      return result;
+    }
+    return _origCbrt(x);
+  },
+}, { override: true });
+
 // ─── CAS (Computer Algebra System) ──────────────────────
 /** CAS function names — routed to symbolic math engine (SymPy/Giac/Maxima cascade) */
 const CAS_FUNCTIONS = new Set([
@@ -505,6 +552,7 @@ export interface CellResult {
   value: any;
   display: string;
   error?: string;
+  unitAnnotation?: string;
 }
 
 export interface LineResult {
@@ -516,12 +564,18 @@ export interface LineResult {
   display?: string;
   error?: string;
   cells?: CellResult[];
+  /** Display mode for @{cells}: undefined=full, "f"=formula, "r"=result, "fr"=formula+result */
+  cellsMode?: "f" | "r" | "fr";
+  /** Display mode set by @{mode} directive: undefined=full, "f"=formula, "r"=result, "fr"=formula+result */
+  displayMode?: "f" | "r" | "fr";
   /** For type "draw"/"draw3d": width, height, and command lines */
   drawWidth?: number;
   drawHeight?: number;
   drawCommands?: string[];
   /** Named figure identifier for @{draw W H name:FigName} */
   drawName?: string;
+  /** Figure alignment: center, left, right */
+  drawAlign?: string;
   /** For type "plot": plot command lines */
   plotCommands?: string[];
   /** For type "svg": raw SVG lines */
@@ -531,9 +585,10 @@ export interface LineResult {
   /** For type "importifc": IFC file path/URL and optional filter */
   ifcFile?: string;
   ifcFilter?: string;
-  /** For type "image64": base64 data URI, width, height, name */
+  /** For type "image64": base64 data URI, width, height, name, align */
   imageData?: string;
   imageName?: string;
+  imageAlign?: string;
   /** When true, hide the expression/function in rendering — show only varName = result */
   hideExpr?: boolean;
   /** Display hint: "row" = horizontal inline, "col" = vertical column */
@@ -544,6 +599,8 @@ export interface LineResult {
   latex?: string;
   /** CAS engine that produced the result */
   casEngine?: string;
+  /** Default unit from @{config units:force,length} — renderer shows this label */
+  defaultUnit?: string;
 }
 
 // ─── HekatanEvaluator ───────────────────────────────────
@@ -572,10 +629,29 @@ export class HekatanEvaluator {
   eqBlack: boolean = false;
   /** Fraction display mode — configurable via @{config frac:on/off} (default: on = vertical fractions) */
   fracMode: boolean = true;
+  /** Render flags — configurable via @{config render:frac=off,mul=off,...} or @{config plain} */
+  renderFlags: { frac: boolean; mul: boolean; sup: boolean; sub: boolean; sqrt: boolean } = {
+    frac: true, mul: true, sup: true, sub: true, sqrt: true
+  };
   /** Number notation mode — configurable via @{config notation:eng/sci/auto} (default: auto) */
   notation: "auto" | "eng" | "sci" = "auto";
+  /** Matrix/vector visible size — configurable via @{config matvis:N} (0=all, -1=use UI selector) */
+  matVisSize: number = -1;
+  /** Decimals for tounit() — configurable via @{config decimals:N} (default: 2) */
+  tounitDecimals: number = 2;
+  /** Unit strip mode — configurable via @{config units:kgf,cm} */
+  unitsStrip: boolean = false;
+  private _unitsForce: string = "";
+  private _unitsLength: string = "";
+  /** Map of variable names to their detected default unit (from strip) */
+  private _varUnits = new Map<string, string>();
+  /** Pre-strip display values: var → {value, unit} in original units before stripping.
+   *  e.g. b = 30 cm → _preStripDisplay.set("b", {value: 30, unit: "cm"}) before converting to 0.3 m */
+  private _preStripDisplay = new Map<string, { value: number; unit: string }>();
   /** Hide mode: "none" = visible, "all" = hide everything, "function" = hide expr show result */
   private hideMode: "none" | "all" | "function" = "none";
+  /** Display mode set by @{mode}: undefined=full, "f"=formula, "r"=result, "fr"=formula+result */
+  private _displayMode: "f" | "r" | "fr" | undefined = undefined;
   /** Set of function names that should be auto-hidden (@{config hide:fn1,fn2}) */
   private hiddenFunctions: Set<string> = new Set();
   /** Named figures store: name → {width, height, commands} */
@@ -600,19 +676,154 @@ export class HekatanEvaluator {
       if (c && c.__cell) return c.elements[Math.round(i) - 1] ?? 0;
       return c;
     };
+    this.scope["cells"] = (...args: any[]) => ({ __cell: true, elements: [...args] });
+    this.scope["cset"] = (c: any, i: number, val: any) => {
+      if (c && c.__cell) c.elements[Math.round(i) - 1] = val;
+      return val;
+    };
+    this.scope["clen"] = (c: any) => {
+      if (c && c.__cell) return c.elements.length;
+      return 0;
+    };
+    // Alias: lsolve → lusolve (math.js built-in)
+    this.scope["lsolve"] = (...args: any[]) => (math as any).lusolve(...args);
+    // tounit(value, "unit") — smart unit conversion for scalars, vectors, and matrices
+    // Algorithm:
+    //   1. Parse target unit to extract force base (kN) and length base (m)
+    //   2. For each element, try direct .to(target) first
+    //   3. If fails, convert internally to force+length system (cm→m, MPa→kN/m²)
+    //      which simplifies compound units (m/m=1) → pure number
+    //   4. Multiply number × target unit
+    // Supports:
+    //   tounit(val, "kN/m")   — smart single-unit conversion
+    //   tounit(val, "kN,m")   — system mode: strip to numbers in that force+length system
+    this.scope["tounit"] = (val: any, targetUnit: any) => {
+      let target: string;
+      if (typeof targetUnit === "string") {
+        target = targetUnit.trim();
+      } else if (targetUnit && typeof targetUnit === "object" && targetUnit.type === "Unit") {
+        const parts = targetUnit.toString().split(" ");
+        target = parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
+      } else {
+        target = String(targetUnit).trim();
+      }
+
+      // Round to N decimals (from @{config decimals:N}, default 2)
+      const dec = this.tounitDecimals;
+      const factor = Math.pow(10, dec);
+      const roundN = (n: number): number => {
+        if (n === 0) return 0;
+        const abs = Math.abs(n);
+        if (abs < Math.pow(10, -dec) || abs >= 1e6) return n; // sci notation range — keep full
+        return Math.round(n * factor) / factor;
+      };
+
+      // --- Comma mode: "kN,m" → system conversion (strip to pure numbers) ---
+      const commaMatch = target.match(/^([^,]+),\s*([^,]+)$/);
+      if (commaMatch) {
+        const fu = commaMatch[1].trim();
+        const lu = commaMatch[2].trim();
+        const stripOne = (v: any): any => {
+          if (v && typeof v === "object" && v.type === "Unit") {
+            return roundN(this._unitToNumberWith(v, fu, lu));
+          }
+          return typeof v === "number" ? roundN(v) : v;
+        };
+        const deepStrip = (a: any): any => Array.isArray(a) ? a.map(deepStrip) : stripOne(a);
+        if (val && typeof val === "object" && val.type === "DenseMatrix" && typeof val.toArray === "function") {
+          return math.matrix(deepStrip(val.toArray()));
+        }
+        if (Array.isArray(val)) {
+          return deepStrip(val);
+        }
+        return stripOne(val);
+      }
+
+      // --- Single unit mode: "kN/m" → smart conversion ---
+      // Extract force and length base units from the target string
+      const forceMatch = target.match(/\b(tonf|kgf|lbf|kip|daN|MN|GN|kN|N)\b/);
+      const lengthMatch = target.match(/\b(inch|mm|cm|km|ft|yd|mi|in|m)\b/);
+      const fu = forceMatch ? forceMatch[1] : "";
+      const lu = lengthMatch ? lengthMatch[1] : "";
+
+      const convertOne = (v: any): any => {
+        if (v && typeof v === "object" && v.type === "Unit") {
+          // Step 1: try direct .to(target) — works if dimensions match exactly
+          try {
+            const converted = v.to(target);
+            // Round the internal value
+            const num = converted.toNumber(target);
+            return math.unit(roundN(num), target);
+          } catch {}
+          // Step 2: smart system conversion
+          if (fu || lu) {
+            const num = roundN(this._unitToNumberWith(v, fu, lu));
+            try { return math.unit(num, target); } catch { return num; }
+          }
+          // Step 3: fallback — return original
+          return v;
+        }
+        if (typeof v === "number") {
+          try { return math.unit(roundN(v), target); } catch { return v; }
+        }
+        return v;
+      };
+
+      // Apply to DenseMatrix, Array, or scalar.
+      // IMPORTANT: DenseMatrix cannot hold Unit objects (corrupts shape/stringifies),
+      // so for matrices/arrays we convert each cell, extract the numeric value,
+      // and tag the result with __commonUnit for the renderer to display outside brackets.
+      const deepMap = (a: any): any => Array.isArray(a) ? a.map(deepMap) : convertOne(a);
+      // Extract number from a converted Unit (or keep as-is if not Unit)
+      const deepToNum = (a: any): any => {
+        if (Array.isArray(a)) return a.map(deepToNum);
+        if (a && typeof a === "object" && a.type === "Unit") {
+          try { return roundN(a.toNumber()); } catch { return a; }
+        }
+        return a;
+      };
+      if (val && typeof val === "object" && val.type === "DenseMatrix" && typeof val.toArray === "function") {
+        // Use _data directly — toArray() corrupts when DenseMatrix holds Unit objects.
+        // DenseMatrix with Units often gets shape [1,N,M] instead of [N,M]; unwrap.
+        let raw: any = (val as any)._data || val.toArray();
+        const sz = val.size();
+        if (sz.length === 3 && sz[0] === 1 && Array.isArray(raw[0])) raw = raw[0];
+        const mapped = deepMap(raw);
+        const numArr = deepToNum(mapped);
+        const result = math.matrix(numArr);
+        (result as any).__commonUnit = target;
+        return result;
+      }
+      if (Array.isArray(val)) {
+        const mapped = deepMap(val);
+        const numArr = deepToNum(mapped);
+        if (Array.isArray(numArr)) (numArr as any).__commonUnit = target;
+        return numArr;
+      }
+      return convertOne(val);
+    };
     this.eqDelimiter = "";
     this.textDelimiter = "";
     this.commentDelimiter = "//";
     this.hideMode = "none";
+    this._displayMode = undefined;
     this.hiddenFunctions = new Set();
     this.eqBold = false;
     this.eqBlack = false;
     this.fracMode = true;
+    this.renderFlags = { frac: true, mul: true, sup: true, sub: true, sqrt: true };
     this.notation = "auto";
     this.pageHeader = false;
     this.pageFooter = false;
     this.startPage = 1;
     this.headerTitle = "";
+    this.matVisSize = -1;
+    this.tounitDecimals = 2;
+    this.unitsStrip = false;
+    this._unitsForce = "";
+    this._unitsLength = "";
+    this._varUnits.clear();
+    this._preStripDisplay.clear();
     this.namedFigures = new Map();
     this.namedEquations = new Map();
     this.multilineFunctions = new Map();
@@ -620,6 +831,17 @@ export class HekatanEvaluator {
 
   getScope(): Record<string, any> {
     return { ...this.scope };
+  }
+
+  /** Get pre-strip display values: var → {value, unit} in original units before stripping.
+   *  e.g. b=30cm → {b: {value:30, unit:"cm"}} (before conversion to meters) */
+  getPreStripDisplay(): Map<string, { value: number; unit: string }> {
+    return this._preStripDisplay;
+  }
+
+  /** Get variable unit map: var → unit string (e.g. "tonf/m²", "m⁴") */
+  getVarUnits(): Map<string, string> {
+    return this._varUnits;
   }
 
   /** Evalua una sola expresion */
@@ -769,6 +991,11 @@ export class HekatanEvaluator {
         try {
           // Convert cell reads: VAR{idx} → __cellget(VAR, idx)
           let processed = stmt.replace(/(\w+)\{([^}]+)\}/g, '__cellget($1, $2)');
+          // Dot-notation element access: var.(i,j) → subset(var, index(i,j))
+          processed = processed.replace(/\b([a-zA-Z_]\w*)\.\(([^)]+)\)/g, (m, name, args) => {
+            if (scope[name] !== undefined) return `subset(${name}, index(${args}))`;
+            return m;
+          });
           // Convert semicolons inside brackets to commas (MATLAB→math.js matrix syntax)
           processed = this._semicolonToCommaInBrackets(processed);
           math.evaluate(processed, scope);
@@ -969,11 +1196,59 @@ export class HekatanEvaluator {
         const fracMatch = cfgStr.match(/frac:(on|off)/i);
         if (fracMatch) {
           this.fracMode = fracMatch[1].toLowerCase() === "on";
+          this.renderFlags.frac = this.fracMode;
+        }
+        // Parse plain — disable ALL rendering (plain text output)
+        if (/\bplain\b/i.test(cfgStr)) {
+          this.renderFlags = { frac: false, mul: false, sup: false, sub: false, sqrt: false };
+          this.fracMode = false;
+        }
+        // Parse render — re-enable ALL rendering
+        if (/\brender\b(?!\s*:)/i.test(cfgStr)) {
+          this.renderFlags = { frac: true, mul: true, sup: true, sub: true, sqrt: true };
+          this.fracMode = true;
+        }
+        // Parse render:key=on|off,... — granular render control
+        const renderMatch = cfgStr.match(/render:([\w=,]+)/i);
+        if (renderMatch) {
+          const pairs = renderMatch[1].split(",");
+          for (const p of pairs) {
+            const [key, val] = p.split("=");
+            if (key && val && key in this.renderFlags) {
+              (this.renderFlags as any)[key] = val.toLowerCase() === "on";
+            }
+          }
+          this.fracMode = this.renderFlags.frac;
         }
         // Parse notation:eng|sci|auto — number display format (default: auto)
         const notMatch = cfgStr.match(/notation:(eng|sci|auto)/i);
         if (notMatch) {
           this.notation = notMatch[1].toLowerCase() as "auto" | "eng" | "sci";
+        }
+        // Parse matvis:<N> — visible rows/cols for truncated matrices/vectors (0=all)
+        const matvisMatch = cfgStr.match(/matvis:(\d+)/i);
+        if (matvisMatch) {
+          this.matVisSize = parseInt(matvisMatch[1]);
+        }
+        // Parse decimals:<N> — decimal places for tounit() (default: 2)
+        const decMatch = cfgStr.match(/decimals?:(\d+)/i);
+        if (decMatch) {
+          this.tounitDecimals = parseInt(decMatch[1]);
+        }
+        // Parse units:off — disable unit stripping
+        if (/units:\s*off\b/i.test(cfgStr)) {
+          this.unitsStrip = false;
+          this._unitsForce = "";
+          this._unitsLength = "";
+        }
+        // Parse units:<force>,<length> — strip units and convert to specified system
+        const unitsMatch = cfgStr.match(/units:(\w+(?:\/\w+(?:\^\d)?)?),(\w+)/i);
+        if (unitsMatch) {
+          this.unitsStrip = true;
+          this._unitsForce = unitsMatch[1];
+          this._unitsLength = unitsMatch[2];
+          // Convert all existing scope Unit values to numbers in the target system
+          this._stripScopeUnits();
         }
         // Parse align:<left|center|right>
         const alignMatch = cfgStr.match(/align:(\w+)/);
@@ -984,6 +1259,13 @@ export class HekatanEvaluator {
         if (this.textDelimiter) cfgParts.push(`text=${this.textDelimiter}`);
         if (this.commentDelimiter) cfgParts.push(`comment=${this.commentDelimiter}`);
         if (this.pageBackground) cfgParts.push(`bg=${this.pageBackground}`);
+        cfgParts.push(`frac=${this.renderFlags.frac ? "on" : "off"}`);
+        cfgParts.push(`mul=${this.renderFlags.mul ? "on" : "off"}`);
+        cfgParts.push(`sup=${this.renderFlags.sup ? "on" : "off"}`);
+        cfgParts.push(`sub=${this.renderFlags.sub ? "on" : "off"}`);
+        cfgParts.push(`sqrt=${this.renderFlags.sqrt ? "on" : "off"}`);
+        if (this.matVisSize >= 0) cfgParts.push(`matvis=${this.matVisSize}`);
+        if (this.unitsStrip) cfgParts.push(`units=${this._unitsForce},${this._unitsLength}`);
         results.push({ lineIndex: i, input: raw, type: "directive", display: `config:${cfgParts.join(",")}` });
         // Emit align directive if present (renderer handles align:X)
         if (alignMatch) {
@@ -992,9 +1274,11 @@ export class HekatanEvaluator {
         continue;
       }
 
-      // @{cells} |a=1|b=2|c=3|
-      if (/^@\{cells\}\s*\|/.test(trimmed)) {
-        const cellsResult = this._evalCells(i, raw, trimmed);
+      // @{cells} |a=1|b=2|  @{cells f} |a=expr|  @{cells r} |a=expr|  @{cells fr} |a=expr|
+      const cellsMatch = trimmed.match(/^@\{cells(?:\s+(f|r|fr))?\}\s*\|/);
+      if (cellsMatch) {
+        const cellsMode = cellsMatch[1] as "f" | "r" | "fr" | undefined;
+        const cellsResult = this._evalCells(i, raw, trimmed, cellsMode);
         results.push(cellsResult);
         continue;
       }
@@ -1036,6 +1320,15 @@ export class HekatanEvaluator {
       // @{show} — alias for @{end hide}
       if (/^@\{show\}\s*$/i.test(trimmed)) {
         this.hideMode = "none";
+        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        continue;
+      }
+
+      // @{mode f|r|fr} — display mode for assignments: f=formula, r=result, fr=formula+result
+      // @{mode} — reset to default (full procedure)
+      const modeMatch = trimmed.match(/^@\{mode(?:\s+(f|r|fr))?\}\s*$/i);
+      if (modeMatch) {
+        this._displayMode = modeMatch[1] as "f" | "r" | "fr" | undefined;
         results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
         continue;
       }
@@ -1111,6 +1404,7 @@ export class HekatanEvaluator {
         /^function\s*(?:(?:\[([^\]]*)\]|(\w+))\s*=\s*)?(\w+)\s*\(([^)]*)\)\s*$/i
       );
       if (funcMatch) {
+        const funcStartLine = i;
         const funcName = funcMatch[3];
         const paramStr = funcMatch[4] || "";
         let outputs: string[];
@@ -1146,7 +1440,7 @@ export class HekatanEvaluator {
         this._registerMultilineFunction(funcName, params, outputs, bodyLines);
         // Emit a directive so the renderer knows a function was defined
         results.push({
-          lineIndex: i, input: raw,
+          lineIndex: funcStartLine, input: raw,
           type: "directive",
           display: `function:${funcName}(${params.join(", ")})`,
         });
@@ -1155,6 +1449,7 @@ export class HekatanEvaluator {
 
       // @{plot}...@{end plot} - Plot block (heatmap, curves, etc.)
       if (/^@\{plot\}\s*$/i.test(trimmed)) {
+        const plotStartLine = i;
         const plotCommands: string[] = [];
         i++;
         while (i < lines.length && !/^@\{end\s+plot\}/i.test(lines[i].trim())) {
@@ -1162,7 +1457,7 @@ export class HekatanEvaluator {
           i++;
         }
         results.push({
-          lineIndex: i, input: raw,
+          lineIndex: plotStartLine, input: raw,
           type: "plot",
           plotCommands,
         });
@@ -1171,6 +1466,7 @@ export class HekatanEvaluator {
 
       // @{svg}...@{end svg} - SVG block (raw SVG passthrough)
       if (/^@\{svg\}\s*$/i.test(trimmed)) {
+        const svgStartLine = i;
         const svgLines: string[] = [];
         i++;
         while (i < lines.length && !/^@\{end\s+svg\}/i.test(lines[i].trim())) {
@@ -1178,36 +1474,44 @@ export class HekatanEvaluator {
           i++;
         }
         results.push({
-          lineIndex: i, input: raw,
+          lineIndex: svgStartLine, input: raw,
           type: "svg",
           svgLines,
         });
         continue;
       }
 
-      // @{three}...@{end three} - Three.js 3D scene block
-      if (/^@\{three\}\s*$/i.test(trimmed)) {
+      // @{three}...@{end three} or @{three W H}...@{end three} - Three.js 3D scene block
+      const threeMatch = trimmed.match(/^@\{three(?:\s+(\d+)\s+(\d+))?\s*\}$/i);
+      if (threeMatch) {
+        const threeStartLine = i;
         const threeLines: string[] = [];
+        const threeW = threeMatch[1] ? parseInt(threeMatch[1]) : undefined;
+        const threeH = threeMatch[2] ? parseInt(threeMatch[2]) : undefined;
         i++;
         while (i < lines.length && !/^@\{end\s+three\}/i.test(lines[i].trim())) {
           threeLines.push(lines[i]);
           i++;
         }
         results.push({
-          lineIndex: i, input: raw,
+          lineIndex: threeStartLine, input: raw,
           type: "three",
           threeLines,
+          drawWidth: threeW,
+          drawHeight: threeH,
         });
         continue;
       }
 
-      // @{draw W H}, @{draw W H name:Fig 5.1}, @{draw:3D W H}, @{svg W H} (alias) - CAD block
-      const drawMatch = trimmed.match(/^@\{(?:draw|svg)(?::(2D|3D|3D:IFC))?\s+(\d+)\s+(\d+)(?:\s+name:([^}]+?))?\s*\}/i);
+      // @{draw W H}, @{draw W H name:Fig 5.1 align:center}, @{draw:3D W H}, @{svg W H} (alias) - CAD block
+      const drawMatch = trimmed.match(/^@\{(?:draw|svg)(?::(2D|3D|3D:IFC))?\s+(\d+)\s+(\d+)(?:\s+name:([^}]+?))?\s*(?:align:(left|center|right))?\s*\}/i);
       if (drawMatch) {
+        const drawStartLine = i;
         const mode = (drawMatch[1] || "2D").toUpperCase();
         const drawWidth = parseInt(drawMatch[2]);
         const drawHeight = parseInt(drawMatch[3]);
         const drawName = drawMatch[4]?.trim() || undefined;
+        const drawAlign = drawMatch[5]?.trim() || undefined;
         const drawCommands: string[] = [];
         i++;
         while (i < lines.length && !/^@\{end\s+(?:draw|svg)\}/i.test(lines[i].trim())) {
@@ -1222,20 +1526,22 @@ export class HekatanEvaluator {
           this.namedFigures.set(drawName, { width: drawWidth, height: drawHeight, commands: [...drawCommands] });
         }
         results.push({
-          lineIndex: i, input: raw,
+          lineIndex: drawStartLine, input: raw,
           type: dtype,
-          drawWidth, drawHeight, drawCommands, drawName,
+          drawWidth, drawHeight, drawCommands, drawName, drawAlign,
         });
         continue;
       }
 
-      // @{image64 [W] [H] [name:Name]} ... base64 data ... @{end image64}
+      // @{image64 [W] [H] [name:Name] [align:center|left|right]} ... base64 data ... @{end image64}
       // Embeds a base64-encoded image directly in the document
-      const img64Match = trimmed.match(/^@\{image64(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+name:([^}]+?))?\s*\}/i);
+      const img64Match = trimmed.match(/^@\{image64(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+name:([^}]*?))?\s*(?:align:(left|center|right))?\s*\}/i);
       if (img64Match) {
+        const imgStartLine = i; // remember start line for data-line navigation
         const imgW = img64Match[1] ? parseInt(img64Match[1]) : undefined;
         const imgH = img64Match[2] ? parseInt(img64Match[2]) : undefined;
         const imgName = img64Match[3]?.trim() || undefined;
+        const imgAlign = img64Match[4]?.trim() || undefined;
         const imgLines: string[] = [];
         i++;
         while (i < lines.length && !/^@\{end\s+image64\}/i.test(lines[i].trim())) {
@@ -1254,10 +1560,11 @@ export class HekatanEvaluator {
           b64 = `data:${mime};base64,${b64}`;
         }
         results.push({
-          lineIndex: i, input: raw,
+          lineIndex: imgStartLine, input: raw,
           type: "image64",
           imageData: b64,
           imageName: imgName,
+          imageAlign: imgAlign,
           drawWidth: imgW,
           drawHeight: imgH,
         });
@@ -1323,10 +1630,11 @@ export class HekatanEvaluator {
         continue;
       }
 
-      const eqMatch = trimmed.match(/^@\{eq(?:(?:\s+|:align\s+)(left|center|right))?\}\s*$/i);
+      const eqMatch = trimmed.match(/^@\{eq(?:(?:\s+|:align\s+)(left|center|right))?(?:\s+size:(\d+))?\}\s*$/i);
       if (eqMatch) {
         const eqAlign = eqMatch[1]?.toLowerCase() || "center";
-        results.push({ lineIndex: i, input: raw, type: "directive", display: `eq:${eqAlign}` });
+        const eqSize = eqMatch[2] || "";
+        results.push({ lineIndex: i, input: raw, type: "directive", display: `eq:${eqAlign}:${eqSize}` });
         i++;
         const eqContentLines: string[] = [];
         while (i < lines.length && !/^@\{end\s+eq\}/i.test(lines[i].trim())) {
@@ -1541,13 +1849,18 @@ export class HekatanEvaluator {
       // ── Expresion o asignacion ─────────────────────────────
       try {
         const result = await this._evalLine(trimmed);
-        // Apply hide mode
+        // Apply hide mode and display mode
+        const dm = this._displayMode;
         if (this.hideMode === "all") {
           results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
         } else if (this.hideMode === "function") {
-          results.push({ lineIndex: i, input: raw, ...result, hideExpr: true });
+          const lr = { lineIndex: i, input: raw, ...result, hideExpr: true } as LineResult;
+          if (dm) lr.displayMode = dm;
+          results.push(lr);
         } else {
-          results.push({ lineIndex: i, input: raw, ...result });
+          const lr = { lineIndex: i, input: raw, ...result } as LineResult;
+          if (dm) lr.displayMode = dm;
+          results.push(lr);
         }
       } catch (e: any) {
         results.push({
@@ -1560,9 +1873,9 @@ export class HekatanEvaluator {
   }
 
   // ─── @{cells} ─────────────────────────────────────────
-  private _evalCells(lineIndex: number, raw: string, trimmed: string): LineResult {
+  private _evalCells(lineIndex: number, raw: string, trimmed: string, mode?: "f" | "r" | "fr"): LineResult {
     // Extraer contenido entre pipes: @{cells} |a=1|b=2|c=3|
-    const content = trimmed.replace(/^@\{cells\}\s*/, "");
+    const content = trimmed.replace(/^@\{cells(?:\s+(?:f|r|fr))?\}\s*/, "");
     const parts = content.split("|").filter(p => p.trim());
     const cells: CellResult[] = [];
 
@@ -1570,17 +1883,40 @@ export class HekatanEvaluator {
       const cellTrimmed = part.trim();
       if (!cellTrimmed) continue;
 
-      const assignMatch = cellTrimmed.match(/^([a-zA-Z_]\w*)\s*=\s*(.+)$/);
+      // Extract unit annotation from & operator (e.g. "L = 100 & in" → expr="100", unit="in")
+      let unitAnnotation: string | undefined;
+      let cellExprStr = cellTrimmed;
+      if (cellTrimmed.includes("&")) {
+        // Find top-level & (not inside brackets/parens, skip &&)
+        let d = 0, aIdx = -1;
+        for (let j = 0; j < cellTrimmed.length; j++) {
+          const ch = cellTrimmed[j];
+          if (ch === "(" || ch === "[" || ch === "{") d++;
+          else if (ch === ")" || ch === "]" || ch === "}") d--;
+          else if (ch === "&" && d === 0) {
+            if (j + 1 < cellTrimmed.length && cellTrimmed[j + 1] === "&") { j++; continue; }
+            aIdx = j; break;
+          }
+        }
+        if (aIdx >= 0) {
+          unitAnnotation = cellTrimmed.substring(aIdx + 1).trim();
+          cellExprStr = cellTrimmed.substring(0, aIdx).trim();
+        }
+      }
+
+      const assignMatch = cellExprStr.match(/^([a-zA-Z_]\w*)\s*=\s*(.+)$/);
       if (assignMatch) {
         const varName = assignMatch[1];
         const expr = assignMatch[2].trim();
         try {
           const value = math.evaluate(expr, this.scope);
           this.scope[varName] = value;
-          cells.push({
+          const cell: CellResult = {
             varName, expr, value,
             display: `${varName} = ${this._formatValue(value)}`
-          });
+          };
+          if (unitAnnotation) cell.unitAnnotation = unitAnnotation;
+          cells.push(cell);
         } catch (e: any) {
           cells.push({
             varName, expr, value: undefined,
@@ -1590,25 +1926,32 @@ export class HekatanEvaluator {
       } else {
         // Expresion pura en celda
         try {
-          const value = math.evaluate(cellTrimmed, this.scope);
-          cells.push({
-            varName: "", expr: cellTrimmed, value,
+          const value = math.evaluate(cellExprStr, this.scope);
+          const cell: CellResult = {
+            varName: "", expr: cellExprStr, value,
             display: this._formatValue(value)
-          });
+          };
+          if (unitAnnotation) cell.unitAnnotation = unitAnnotation;
+          cells.push(cell);
         } catch (e: any) {
           cells.push({
-            varName: "", expr: cellTrimmed, value: undefined,
-            display: cellTrimmed, error: e.message
+            varName: "", expr: cellExprStr, value: undefined,
+            display: cellExprStr, error: e.message
           });
         }
       }
     }
 
-    return { lineIndex, input: raw, type: "cells", cells };
+    const lr: LineResult = { lineIndex, input: raw, type: "cells", cells, cellsMode: mode };
+    if (this._displayMode) lr.displayMode = this._displayMode;
+    return lr;
   }
 
   // ─── Evaluar linea ────────────────────────────────────
   private async _evalLine(line: string): Promise<Partial<LineResult>> {
+    // Normalize prime notation: f'_c → f_prime_c (ACI concrete notation)
+    line = line.replace(/([a-zA-Z])'([_a-zA-Z])/g, '$1_prime$2');
+
     // ── Cell array assignment: V = {expr1, expr2, ...} ──
     const cellAssignMatch = line.match(/^([a-zA-Z_]\w*)\s*=(?!=)\s*\{(.+)\}$/);
     if (cellAssignMatch) {
@@ -1656,6 +1999,65 @@ export class HekatanEvaluator {
       }
     }
 
+    // ── Cell element write: V{i} = expr ──
+    const cellWriteMatch = line.match(/^([a-zA-Z_]\w*)\{(.+?)\}\s*=(?!=)\s*(.+)$/);
+    if (cellWriteMatch) {
+      const varName = cellWriteMatch[1];
+      const idxExpr = cellWriteMatch[2];
+      const rhsExpr = this._fixNx1Indexing(this._resolveCellRefs(cellWriteMatch[3]));
+      try {
+        const idx = Math.round(Number(math.evaluate(idxExpr, this.scope))) - 1;
+        const val = await this._evalExpr(rhsExpr);
+        if (!this.scope[varName] || !(this.scope[varName] as any).__cell) {
+          this.scope[varName] = { __cell: true, elements: [] };
+        }
+        (this.scope[varName] as any).elements[idx] = val;
+        return { type: "directive" as const, display: "" };
+      } catch (e: any) {
+        return { type: "error" as const, error: e.message };
+      }
+    }
+
+    // ── Multi-output assignment: [a, b] = func(args) ──
+    const multiOutMatch = line.match(/^\[([^\]]+)\]\s*=\s*(\w+)\s*\(([^)]*)\)\s*$/);
+    if (multiOutMatch) {
+      const outNames = multiOutMatch[1].split(",").map(s => s.trim()).filter(Boolean);
+      const funcName = multiOutMatch[2];
+      const argsStr = multiOutMatch[3];
+      const fn = this.scope[funcName];
+      if (typeof fn === "function") {
+        const args = argsStr ? argsStr.split(",").map(a => {
+          const resolved = this._fixNx1Indexing(this._resolveCellRefs(a.trim()));
+          return math.evaluate(resolved, this.scope);
+        }) : [];
+        const result = fn(...args);
+        if (result && (result as any).__cell) {
+          const elements = (result as any).elements;
+          const displays: string[] = [];
+          for (let k = 0; k < outNames.length; k++) {
+            const val = elements[k] ?? 0;
+            this.scope[outNames[k]] = val;
+            displays.push(`${outNames[k]} = ${this._formatValue(val)}`);
+          }
+          return {
+            type: "assignment" as const,
+            varName: outNames[0],
+            value: result,
+            display: displays.join("\n"),
+          };
+        } else {
+          // Single output
+          this.scope[outNames[0]] = result;
+          return {
+            type: "assignment" as const,
+            varName: outNames[0],
+            value: result,
+            display: `${outNames[0]} = ${this._formatValue(result)}`,
+          };
+        }
+      }
+    }
+
     // ── Indexed assignment: VAR[idx1, idx2] = expr ──
     // e.g. K[i,j] = K[i,j] + Ke[r,s]  or  V[i] = 5
     const idxAssignMatch = line.match(/^([a-zA-Z_]\w*)\[(.+?)\]\s*=(?!=)\s*(.+)$/);
@@ -1681,9 +2083,43 @@ export class HekatanEvaluator {
     const assignMatch = line.match(/^([a-zA-Z_]\w*)\s*=(?!=)\s*(.+)$/);
     if (assignMatch) {
       const varName = assignMatch[1];
-      const expr = this._fixNx1Indexing(this._resolveCellRefs(assignMatch[2]));
-      const value = await this._evalExpr(expr);
+      const expr = this._fixRangeSlicing(this._fixNx1Indexing(this._resolveCellRefs(assignMatch[2])));
+      let value: any;
+      try {
+        value = await this._evalExpr(expr);
+      } catch (evalErr: any) {
+        throw evalErr;
+      }
       const casResult = this._lastCASResult;
+      // Auto-strip units when units:strip mode is active
+      // Detect default unit BEFORE stripping (so renderer can display it)
+      let defaultUnit: string | undefined;
+      if (this.unitsStrip) {
+        // If expression used & or | (explicit unit override), extract number in the target unit
+        const hasUnitOverride = /(?<!\&)\&(?!\&)/.test(assignMatch[2]) || /(?<!\|)\|(?!\|)/.test(assignMatch[2]);
+        if (hasUnitOverride && value && typeof value === 'object' && value.type === 'Unit') {
+          const uStr = value.toString();
+          const spaceIdx = uStr.indexOf(' ');
+          defaultUnit = spaceIdx > 0 ? uStr.substring(spaceIdx + 1) : undefined;
+          try { value = value.toNumber(defaultUnit); } catch { value = parseFloat(uStr) || value; }
+        } else if (hasUnitOverride && value && typeof value === 'object' && (value as any).__commonUnitArray) {
+          // Matrix/array with per-row unit array from & [...] — preserve array, no single defaultUnit
+          // Don't set defaultUnit — per-row units handled by renderer via __commonUnitArray
+        } else if (hasUnitOverride && value && typeof value === 'object' && (value as any).__commonUnit) {
+          // Matrix/array with __commonUnit from tounit() — preserve unit label
+          defaultUnit = (value as any).__commonUnit;
+        } else {
+          defaultUnit = this._detectDefaultUnit(value);
+          // If value is already a number (post-strip scope), try to derive unit
+          // by re-evaluating with original unit scope (too expensive).
+          // Instead, use heuristic: infer from the variables used in expression.
+          if (!defaultUnit) {
+            defaultUnit = this._inferUnitFromExpr(assignMatch[2].trim());
+          }
+          value = this._stripUnit(value);
+        }
+        if (defaultUnit) this._varUnits.set(varName, defaultUnit);
+      }
       this.scope[varName] = value;
       // Check if expression uses a hidden function → hide the expression
       const fnCall = assignMatch[2].trim().match(/^(\w+)\s*\(/);
@@ -1701,6 +2137,7 @@ export class HekatanEvaluator {
         display: `${varName} = ${this._formatValue(value)}`,
         hideExpr: isHidden || undefined,
         lsolveData,
+        defaultUnit,
         latex: casResult?.latex,
         casEngine: casResult?.engine,
       };
@@ -1724,11 +2161,33 @@ export class HekatanEvaluator {
     }
 
     // Expresion pura
-    const resolved = this._fixNx1Indexing(this._resolveCellRefs(line));
-    const value = await this._evalExpr(resolved);
+    const resolved = this._fixRangeSlicing(this._fixNx1Indexing(this._resolveCellRefs(line)));
+    let value = await this._evalExpr(resolved);
     const casResult = this._lastCASResult;
+    let defaultUnit: string | undefined;
+    if (this.unitsStrip) {
+      // If expression used & or | (explicit unit override), extract number in the target unit
+      // instead of re-stripping to the default system (which would undo the conversion)
+      const hasUnitOverride = /(?<!\&)\&(?!\&)/.test(line) || /(?<!\|)\|(?!\|)/.test(line);
+      if (hasUnitOverride && value && typeof value === 'object' && value.type === 'Unit') {
+        const uStr = value.toString();
+        const spaceIdx = uStr.indexOf(' ');
+        defaultUnit = spaceIdx > 0 ? uStr.substring(spaceIdx + 1) : undefined;
+        try { value = value.toNumber(defaultUnit); } catch { value = parseFloat(uStr) || value; }
+      } else if (hasUnitOverride && value && typeof value === 'object' && (value as any).__commonUnitArray) {
+        // Matrix/array with per-row unit array — no single defaultUnit
+      } else if (hasUnitOverride && value && typeof value === 'object' && (value as any).__commonUnit) {
+        // Matrix/array with __commonUnit from tounit() — preserve unit label
+        defaultUnit = (value as any).__commonUnit;
+      } else {
+        defaultUnit = this._detectDefaultUnit(value);
+        if (!defaultUnit) defaultUnit = this._inferUnitFromExpr(line.trim());
+        value = this._stripUnit(value);
+      }
+    }
     return {
       type: "expression", value, display: this._formatValue(value),
+      defaultUnit,
       latex: casResult?.latex, casEngine: casResult?.engine,
     };
   }
@@ -1739,6 +2198,8 @@ export class HekatanEvaluator {
    * factor, laplace, fourier, series, taylor (+ sdiff alias for diff).
    */
   private async _evalExpr(expr: string): Promise<any> {
+    // Normalize Calcpad matrix syntax [a; b| c; d] → [a, b; c, d] early
+    expr = this._normalizeCalcpadMatrix(expr);
     const trimmed = expr.trim();
 
     // Check if expression contains CAS function calls
@@ -1751,7 +2212,500 @@ export class HekatanEvaluator {
     }
 
     this._lastCASResult = undefined;
-    return math.evaluate(expr, this.scope);
+
+    // NEW: Try strip-evaluate-tag for & operator.
+    // This handles dimensionally-inconsistent formulas (e.g. sqrt(kgf/cm²))
+    // that tounit() can't process. Falls back to tounit() if strip approach fails.
+    if (expr.includes("&")) {
+      const ampResult = this._evalWithAmpersandStrip(expr);
+      if (ampResult !== undefined) return ampResult;
+    }
+
+    // Per-row pipe conversion: expr | [unit1, unit2, ...]
+    // Intercept before _normalizePipe mangles the bracket syntax.
+    if (expr.includes("|")) {
+      const pipeArrayResult = this._evalPipeArray(expr);
+      if (pipeArrayResult !== undefined) return pipeArrayResult;
+    }
+
+    const normalized = this._normalizePipe(this._normalizeAmpersand(expr));
+
+    // When expression uses unit conversion (& or |), restore units from _varUnits
+    // so tounit() / "to" work correctly for stripped variables (pure numbers).
+    const hasUnitConversion = normalized.includes('tounit(') ||
+      (expr.includes('|') && normalized.includes(' to '));
+    if (this._varUnits.size > 0 && hasUnitConversion) {
+      const tmpScope: Record<string, any> = {};
+      for (const key of Object.keys(this.scope)) {
+        tmpScope[key] = this.scope[key];
+      }
+      // Restore scalar units so math.js "to" operator works
+      for (const [varName, unitStr] of this._varUnits) {
+        if (!(varName in tmpScope)) continue;
+        const val = tmpScope[varName];
+        if (typeof val === 'number') {
+          try {
+            tmpScope[varName] = math.unit(val, unitStr);
+          } catch { /* skip if unit creation fails */ }
+        }
+      }
+      // Try evaluating with restored scalar units (works for scalar | conversions)
+      try {
+        return math.evaluate(normalized, tmpScope);
+      } catch { /* fall through to matrix conversion */ }
+    }
+
+    // Manual matrix/vector conversion for | pipe: "varName to targetUnit"
+    // Works even when _varUnits is empty — uses __commonUnit from & tag as source unit.
+    if (hasUnitConversion) {
+      const toMatch = normalized.match(/^(\w+)\s+to\s+(\S+)\s*$/);
+      if (toMatch) {
+        const [, srcVar, tgtUnit] = toMatch;
+        const srcVal = this.scope[srcVar];
+        // Source unit: prefer _varUnits, fallback to __commonUnit tag from & operator
+        const srcUnit = this._varUnits.get(srcVar) ||
+          (srcVal && typeof srcVal === 'object' ? (srcVal as any).__commonUnit : undefined);
+        if (srcUnit && srcVal && typeof srcVal === 'object') {
+          try {
+            const factor = math.unit(1, srcUnit).to(tgtUnit).toNumber(tgtUnit);
+            if (srcVal.type === 'DenseMatrix') {
+              const result = srcVal.map((el: any) =>
+                typeof el === 'number' ? el * factor : el);
+              (result as any).__commonUnit = tgtUnit;
+              return result;
+            }
+            if (Array.isArray(srcVal)) {
+              const deepMap = (a: any): any =>
+                Array.isArray(a) ? a.map(deepMap) : (typeof a === 'number' ? a * factor : a);
+              const result = deepMap(srcVal);
+              (result as any).__commonUnit = tgtUnit;
+              return result;
+            }
+          } catch { /* conversion failed */ }
+        }
+      }
+    }
+
+    return math.evaluate(normalized, this.scope);
+  }
+
+  /**
+   * Normalize pipe `|` → ` to ` for unit conversion (math.js syntax).
+   * Only replaces top-level pipes (not inside brackets/parens).
+   * Skips `||` (logical OR).
+   * Example: `5 cm|m` → `5 cm to m`
+   */
+  /**
+   * Normalize Calcpad matrix syntax: [a; b| c; d] → [a, b; c, d]
+   * In Calcpad: semicolons separate columns, pipes separate rows.
+   * In MATLAB:  commas separate columns, semicolons separate rows.
+   * Only transforms pipe chars that appear inside brackets.
+   */
+  private _normalizeCalcpadMatrix(expr: string): string {
+    if (!expr.includes("|")) return expr;
+    // Find bracket regions that contain pipes
+    const chars = [...expr];
+    const result: string[] = [];
+    let i = 0;
+    while (i < chars.length) {
+      if (chars[i] === "[") {
+        // Scan ahead to find matching ] and check for |
+        let depth = 1;
+        let j = i + 1;
+        while (j < chars.length && depth > 0) {
+          if (chars[j] === "[") depth++;
+          else if (chars[j] === "]") depth--;
+          j++;
+        }
+        // j is now past the matching ]
+        const bracketContent = expr.slice(i + 1, j - 1);
+        if (bracketContent.includes("|") && !bracketContent.startsWith("[")) {
+          // Calcpad style: convert ; → , and | → ; inside this bracket
+          result.push("[");
+          for (let k = i + 1; k < j - 1; k++) {
+            if (chars[k] === ";") result.push(",");
+            else if (chars[k] === "|") result.push(";");
+            else result.push(chars[k]);
+          }
+          result.push("]");
+          i = j;
+        } else {
+          result.push(chars[i]);
+          i++;
+        }
+      } else {
+        result.push(chars[i]);
+        i++;
+      }
+    }
+    return result.join("");
+  }
+
+  private _normalizePipe(expr: string): string {
+    if (!expr.includes("|")) return expr;
+    let result = "";
+    let depth = 0;
+    for (let i = 0; i < expr.length; i++) {
+      const ch = expr[i];
+      if (ch === "(" || ch === "[" || ch === "{") { depth++; result += ch; }
+      else if (ch === ")" || ch === "]" || ch === "}") { depth--; result += ch; }
+      else if (ch === "|" && depth === 0) {
+        // Skip || (logical OR)
+        if (i + 1 < expr.length && expr[i + 1] === "|") {
+          result += "||";
+          i++;
+        } else {
+          result += " to ";
+        }
+      } else {
+        result += ch;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Transform `&` operator: `expr & unit` → `tounit(expr, "unit")`
+   * Only matches top-level `&` (not inside brackets/parens).
+   * The right side of `&` is treated as the target unit string.
+   * Examples:
+   *   k & kN/m        → tounit(k, "kN/m")
+   *   12*E*I/L^3 & kN/m → tounit(12*E*I/L^3, "kN/m")
+   *   F & kN           → tounit(F, "kN")
+   */
+  private _normalizeAmpersand(expr: string): string {
+    if (!expr.includes("&")) return expr;
+    // Find top-level & (not inside brackets/parens)
+    let depth = 0;
+    let ampIdx = -1;
+    for (let i = 0; i < expr.length; i++) {
+      const ch = expr[i];
+      if (ch === "(" || ch === "[" || ch === "{") depth++;
+      else if (ch === ")" || ch === "]" || ch === "}") depth--;
+      else if (ch === "&" && depth === 0) {
+        // Skip && (logical AND)
+        if (i + 1 < expr.length && expr[i + 1] === "&") { i++; continue; }
+        ampIdx = i;
+        break;
+      }
+    }
+    if (ampIdx < 0) return expr;
+    const left = expr.substring(0, ampIdx).trim();
+    const right = expr.substring(ampIdx + 1).trim();
+    if (!left || !right) return expr;
+    return `tounit(${left}, "${right}")`;
+  }
+
+  /**
+   * Extract base force and length units from a unit string.
+   * E.g. "kgf/cm^2" → { force: "kgf", length: "cm" }
+   *      "tonf m^2" → { force: "tonf", length: "m" }
+   *      "kN/m"     → { force: "kN", length: "m" }
+   */
+  private _extractBaseUnitsFromString(unitStr: string): { force: string; length: string } {
+    // Tokenize: split on operators and exponents, keep only unit names
+    const tokens = unitStr.replace(/[\^0-9\/\*\s]+/g, ' ').trim().split(/\s+/);
+    const knownForce = new Set(['N', 'kN', 'MN', 'GN', 'kgf', 'tonf', 'lbf', 'kip', 'daN']);
+    const knownLength = new Set(['m', 'cm', 'mm', 'km', 'in', 'ft', 'yd']);
+    let force = '', length = '';
+    for (const t of tokens) {
+      if (!force && knownForce.has(t)) force = t;
+      if (!length && knownLength.has(t)) length = t;
+    }
+    return { force, length };
+  }
+
+  /**
+   * Strip-evaluate-tag implementation for the `&` operator.
+   * Instead of `tounit(expr, "unit")` (which fails for dimensionally-inconsistent
+   * formulas like `sqrt(kgf/cm²)`), this approach:
+   *   1. Extracts force/length base units from the target unit string
+   *   2. Builds a temp scope where ALL Unit variables are stripped to those base units
+   *   3. Evaluates the expression (now purely numeric/dimensionless)
+   *   4. Wraps the result with the target unit
+   * Returns undefined if expression has no `&` or can't be processed this way.
+   */
+  private _evalWithAmpersandStrip(expr: string): any | undefined {
+    if (!expr.includes("&")) return undefined;
+
+    // Find top-level & (same logic as _normalizeAmpersand)
+    let depth = 0;
+    let ampIdx = -1;
+    for (let i = 0; i < expr.length; i++) {
+      const ch = expr[i];
+      if (ch === "(" || ch === "[" || ch === "{") depth++;
+      else if (ch === ")" || ch === "]" || ch === "}") depth--;
+      else if (ch === "&" && depth === 0) {
+        if (i + 1 < expr.length && expr[i + 1] === "&") { i++; continue; }
+        ampIdx = i;
+        break;
+      }
+    }
+    if (ampIdx < 0) return undefined;
+
+    const baseExpr = expr.substring(0, ampIdx).trim();
+    const targetUnit = expr.substring(ampIdx + 1).trim();
+    if (!baseExpr || !targetUnit) return undefined;
+
+    // --- Per-row unit array: & [rad, rad, in] ---
+    if (targetUnit.startsWith("[") && targetUnit.endsWith("]")) {
+      return this._evalAmpersandArray(baseExpr, targetUnit);
+    }
+
+    // --- Chain conversion: & unit1|unit2 ---
+    // Evaluates in unit1 system, then converts numeric result to unit2
+    // e.g. "Suma & kN|tonf" → evaluate Suma in kN, then convert to tonf
+    if (targetUnit.includes("|") && !targetUnit.includes("||")) {
+      const pipeIdx = targetUnit.indexOf("|");
+      const srcUnit = targetUnit.substring(0, pipeIdx).trim();
+      const dstUnit = targetUnit.substring(pipeIdx + 1).trim();
+      if (srcUnit && dstUnit) {
+        // Recursively evaluate "baseExpr & srcUnit" first
+        const srcResult = this._evalWithAmpersandStrip(
+          baseExpr + " & " + srcUnit
+        );
+        if (srcResult !== undefined) {
+          // srcResult is a Unit (scalar) or tagged matrix/array
+          if (typeof srcResult === "object" && srcResult !== null && srcResult.type === "Unit") {
+            // Scalar Unit: convert to dstUnit
+            try {
+              return srcResult.to(dstUnit);
+            } catch { /* fall through */ }
+          } else if (typeof srcResult === "object" && srcResult !== null &&
+                     (srcResult.type === "DenseMatrix" || Array.isArray(srcResult))) {
+            // Matrix/array with __commonUnit tag: convert via factor
+            const commonUnit = (srcResult as any).__commonUnit;
+            if (commonUnit) {
+              try {
+                const factor = (math as any).unit(1, commonUnit).to(dstUnit).toNumber(dstUnit);
+                const converted = srcResult.type === "DenseMatrix"
+                  ? srcResult.map((el: any) => typeof el === "number" ? el * factor : el)
+                  : (srcResult as any[]).map((el: any) => typeof el === "number" ? el * factor : el);
+                (converted as any).__commonUnit = dstUnit;
+                return converted;
+              } catch { /* fall through */ }
+            }
+          }
+        }
+      }
+    }
+
+    // Extract base units from target
+    const { force, length } = this._extractBaseUnitsFromString(targetUnit);
+    // & requires recognizable force and/or length units to perform conversion
+    if (!force && !length) return undefined;
+
+    // Build temp scope with all variables stripped to the target unit system
+    const tmpScope: Record<string, any> = {};
+    for (const key of Object.keys(this.scope)) {
+      tmpScope[key] = this.scope[key];
+    }
+
+    // If unitsStrip is active, variables are already numbers in the default system.
+    // Restore them as Unit values using _varUnits, then re-strip to the target system.
+    if (this.unitsStrip && this._varUnits.size > 0) {
+      for (const [varName, unitStr] of this._varUnits) {
+        if (!(varName in tmpScope)) continue;
+        const val = tmpScope[varName];
+
+        if (typeof val === 'number') {
+          // Scalar: restore as Unit, then strip to target system
+          try {
+            const restored = math.unit(val, unitStr);
+            tmpScope[varName] = this._unitToNumberWith(restored, force, length);
+          } catch { /* keep number as-is */ }
+        } else if (typeof val === 'object' && val !== null &&
+                   (val.type === 'DenseMatrix' || Array.isArray(val))) {
+          // Matrix/array: compute conversion factor and multiply all elements
+          try {
+            const oneUnit = math.unit(1, unitStr);
+            const factor = this._unitToNumberWith(oneUnit, force, length);
+            if (factor !== 1) {
+              if (val.type === 'DenseMatrix') {
+                tmpScope[varName] = val.map((el: any) =>
+                  typeof el === 'number' ? el * factor : el);
+              } else {
+                tmpScope[varName] = (val as any[]).map((el: any) =>
+                  typeof el === 'number' ? el * factor : el);
+              }
+            }
+          } catch { /* keep as-is */ }
+        }
+      }
+    }
+
+    // Strip any remaining Unit values (when unitsStrip is NOT active)
+    for (const key of Object.keys(tmpScope)) {
+      const v = tmpScope[key];
+      if (v == null || typeof v === "function") continue;
+      if (typeof v === "object" && v.type === "Unit") {
+        tmpScope[key] = this._unitToNumberWith(v, force, length);
+      } else if (typeof v === "object" && v.type === "DenseMatrix" && typeof v.map === "function") {
+        tmpScope[key] = v.map((el: any) => {
+          if (typeof el === "object" && el !== null && el.type === "Unit") {
+            return this._unitToNumberWith(el, force, length);
+          }
+          return el;
+        });
+      } else if (Array.isArray(v)) {
+        tmpScope[key] = v.map((el: any) => {
+          if (typeof el === "object" && el !== null && el.type === "Unit") {
+            return this._unitToNumberWith(el, force, length);
+          }
+          return el;
+        });
+      }
+    }
+
+    // Evaluate the base expression with the stripped scope (dimensionless)
+    const normalized = this._normalizePipe(baseExpr);
+    let result: any;
+    try {
+      result = math.evaluate(normalized, tmpScope);
+    } catch {
+      return undefined; // Fall through to existing tounit() approach
+    }
+
+    // Wrap scalar result with the target unit
+    if (typeof result === "number") {
+      try {
+        return math.unit(result, targetUnit);
+      } catch {
+        return undefined;
+      }
+    }
+
+    // Matrix/array result — tag with __commonUnit
+    if (typeof result === "object" && result !== null) {
+      if (result.type === "DenseMatrix" || Array.isArray(result)) {
+        (result as any).__commonUnit = targetUnit;
+        return result;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Handle per-row unit array: expr & [unit1, unit2, ...]
+   * Tags each row of a vector/matrix with its own unit.
+   * No unit conversion is performed — values stay as-is.
+   * Sets __commonUnitArray on the result for the renderer.
+   */
+  private _evalAmpersandArray(baseExpr: string, bracketStr: string): any | undefined {
+    // Parse [rad, rad, in] → ["rad", "rad", "in"]
+    const inner = bracketStr.slice(1, -1).trim();
+    if (!inner) return undefined;
+    const units = inner.split(",").map(s => s.trim()).filter(Boolean);
+    if (units.length === 0) return undefined;
+
+    // Evaluate the base expression with current scope
+    const normalized = this._normalizePipe(baseExpr);
+    let result: any;
+    try {
+      result = math.evaluate(normalized, this.scope);
+    } catch {
+      return undefined;
+    }
+
+    // Tag the result with per-row unit array
+    if (result && typeof result === "object") {
+      if (result.type === "DenseMatrix" || Array.isArray(result)) {
+        (result as any).__commonUnitArray = units;
+        return result;
+      }
+    }
+
+    // Scalar with array of 1 unit — treat as regular unit
+    if (typeof result === "number" && units.length === 1) {
+      try { return math.unit(result, units[0]); } catch { /* fall through */ }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Handle per-row pipe conversion: expr | [unit1, unit2, ...]
+   * Converts each row of a vector/matrix using its own source→target unit pair.
+   * Source units come from __commonUnitArray (set by & [u1,u2,...]) or _varUnits.
+   */
+  private _evalPipeArray(expr: string): any | undefined {
+    // Find top-level | followed by [...]
+    const pipeMatch = expr.match(/^(.+?)\s*\|\s*\[([^\]]+)\]\s*$/);
+    if (!pipeMatch) return undefined;
+
+    const baseExpr = pipeMatch[1].trim();
+    const targetUnitsStr = pipeMatch[2].trim();
+    const targetUnits = targetUnitsStr.split(",").map(s => s.trim()).filter(Boolean);
+    if (targetUnits.length === 0) return undefined;
+
+    // Evaluate the base expression
+    let srcVal: any;
+    try {
+      srcVal = math.evaluate(baseExpr, this.scope);
+    } catch {
+      // Try scope lookup directly (simple variable name)
+      srcVal = this.scope[baseExpr];
+    }
+    if (!srcVal || typeof srcVal !== 'object') return undefined;
+
+    // Get source units per row: from __commonUnitArray or single __commonUnit
+    const srcUnitArray: string[] | undefined = (srcVal as any).__commonUnitArray;
+    const srcUnitSingle: string | undefined = (srcVal as any).__commonUnit ||
+      this._varUnits.get(baseExpr);
+
+    // Extract rows from DenseMatrix or Array
+    let rows: any[];
+    if (srcVal.type === 'DenseMatrix') {
+      const data = (srcVal as any)._data;
+      rows = data || srcVal.toArray();
+    } else if (Array.isArray(srcVal)) {
+      rows = srcVal;
+    } else {
+      return undefined;
+    }
+
+    // Convert each row using its source→target unit pair
+    const nRows = rows.length;
+    const newRows: any[] = [];
+    const resultUnitArray: string[] = [];
+
+    for (let r = 0; r < nRows; r++) {
+      const tgtUnit = targetUnits[r] || targetUnits[targetUnits.length - 1];
+      const srcUnit = srcUnitArray ? (srcUnitArray[r] || srcUnitArray[srcUnitArray.length - 1]) : srcUnitSingle;
+
+      resultUnitArray.push(tgtUnit);
+
+      if (!srcUnit || srcUnit === tgtUnit) {
+        // Same unit or no source — keep value as-is
+        newRows.push(rows[r]);
+        continue;
+      }
+
+      // Compute conversion factor
+      try {
+        const factor = math.unit(1, srcUnit).to(tgtUnit).toNumber(tgtUnit);
+        const row = rows[r];
+        if (Array.isArray(row)) {
+          newRows.push(row.map((v: any) => typeof v === 'number' ? v * factor : v));
+        } else {
+          newRows.push(typeof row === 'number' ? row * factor : row);
+        }
+      } catch {
+        // Conversion failed (incompatible units, e.g. rad→mm) — keep as-is
+        newRows.push(rows[r]);
+      }
+    }
+
+    // Build result
+    if (srcVal.type === 'DenseMatrix') {
+      const result = math.matrix(newRows);
+      (result as any).__commonUnitArray = resultUnitArray;
+      return result;
+    } else {
+      (newRows as any).__commonUnitArray = resultUnitArray;
+      return newRows;
+    }
   }
 
   /** Check if an expression contains CAS function calls */
@@ -1807,19 +2761,241 @@ export class HekatanEvaluator {
    * Ejemplo: "transpose(T) * k{1} * T" → "transpose(T) * __cell_k_1 * T"
    */
   private _resolveCellRefs(expr: string): string {
-    return expr.replace(/\b([a-zA-Z_]\w*)\{(\d+)\}/g, (match, name, idxStr) => {
+    // Dot-notation element access: var.(i) or var.(i,j) → subset(var, index(i)) or subset(var, index(i,j))
+    expr = expr.replace(/\b([a-zA-Z_]\w*)\.\(([^)]+)\)/g, (match, name, args) => {
+      if (this.scope[name] !== undefined) {
+        return `subset(${name}, index(${args}))`;
+      }
+      return match;
+    });
+    return expr.replace(/\b([a-zA-Z_]\w*)\{([^}]+)\}/g, (match, name, idxExpr) => {
       const cell = this.scope[name];
       if (cell && (cell as any).__cell) {
-        const idx = parseInt(idxStr) - 1;
-        const value = (cell as any).elements[idx];
-        if (value !== undefined) {
-          // Crear variable temporal en scope
-          const tmpName = `__cell_${name}_${idxStr}`;
-          this.scope[tmpName] = value;
-          return tmpName;
+        // Literal index: V{1}, V{2} → resolve directly to temp var
+        if (/^\d+$/.test(idxExpr.trim())) {
+          const idx = parseInt(idxExpr) - 1;
+          const value = (cell as any).elements[idx];
+          if (value !== undefined) {
+            const tmpName = `__cell_${name}_${idxExpr.trim()}`;
+            this.scope[tmpName] = value;
+            return tmpName;
+          }
         }
+        // Variable index: V{e}, V{i+1} → use __cellget(V, expr)
+        return `__cellget(${name}, ${idxExpr})`;
       }
       return match; // no es cell array, dejar como esta
+    });
+  }
+
+  /** Convert a single Unit value to a number in the target force/length system */
+  private _unitToNumber(unit: any): number {
+    return this._unitToNumberWith(unit, this._unitsForce, this._unitsLength);
+  }
+
+  /** Detect the default unit string for a value (scalar, matrix, or array) */
+  private _detectDefaultUnit(value: any): string | undefined {
+    if (value == null) return undefined;
+    // Scalar Unit
+    if (typeof value === "object" && value.type === "Unit") {
+      return this._detectTargetUnit(value) ?? undefined;
+    }
+    // DenseMatrix — check first Unit cell
+    if (typeof value === "object" && value.type === "DenseMatrix") {
+      const raw = (value as any)._data;
+      if (raw) {
+        const first = this._findFirstUnit(raw);
+        if (first) return this._detectTargetUnit(first) ?? undefined;
+      }
+    }
+    // Plain array
+    if (Array.isArray(value)) {
+      const first = this._findFirstUnit(value);
+      if (first) return this._detectTargetUnit(first) ?? undefined;
+    }
+    return undefined;
+  }
+
+  /** Find the first Unit object in a nested array */
+  private _findFirstUnit(arr: any): any {
+    if (Array.isArray(arr)) {
+      for (const item of arr) {
+        const found = this._findFirstUnit(item);
+        if (found) return found;
+      }
+    } else if (arr && typeof arr === "object" && arr.type === "Unit") {
+      return arr;
+    }
+    return null;
+  }
+
+  /**
+   * Infer the resulting unit of an expression by performing dimensional analysis.
+   * Uses the stored _varUnits map to know the units of each variable,
+   * then re-evaluates the expression with unit objects to get the result unit.
+   */
+  private _inferUnitFromExpr(expr: string): string | undefined {
+    if (!this._unitsForce && !this._unitsLength) return undefined;
+    // Extract variable names from expression
+    const varNames = expr.match(/[a-zA-Z_]\w*/g);
+    if (!varNames) return undefined;
+    // Check if any variable has a known unit
+    const hasUnit = varNames.some(v => this._varUnits.has(v));
+    if (!hasUnit) return undefined;
+    // Build a temporary scope with unit values
+    try {
+      const tmpScope: Record<string, any> = {};
+      for (const v of varNames) {
+        const unitStr = this._varUnits.get(v);
+        if (unitStr) {
+          // Create a Unit with value 1 in the known unit
+          tmpScope[v] = math.unit(1, unitStr);
+        } else if (v in this.scope && typeof this.scope[v] === "number") {
+          tmpScope[v] = this.scope[v]; // dimensionless number
+        }
+      }
+      // Also add math functions
+      const result = math.evaluate(expr, tmpScope);
+      if (result && typeof result === "object" && result.type === "Unit") {
+        return this._detectTargetUnit(result) ?? undefined;
+      }
+    } catch {}
+    return undefined;
+  }
+
+  /** Detect the target unit string that matches a Unit value in the configured system */
+  private _detectTargetUnit(unit: any): string | null {
+    if (!unit || typeof unit !== "object" || unit.type !== "Unit") return null;
+    const fu = this._unitsForce;
+    const lu = this._unitsLength;
+    const patterns: string[] = [];
+    if (lu) patterns.push(lu, lu + '^2', lu + '^3', lu + '^4');
+    if (fu) patterns.push(fu);
+    if (fu && lu) {
+      patterns.push(
+        fu + '/' + lu, fu + '/' + lu + '^2', fu + '/' + lu + '^3',
+        fu + ' ' + lu, fu + ' ' + lu + '^2',
+      );
+    }
+    if (lu) patterns.push('1/' + lu, '1/' + lu + '^2');
+    for (const target of patterns) {
+      try { unit.toNumber(target); return target; } catch {}
+    }
+    return null;
+  }
+
+  /**
+   * Convert a Unit value to a number using a specific force+length system.
+   * Tries all common structural engineering unit patterns (force, force/length, etc.)
+   * until one succeeds. This is the core of the smart unit conversion algorithm:
+   *   1. Convert all sub-units to the target system (e.g., cm→m, MPa→kN/m²)
+   *   2. math.js internally simplifies (m/m = 1) making the result dimensionless
+   *   3. Returns the pure numeric coefficient
+   */
+  private _unitToNumberWith(unit: any, fu: string, lu: string): number {
+    const patterns: string[] = [];
+    if (lu) {
+      patterns.push(lu, lu + '^2', lu + '^3', lu + '^4');
+    }
+    if (fu) {
+      patterns.push(fu);
+    }
+    if (fu && lu) {
+      patterns.push(
+        fu + '/' + lu, fu + '/' + lu + '^2', fu + '/' + lu + '^3',  // force/length^n
+        fu + ' ' + lu, fu + ' ' + lu + '^2',                         // force*length^n (moment)
+      );
+    }
+    if (lu) {
+      patterns.push('1/' + lu, '1/' + lu + '^2');
+    }
+    for (const target of patterns) {
+      try { return unit.toNumber(target); } catch {}
+    }
+    // Fallback: extract the numeric coefficient as displayed
+    try {
+      const str = unit.toString();
+      const num = parseFloat(str);
+      if (!isNaN(num)) return num;
+    } catch {}
+    return typeof unit.value === "number" ? unit.value : 0;
+  }
+
+  /** Strip units from a value (scalar, matrix, or array) */
+  private _stripUnit(value: any): any {
+    if (value == null) return value;
+    // mathjs Unit
+    if (typeof value === "object" && value.type === "Unit") {
+      return this._unitToNumber(value);
+    }
+    // mathjs DenseMatrix — map each element
+    if (typeof value === "object" && value.type === "DenseMatrix" && typeof value.map === "function") {
+      return value.map((v: any) => {
+        if (typeof v === "object" && v !== null && v.type === "Unit") return this._unitToNumber(v);
+        return v;
+      });
+    }
+    // Plain array
+    if (Array.isArray(value)) {
+      return value.map((v: any) => this._stripUnit(v));
+    }
+    return value;
+  }
+
+  /** Convert all Unit values in scope to numbers using the target unit system */
+  private _stripScopeUnits(): void {
+    for (const key of Object.keys(this.scope)) {
+      const v = this.scope[key];
+      if (v == null || typeof v === "function") continue;
+      if (typeof v === "object" && v.type === "Unit") {
+        // Save the pre-strip display value + unit (numeric part in original units)
+        // e.g. Unit(30, "cm") → save {value: 30, unit: "cm"} before converting to 0.3 m
+        try {
+          const uStr = v.formatUnits ? v.formatUnits() : "";
+          if (uStr) {
+            const displayVal = v.toNumber(uStr);
+            if (isFinite(displayVal)) this._preStripDisplay.set(key, { value: displayVal, unit: uStr });
+          }
+        } catch { /* ignore — fallback to no pre-strip value */ }
+        const detected = this._detectTargetUnit(v);
+        if (detected) this._varUnits.set(key, detected);
+        this.scope[key] = this._unitToNumber(v);
+      } else if (typeof v === "object" && v.type === "DenseMatrix") {
+        const du = this._detectDefaultUnit(v);
+        if (du) this._varUnits.set(key, du);
+        this.scope[key] = this._stripUnit(v);
+      } else if (Array.isArray(v)) {
+        const du = this._detectDefaultUnit(v);
+        if (du) this._varUnits.set(key, du);
+        this.scope[key] = this._stripUnit(v);
+      }
+    }
+  }
+
+  /** Transform range-indexed access: VAR[a:b, c:d] → subset(VAR, index([a,...,b], [c,...,d])) */
+  private _fixRangeSlicing(expr: string): string {
+    return expr.replace(/\b([a-zA-Z_]\w*)\[([^\]]*:[^\]]*)\]/g, (match, name, idxContent) => {
+      // Only transform if the variable exists in scope
+      if (this.scope[name] === undefined) return match;
+      // Split by top-level commas
+      const parts = idxContent.split(",").map(s => s.trim());
+      const indexArgs = parts.map(part => {
+        const rangeMatch = part.match(/^(.+):(.+)$/);
+        if (rangeMatch) {
+          // Expand a:b → [a, a+1, ..., b]
+          try {
+            const a = Math.round(Number(math.evaluate(rangeMatch[1], this.scope)));
+            const b = Math.round(Number(math.evaluate(rangeMatch[2], this.scope)));
+            const arr: number[] = [];
+            for (let i = a; i <= b; i++) arr.push(i);
+            return `[${arr.join(",")}]`;
+          } catch {
+            return part; // fallback
+          }
+        }
+        return part;
+      });
+      return `subset(${name}, index(${indexArgs.join(", ")}))`;
     });
   }
 
@@ -1985,6 +3161,101 @@ export class HekatanEvaluator {
     return this._formatValue(value);
   }
 
+  /** Display aliases for units: math.js name → display name */
+  private static _unitDisplayAlias: Record<string, string> = {
+    "inch": "in",
+  };
+
+  /** Parse unit tokens from a string, returning Map<base, exponent> and insertion order */
+  private static _parseUnitTokens(s: string): { counts: Map<string, number>; order: string[] } {
+    const tokens = s.split(/\s+/).filter(Boolean);
+    const counts = new Map<string, number>();
+    const order: string[] = [];
+    for (const tok of tokens) {
+      // strip parentheses that math.js sometimes adds
+      const clean = tok.replace(/[()]/g, "");
+      if (!clean) continue;
+      const m = clean.match(/^([a-zA-Z\u00B0\u2103\u2109]+)\^?(\d*)$/);
+      if (m) {
+        const base = m[1];
+        const exp = m[2] ? parseInt(m[2]) : 1;
+        if (!counts.has(base)) order.push(base);
+        counts.set(base, (counts.get(base) || 0) + exp);
+      } else {
+        if (!counts.has(clean)) order.push(clean);
+        counts.set(clean, (counts.get(clean) || 0) + 1);
+      }
+    }
+    return { counts, order };
+  }
+
+  /** Format unit tokens back to string, applying display aliases */
+  private static _formatUnitTokens(counts: Map<string, number>, order: string[]): string {
+    const parts: string[] = [];
+    for (const base of order) {
+      const exp = counts.get(base);
+      if (!exp || exp <= 0) continue;
+      const display = HekatanEvaluator._unitDisplayAlias[base] || base;
+      parts.push(exp === 1 ? display : `${display}^${exp}`);
+    }
+    return parts.join(" ");
+  }
+
+  /**
+   * Simplify unit string: collapse repeated tokens AND cancel across numerator/denominator.
+   * "cm cm" → "cm^2", "kip inch^4 / inch^2 inch" → "kip in"
+   */
+  static simplifyUnits(unitStr: string): string {
+    if (!unitStr) return unitStr;
+
+    // Strip outer parens: "(kip inch^4) / (inch^2 inch)" → "kip inch^4 / inch^2 inch"
+    let s = unitStr.trim();
+
+    const slashIdx = s.indexOf("/");
+    if (slashIdx < 0) {
+      // No fraction — just collapse repeated tokens
+      if (!s.includes(" ")) {
+        // Single token — just apply alias
+        const alias = HekatanEvaluator._unitDisplayAlias[s] || s;
+        return alias;
+      }
+      const { counts, order } = HekatanEvaluator._parseUnitTokens(s);
+      return HekatanEvaluator._formatUnitTokens(counts, order);
+    }
+
+    // Has fraction — parse both sides and cancel common factors
+    const numStr = s.slice(0, slashIdx).trim();
+    const denStr = s.slice(slashIdx + 1).trim();
+    const num = HekatanEvaluator._parseUnitTokens(numStr);
+    const den = HekatanEvaluator._parseUnitTokens(denStr);
+
+    // Cancel common bases
+    for (const [base, denExp] of den.counts) {
+      const numExp = num.counts.get(base) || 0;
+      if (numExp > 0 && denExp > 0) {
+        const net = numExp - denExp;
+        if (net > 0) {
+          num.counts.set(base, net);
+          den.counts.delete(base);
+        } else if (net < 0) {
+          num.counts.delete(base);
+          den.counts.set(base, -net);
+        } else {
+          // Fully cancel
+          num.counts.delete(base);
+          den.counts.delete(base);
+        }
+      }
+    }
+
+    const numResult = HekatanEvaluator._formatUnitTokens(num.counts, num.order);
+    const denResult = HekatanEvaluator._formatUnitTokens(den.counts, den.order);
+
+    if (!denResult) return numResult || "";
+    if (!numResult) return `1 / ${denResult}`;
+    return `${numResult} / ${denResult}`;
+  }
+
   private _formatValue(value: any): string {
     if (value === undefined || value === null) return "";
     if (typeof value === "function") return "[function]";
@@ -1993,6 +3264,17 @@ export class HekatanEvaluator {
     if (value && (value as any).__cell) {
       const elems = (value as any).elements as any[];
       return `{${elems.map((e: any) => this._formatValue(e)).join(", ")}}`;
+    }
+
+    // math.js Unit object (e.g. 5 cm, 250 MPa)
+    if (value && typeof value === "object"
+        && typeof value.toNumber === "function"
+        && typeof value.formatUnits === "function") {
+      const num = value.toNumber();
+      const unit = HekatanEvaluator.simplifyUnits(value.formatUnits());
+      const numStr = Number.isInteger(num) ? String(num)
+        : String(Math.round(num * 10000) / 10000);
+      return unit ? `${numStr} ${unit}` : numStr;
     }
 
     // Matrix math.js

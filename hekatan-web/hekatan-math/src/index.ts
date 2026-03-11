@@ -6,6 +6,7 @@ export {
   renderNode, renderValue, renderInlineText, renderEquationText,
   renderMatrix, renderVector, renderMatrixOperation, renderVectorOperation,
   setDecimals, getDecimals,
+  setFractions, getFractions,
 } from "./renderer.js";
 
 // ─── Eigen WASM Solver (sparse + dense linear algebra) ───
