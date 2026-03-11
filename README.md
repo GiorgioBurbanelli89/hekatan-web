@@ -35,6 +35,54 @@ The first version is open and available to everyone. Future versions will incorp
 
 ---
 
+## Key Innovation: The `@{}` Block System
+
+One thing always surprised me about tools like **Mathcad**, **Calcpad**, **SMath Studio**, and similar engineering calculators: they are all locked to their own proprietary math engine. If you need to call a Python library, run an Octave script, or use a Fortran solver - you can't. You have to leave the tool, run your code somewhere else, and manually copy results back.
+
+**Why did nobody think of embedding external languages directly inside the calculation document?**
+
+Hekatan solves this with the `@{}` block system: everything outside `@{}` blocks is **markdown + math**, and each language lives inside its own `@{language}...@{end language}` block. It works. You can mix and match **26 programming languages** alongside the native math engine in a single document:
+
+```
+# Structural Analysis
+
+> Compare hand calculation with Python FEM library
+
+## Hand Calculation (Hekatan math engine)
+
+E = 200000         // MPa
+I = 8333.33        // cm^4
+L = 6              // m
+P = 50             // kN
+
+delta = P*L^3/(48*E*I)
+'Midspan deflection: delta
+
+## Python Verification (OpenSeesPy)
+
+@{python}
+import openseespy.opensees as ops
+ops.wipe()
+ops.model('basic', '-ndm', 2, '-ndf', 3)
+# ... full FEM model ...
+print(f"delta = {displacement:.4f} m")
+@{end python}
+
+## Octave Cross-Check
+
+@{octave}
+E = 200000; I = 8333.33; L = 6; P = 50;
+delta = P*L^3/(48*E*I);
+printf("delta = %.6f m\n", delta)
+@{end octave}
+```
+
+This means an engineer can write their design calculations with the built-in math engine, verify results with Python or MATLAB/Octave, call specialized solvers like OpenSees, and generate everything as a single professional document. No tool-switching, no copy-pasting results between applications.
+
+**Supported languages:** Python, C++, C, C#, Fortran, Rust, TypeScript, JavaScript, Julia, R, Octave, Go, Lua, Perl, Ruby, PHP, Haskell, D, PowerShell, Bash, OpenSees, WPF, Avalonia, Qt, GTK, and more.
+
+---
+
 ## Features
 
 ### Split-Pane Live Editor
