@@ -123,6 +123,9 @@ hekatan-web/
       parser.ts          # Token-based math parser
       renderer.ts        # HTML output renderer (equations, matrices, vectors)
       mathEngine.ts      # High-level API: parse, evaluate, render
+      mathcanvas-cli.ts  # CLI batch processor for .hcalc files
+      gpu/
+        gpu-compute.ts   # WebGPU sparse matrix solver
       matheditor/
         CadCli.ts        # @{draw} 2D/3D CAD diagram engine
       wasm/
@@ -132,8 +135,8 @@ hekatan-web/
           eigen_sparse.wasm  # Compiled WebAssembly (229 KB)
   hekatan-ui/            # Frontend application
     src/mathcanvas/
-      main.ts            # MathCanvas editor (6700+ lines)
-      styles.css         # 5-theme stylesheet (2700+ lines)
+      main.ts            # MathCanvas editor (8500+ lines)
+      styles.css         # 5-theme stylesheet (3800+ lines)
       index.html         # Entry point
     public/
       help.html          # Bilingual help documentation (800+ lines)
@@ -188,6 +191,28 @@ circle3d 0 0 0  0.15  color:green
 hdim 0 0  4 0  -0.8  "4000"  fs:11
 @{end draw}
 ```
+
+### @{three} — 3D Engineering Visualization
+
+Interactive Three.js scenes with DSL commands for structural engineering models.
+
+```
+@{three 800 500}
+background #87CEEB
+// Structural elements
+beam x1 y1 z1 x2 y2 z2 r:0.3 color:#cc4444    // Cylinder between two points
+deck x1 y1 z1 x2 y2 z2 w:12 t:1 color:#888888  // Oriented slab/deck
+pier x y z h:15 wbot:4 wtop:3 d:6 color:#8B7355 // Tapered pier
+cable 0,0,0 5,2,5 10,0,10 r:0.15 color:#ccc     // Spline tube through points
+hanger x y ztop zbot r:0.1 color:#999            // Vertical cable
+water -2 w:200 l:200 color:#1a5276               // Semi-transparent water plane
+text 0 0 55 "Label" color:#fff scale:1           // 3D sprite text
+camera 80 60 40 lookat:0,0,25
+fit                                               // Auto-frame camera
+@{end three}
+```
+
+Includes a **Puente Suspendido 3D** example (~1400 objects) with realistic cable-stayed bridge: deck, towers with saddle rollers, parabolic main cables, hangers, abutments, anchorage blocks, and water.
 
 ### 5 Visual Themes
 
