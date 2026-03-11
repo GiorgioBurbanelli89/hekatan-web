@@ -25,7 +25,7 @@ However, I wanted to go further: a **browser-based platform** that unifies struc
 
 ### Inspiration & Vision
 
-The structural analysis examples in this project follow the theory from **"Matrix Structural Analysis" by Mario Paz and William Leigh** - a rigorous treatment of the direct stiffness method.
+The structural analysis examples in this project follow the theory from **"Matrix Structural Analysis" by Mario Paz and William Leigh** and the books by **Edward L. Wilson** - the creator of SAP 2000 and pioneer of finite element methods for structural engineering. Wilson's work on dynamic analysis, equation solvers, and practical FEM implementation is the foundation that inspired SAP 2000, and serves as a guide for the analytical capabilities in Hekatan Web.
 
 I also studied [**awatif**](https://github.com/madil4/awatif) (by Mohamed Adil), an excellent open-source FEM framework. awatif's architecture is clean and well-designed, and the Eigen WASM solver in Hekatan Web is based on its approach. However, awatif is still incomplete - it only supports 3-node triangular meshes for plates, and has no shell elements or foundation modeling.
 
@@ -35,51 +35,61 @@ The first version is open and available to everyone. Future versions will incorp
 
 ---
 
-## Key Innovation: The `@{}` Block System
+## Key Innovation: The `&` Unit Annotation Operator
 
-One thing always surprised me about tools like **Mathcad**, **Calcpad**, **SMath Studio**, and similar engineering calculators: they are all locked to their own proprietary math engine. If you need to call a Python library, run an Octave script, or use a Fortran solver - you can't. You have to leave the tool, run your code somewhere else, and manually copy results back.
+One problem always bothered me about tools like **Mathcad**, **Calcpad**, **SMath Studio**, and similar engineering calculators: **units**.
 
-**Why did nobody think of embedding external languages directly inside the calculation document?**
+In Mathcad, units are part of the numerical system. Every variable carries dimensional information, and the engine performs dimensional analysis on every operation. This sounds elegant in theory, but in practice it causes constant headaches: unit conversion errors, incompatible dimensions in matrix operations, fractional exponents in `sqrt(kgf/cm^2)` that break everything downstream, and formulas that work with pure numbers but fail when you add units.
 
-Hekatan solves this with the `@{}` block system: everything outside `@{}` blocks is **markdown + math**, and each language lives inside its own `@{language}...@{end language}` block. It works. You can mix and match **26 programming languages** alongside the native math engine in a single document:
+In Calcpad and others, units are either completely absent (just numbers) or implemented with similar dimensional-analysis complexity.
+
+**Why did nobody think of simply separating the units from the calculation?**
+
+Hekatan Web solves this with the **`&` operator** - a unit annotation that is purely cosmetic. The math engine evaluates the expression as pure numbers, and the `&` just tells the renderer what label to display next to the result:
 
 ```
-# Structural Analysis
+@{cells r} |L = 100 & in|I_z = 882 & in^4|J_t = 5.08 & in^4|
+@{cells r} |E_s = 29000 & kip/in^2|G_s = 11600 & kip/in^2|
 
-> Compare hand calculation with Python FEM library
+@{cells fr} |t_1 = G_s*J_t/L & kip*in|a_4 = 4*E_s*I_z/L & kip*in|
 
-## Hand Calculation (Hekatan math engine)
+k = [[t_1,0,0,-t_1,0,0],[0,a_4,b_6,0,a_2,-b_6],...] & kip*in
 
-E = 200000         // MPa
-I = 8333.33        // cm^4
-L = 6              // m
-P = 50             // kN
-
-delta = P*L^3/(48*E*I)
-'Midspan deflection: delta
-
-## Python Verification (OpenSeesPy)
-
-@{python}
-import openseespy.opensees as ops
-ops.wipe()
-ops.model('basic', '-ndm', 2, '-ndf', 3)
-# ... full FEM model ...
-print(f"delta = {displacement:.4f} m")
-@{end python}
-
-## Octave Cross-Check
-
-@{octave}
-E = 200000; I = 8333.33; L = 6; P = 50;
-delta = P*L^3/(48*E*I);
-printf("delta = %.6f m\n", delta)
-@{end octave}
+K_R = k1R + k2R & kip*in
+u = lsolve(K_R, F_R) & in
 ```
 
-This means an engineer can write their design calculations with the built-in math engine, verify results with Python or MATLAB/Octave, call specialized solvers like OpenSees, and generate everything as a single professional document. No tool-switching, no copy-pasting results between applications.
+**How it works:**
+- `L = 100 & in` — evaluates `L = 100`, displays "100 **in**" with the unit styled as an italic label
+- `k = [[...]] & kip*in` — evaluates the full matrix, shows "kip*in" next to every element
+- `u = lsolve(K_R, F_R) & in` — solves the system, annotates the result vector with "in"
 
-**Supported languages:** Python, C++, C, C#, Fortran, Rust, TypeScript, JavaScript, Julia, R, Octave, Go, Lua, Perl, Ruby, PHP, Haskell, D, PowerShell, Bash, OpenSees, WPF, Avalonia, Qt, GTK, and more.
+**The classic problem with units in engineering calculators:**
+
+In Mathcad or Calcpad, if you write:
+```
+f'c = 210 kgf/cm²
+Ec = 15100 * sqrt(f'c)       ← ERROR: sqrt(kgf/cm²) = kgf^0.5/cm — fractional exponent!
+```
+The unit system propagates `kgf/cm²` into the square root, producing `kgf^0.5/cm` — a nonsensical fractional exponent that breaks all downstream operations. This is a **real problem** that every structural engineer using Mathcad has encountered.
+
+**In Hekatan Web with `&`:**
+```
+f_c = 210 & kgf/cm^2
+Ec = 15100 * sqrt(f_c) & kgf/cm^2
+```
+- `f_c` = **210** (pure number). The `& kgf/cm^2` is just a display label.
+- `sqrt(f_c)` = `sqrt(210)` = 14.49... — no unit interference, no fractional exponents.
+- `Ec` = 15100 × 14.49 = **218,820** displayed with the label `kgf/cm²`
+
+**Why this is better:**
+- **No dimensional errors** — the math engine works with pure numbers, no unit propagation
+- **No fractional exponents** — `sqrt(f_c)` just works, because `f_c` is just a number
+- **Matrix operations are clean** — stiffness matrices, force vectors, displacements all compute without unit interference
+- **The engineer controls the display** — you know your units, you annotate them explicitly
+- **Works everywhere** — on scalars, vectors, matrices, inside `@{cells}`, on standalone lines
+
+This is exactly how structural engineers actually work: they keep track of units mentally and annotate their hand calculations. The `&` operator formalizes this practice. It's surprising that no engineering calculator thought of this before — Mathcad, Calcpad, SMath Studio, none of them offer this simple solution.
 
 ---
 
@@ -262,44 +272,6 @@ u = lsolve(K_reduced, F_reduced)
 
 // Reactions
 R = K * u - F
-```
-
----
-
-## Example: Multi-Language Integration
-
-Execute Python, MATLAB/Octave, JavaScript, and more alongside math:
-
-```
-# Comparative Analysis
-
-> Steel beam design with verification in multiple languages
-
-## Hekatan Math Engine
-
-b = 200            // mm - flange width
-t_f = 15           // mm - flange thickness
-h_w = 400          // mm - web height
-t_w = 10           // mm - web thickness
-
-I_x = 2*(b*t_f^3/12 + b*t_f*(h_w/2 + t_f/2)^2) + t_w*h_w^3/12
-'Moment of inertia: I_x
-
-## Python Verification
-
-@{python}
-b, tf, hw, tw = 200, 15, 400, 10
-Ix = 2*(b*tf**3/12 + b*tf*(hw/2 + tf/2)**2) + tw*hw**3/12
-print(f"I_x = {Ix:,.0f} mm4")
-@{end python}
-
-## Octave/MATLAB
-
-@{octave}
-b = 200; tf = 15; hw = 400; tw = 10;
-Ix = 2*(b*tf^3/12 + b*tf*(hw/2 + tf/2)^2) + tw*hw^3/12;
-printf("I_x = %.0f mm4\n", Ix)
-@{end octave}
 ```
 
 ---
@@ -499,7 +471,8 @@ npm run build     # Outputs to hekatan-ui/dist/
 
 - **[Calcpad](https://github.com/Proektsoftbg/Calcpad)** by Nedyo Zhekov / PROEKTSOFT EOOD - The original math engine that started it all
 - **[awatif](https://github.com/madil4/awatif)** by Mohamed Adil - FEM framework; Eigen WASM solver architecture
-- **"Matrix Structural Analysis" by Mario Paz & William Leigh** - Theoretical foundation for structural examples
+- **"Matrix Structural Analysis" by Mario Paz & William Leigh** - Direct stiffness method theory
+- **Edward L. Wilson** - Creator of SAP 2000; his books on structural dynamics and FEM are the theoretical guide for Hekatan's analytical capabilities
 - **[OpenSees](https://opensees.berkeley.edu/)** - Advanced structural analysis concepts
 - **[Eigen](https://eigen.tuxfamily.org/)** 3.4.0 - C++ linear algebra (compiled to WASM)
 - **[math.js](https://mathjs.org/)** - JavaScript math library
