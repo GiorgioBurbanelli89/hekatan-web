@@ -59,37 +59,50 @@ K_R = k1R + k2R & kip*in
 u = lsolve(K_R, F_R) & in
 ```
 
-**How it works:**
-- `L = 100 & in` — evaluates `L = 100`, displays "100 **in**" with the unit styled as an italic label
-- `k = [[...]] & kip*in` — evaluates the full matrix, shows "kip*in" next to every element
-- `u = lsolve(K_R, F_R) & in` — solves the system, annotates the result vector with "in"
+**The classic problem — `sqrt(kgf/cm²)` in Mathcad:**
 
-**The classic problem with units in engineering calculators:**
+Every structural engineer knows this formula for the elastic modulus of concrete:
 
-In Mathcad or Calcpad, if you write:
 ```
-f'c = 210 kgf/cm²
-Ec = 15100 * sqrt(f'c)       ← ERROR: sqrt(kgf/cm²) = kgf^0.5/cm — fractional exponent!
+Ec = 15100 * sqrt(f'c)       where f'c = 210 kgf/cm²
 ```
-The unit system propagates `kgf/cm²` into the square root, producing `kgf^0.5/cm` — a nonsensical fractional exponent that breaks all downstream operations. This is a **real problem** that every structural engineer using Mathcad has encountered.
+
+In **Mathcad** or **Calcpad**, if `f'c` carries the unit `kgf/cm²`, then `sqrt(f'c)` produces `kgf^0.5/cm` — a **fractional exponent** that is dimensionally nonsensical and breaks all downstream operations. This is a real, well-known problem that forces engineers to add workarounds, strip units manually, or restructure their formulas.
+
+**Why did nobody think of simply separating the calculation from the units?** Not Mathcad, not MathcadPrime, not Calcpad, not SMath Studio — none of them offer this simple solution.
 
 **In Hekatan Web with `&`:**
 ```
 f_c = 210 & kgf/cm^2
 Ec = 15100 * sqrt(f_c) & kgf/cm^2
 ```
-- `f_c` = **210** (pure number). The `& kgf/cm^2` is just a display label.
+- `f_c` = **210** (pure number). The `& kgf/cm^2` is just a display annotation.
 - `sqrt(f_c)` = `sqrt(210)` = 14.49... — no unit interference, no fractional exponents.
 - `Ec` = 15100 × 14.49 = **218,820** displayed with the label `kgf/cm²`
 
-**Why this is better:**
+**How `&` works internally — the 3-step mechanism:**
+
+1. **Calculate** — the math engine evaluates the expression as pure numbers (no units in the computation)
+2. **Simplify** — when the target unit differs from the working system, it divides by the target unit to make the value dimensionless (= 1)
+3. **Re-scale** — multiplies by the target unit and displays the converted result
+
+For example, if you work in **ksi** (kip/in²) but want to see the result in **tonf/m²**:
+```
+@{config units:kip,in}
+sigma = 36 & ksi
+sigma_metric = sigma & tonf/m^2     // automatically converts ksi → tonf/m²
+```
+The `&` operator takes the internal value (in ksi), simplifies it to a dimensionless number relative to tonf/m², and displays the converted value. All intermediate calculations remain in pure numbers — no unit propagation, no dimensional errors.
+
+**Why this is better than Mathcad/Calcpad/SMath:**
 - **No dimensional errors** — the math engine works with pure numbers, no unit propagation
 - **No fractional exponents** — `sqrt(f_c)` just works, because `f_c` is just a number
+- **Cross-system conversion** — work in kip-in, display in tonf-m, without breaking anything
 - **Matrix operations are clean** — stiffness matrices, force vectors, displacements all compute without unit interference
 - **The engineer controls the display** — you know your units, you annotate them explicitly
 - **Works everywhere** — on scalars, vectors, matrices, inside `@{cells}`, on standalone lines
 
-This is exactly how structural engineers actually work: they keep track of units mentally and annotate their hand calculations. The `&` operator formalizes this practice. It's surprising that no engineering calculator thought of this before — Mathcad, Calcpad, SMath Studio, none of them offer this simple solution.
+This is exactly how structural engineers actually work on paper: they calculate with numbers in a consistent unit system and annotate the units by hand. The `&` operator formalizes this practice in software. It's a simple, pragmatic solution that none of the established engineering calculators ever implemented.
 
 ---
 
