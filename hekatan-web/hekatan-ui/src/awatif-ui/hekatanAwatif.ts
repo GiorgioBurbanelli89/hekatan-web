@@ -801,6 +801,97 @@ export function renderAwatifBlock(
   scope: Record<string, any>,
 ): void {
   try {
+    // ── Inject FEM inspect panel CSS (once) ──
+    if (!document.getElementById('fem-inspect-styles')) {
+      const style = document.createElement('style');
+      style.id = 'fem-inspect-styles';
+      style.textContent = `
+    #fem-inspect-panel {
+      position: fixed; top: 10px; right: 10px;
+      background: rgba(20,20,28,0.97); color: #ccc;
+      border: 1px solid #555; border-radius: 8px;
+      padding: 14px 16px; font-family: monospace; font-size: 11px;
+      z-index: 999999; width: 420px; max-height: calc(100vh - 20px);
+      overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      pointer-events: auto;
+    }
+    #fem-inspect-panel h3 { margin: 0 0 8px 0; color: #0a84ff; font-size: 14px; display: flex; justify-content: space-between; }
+    #fem-inspect-panel .close-btn { background: none; border: none; color: #888; cursor: pointer; font-size: 16px; }
+    #fem-inspect-panel .close-btn:hover { color: #fff; }
+    #fem-inspect-panel .section { margin-top: 10px; border-top: 1px solid #444; padding-top: 8px; }
+    #fem-inspect-panel .section-title { color: #ee9b00; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+    #fem-inspect-panel .prop-row { display: flex; justify-content: space-between; padding: 1px 0; }
+    #fem-inspect-panel .prop-key { color: #aaa; }
+    #fem-inspect-panel .prop-val { color: #fff; font-weight: bold; }
+    #fem-inspect-panel .matrix-label { color: #888; font-size: 10px; margin-top: 6px; }
+    #fem-inspect-panel table { border-collapse: collapse; width: 100%; margin-top: 4px; font-size: 10px; }
+    #fem-inspect-panel td { border: 1px solid #333; padding: 2px 4px; text-align: right; color: #ddd; white-space: nowrap; }
+    #fem-inspect-panel td.nonzero { color: #0f0; }
+    #fem-inspect-panel td.header { color: #ee9b00; font-weight: bold; background: #222; text-align: center; }
+    #fem-inspect-panel .result-val { font-size: 13px; color: #0f0; font-weight: bold; }
+    #fem-inspect-panel .dof-labels { color: #888; font-size: 9px; }
+    button.inspect-active { background: #ff4444 !important; color: #fff !important; border-color: #ff4444 !important; }
+    .fem-eq { font-family: 'STIX Two Math','Cambria Math','Times New Roman',serif; font-size: 13px; color: #e8e8ff; line-height: 1.6; margin: 6px 0 8px 0; text-align: center; }
+    .fem-eq .var { color: #7cb3ff; font-style: italic; }
+    .fem-eq .op { color: #ccc; padding: 0 2px; }
+    .fem-eq .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 2px; }
+    .fem-eq .frac-num { border-bottom: 1px solid #999; padding: 0 4px 1px; font-size: 11px; }
+    .fem-eq .frac-den { padding: 1px 4px 0; font-size: 11px; }
+    .fem-eq sub { font-size: 0.75em; vertical-align: sub; color: #aaa; }
+    .fem-eq sup { font-size: 0.75em; vertical-align: super; }
+    .fem-eq .mat-sym { display: inline-grid; border-left: 2px solid #888; border-right: 2px solid #888; padding: 2px 6px; margin: 0 4px; vertical-align: middle; gap: 1px 8px; font-size: 11px; }
+    .fem-eq .mat-sym .cell { text-align: center; }
+    .fem-eq .mat-sym .dots { color: #666; }
+    .fem-eq .highlight { color: #0f0; font-weight: bold; }
+    .fem-eq .eq-box { background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 4px; padding: 6px 10px; margin: 4px 0; }
+    .fem-full-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.97); z-index: 9999999; overflow: auto; padding: 20px; }
+    .fem-full-overlay .close-full { position: fixed; top: 12px; right: 16px; background: #444; color: #fff; border: 1px solid #666; border-radius: 4px; padding: 6px 14px; cursor: pointer; font-size: 13px; z-index: 10000000; }
+    .fem-full-overlay .close-full:hover { background: #666; }
+    .fem-full-overlay h2 { color: #ee9b00; margin: 0 0 16px 0; font-size: 18px; font-family: monospace; }
+    .fem-full-sections { display: flex; flex-direction: column; gap: 20px; }
+    .fem-full-sections .full-section { background: rgba(30,30,50,0.8); border: 1px solid #555; border-radius: 6px; padding: 16px; overflow-x: auto; }
+    .fem-full-sections .full-section.coeff { background: rgba(40,35,20,0.8); }
+    .fem-full-sections .full-section.numeric { background: rgba(30,40,30,0.8); }
+    .fem-full-sections .side-title { font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .fem-full-sections table { border-collapse: collapse; font-family: monospace; font-size: 11px; }
+    .fem-full-sections td { border: 1px solid #333; padding: 3px 6px; text-align: right; color: #ddd; white-space: nowrap; }
+    .fem-full-sections td.nz { color: #0f0; }
+    .fem-full-sections td.hdr { color: #ee9b00; font-weight: bold; background: #222; text-align: center; }
+    .fem-full-sections td.diag { background: rgba(255,255,0,0.06); }
+    .fem-full-sections .coeff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+    .fem-full-sections .coeff-item { background: rgba(255,255,255,0.04); border: 1px solid #444; border-radius: 4px; padding: 8px 12px; font-family: 'STIX Two Math','Cambria Math','Times New Roman',serif; font-size: 13px; color: #e8e8ff; line-height: 1.6; }
+    .fem-full-sections .coeff-item .var { color: #7cb3ff; font-style: italic; }
+    .fem-full-sections .coeff-item .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 2px; }
+    .fem-full-sections .coeff-item .frac-num { border-bottom: 1px solid #999; padding: 0 4px 1px; font-size: 11px; }
+    .fem-full-sections .coeff-item .frac-den { padding: 1px 4px 0; font-size: 11px; }
+    .fem-full-sections .coeff-item .highlight { color: #0f0; font-weight: bold; }
+    .fem-full-sections .coeff-item sub { font-size: 0.75em; vertical-align: sub; color: #aaa; }
+    .fem-full-sections .coeff-item sup { font-size: 0.75em; vertical-align: super; }
+    .fem-step { background: rgba(255,255,255,0.03); border: 1px solid #444; border-radius: 4px; padding: 8px 12px; margin: 6px 0; font-family: 'STIX Two Math','Cambria Math','Times New Roman',serif; font-size: 12px; color: #e8e8ff; overflow-x: auto; }
+    .fem-step .step-title { color: #ee9b00; font-weight: bold; font-size: 11px; margin-bottom: 4px; font-family: monospace; }
+    .fem-step .step-eq { margin: 4px 0; }
+    .fem-step .var { color: #7cb3ff; font-style: italic; }
+    .fem-step .highlight { color: #0f0; font-weight: bold; }
+    .fem-step .vec-inline { color: #ccc; font-family: monospace; font-size: 11px; }
+    .fem-step sub { font-size: 0.75em; vertical-align: sub; color: #aaa; }
+    .fem-step .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 2px; }
+    .fem-step .frac-num { border-bottom: 1px solid #999; padding: 0 4px 1px; font-size: 10px; }
+    .fem-step .frac-den { padding: 1px 4px 0; font-size: 10px; }
+    .fem-full-sym { font-family: 'STIX Two Math','Cambria Math','Times New Roman',serif; }
+    .fem-full-sym table { font-family: 'STIX Two Math','Cambria Math',serif; font-size: 13px; }
+    .fem-full-sym td { border: 1px solid #444; padding: 4px 8px; text-align: center; color: #aad; vertical-align: middle; }
+    .fem-full-sym td.nz { color: #7cb3ff; }
+    .fem-full-sym .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 1px; line-height: 1.2; }
+    .fem-full-sym .frac-num { border-bottom: 1px solid #888; padding: 0 3px 1px; font-size: 11px; white-space: nowrap; }
+    .fem-full-sym .frac-den { padding: 1px 3px 0; font-size: 11px; white-space: nowrap; }
+    .fem-full-sym .var { color: #7cb3ff; font-style: italic; }
+    .fem-full-sym sub { font-size: 0.7em; vertical-align: sub; color: #aaa; }
+    .fem-expand-btn { background: #333; color: #0a84ff; border: 1px solid #555; border-radius: 3px; padding: 2px 8px; cursor: pointer; font-size: 10px; margin-left: 8px; }
+    .fem-expand-btn:hover { background: #444; color: #fff; }
+      `;
+      document.head.appendChild(style);
+    }
+
     // 1. Extract $variables and create Parameters (Tweakpane)
     const dollarVars = extractDollarVars(awatifLines);
     const hasParams = dollarVars.length > 0;
@@ -962,9 +1053,9 @@ export function renderAwatifBlock(
         html += `<tr>`;
         if (labels) html += `<td style="border:1px solid #333;padding:2px 4px;color:#ee9b00;font-weight:bold;background:#222;text-align:center">${labels[i] || i}</td>`;
         for (let j = 0; j < cols; j++) {
-          const v = m[i][j];
-          const color = Math.abs(v) > 1e-10 ? "#0f0" : "#ddd";
-          html += `<td style="border:1px solid #333;padding:2px 4px;text-align:right;color:${color};white-space:nowrap">${fmtInsp(v, 2)}</td>`;
+          const val = m[i][j];
+          const color = Math.abs(val) > 1e-10 ? "#0f0" : "#ddd";
+          html += `<td style="border:1px solid #333;padding:2px 4px;text-align:right;color:${color};white-space:nowrap">${fmtInsp(val, 2)}</td>`;
         }
         html += `</tr>`;
       }
@@ -972,6 +1063,268 @@ export function renderAwatifBlock(
       return html;
     }
 
+    // ── FEM Inspect helper functions (ported from getCad3d.ts) ──
+
+    /** Format number for display */
+    function fmt(val: number, dec = 4): string {
+      if (Math.abs(val) < 1e-10) return "0";
+      if (Math.abs(val) >= 1e6) return val.toExponential(2);
+      if (Math.abs(val) >= 100) return val.toFixed(1);
+      return val.toFixed(dec);
+    }
+
+    /** Build matrix HTML table (compact, only non-zero highlighted) */
+    function matrixHTMLFem(m: number[][], labels?: string[], maxSize = 12): string {
+      const rows = Math.min(m.length, maxSize);
+      const cols = Math.min(m[0]?.length || 0, maxSize);
+      let html = `<table>`;
+      if (labels) {
+        html += `<tr><td class="header"></td>`;
+        for (let j = 0; j < cols; j++) html += `<td class="header">${labels[j] || j}</td>`;
+        html += `</tr>`;
+      }
+      for (let i = 0; i < rows; i++) {
+        html += `<tr>`;
+        if (labels) html += `<td class="header">${labels[i] || i}</td>`;
+        for (let j = 0; j < cols; j++) {
+          const val = m[i][j];
+          const cls = Math.abs(val) > 1e-10 ? "nonzero" : "";
+          html += `<td class="${cls}">${fmt(val, 2)}</td>`;
+        }
+        html += `</tr>`;
+      }
+      html += `</table>`;
+      return html;
+    }
+
+    // ── Math formula helpers ──
+    function frac(num: string, den: string): string {
+      return `<span class="frac"><span class="frac-num">${num}</span><span class="frac-den">${den}</span></span>`;
+    }
+    function vv(name: string, sub?: string, sup?: string): string {
+      let s = `<span class="var">${name}</span>`;
+      if (sub) s += `<sub>${sub}</sub>`;
+      if (sup) s += `<sup>${sup}</sup>`;
+      return s;
+    }
+
+    /** Generate symbolic formula HTML for the frame local stiffness matrix */
+    function frameStiffnessFormula(E: number, A: number, Iz: number, Iy: number, G: number, J: number, L: number): string {
+      const ea_l = `${frac(vv("E")+"·"+vv("A"), vv("L"))}`;
+      const eiz = `${frac("12·"+vv("E")+"·"+vv("I","z"), vv("L")+"³")}`;
+      const eiy = `${frac("12·"+vv("E")+"·"+vv("I","y"), vv("L")+"³")}`;
+      const gj_l = `${frac(vv("G")+"·"+vv("J"), vv("L"))}`;
+      const eiy4 = `${frac("4·"+vv("E")+"·"+vv("I","y"), vv("L"))}`;
+      const eiz4 = `${frac("4·"+vv("E")+"·"+vv("I","z"), vv("L"))}`;
+      return `<div class="fem-eq eq-box">
+        <div style="text-align:left;margin-bottom:4px"><strong style="color:#ee9b00">Coeficientes de rigidez:</strong></div>
+        <div>${ea_l} = ${frac(fmt(E)+"·"+fmt(A), fmt(L))} = <span class="highlight">${fmt(E*A/L)}</span></div>
+        <div>${eiz} = ${frac("12·"+fmt(E)+"·"+fmt(Iz), fmt(L)+"³")} = <span class="highlight">${fmt(12*E*Iz/(L**3))}</span></div>
+        <div>${eiy} = ${frac("12·"+fmt(E)+"·"+fmt(Iy), fmt(L)+"³")} = <span class="highlight">${fmt(12*E*Iy/(L**3))}</span></div>
+        <div>${gj_l} = ${frac(fmt(G)+"·"+fmt(J), fmt(L))} = <span class="highlight">${fmt(G*J/L)}</span></div>
+        <div>${eiy4} = ${frac("4·"+fmt(E)+"·"+fmt(Iy), fmt(L))} = <span class="highlight">${fmt(4*E*Iy/L)}</span></div>
+        <div>${eiz4} = ${frac("4·"+fmt(E)+"·"+fmt(Iz), fmt(L))} = <span class="highlight">${fmt(4*E*Iz/L)}</span></div>
+      </div>
+      <div class="fem-eq">
+        ${vv("k","local")} = <span class="mat-sym" style="grid-template-columns:repeat(4,auto)">
+          <span class="cell">${frac(vv("EA"),vv("L"))}</span><span class="cell">0</span><span class="cell dots">⋯</span><span class="cell">${frac("−"+vv("EA"),vv("L"))}</span>
+          <span class="cell">0</span><span class="cell">${frac("12"+vv("EI","z"),vv("L")+"³")}</span><span class="cell dots">⋯</span><span class="cell">0</span>
+          <span class="cell dots">⋮</span><span class="cell dots">⋮</span><span class="cell dots">⋱</span><span class="cell dots">⋮</span>
+          <span class="cell">${frac("−"+vv("EA"),vv("L"))}</span><span class="cell">0</span><span class="cell dots">⋯</span><span class="cell">${frac(vv("EA"),vv("L"))}</span>
+        </span>
+        <sub style="color:#888">12×12</sub>
+      </div>`;
+    }
+
+    /** Generate symbolic formula for transformation */
+    function transformFormula(elmNodes: Node[]): string {
+      const isFrame = elmNodes.length === 2;
+      if (isFrame) {
+        const vec = subtract(elmNodes[1], elmNodes[0]) as number[];
+        const L = norm(vec) as number;
+        const l = vec[0] / L, m = vec[1] / L, n = vec[2] / L;
+        return `<div class="fem-eq eq-box">
+          <div style="text-align:left;margin-bottom:4px"><strong style="color:#ee9b00">Cosenos directores:</strong></div>
+          <div>${vv("l")} = cos(\u03b1) = ${frac("\u0394x",vv("L"))} = ${frac(fmt(vec[0]),fmt(L))} = <span class="highlight">${fmt(l)}</span></div>
+          <div>${vv("m")} = cos(\u03b2) = ${frac("\u0394y",vv("L"))} = ${frac(fmt(vec[1]),fmt(L))} = <span class="highlight">${fmt(m)}</span></div>
+          <div>${vv("n")} = cos(\u03b3) = ${frac("\u0394z",vv("L"))} = ${frac(fmt(vec[2]),fmt(L))} = <span class="highlight">${fmt(n)}</span></div>
+        </div>
+        <div class="fem-eq">
+          \u03bb = <span class="mat-sym" style="grid-template-columns:repeat(3,auto)">
+            <span class="cell">${vv("l")}</span><span class="cell">${vv("m")}</span><span class="cell">${vv("n")}</span>
+            <span class="cell">${frac("−"+vv("m"),vv("D"))}</span><span class="cell">${frac(vv("l"),vv("D"))}</span><span class="cell">0</span>
+            <span class="cell">${frac("−"+vv("l")+"·"+vv("n"),vv("D"))}</span><span class="cell">${frac("−"+vv("m")+"·"+vv("n"),vv("D"))}</span><span class="cell">${vv("D")}</span>
+          </span>
+          &nbsp; donde ${vv("D")} = \u221a(${vv("l")}\u00b2 + ${vv("m")}\u00b2)
+        </div>
+        <div class="fem-eq">
+          ${vv("T")} = ${vv("I","4")} \u2297 \u03bb &nbsp; <sub style="color:#888">(Kronecker, 12\u00d712)</sub>
+        </div>`;
+      }
+      return `<div class="fem-eq">${vv("T")} \u2014 sistema local del tri\u00e1ngulo (normal \u00d7 lados) <sub>18\u00d718</sub></div>`;
+    }
+
+    /** Global stiffness formula */
+    function globalStiffnessFormula(): string {
+      return `<div class="fem-eq">
+        ${vv("K","global")} = ${vv("T")}${'<sup>T</sup>'} · ${vv("k","local")} · ${vv("T")}
+      </div>`;
+    }
+
+    /** Assembly formula */
+    function assemblyFormula(elem: number[]): string {
+      const offsets = elem.map(ni => `6·${ni} = ${6*ni}`).join(", ");
+      return `<div class="fem-eq eq-box">
+        <div style="text-align:left;margin-bottom:4px"><strong style="color:#ee9b00">Ensamblaje en K global:</strong></div>
+        <div>${vv("K","global")}[${vv("i")}, ${vv("j")}] += ${vv("K","elem")}[${vv("i")}, ${vv("j")}]</div>
+        <div style="margin-top:4px">donde ${vv("i")}, ${vv("j")} \u2208 {${offsets}} + (0..5)</div>
+      </div>`;
+    }
+
+    /** Force recovery formula */
+    function forceRecoveryFormula(isFrame: boolean): string {
+      if (isFrame) {
+        return `<div class="fem-eq eq-box">
+          <div style="text-align:left;margin-bottom:4px"><strong style="color:#ee9b00">Recuperaci\u00f3n de fuerzas:</strong></div>
+          <div>${vv("u","local")} = ${vv("T")} · ${vv("u","global")}</div>
+          <div>${vv("f","local")} = ${vv("k","local")} · ${vv("u","local")}</div>
+          <div style="margin-top:4px;color:#aaa">
+            ${vv("f")} = [${vv("N","i")}, ${vv("V","y,i")}, ${vv("V","z,i")}, ${vv("M","x,i")}, ${vv("M","y,i")}, ${vv("M","z,i")}, ${vv("N","j")}, \u2026]
+          </div>
+        </div>`;
+      }
+      return `<div class="fem-eq eq-box">
+        <div style="text-align:left;margin-bottom:4px"><strong style="color:#ee9b00">Esfuerzos en placa:</strong></div>
+        <div>\u03c3 = ${frac("1","2"+vv("A"))} · ${vv("D")} · ${vv("B")} · ${vv("u")}</div>
+        <div>${vv("N","xx")} = \u03c3<sub>xx</sub> · ${vv("t")} &nbsp;&nbsp; ${vv("M","xx")} = \u03c3<sub>xx</sub> · ${frac(vv("t")+"\u00b3","12")}</div>
+      </div>`;
+    }
+
+    /** Build full numeric matrix HTML (all rows/cols, with diagonal highlight) */
+    function fullMatrixHTML(m: number[][], labels: string[]): string {
+      const n = m.length;
+      let html = `<table><tr><td class="hdr"></td>`;
+      for (let j = 0; j < n; j++) html += `<td class="hdr">${labels[j] || j}</td>`;
+      html += `</tr>`;
+      for (let i = 0; i < n; i++) {
+        html += `<tr><td class="hdr">${labels[i] || i}</td>`;
+        for (let j = 0; j < n; j++) {
+          const val = m[i][j];
+          const cls = (i === j ? "diag " : "") + (Math.abs(val) > 1e-10 ? "nz" : "");
+          html += `<td class="${cls}">${fmt(val, 2)}</td>`;
+        }
+        html += `</tr>`;
+      }
+      html += `</table>`;
+      return html;
+    }
+
+    /** Build symbolic stiffness matrix 12x12 for frame */
+    function frameSymbolicMatrix12(): string {
+      const _ = "0";
+      const ea = frac(vv("EA"), vv("L"));
+      const nea = frac("−"+vv("EA"), vv("L"));
+      const vz3 = frac("12"+vv("EI","z"), vv("L")+"³");
+      const nvz3 = frac("−12"+vv("EI","z"), vv("L")+"³");
+      const vy3 = frac("12"+vv("EI","y"), vv("L")+"³");
+      const nvy3 = frac("−12"+vv("EI","y"), vv("L")+"³");
+      const vz2 = frac("6"+vv("EI","z"), vv("L")+"²");
+      const nvz2 = frac("−6"+vv("EI","z"), vv("L")+"²");
+      const vy2 = frac("6"+vv("EI","y"), vv("L")+"²");
+      const nvy2 = frac("−6"+vv("EI","y"), vv("L")+"²");
+      const gj = frac(vv("GJ"), vv("L"));
+      const ngj = frac("−"+vv("GJ"), vv("L"));
+      const iz4 = frac("4"+vv("EI","z"), vv("L"));
+      const iz2 = frac("2"+vv("EI","z"), vv("L"));
+      const iy4 = frac("4"+vv("EI","y"), vv("L"));
+      const iy2 = frac("2"+vv("EI","y"), vv("L"));
+      const SYM = `<span style="color:#666;font-style:italic">sym</span>`;
+      const pLabels = ["\u2081","\u2082","\u2083","\u2084","\u2085","\u2086","\u2087","\u2088","\u2089","\u2081\u2080","\u2081\u2081","\u2081\u2082"].map(s => "P" + s);
+      const dLabels = ["\u2081","\u2082","\u2083","\u2084","\u2085","\u2086","\u2087","\u2088","\u2089","\u2081\u2080","\u2081\u2081","\u2081\u2082"].map(s => "\u03b4" + s);
+      const full: string[][] = [
+        [ea,  _,    _,    _,   _,     _,    nea, _,    _,    _,   _,     _],
+        [_,   vz3,  _,    _,   _,     vz2,  _,   nvz3, _,    _,   _,     vz2],
+        [_,   _,    vy3,  _,   nvy2,  _,    _,   _,    nvy3, _,   nvy2,  _],
+        [_,   _,    _,    gj,  _,     _,    _,   _,    _,    ngj, _,     _],
+        [_,   _,    nvy2, _,   iy4,   _,    _,   _,    vy2,  _,   iy2,   _],
+        [_,   vz2,  _,    _,   _,     iz4,  _,   nvz2, _,    _,   _,     iz2],
+        [nea, _,    _,    _,   _,     _,    ea,  _,    _,    _,   _,     _],
+        [_,   nvz3, _,    _,   _,     nvz2, _,   vz3,  _,    _,   _,     nvz2],
+        [_,   _,    nvy3, _,   vy2,   _,    _,   _,    vy3,  _,   vy2,   _],
+        [_,   _,    _,    ngj, _,     _,    _,   _,    _,    gj,  _,     _],
+        [_,   _,    nvy2, _,   iy2,   _,    _,   _,    vy2,  _,   iy4,   _],
+        [_,   vz2,  _,    _,   _,     iz2,  _,   nvz2, _,    _,   _,     iz4],
+      ];
+      let html = `<div style="margin-bottom:8px;color:#aaa;font-size:11px;font-family:monospace">Eq. 6.1 \u2014 Matriz de rigidez de elemento de p\u00f3rtico espacial</div>`;
+      html += `<table><tr><td class="hdr"></td>`;
+      for (const lb of dLabels) html += `<td class="hdr">${lb}</td>`;
+      html += `</tr>`;
+      for (let i = 0; i < 12; i++) {
+        html += `<tr><td class="hdr">${pLabels[i]}</td>`;
+        for (let j = 0; j < 12; j++) {
+          if (j < i) {
+            html += `<td style="color:#333">${j === 0 && i > 0 ? SYM : ""}</td>`;
+          } else {
+            const c = full[i][j];
+            const cls = (i === j ? "diag " : "") + (c !== "0" ? "nz" : "");
+            html += `<td class="${cls}">${c}</td>`;
+          }
+        }
+        html += `</tr>`;
+      }
+      html += `</table>`;
+      return html;
+    }
+
+    /** Generate coefficient calculation HTML for frame stiffness matrix */
+    function frameCoeffCalcHTML(E: number, A: number, Iz: number, Iy: number, G: number, J: number, L: number): string {
+      const coeffs = [
+        { name: `${frac(vv("E")+"·"+vv("A"), vv("L"))}`, calc: `${frac(fmt(E)+"\u00d7"+fmt(A), fmt(L))}`, val: E*A/L, label: "Axial" },
+        { name: `${frac("12·"+vv("E")+"·"+vv("I","z"), vv("L")+"\u00b3")}`, calc: `${frac("12\u00d7"+fmt(E)+"\u00d7"+fmt(Iz), fmt(L)+"\u00b3")}`, val: 12*E*Iz/(L**3), label: "Corte Y" },
+        { name: `${frac("6·"+vv("E")+"·"+vv("I","z"), vv("L")+"\u00b2")}`, calc: `${frac("6\u00d7"+fmt(E)+"\u00d7"+fmt(Iz), fmt(L)+"\u00b2")}`, val: 6*E*Iz/(L**2), label: "Corte-Momento Z" },
+        { name: `${frac("12·"+vv("E")+"·"+vv("I","y"), vv("L")+"\u00b3")}`, calc: `${frac("12\u00d7"+fmt(E)+"\u00d7"+fmt(Iy), fmt(L)+"\u00b3")}`, val: 12*E*Iy/(L**3), label: "Corte Z" },
+        { name: `${frac("6·"+vv("E")+"·"+vv("I","y"), vv("L")+"\u00b2")}`, calc: `${frac("6\u00d7"+fmt(E)+"\u00d7"+fmt(Iy), fmt(L)+"\u00b2")}`, val: 6*E*Iy/(L**2), label: "Corte-Momento Y" },
+        { name: `${frac(vv("G")+"·"+vv("J"), vv("L"))}`, calc: `${frac(fmt(G)+"\u00d7"+fmt(J), fmt(L))}`, val: G*J/L, label: "Torsi\u00f3n" },
+        { name: `${frac("4·"+vv("E")+"·"+vv("I","z"), vv("L"))}`, calc: `${frac("4\u00d7"+fmt(E)+"\u00d7"+fmt(Iz), fmt(L))}`, val: 4*E*Iz/L, label: "Flexi\u00f3n Z (4EI/L)" },
+        { name: `${frac("2·"+vv("E")+"·"+vv("I","z"), vv("L"))}`, calc: `${frac("2\u00d7"+fmt(E)+"\u00d7"+fmt(Iz), fmt(L))}`, val: 2*E*Iz/L, label: "Flexi\u00f3n Z (2EI/L)" },
+        { name: `${frac("4·"+vv("E")+"·"+vv("I","y"), vv("L"))}`, calc: `${frac("4\u00d7"+fmt(E)+"\u00d7"+fmt(Iy), fmt(L))}`, val: 4*E*Iy/L, label: "Flexi\u00f3n Y (4EI/L)" },
+        { name: `${frac("2·"+vv("E")+"·"+vv("I","y"), vv("L"))}`, calc: `${frac("2\u00d7"+fmt(E)+"\u00d7"+fmt(Iy), fmt(L))}`, val: 2*E*Iy/L, label: "Flexi\u00f3n Y (2EI/L)" },
+      ];
+      return `<div class="coeff-grid">${coeffs.map(c =>
+        `<div class="coeff-item"><div style="color:#aaa;font-size:10px;font-family:monospace;margin-bottom:2px">${c.label}</div>${c.name} = ${c.calc} = <span class="highlight">${fmt(c.val)}</span></div>`
+      ).join("")}</div>`;
+    }
+
+    /** Open full-screen overlay: symbolic formula -> coefficient calculations -> numeric matrix */
+    function showFullMatrix(title: string, symHTML: string, numHTML: string, coeffHTML?: string) {
+      const existing = document.querySelector(".fem-full-overlay");
+      if (existing) existing.remove();
+      const overlay = document.createElement("div");
+      overlay.className = "fem-full-overlay";
+      overlay.innerHTML = `
+        <button class="close-full" id="fem-full-close">\u2715 Cerrar</button>
+        <h2>${title}</h2>
+        <div class="fem-full-sections">
+          <div class="full-section">
+            <div class="side-title">\u2460 F\u00f3rmula General (simb\u00f3lica)</div>
+            <div class="fem-full-sym">${symHTML}</div>
+          </div>
+          ${coeffHTML ? `<div class="full-section coeff">
+            <div class="side-title">\u2461 C\u00e1lculo de Coeficientes (sustituci\u00f3n num\u00e9rica)</div>
+            ${coeffHTML}
+          </div>` : ""}
+          <div class="full-section numeric">
+            <div class="side-title">${coeffHTML ? "\u2462" : "\u2461"} Matriz Num\u00e9rica Resultante</div>
+            ${numHTML}
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector("#fem-full-close")?.addEventListener("click", () => overlay.remove());
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    /** Show the FEM detail panel for a selected element (full 7-section version) */
     function showInspectForElement(elemIdx: number) {
       if (inspectPanelEl) inspectPanelEl.remove();
 
@@ -985,9 +1338,10 @@ export function renderAwatifBlock(
       const dOut = mesh.deformOutputs?.val;
       const aOut = mesh.analyzeOutputs?.val;
 
+      // Element properties
       let propsHTML = "";
       if (isFrame) {
-        const L_val = norm(subtract(elmNodes[1], elmNodes[0])) as number;
+        const L = norm(subtract(elmNodes[1], elmNodes[0])) as number;
         const E = ei.elasticities?.get(elemIdx) ?? 0;
         const A = ei.areas?.get(elemIdx) ?? 0;
         const Iz = ei.momentsOfInertiaZ?.get(elemIdx) ?? 0;
@@ -995,82 +1349,238 @@ export function renderAwatifBlock(
         const G = ei.shearModuli?.get(elemIdx) ?? 0;
         const J = ei.torsionalConstants?.get(elemIdx) ?? 0;
         propsHTML = `
-          <div style="display:flex;justify-content:space-between;padding:1px 0"><span style="color:#aaa">Tipo</span><span style="color:#fff;font-weight:bold">Frame (2 nodos)</span></div>
-          <div style="display:flex;justify-content:space-between;padding:1px 0"><span style="color:#aaa">Nodos</span><span style="color:#fff;font-weight:bold">${elem[0]} → ${elem[1]}</span></div>
-          <div style="display:flex;justify-content:space-between;padding:1px 0"><span style="color:#aaa">L</span><span style="color:#fff;font-weight:bold">${fmtInsp(L_val)} m</span></div>
-          <div style="display:flex;justify-content:space-between;padding:1px 0"><span style="color:#aaa">E</span><span style="color:#fff;font-weight:bold">${fmtInsp(E)}</span></div>
-          <div style="display:flex;justify-content:space-between;padding:1px 0"><span style="color:#aaa">A</span><span style="color:#fff;font-weight:bold">${fmtInsp(A)}</span></div>
-          <div style="display:flex;justify-content:space-between;padding:1px 0"><span style="color:#aaa">Iz</span><span style="color:#fff;font-weight:bold">${fmtInsp(Iz)}</span></div>
-          <div style="display:flex;justify-content:space-between;padding:1px 0"><span style="color:#aaa">Iy</span><span style="color:#fff;font-weight:bold">${fmtInsp(Iy)}</span></div>
-          <div style="display:flex;justify-content:space-between;padding:1px 0"><span style="color:#aaa">G</span><span style="color:#fff;font-weight:bold">${fmtInsp(G)}</span></div>
-          <div style="display:flex;justify-content:space-between;padding:1px 0"><span style="color:#aaa">J</span><span style="color:#fff;font-weight:bold">${fmtInsp(J)}</span></div>
+          <div class="prop-row"><span class="prop-key">Tipo</span><span class="prop-val">Frame (2 nodos)</span></div>
+          <div class="prop-row"><span class="prop-key">Nodos</span><span class="prop-val">${elem[0]} \u2192 ${elem[1]}</span></div>
+          <div class="prop-row"><span class="prop-key">L</span><span class="prop-val">${fmt(L)} m</span></div>
+          <div class="prop-row"><span class="prop-key">E</span><span class="prop-val">${fmt(E)}</span></div>
+          <div class="prop-row"><span class="prop-key">A</span><span class="prop-val">${fmt(A)}</span></div>
+          <div class="prop-row"><span class="prop-key">Iz</span><span class="prop-val">${fmt(Iz)}</span></div>
+          <div class="prop-row"><span class="prop-key">Iy</span><span class="prop-val">${fmt(Iy)}</span></div>
+          <div class="prop-row"><span class="prop-key">G</span><span class="prop-val">${fmt(G)}</span></div>
+          <div class="prop-row"><span class="prop-key">J</span><span class="prop-val">${fmt(J)}</span></div>
         `;
       } else {
-        propsHTML = `<div style="color:#aaa">Shell (${elem.length} nodos): ${elem.join(", ")}</div>`;
+        const E = ei.elasticities?.get(elemIdx) ?? 0;
+        const t = ei.thicknesses?.get(elemIdx) ?? 0;
+        const nu = ei.poissonsRatios?.get(elemIdx) ?? 0;
+        propsHTML = `
+          <div class="prop-row"><span class="prop-key">Tipo</span><span class="prop-val">Shell (3 nodos)</span></div>
+          <div class="prop-row"><span class="prop-key">Nodos</span><span class="prop-val">${elem.join(", ")}</span></div>
+          <div class="prop-row"><span class="prop-key">E</span><span class="prop-val">${fmt(E)}</span></div>
+          <div class="prop-row"><span class="prop-key">t</span><span class="prop-val">${fmt(t)} m</span></div>
+          <div class="prop-row"><span class="prop-key">\u03bd</span><span class="prop-val">${fmt(nu)}</span></div>
+        `;
       }
 
       // Compute matrices
-      let matricesHTML = "";
+      let kLocalHTML = "", tMatrixHTML = "", kGlobalHTML = "";
+      let formulaStiffHTML = "", formulaTransHTML = "", formulaGlobalHTML = "", formulaAssemblyHTML = "", formulaForceHTML = "";
+      let _kLocal: number[][] | null = null, _T: number[][] | null = null, _kGlobal: number[][] | null = null;
+      let _dofLabels: string[] = [];
       try {
-        const kLocal = getLocalStiffnessMatrix(elmNodes, ei, elemIdx);
-        const T = getTransformationMatrix(elmNodes);
-        const kGlobal = multiply(transpose(T), multiply(kLocal, T)) as number[][];
-        const dofLabels = ["ux₀","uy₀","uz₀","θx₀","θy₀","θz₀","ux₁","uy₁","uz₁","θx₁","θy₁","θz₁"];
+        _kLocal = getLocalStiffnessMatrix(elmNodes, ei, elemIdx);
+        _T = getTransformationMatrix(elmNodes);
+        _kGlobal = multiply(transpose(_T), multiply(_kLocal, _T)) as number[][];
 
-        matricesHTML = `
-          <div style="margin-top:10px;border-top:1px solid #444;padding-top:8px">
-            <div style="color:#ee9b00;font-size:12px;font-weight:bold;margin-bottom:4px">K local (12×12)</div>
-            ${matrixHTMLInsp(kLocal, dofLabels)}
+        _dofLabels = isFrame
+          ? ["ux\u2080","uy\u2080","uz\u2080","\u03b8x\u2080","\u03b8y\u2080","\u03b8z\u2080","ux\u2081","uy\u2081","uz\u2081","\u03b8x\u2081","\u03b8y\u2081","\u03b8z\u2081"]
+          : ["ux\u2080","uy\u2080","uz\u2080","\u03b8x\u2080","\u03b8y\u2080","\u03b8z\u2080","ux\u2081","uy\u2081","uz\u2081","\u03b8x\u2081","\u03b8y\u2081","\u03b8z\u2081","ux\u2082","uy\u2082","uz\u2082","\u03b8x\u2082","\u03b8y\u2081","\u03b8z\u2082"];
+
+        // Symbolic formulas
+        if (isFrame) {
+          const L_val = norm(subtract(elmNodes[1], elmNodes[0])) as number;
+          const E_val = ei.elasticities?.get(elemIdx) ?? 0;
+          const A_val = ei.areas?.get(elemIdx) ?? 0;
+          const Iz_val = ei.momentsOfInertiaZ?.get(elemIdx) ?? 0;
+          const Iy_val = ei.momentsOfInertiaY?.get(elemIdx) ?? 0;
+          const G_val = ei.shearModuli?.get(elemIdx) ?? 0;
+          const J_val = ei.torsionalConstants?.get(elemIdx) ?? 0;
+          formulaStiffHTML = frameStiffnessFormula(E_val, A_val, Iz_val, Iy_val, G_val, J_val, L_val);
+        }
+        formulaTransHTML = transformFormula(elmNodes);
+        formulaGlobalHTML = globalStiffnessFormula();
+        formulaAssemblyHTML = assemblyFormula(elem);
+        formulaForceHTML = forceRecoveryFormula(isFrame);
+
+        const expandBtn = `<button class="fem-expand-btn" data-full="kLocal">\u26f6 Ver completa</button>`;
+        const expandBtnT = `<button class="fem-expand-btn" data-full="T">\u26f6 Ver completa</button>`;
+        const expandBtnKg = `<button class="fem-expand-btn" data-full="kGlobal">\u26f6 Ver completa</button>`;
+
+        kLocalHTML = `<div class="matrix-label">k_local (${_kLocal.length}\u00d7${_kLocal.length}) ${expandBtn}</div>${matrixHTMLFem(_kLocal, _dofLabels)}`;
+        tMatrixHTML = `<div class="matrix-label">T \u2014 Transformaci\u00f3n (${_T.length}\u00d7${_T.length}) ${expandBtnT}</div>${matrixHTMLFem(_T, _dofLabels)}`;
+        kGlobalHTML = `<div class="matrix-label">K_global = T^T \u00b7 k \u00b7 T ${expandBtnKg}</div>${matrixHTMLFem(_kGlobal, _dofLabels)}`;
+      } catch (err: any) {
+        kLocalHTML = `<div style="color:red">Error: ${err.message}</div>`;
+      }
+
+      // Displacements at element nodes
+      let dispHTML = "";
+      if (dOut?.deformations) {
+        const dofNames = ["ux","uy","uz","\u03b8x","\u03b8y","\u03b8z"];
+        dispHTML = elem.map((ni: number) => {
+          const d = dOut.deformations?.get(ni) || [0,0,0,0,0,0];
+          const rows = dofNames.map((name, j) => `<span class="prop-key">${name}</span>: <span class="${Math.abs(d[j]) > 1e-10 ? 'result-val' : ''}">${fmt(d[j])}</span>`).join(" &nbsp;");
+          return `<div style="margin-bottom:2px"><strong>Nodo ${ni}:</strong> ${rows}</div>`;
+        }).join("");
+      }
+
+      // Internal forces - step by step
+      let resultsHTML = "";
+      if (aOut && isFrame && dOut?.deformations && _kLocal && _T) {
+        const N = aOut.normals?.get(elemIdx);
+        const Vy = aOut.shearsY?.get(elemIdx);
+        const Vz = aOut.shearsZ?.get(elemIdx);
+        const Mx = aOut.torsions?.get(elemIdx);
+        const My = aOut.bendingsY?.get(elemIdx);
+        const Mz = aOut.bendingsZ?.get(elemIdx);
+
+        // Step A: gather u_global for this element's nodes
+        const dofNames = ["ux","uy","uz","\u03b8x","\u03b8y","\u03b8z"];
+        const u_global: number[] = [];
+        for (const ni of elem) {
+          const d = dOut.deformations?.get(ni) || [0,0,0,0,0,0];
+          u_global.push(...d);
+        }
+
+        // Step B: u_local = T * u_global
+        let u_local: number[] = [];
+        try { u_local = (multiply(_T, u_global) as number[]); } catch { u_local = new Array(12).fill(0); }
+
+        // Step C: f_local = k_local * u_local
+        let f_local: number[] = [];
+        try { f_local = (multiply(_kLocal, u_local) as number[]); } catch { f_local = new Array(12).fill(0); }
+
+        const vecStr = (arr: number[], names: string[]) => arr.map((val, i) =>
+          `<span style="color:${Math.abs(val) > 1e-10 ? '#0f0' : '#666'}">${names[i % 6]}=${fmt(val)}</span>`
+        ).join(", ");
+
+        const fLabels = ["N","Vy","Vz","Mx","My","Mz","N","Vy","Vz","Mx","My","Mz"];
+        const fLabelsFull = fLabels.map((n, i) => `${n}${i < 6 ? "\u1d62" : "\u2c7c"}`);
+
+        resultsHTML = `
+          <div class="fem-step">
+            <div class="step-title">Paso A \u2014 Desplazamientos globales del elemento</div>
+            <div class="step-eq">${vv("u","global")} = [${elem.map((ni: number, idx: number) => `<span style="color:#888">nodo ${ni}:</span> ${dofNames.map((dn, j) => `<span style="color:${Math.abs(u_global[idx*6+j]) > 1e-10 ? '#7cb3ff' : '#555'}">${fmt(u_global[idx*6+j])}</span>`).join(", ")}`).join(" | ")}]</div>
           </div>
-          <div style="margin-top:10px;border-top:1px solid #444;padding-top:8px">
-            <div style="color:#ee9b00;font-size:12px;font-weight:bold;margin-bottom:4px">T (transformacion)</div>
-            ${matrixHTMLInsp(T, dofLabels)}
+          <div class="fem-step">
+            <div class="step-title">Paso B \u2014 Transformar a coordenadas locales</div>
+            <div class="step-eq">${vv("u","local")} = ${vv("T")} \u00b7 ${vv("u","global")}</div>
+            <div class="step-eq" style="margin-top:4px">${vv("u","local")} = [${vecStr(u_local, [...dofNames, ...dofNames])}]</div>
           </div>
-          <div style="margin-top:10px;border-top:1px solid #444;padding-top:8px">
-            <div style="color:#ee9b00;font-size:12px;font-weight:bold;margin-bottom:4px">K global = T' · K_local · T</div>
-            ${matrixHTMLInsp(kGlobal, dofLabels)}
+          <div class="fem-step">
+            <div class="step-title">Paso C \u2014 Fuerzas internas: ${vv("f","local")} = ${vv("k","local")} \u00b7 ${vv("u","local")}</div>
+            <div class="step-eq" style="margin-top:4px">${vv("f","local")} = [${f_local.map((val, i) =>
+              `<span style="color:${Math.abs(val) > 1e-10 ? '#0f0' : '#666'}">${fLabelsFull[i]}=${fmt(val)}</span>`
+            ).join(", ")}]</div>
+          </div>
+          <div class="fem-step">
+            <div class="step-title">Paso D \u2014 Identificaci\u00f3n de esfuerzos (nodo i \u2192 nodo j)</div>
+            <div class="step-eq" style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
+              <div>${vv("P","1")} = ${vv("N","i")} = <span class="highlight">${fmt(f_local[0])}</span></div>
+              <div>${vv("P","7")} = ${vv("N","j")} = <span class="highlight">${fmt(f_local[6])}</span></div>
+              <div>${vv("P","2")} = ${vv("V","y,i")} = <span class="highlight">${fmt(f_local[1])}</span></div>
+              <div>${vv("P","8")} = ${vv("V","y,j")} = <span class="highlight">${fmt(f_local[7])}</span></div>
+              <div>${vv("P","3")} = ${vv("V","z,i")} = <span class="highlight">${fmt(f_local[2])}</span></div>
+              <div>${vv("P","9")} = ${vv("V","z,j")} = <span class="highlight">${fmt(f_local[8])}</span></div>
+              <div>${vv("P","4")} = ${vv("M","x,i")} = <span class="highlight">${fmt(f_local[3])}</span></div>
+              <div>${vv("P","10")} = ${vv("M","x,j")} = <span class="highlight">${fmt(f_local[9])}</span></div>
+              <div>${vv("P","5")} = ${vv("M","y,i")} = <span class="highlight">${fmt(f_local[4])}</span></div>
+              <div>${vv("P","11")} = ${vv("M","y,j")} = <span class="highlight">${fmt(f_local[10])}</span></div>
+              <div>${vv("P","6")} = ${vv("M","z,i")} = <span class="highlight">${fmt(f_local[5])}</span></div>
+              <div>${vv("P","12")} = ${vv("M","z,j")} = <span class="highlight">${fmt(f_local[11])}</span></div>
+            </div>
+          </div>
+          <div style="margin-top:8px;border-top:1px solid #555;padding-top:6px">
+            <div style="color:#888;font-size:10px;margin-bottom:4px">RESUMEN (awatif-fem output):</div>
+            <div class="prop-row"><span class="prop-key">N (normal)</span><span class="result-val">[${N ? N.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+            <div class="prop-row"><span class="prop-key">Vy (corte Y)</span><span class="result-val">[${Vy ? Vy.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+            <div class="prop-row"><span class="prop-key">Vz (corte Z)</span><span class="result-val">[${Vz ? Vz.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+            <div class="prop-row"><span class="prop-key">Mx (torsion)</span><span class="result-val">[${Mx ? Mx.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+            <div class="prop-row"><span class="prop-key">My (momento Y)</span><span class="result-val">[${My ? My.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+            <div class="prop-row"><span class="prop-key">Mz (momento Z)</span><span class="result-val">[${Mz ? Mz.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
           </div>
         `;
-      } catch (e: any) {
-        matricesHTML = `<div style="color:#c60;margin-top:8px">No se pudo calcular matrices: ${e.message}</div>`;
+      } else if (aOut && isFrame) {
+        const N = aOut.normals?.get(elemIdx);
+        const Vy = aOut.shearsY?.get(elemIdx);
+        const Vz = aOut.shearsZ?.get(elemIdx);
+        const Mx = aOut.torsions?.get(elemIdx);
+        const My = aOut.bendingsY?.get(elemIdx);
+        const Mz = aOut.bendingsZ?.get(elemIdx);
+        resultsHTML = `
+          <div class="prop-row"><span class="prop-key">N (normal)</span><span class="result-val">[${N ? N.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+          <div class="prop-row"><span class="prop-key">Vy (corte Y)</span><span class="result-val">[${Vy ? Vy.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+          <div class="prop-row"><span class="prop-key">Vz (corte Z)</span><span class="result-val">[${Vz ? Vz.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+          <div class="prop-row"><span class="prop-key">Mx (torsion)</span><span class="result-val">[${Mx ? Mx.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+          <div class="prop-row"><span class="prop-key">My (momento Y)</span><span class="result-val">[${My ? My.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+          <div class="prop-row"><span class="prop-key">Mz (momento Z)</span><span class="result-val">[${Mz ? Mz.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+        `;
+      } else if (aOut && !isFrame) {
+        const Mxx = aOut.bendingXX?.get(elemIdx);
+        const Myy = aOut.bendingYY?.get(elemIdx);
+        const Mxy = aOut.bendingXY?.get(elemIdx);
+        const Nxx = aOut.membraneXX?.get(elemIdx);
+        const Nyy = aOut.membraneYY?.get(elemIdx);
+        const Nxy = aOut.membraneXY?.get(elemIdx);
+        resultsHTML = `
+          <div class="prop-row"><span class="prop-key">Mxx (flexion)</span><span class="result-val">[${Mxx ? Mxx.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+          <div class="prop-row"><span class="prop-key">Myy</span><span class="result-val">[${Myy ? Myy.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+          <div class="prop-row"><span class="prop-key">Mxy</span><span class="result-val">[${Mxy ? Mxy.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+          <div class="prop-row"><span class="prop-key">Nxx (membrana)</span><span class="result-val">[${Nxx ? Nxx.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+          <div class="prop-row"><span class="prop-key">Nyy</span><span class="result-val">[${Nyy ? Nyy.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+          <div class="prop-row"><span class="prop-key">Nxy</span><span class="result-val">[${Nxy ? Nxy.map((x: number)=>fmt(x)).join(", ") : "\u2014"}]</span></div>
+        `;
       }
 
-      // Results
-      let resultsHTML = "";
-      if (dOut && isFrame) {
-        const dofNames = ["ux","uy","uz","θx","θy","θz"];
-        const d0 = dOut.deformations?.get(elem[0]) ?? [0,0,0,0,0,0];
-        const d1 = dOut.deformations?.get(elem[1]) ?? [0,0,0,0,0,0];
-        resultsHTML += `<div style="margin-top:10px;border-top:1px solid #444;padding-top:8px">
-          <div style="color:#ee9b00;font-size:12px;font-weight:bold;margin-bottom:4px">Desplazamientos</div>
-          <div style="color:#aaa;font-size:10px">Nodo ${elem[0]}: ${d0.map((v,i) => `${dofNames[i]}=${fmtInsp(v)}`).join(", ")}</div>
-          <div style="color:#aaa;font-size:10px">Nodo ${elem[1]}: ${d1.map((v,i) => `${dofNames[i]}=${fmtInsp(v)}`).join(", ")}</div>
-        </div>`;
-      }
-      if (aOut && isFrame) {
-        const forces = aOut.normals;
-        if (forces) {
-          const n = forces.get(elemIdx);
-          if (n !== undefined) {
-            resultsHTML += `<div style="margin-top:6px"><span style="color:#aaa;font-size:10px">N = </span><span style="color:#0f0;font-weight:bold">${fmtInsp(Array.isArray(n) ? n[0] : n as number)}</span></div>`;
-          }
-        }
-      }
-
-      inspectPanelEl = document.createElement("div");
-      inspectPanelEl.style.cssText = "position:absolute;top:10px;right:10px;background:rgba(20,20,28,0.97);color:#ccc;border:1px solid #555;border-radius:8px;padding:12px;font-family:monospace;font-size:12px;max-width:420px;max-height:80%;overflow-y:auto;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.6);";
-      inspectPanelEl.innerHTML = `
-        <h3 style="margin:0 0 8px 0;color:#0a84ff;font-size:14px;display:flex;justify-content:space-between;">
-          Elemento ${elemIdx}
-          <button style="background:none;border:none;color:#888;cursor:pointer;font-size:16px" id="awatif-inspect-close">✕</button>
-        </h3>
-        ${propsHTML}
-        ${resultsHTML}
-        ${matricesHTML}
+      // Assembly info
+      const assemblyHTML = `
+        <div class="prop-row"><span class="prop-key">DOF offset nodo ${elem[0]}</span><span class="prop-val">${6 * elem[0]}..${6 * elem[0] + 5}</span></div>
+        <div class="prop-row"><span class="prop-key">DOF offset nodo ${elem[1]}</span><span class="prop-val">${6 * elem[1]}..${6 * elem[1] + 5}</span></div>
+        ${elem.length === 3 ? `<div class="prop-row"><span class="prop-key">DOF offset nodo ${elem[2]}</span><span class="prop-val">${6 * elem[2]}..${6 * elem[2] + 5}</span></div>` : ""}
+        <div class="prop-row"><span class="prop-key">K global total</span><span class="prop-val">${nodes_arr.length * 6} \u00d7 ${nodes_arr.length * 6}</span></div>
       `;
-      container.appendChild(inspectPanelEl);
-      inspectPanelEl.querySelector("#awatif-inspect-close")?.addEventListener("click", () => {
-        if (inspectPanelEl) { inspectPanelEl.remove(); inspectPanelEl = null; }
+
+      // Build panel
+      inspectPanelEl = document.createElement("div");
+      inspectPanelEl.id = "fem-inspect-panel";
+      inspectPanelEl.innerHTML = `
+        <h3>Elemento ${elemIdx} <button class="close-btn" id="fem-close">\u2715</button></h3>
+        <div class="section"><div class="section-title">1. Propiedades</div>${propsHTML}</div>
+        <div class="section"><div class="section-title">2. Rigidez Local</div>${formulaStiffHTML}${kLocalHTML}</div>
+        <div class="section"><div class="section-title">3. Transformaci\u00f3n</div>${formulaTransHTML}${tMatrixHTML}</div>
+        <div class="section"><div class="section-title">4. Rigidez Global</div>${formulaGlobalHTML}${kGlobalHTML}</div>
+        <div class="section"><div class="section-title">5. Ensamblaje</div>${formulaAssemblyHTML}${assemblyHTML}</div>
+        <div class="section"><div class="section-title">6. Desplazamientos</div>${dispHTML || "<span style='color:#888'>Sin an\u00e1lisis</span>"}</div>
+        <div class="section"><div class="section-title">7. Fuerzas Internas</div>${formulaForceHTML}${resultsHTML || "<span style='color:#888'>Sin an\u00e1lisis</span>"}</div>
+      `;
+      document.body.appendChild(inspectPanelEl);
+      inspectPanelEl.querySelector("#fem-close")?.addEventListener("click", () => cleanupInspect());
+
+      // Wire up "Ver completa" buttons
+      const _coeffHTML = isFrame ? (() => {
+        const L_v = norm(subtract(elmNodes[1], elmNodes[0])) as number;
+        const E_v = ei.elasticities?.get(elemIdx) ?? 0;
+        const A_v = ei.areas?.get(elemIdx) ?? 0;
+        const Iz_v = ei.momentsOfInertiaZ?.get(elemIdx) ?? 0;
+        const Iy_v = ei.momentsOfInertiaY?.get(elemIdx) ?? 0;
+        const G_v = ei.shearModuli?.get(elemIdx) ?? 0;
+        const J_v = ei.torsionalConstants?.get(elemIdx) ?? 0;
+        return frameCoeffCalcHTML(E_v, A_v, Iz_v, Iy_v, G_v, J_v, L_v);
+      })() : undefined;
+      inspectPanelEl.querySelectorAll("[data-full]").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const which = (btn as HTMLElement).dataset.full;
+          if (which === "kLocal" && _kLocal) {
+            const symHTML = isFrame ? frameSymbolicMatrix12() : "<em>Shell 18\u00d718 \u2014 ver tabla num\u00e9rica</em>";
+            showFullMatrix(`Elemento ${elemIdx} \u2014 Rigidez Local k_local`, symHTML, fullMatrixHTML(_kLocal, _dofLabels), _coeffHTML);
+          } else if (which === "T" && _T) {
+            showFullMatrix(`Elemento ${elemIdx} \u2014 Transformaci\u00f3n T`, formulaTransHTML, fullMatrixHTML(_T, _dofLabels));
+          } else if (which === "kGlobal" && _kGlobal) {
+            const symHTML = isFrame ? frameSymbolicMatrix12() : "<em>Shell 18\u00d718</em>";
+            showFullMatrix(`Elemento ${elemIdx} \u2014 Rigidez Global K = T^T \u00b7 k \u00b7 T`, symHTML, fullMatrixHTML(_kGlobal, _dofLabels), _coeffHTML);
+          }
+        });
       });
     }
 
@@ -1157,11 +1667,20 @@ export function renderAwatifBlock(
       }
     });
 
-    // Hover cursor change
+    // Hover: highlight element + cursor change
     viewerDiv.addEventListener("mousemove", (ev: MouseEvent) => {
       if (!inspectActive) return;
       const idx = pickElement(ev);
-      viewerDiv.style.cursor = idx >= 0 ? "crosshair" : "default";
+      if (idx >= 0) {
+        highlightElement(idx);
+        viewerDiv.style.cursor = "pointer";
+      } else {
+        if (highlightObj) {
+          const ctx = getViewerCtx();
+          if (ctx) { ctx.scene.remove(highlightObj); highlightObj = null; ctx.render(); }
+        }
+        viewerDiv.style.cursor = "default";
+      }
     });
 
     btnInspect.addEventListener("click", (e) => {
