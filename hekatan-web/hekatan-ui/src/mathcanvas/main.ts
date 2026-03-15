@@ -15793,23 +15793,17 @@ u_analitico = F * L / (E * A)
 
 > 4 nodos en X, 3 elementos, empotramiento en nodo 0, F axial en nodo 3
 
-@{awatif}
-nodes = [[0,0,0],[2,0,0],[4,0,0],[6,0,0]]
-elements = [[0,1],[1,2],[2,3]]
-supports = {0: [true,true,true,true,true,true]}
-loads = {3: [100,0,0,0,0,0]}
-E_val = 200000000
-A_val = 0.01
-Iz_val = 0.00001
-Iy_val = 0.00001
-G_val = 80000000
-J_val = 0.00002
-elasticities = {0: E_val, 1: E_val, 2: E_val}
-areas = {0: A_val, 1: A_val, 2: A_val}
-momentsOfInertiaZ = {0: Iz_val, 1: Iz_val, 2: Iz_val}
-momentsOfInertiaY = {0: Iy_val, 1: Iy_val, 2: Iy_val}
-shearModuli = {0: G_val, 1: G_val, 2: G_val}
-torsionalConstants = {0: J_val, 1: J_val, 2: J_val}
+@{awatif 800 400}
+node 0 0 0
+node 2 0 0
+node 4 0 0
+node 6 0 0
+element frame 0 1 E:$E A:$A Iz:0.00001 Iy:0.00001 G:80000000 J:0.00002
+element frame 1 2 E:$E A:$A Iz:0.00001 Iy:0.00001 G:80000000 J:0.00002
+element frame 2 3 E:$E A:$A Iz:0.00001 Iy:0.00001 G:80000000 J:0.00002
+support 0 fixed
+load 3 fx:$F
+solve explicit
 show deformed scale:5000 nodeResults:deformations
 @{end awatif}
 
