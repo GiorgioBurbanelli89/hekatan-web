@@ -11,7 +11,13 @@
     "isolatedModules": true,
     "noEmit": true,
     "paths": {
-      "hekatan-math/*": ["../hekatan-math/src/*"]
+      "hekatan-math/*": ["../hekatan-math/src/*"],
+      "awatif-fem": ["../hekatan-math/src/awatif-fem"],
+      "awatif-fem/*": ["../hekatan-math/src/awatif-fem/*"],
+      "awatif-ui": ["./src/awatif-ui"],
+      "awatif-ui/*": ["./src/awatif-ui/*"],
+      "awatif-mesh": ["../hekatan-math/src/awatif-mesh"],
+      "awatif-mesh/*": ["../hekatan-math/src/awatif-mesh/*"]
     }
   },
   "include": ["src/**/*.ts", "editor/**/*.ts", "../hekatan-math/src/**/*.ts"]

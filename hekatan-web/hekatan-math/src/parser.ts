@@ -8,8 +8,8 @@
 import { parseExpression, evaluate, HekatanEnvironment, type ASTNode } from "./evaluator.js";
 import { renderNode, renderValue, renderValueRow, renderValueCol, renderInlineText, renderEquationText, renderVarName } from "./renderer.js";
 
-const BLOCK_OPEN_RE = /^@\{(plot|plotly|svg|three|eq|draw|text|columns)\b\s*([^}]*)\}\s*$/i;
-const BLOCK_CLOSE_RE = /^@\{end\s+(plot|plotly|svg|three|eq|draw|text|columns)\}\s*$/i;
+const BLOCK_OPEN_RE = /^@\{(plot|plotly|svg|three|eq|draw|text|columns|html|code)\b\s*([^}]*)\}\s*$/i;
+const BLOCK_CLOSE_RE = /^@\{end\s+(plot|plotly|svg|three|eq|draw|text|columns|html|code)\}\s*$/i;
 
 // ─── Main parse function ─────────────────────────────────
 export function parse(source: string, existingEnv?: HekatanEnvironment, compact?: boolean): { html: string; env: HekatanEnvironment } {
@@ -286,10 +286,50 @@ function parseDirectiveBlock(type: string, lines: string[], args?: string, env?:
     case "svg": return handleSvgBlock(lines);
     case "three": return handleThreeBlock(lines);
     case "draw": return `<!-- draw block (${args || ""}) - rendered in GUI -->`;
+    case "html": return lines.join("\n");
     case "text": return lines.map(l => `<p class="comment">${l.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p>`).join("");
+    case "code": return handleCodeBlock(lines, args || "");
     case "columns": return `<!-- columns block -->`;
     default: return `<pre>${lines.join("\n")}</pre>`;
   }
+}
+
+// ─── @{code} block — syntax-highlighted code display ─────
+function handleCodeBlock(lines: string[], lang: string): string {
+  const langLower = (lang || "").trim().toLowerCase();
+  const escaped = lines.join("\n")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Apply basic syntax highlighting for C/C++
+  let highlighted = escaped;
+  if (langLower === "cpp" || langLower === "c++" || langLower === "c") {
+    // Comments (// ...)
+    highlighted = highlighted.replace(/(\/\/[^\n]*)/g, '<span style="color:#6a9955">$1</span>');
+    // Keywords
+    highlighted = highlighted.replace(/\b(const|double|int|float|void|return|if|else|for|while|auto|struct|class|template|typename|using|namespace|static|inline|extern|unsigned|long|short|char|bool|true|false|nullptr|new|delete|this|public|private|protected|virtual|override|include|define)\b/g,
+      '<span style="color:#569cd6">$1</span>');
+    // Numeric literals
+    highlighted = highlighted.replace(/\b(\d+\.?\d*(?:[eE][+-]?\d+)?)\b/g, '<span style="color:#b5cea8">$1</span>');
+    // Strings
+    highlighted = highlighted.replace(/("(?:[^"\\]|\\.)*")/g, '<span style="color:#ce9178">$1</span>');
+  } else if (langLower === "js" || langLower === "javascript" || langLower === "ts" || langLower === "typescript") {
+    highlighted = highlighted.replace(/(\/\/[^\n]*)/g, '<span style="color:#6a9955">$1</span>');
+    highlighted = highlighted.replace(/\b(const|let|var|function|return|if|else|for|while|class|new|this|import|export|from|async|await|try|catch|throw|typeof|instanceof)\b/g,
+      '<span style="color:#569cd6">$1</span>');
+    highlighted = highlighted.replace(/\b(\d+\.?\d*)\b/g, '<span style="color:#b5cea8">$1</span>');
+    highlighted = highlighted.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g, '<span style="color:#ce9178">$1</span>');
+  } else if (langLower === "python" || langLower === "py") {
+    highlighted = highlighted.replace(/(#[^\n]*)/g, '<span style="color:#6a9955">$1</span>');
+    highlighted = highlighted.replace(/\b(def|class|return|if|elif|else|for|while|import|from|as|with|try|except|raise|lambda|yield|pass|break|continue|and|or|not|in|is|True|False|None)\b/g,
+      '<span style="color:#569cd6">$1</span>');
+    highlighted = highlighted.replace(/\b(\d+\.?\d*)\b/g, '<span style="color:#b5cea8">$1</span>');
+    highlighted = highlighted.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span style="color:#ce9178">$1</span>');
+  }
+
+  const langLabel = langLower ? `<div style="position:absolute;top:6px;right:12px;font-size:11px;color:#888;font-family:sans-serif">${lang.trim()}</div>` : "";
+  return `<div style="position:relative;margin:8px 0"><pre style="background:#1e1e1e;color:#d4d4d4;padding:16px 16px 12px;border-radius:6px;font-size:13px;line-height:1.5;overflow-x:auto;font-family:'Consolas','Monaco','Courier New',monospace;margin:0">${langLabel}${highlighted}</pre></div>`;
 }
 
 // ─── @{eq} block ─────────────────────────────────────────
@@ -384,6 +424,37 @@ function heatColor(t: number): string {
   else if (t < 0.75) { r = Math.round(255 * (t - 0.5) * 4); g = 255; b = 0; }
   else               { r = 255; g = Math.round(255 * (1 - (t - 0.75) * 4)); b = 0; }
   return `rgb(${r},${g},${b})`;
+}
+
+/** Convert text with _subscript and ^superscript to SVG tspan elements.
+ *  Also converts Greek letter names (xi, alpha, etc.) to Unicode symbols.
+ *  Example: "N_1 = 1 - xi" → "N<tspan dy='3' font-size='75%'>1</tspan><tspan dy='-3'> = 1 - ξ</tspan>" */
+function svgMathText(text: string): string {
+  const GREEK: Record<string,string> = {
+    alpha:"\u03B1",beta:"\u03B2",gamma:"\u03B3",delta:"\u03B4",epsilon:"\u03B5",
+    zeta:"\u03B6",eta:"\u03B7",theta:"\u03B8",iota:"\u03B9",kappa:"\u03BA",
+    lambda:"\u03BB",mu:"\u03BC",nu:"\u03BD",xi:"\u03BE",omicron:"\u03BF",
+    pi:"\u03C0",rho:"\u03C1",sigma:"\u03C3",tau:"\u03C4",upsilon:"\u03C5",
+    phi:"\u03C6",chi:"\u03C7",psi:"\u03C8",omega:"\u03C9",
+    Gamma:"\u0393",Delta:"\u0394",Theta:"\u0398",Lambda:"\u039B",Xi:"\u039E",
+    Pi:"\u03A0",Sigma:"\u03A3",Phi:"\u03A6",Psi:"\u03A8",Omega:"\u03A9"
+  };
+  // Replace Greek words first
+  let result = text.replace(/\b(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|omicron|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)\b/g,
+    m => GREEK[m] || m);
+  // Replace => with ⇒, -> with →
+  result = result.replace(/=>/g, "⇒").replace(/->/g, "→");
+  // Subscripts: X_i or X_{abc}
+  result = result.replace(/([A-Za-z\u0370-\u03FF])_\{([^}]+)\}/g,
+    (_, base, sub) => `${base}<tspan dy="3" font-size="75%">${sub}</tspan><tspan dy="-3"></tspan>`);
+  result = result.replace(/([A-Za-z\u0370-\u03FF])_([A-Za-z0-9])/g,
+    (_, base, sub) => `${base}<tspan dy="3" font-size="75%">${sub}</tspan><tspan dy="-3"></tspan>`);
+  // Superscripts: X^2 or X^{abc}
+  result = result.replace(/\^\{([^}]+)\}/g,
+    (_, sup) => `<tspan dy="-4" font-size="75%">${sup}</tspan><tspan dy="4"></tspan>`);
+  result = result.replace(/\^([0-9])/g,
+    (_, sup) => `<tspan dy="-4" font-size="75%">${sup}</tspan><tspan dy="4"></tspan>`);
+  return result;
 }
 
 export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment): string {
@@ -691,7 +762,7 @@ export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment):
     if (f.label) {
       const dashAttr = f.style === "dashed" ? ` stroke-dasharray="8,4"` : f.style === "dot" || f.style === "dotted" ? ` stroke-dasharray="3,3"` : "";
       svg += `<line x1="${W - PAD - 75}" y1="${legendY - 4}" x2="${W - PAD - 55}" y2="${legendY - 4}" stroke="${f.color}" stroke-width="${f.width}"${dashAttr}/>`;
-      svg += `<text x="${W - PAD - 50}" y="${legendY}" fill="${f.color}" font-size="11" text-anchor="start">${f.label}</text>`;
+      svg += `<text x="${W - PAD - 50}" y="${legendY}" fill="${f.color}" font-size="11" text-anchor="start">${svgMathText(f.label)}</text>`;
       legendY += 18;
     }
   }
@@ -786,9 +857,9 @@ export function handlePlotBlock(lines: string[], outerEnv?: HekatanEnvironment):
   }
 
   // Title and axis labels
-  if (title) svg += `<text x="${W / 2}" y="${PAD - 15}" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">${title}</text>`;
-  if (xlabel) svg += `<text x="${W / 2}" y="${H - 5}" fill="#555" font-size="11" text-anchor="middle">${xlabel}</text>`;
-  if (ylabel) svg += `<text x="12" y="${H / 2}" fill="#555" font-size="11" text-anchor="middle" transform="rotate(-90, 12, ${H / 2})">${ylabel}</text>`;
+  if (title) svg += `<text x="${W / 2}" y="${PAD - 15}" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">${svgMathText(title)}</text>`;
+  if (xlabel) svg += `<text x="${W / 2}" y="${H - 5}" fill="#555" font-size="11" text-anchor="middle">${svgMathText(xlabel)}</text>`;
+  if (ylabel) svg += `<text x="12" y="${H / 2}" fill="#555" font-size="11" text-anchor="middle" transform="rotate(-90, 12, ${H / 2})">${svgMathText(ylabel)}</text>`;
 
   svg += "</svg>";
   return `<div class="plot-container">${svg}</div>`;
@@ -1252,6 +1323,321 @@ const dirLight=new THREE.DirectionalLight(0xffffff,0.8);dirLight.position.set(5,
 ${code}
 function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}animate();
 })();</script>`;
+}
+
+// ─── @{canvas} Interactive 2D Canvas DSL ──────────────────
+/**
+ * processCanvasDSL — Converts a simple DSL into JS code for an interactive HTML5 Canvas.
+ *
+ * DSL commands:
+ *   slider varname min max default label:"text"
+ *   let varname = expression        (computed from slider vars)
+ *   line x1 y1 x2 y2 [color:#hex] [width:N]
+ *   arrow x1 y1 x2 y2 [color:#hex] [width:N] [label:"text"]
+ *   circle x y r [fill:#hex] [stroke:#hex] [width:N]
+ *   rect x y w h [fill:#hex] [stroke:#hex] [width:N]
+ *   fillbar x y w h [fill:#hex]
+ *   text x y "content" [color:#hex] [size:N] [align:left|center|right] [font:"bold 13px sans-serif"]
+ *   bracket x1 y x2 y [color:#hex] [label:"text"]
+ *   display "text with {var:.2f}" [color:#hex] [size:N] [bold]
+ *   # comment (ignored)
+ */
+export function processCanvasDSL(lines: string[]): string {
+  const sliders: { name: string; min: number; max: number; def: number; label: string }[] = [];
+  const animates: { name: string; min: number; max: number; duration: number; loop: string }[] = [];
+  const lets: { name: string; expr: string }[] = [];
+  const drawCmds: string[] = [];
+  const displays: { text: string; color: string; size: number; bold: boolean }[] = [];
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#") || line.startsWith("//")) continue;
+
+    // slider varname min max default label:"text"
+    const sliderMatch = line.match(/^slider\s+(\w+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)(?:\s+label:"([^"]*)")?/i);
+    if (sliderMatch) {
+      sliders.push({
+        name: sliderMatch[1],
+        min: parseFloat(sliderMatch[2]),
+        max: parseFloat(sliderMatch[3]),
+        def: parseFloat(sliderMatch[4]),
+        label: sliderMatch[5] || sliderMatch[1],
+      });
+      continue;
+    }
+
+    // animate varname min max duration:N loop:once|repeat|bounce
+    const animMatch = line.match(/^animate\s+(\w+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)(.*)$/i);
+    if (animMatch) {
+      const rest = animMatch[4];
+      const dur = rest.match(/duration:([\d.]+)/)?.[1] || "3";
+      const loop = rest.match(/loop:(\w+)/)?.[1] || "bounce";
+      animates.push({
+        name: animMatch[1],
+        min: parseFloat(animMatch[2]),
+        max: parseFloat(animMatch[3]),
+        duration: parseFloat(dur),
+        loop: loop.toLowerCase(),
+      });
+      continue;
+    }
+
+    // let varname = expression
+    const letMatch = line.match(/^let\s+(\w+)\s*=\s*(.+)$/i);
+    if (letMatch) {
+      lets.push({ name: letMatch[1], expr: letMatch[2].trim() });
+      continue;
+    }
+
+    // display "text" [color:#hex] [size:N] [bold]
+    const dispMatch = line.match(/^display\s+"([^"]*)"(.*)$/i);
+    if (dispMatch) {
+      const rest = dispMatch[2];
+      const color = rest.match(/color:(#[0-9a-fA-F]{3,8}|\w+)/)?.[1] || "#333";
+      const size = rest.match(/size:(\d+)/)?.[1] || "14";
+      const bold = /\bbold\b/.test(rest);
+      displays.push({ text: dispMatch[1], color, size: parseInt(size), bold });
+      continue;
+    }
+
+    // Drawing commands → pushed as JS draw calls
+    // Parse named params: color:#hex, width:N, fill:#hex, stroke:#hex, size:N, align:word, label:"text", font:"..."
+    const parseParams = (rest: string) => {
+      const p: Record<string, string> = {};
+      // label:"..." and font:"..."
+      rest.replace(/(label|font):"([^"]*)"/g, (_, k, v) => { p[k] = v; return ""; });
+      // color, fill, stroke, align
+      rest.replace(/(color|fill|stroke|align):(#?[0-9a-fA-F]+|\w+)/g, (_, k, v) => { p[k] = v; return ""; });
+      // width, size, r, opacity
+      rest.replace(/(width|size|r|opacity):([\d.]+)/g, (_, k, v) => { p[k] = v; return ""; });
+      return p;
+    };
+
+    // line x1 y1 x2 y2 [params]
+    const lineMatch = line.match(/^line\s+([\w.+\-*/()]+)\s*,\s*([\w.+\-*/()]+)\s+([\w.+\-*/()]+)\s*,\s*([\w.+\-*/()]+)(.*)$/i);
+    if (lineMatch) {
+      const p = parseParams(lineMatch[5]);
+      drawCmds.push(`ctx.strokeStyle=${JSON.stringify(p.color||"#333")};ctx.lineWidth=${p.width||2};ctx.beginPath();ctx.moveTo(${lineMatch[1]},${lineMatch[2]});ctx.lineTo(${lineMatch[3]},${lineMatch[4]});ctx.stroke();`);
+      continue;
+    }
+
+    // arrow x1,y1 x2,y2 [params]
+    const arrowMatch = line.match(/^arrow\s+([\w.+\-*/()]+)\s*,\s*([\w.+\-*/()]+)\s+([\w.+\-*/()]+)\s*,\s*([\w.+\-*/()]+)(.*)$/i);
+    if (arrowMatch) {
+      const p = parseParams(arrowMatch[5]);
+      const c = JSON.stringify(p.color || "#333");
+      const w = p.width || 2;
+      const lbl = p.label ? `,${JSON.stringify(p.label)}` : "";
+      drawCmds.push(`_drawArrow(ctx,${arrowMatch[1]},${arrowMatch[2]},${arrowMatch[3]},${arrowMatch[4]},${c},${w}${lbl});`);
+      continue;
+    }
+
+    // circle x,y r [fill:#hex] [stroke:#hex] [width:N]
+    const circMatch = line.match(/^circle\s+([\w.+\-*/()]+)\s*,\s*([\w.+\-*/()]+)\s+([\w.+\-*/()]+)(.*)$/i);
+    if (circMatch) {
+      const p = parseParams(circMatch[4]);
+      const cmds: string[] = [];
+      cmds.push(`ctx.beginPath();ctx.arc(${circMatch[1]},${circMatch[2]},${circMatch[3]},0,Math.PI*2);`);
+      if (p.fill) cmds.push(`ctx.fillStyle=${JSON.stringify(p.fill)};ctx.fill();`);
+      if (p.stroke) cmds.push(`ctx.strokeStyle=${JSON.stringify(p.stroke)};ctx.lineWidth=${p.width||2};ctx.stroke();`);
+      if (!p.fill && !p.stroke) cmds.push(`ctx.fillStyle="#333";ctx.fill();`);
+      drawCmds.push(cmds.join(""));
+      continue;
+    }
+
+    // rect x,y w,h [fill:#hex] [stroke:#hex]
+    const rectMatch = line.match(/^rect\s+([\w.+\-*/()]+)\s*,\s*([\w.+\-*/()]+)\s+([\w.+\-*/()]+)\s*,\s*([\w.+\-*/()]+)(.*)$/i);
+    if (rectMatch) {
+      const p = parseParams(rectMatch[5]);
+      const cmds: string[] = [];
+      if (p.fill) cmds.push(`ctx.fillStyle=${JSON.stringify(p.fill)};ctx.fillRect(${rectMatch[1]},${rectMatch[2]},${rectMatch[3]},${rectMatch[4]});`);
+      if (p.stroke) cmds.push(`ctx.strokeStyle=${JSON.stringify(p.stroke)};ctx.lineWidth=${p.width||1};ctx.strokeRect(${rectMatch[1]},${rectMatch[2]},${rectMatch[3]},${rectMatch[4]});`);
+      if (!p.fill && !p.stroke) cmds.push(`ctx.fillStyle="rgba(0,0,0,0.1)";ctx.fillRect(${rectMatch[1]},${rectMatch[2]},${rectMatch[3]},${rectMatch[4]});`);
+      drawCmds.push(cmds.join(""));
+      continue;
+    }
+
+    // text x,y "content" [color:#hex] [size:N] [align:left|center|right] [font:"..."]
+    const textMatch = line.match(/^text\s+([\w.+\-*/()]+)\s*,\s*([\w.+\-*/()]+)\s+"([^"]*)"(.*)$/i);
+    if (textMatch) {
+      const p = parseParams(textMatch[4]);
+      const font = p.font || `${p.size || 13}px sans-serif`;
+      drawCmds.push(`ctx.fillStyle=${JSON.stringify(p.color||"#333")};ctx.font=${JSON.stringify(font)};ctx.textAlign=${JSON.stringify(p.align||"center")};ctx.fillText(_fmt(${JSON.stringify(textMatch[3])}),${textMatch[1]},${textMatch[2]});`);
+      continue;
+    }
+
+    // bracket x1,y x2,y [color:#hex] [label:"text"]  — horizontal bracket with arrows and label
+    const brackMatch = line.match(/^bracket\s+([\w.+\-*/()]+)\s*,\s*([\w.+\-*/()]+)\s+([\w.+\-*/()]+)\s*,\s*([\w.+\-*/()]+)(.*)$/i);
+    if (brackMatch) {
+      const p = parseParams(brackMatch[5]);
+      const c = JSON.stringify(p.color || "#333");
+      const lbl = p.label ? JSON.stringify(p.label) : '""';
+      drawCmds.push(`_drawBracket(ctx,${brackMatch[1]},${brackMatch[2]},${brackMatch[3]},${brackMatch[4]},${c},${lbl});`);
+      continue;
+    }
+  }
+
+  // Generate the full JS code
+  const js: string[] = [];
+
+  // Helper: format strings with {var} and {var:.2f} interpolation
+  js.push(`function _fmt(s){return s.replace(/\\{([^}]+)\\}/g,function(_,k){`);
+  js.push(`  var parts=k.split(':'),vn=parts[0],fmt=parts[1]||'';`);
+  js.push(`  var v=_vars[vn]; if(v===undefined)return'{'+k+'}';`);
+  js.push(`  if(fmt){var m=fmt.match(/^\\.(\\d+)f$/);if(m)return v.toFixed(parseInt(m[1]));}`);
+  js.push(`  return typeof v==='number'?(Math.round(v*100)/100).toString():String(v);`);
+  js.push(`});}`);
+
+  // Helper: draw arrow with arrowheads
+  js.push(`function _drawArrow(ctx,x1,y1,x2,y2,c,w,lbl){`);
+  js.push(`  var dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);if(len<2)return;`);
+  js.push(`  var ux=dx/len,uy=dy/len,hs=8;`);
+  js.push(`  ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();`);
+  js.push(`  ctx.fillStyle=c;`);
+  js.push(`  ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-ux*hs+uy*hs*0.4,y2-uy*hs-ux*hs*0.4);ctx.lineTo(x2-ux*hs-uy*hs*0.4,y2-uy*hs+ux*hs*0.4);ctx.fill();`);
+  js.push(`  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x1+ux*hs-uy*hs*0.4,y1+uy*hs+ux*hs*0.4);ctx.lineTo(x1+ux*hs+uy*hs*0.4,y1+uy*hs-ux*hs*0.4);ctx.fill();`);
+  js.push(`  if(lbl){ctx.font="12px sans-serif";ctx.textAlign="center";ctx.fillText(_fmt(lbl),(x1+x2)/2,(y1+y2)/2-8);}`);
+  js.push(`}`);
+
+  // Helper: draw bracket (horizontal with arrows + label)
+  js.push(`function _drawBracket(ctx,x1,y1,x2,y2,c,lbl){`);
+  js.push(`  _drawArrow(ctx,x1,y1,x2,y2,c,2,lbl);`);
+  js.push(`}`);
+
+  // Variables store
+  js.push(`var _vars={};`);
+  for (const s of sliders) {
+    js.push(`_vars.${s.name}=${s.def};`);
+  }
+  for (const a of animates) {
+    js.push(`_vars.${a.name}=${a.min};`);
+  }
+
+  // Computed lets
+  js.push(`function _updateVars(){`);
+  for (const l of lets) {
+    js.push(`  _vars.${l.name}=${l.expr.replace(/\b([a-zA-Z_]\w*)\b/g, (m) => {
+      const allVarNames = [...sliders.map(s => s.name), ...animates.map(a => a.name), ...lets.map(l2 => l2.name)];
+      if (allVarNames.includes(m)) return `_vars.${m}`;
+      return m;
+    })};`);
+  }
+  js.push(`}`);
+
+  // Draw function
+  js.push(`function _draw(){`);
+  js.push(`  _updateVars();`);
+  js.push(`  ctx.clearRect(0,0,W,H);`);
+  // Insert user draw commands, replacing variable references (but NOT inside strings)
+  const allVarNames = [...sliders.map(s => s.name), ...animates.map(a => a.name), ...lets.map(l => l.name)];
+  for (let cmd of drawCmds) {
+    // Split by "..." to avoid replacing inside string literals
+    const parts = cmd.split(/("(?:[^"\\]|\\.)*")/g);
+    cmd = parts.map((part, idx) => {
+      if (idx % 2 === 1) return part; // inside quotes, keep as-is
+      for (const vn of allVarNames) {
+        part = part.replace(new RegExp(`\\b${vn}\\b`, "g"), `_vars.${vn}`);
+      }
+      return part;
+    }).join("");
+    js.push(`  ${cmd}`);
+  }
+  // Display texts are rendered as divs below the canvas (not drawn on canvas)
+  js.push(`}`);
+
+  // Build slider HTML
+  js.push(`// Build slider controls`);
+  js.push(`var _controlsDiv=document.createElement('div');_controlsDiv.style.cssText='padding:8px 0;';`);
+  for (const s of sliders) {
+    const steps = 200;
+    js.push(`(function(){`);
+    js.push(`  var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:8px;margin:4px 0;font-family:sans-serif;font-size:13px;';`);
+    js.push(`  var lbl=document.createElement('span');lbl.style.cssText='min-width:120px;';`);
+    js.push(`  var valSpan=document.createElement('span');valSpan.style.cssText='font-weight:bold;min-width:50px;';`);
+    js.push(`  valSpan.textContent=(${s.def}).toFixed(2);`);
+    js.push(`  lbl.innerHTML=${JSON.stringify(s.label)}+': ';lbl.appendChild(valSpan);`);
+    js.push(`  var inp=document.createElement('input');inp.type='range';inp.min=${s.min};inp.max=${s.max};inp.step=${(s.max - s.min) / steps};inp.value=${s.def};inp.style.cssText='flex:1;';`);
+    js.push(`  inp.addEventListener('input',function(){_vars.${s.name}=parseFloat(this.value);valSpan.textContent=_vars.${s.name}.toFixed(2);_draw();});`);
+    js.push(`  row.appendChild(lbl);row.appendChild(inp);_controlsDiv.appendChild(row);`);
+    js.push(`})();`);
+  }
+  js.push(`container.appendChild(_controlsDiv);`);
+
+  // Display divs (below sliders)
+  if (displays.length > 0) {
+    js.push(`var _dispDiv=document.createElement('div');_dispDiv.style.cssText='padding:4px 0;font-family:sans-serif;';_dispDiv.id='_disp_'+Math.random().toString(36).slice(2);`);
+    for (const d of displays) {
+      js.push(`(function(){`);
+      js.push(`  var sp=document.createElement('div');sp.style.cssText='font-size:${d.size}px;color:${d.color};${d.bold?"font-weight:bold;":""}margin:2px 0;';`);
+      js.push(`  sp.setAttribute('data-tpl',${JSON.stringify(d.text)});`);
+      js.push(`  _dispDiv.appendChild(sp);`);
+      js.push(`})();`);
+    }
+    js.push(`container.appendChild(_dispDiv);`);
+    // Update display divs in draw
+    js.push(`var _origDraw=_draw;_draw=function(){_origDraw();var dd=_dispDiv.children;for(var i=0;i<dd.length;i++){dd[i].textContent=_fmt(dd[i].getAttribute('data-tpl'));}};`);
+  }
+
+  // Initial draw
+  js.push(`_draw();`);
+
+  // Animation loop (if any animate commands)
+  if (animates.length > 0) {
+    js.push(`// Animation loop`);
+    js.push(`var _animStart=performance.now(),_animPaused=false,_animPauseTime=0;`);
+    // Build animation config array
+    const animConfigs = animates.map(a =>
+      `{name:${JSON.stringify(a.name)},min:${a.min},max:${a.max},dur:${a.duration * 1000},loop:${JSON.stringify(a.loop)}}`
+    );
+    js.push(`var _anims=[${animConfigs.join(",")}];`);
+    js.push(`function _animLoop(now){`);
+    js.push(`  if(_animPaused){requestAnimationFrame(_animLoop);return;}`);
+    js.push(`  var elapsed=now-_animStart;`);
+    js.push(`  for(var i=0;i<_anims.length;i++){`);
+    js.push(`    var a=_anims[i],range=a.max-a.min;`);
+    js.push(`    var t=(elapsed%a.dur)/a.dur;`);  // 0→1 progress
+    js.push(`    if(a.loop==="bounce"){`);
+    js.push(`      var cycle=Math.floor(elapsed/a.dur);`);
+    js.push(`      if(cycle%2===1)t=1-t;`);  // reverse on odd cycles
+    js.push(`    }else if(a.loop==="once"){`);
+    js.push(`      t=Math.min(elapsed/a.dur,1);`);
+    js.push(`    }`);
+    js.push(`    _vars[a.name]=a.min+t*range;`);
+    js.push(`  }`);
+    js.push(`  _draw();`);
+    js.push(`  requestAnimationFrame(_animLoop);`);
+    js.push(`}`);
+    js.push(`requestAnimationFrame(_animLoop);`);
+
+    // Play/Pause button
+    js.push(`var _animBar=document.createElement('div');_animBar.style.cssText='display:flex;align-items:center;gap:8px;padding:4px 0;font-family:sans-serif;font-size:13px;';`);
+    js.push(`var _btnPlay=document.createElement('button');_btnPlay.textContent='\\u23F8';_btnPlay.title='Pausar';`);
+    js.push(`_btnPlay.style.cssText='font-size:18px;border:1px solid #ccc;border-radius:4px;padding:2px 10px;cursor:pointer;background:#f5f5f5;';`);
+    js.push(`_btnPlay.addEventListener('click',function(){`);
+    js.push(`  _animPaused=!_animPaused;`);
+    js.push(`  if(!_animPaused){_animStart=performance.now()-_animPauseTime;_btnPlay.textContent='\\u23F8';_btnPlay.title='Pausar';}`);
+    js.push(`  else{_animPauseTime=performance.now()-_animStart;_btnPlay.textContent='\\u25B6';_btnPlay.title='Reproducir';}`);
+    js.push(`});`);
+    js.push(`_animBar.appendChild(_btnPlay);`);
+
+    // Speed controls
+    js.push(`var _speedLabel=document.createElement('span');_speedLabel.textContent='1x';_speedLabel.style.cssText='min-width:30px;text-align:center;';`);
+    js.push(`var _speed=1;`);
+    js.push(`function _setSpeed(s){_speed=s;_speedLabel.textContent=s+'x';`);
+    js.push(`  for(var i=0;i<_anims.length;i++){_anims[i].dur=${animates[0].duration*1000}/s;}`);
+    js.push(`  _animStart=performance.now();_animPauseTime=0;`);
+    js.push(`}`);
+    js.push(`var _speeds=[0.5,1,2,4];`);
+    js.push(`for(var si=0;si<_speeds.length;si++){(function(sp){`);
+    js.push(`  var b=document.createElement('button');b.textContent=sp+'x';b.style.cssText='font-size:11px;border:1px solid #ddd;border-radius:3px;padding:1px 6px;cursor:pointer;background:'+(sp===1?'#e3f2fd':'#fff')+';';`);
+    js.push(`  b.addEventListener('click',function(){_setSpeed(sp);_animBar.querySelectorAll('button').forEach(function(bb,ii){if(ii>0)bb.style.background=bb===b?'#e3f2fd':'#fff';});});`);
+    js.push(`  _animBar.appendChild(b);`);
+    js.push(`})(_speeds[si]);}`);
+
+    js.push(`container.appendChild(_animBar);`);
+  }
+
+  return js.join("\n");
 }
 
 // ─── Control flow: for / #for ────────────────────────────

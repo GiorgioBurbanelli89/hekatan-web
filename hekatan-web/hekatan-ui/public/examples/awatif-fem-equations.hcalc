@@ -1,0 +1,256 @@
+# Awatif FEM — Ecuaciones del Solver
+> Documentación matemática del motor de elementos finitos awatif v2.0.0
+> Referencia: Logan, "A First Course in the Finite Element Method"
+
+## 1. Elemento Frame (Viga-Columna 3D)
+> Elemento de 2 nodos con 6 DOF/nodo: [u, v, w, θx, θy, θz]
+> Ref: getLocalStiffnessMatrix.cpp, líneas 48-94
+
+### 1.1 Propiedades del Elemento
+@{eq left}
+E | Módulo de elasticidad
+A | Área de la sección transversal
+I_z | Momento de inercia respecto al eje z (flexión en plano XY)
+I_y | Momento de inercia respecto al eje y (flexión en plano XZ)
+G | Módulo de corte
+J | Constante torsional
+L | Longitud del elemento
+@{end eq}
+
+### 1.2 Coeficientes de Rigidez
+@{eq left}
+k_1 = EA/L
+k_2 = 12EI_z/L^3
+k_3 = 12EI_y/L^3
+k_4 = GJ/L
+k_5 = 6EI_z/L^2
+k_6 = 6EI_y/L^2
+k_7 = 4EI_z/L
+k_8 = 2EI_z/L
+k_9 = 4EI_y/L
+k_{10} = 2EI_y/L
+@{end eq}
+
+### 1.3 Matriz de Rigidez Local 12×12
+> DOF por nodo: [u, v, w, θx, θy, θz]
+> Nodo i (filas 1-6), Nodo j (filas 7-12)
+
+@{eq}
+k_{local} = [k_1, 0, 0, 0, 0, 0, -k_1, 0, 0, 0, 0, 0; 0, k_2, 0, 0, 0, k_5, 0, -k_2, 0, 0, 0, k_5; 0, 0, k_3, 0, -k_6, 0, 0, 0, -k_3, 0, -k_6, 0; 0, 0, 0, k_4, 0, 0, 0, 0, 0, -k_4, 0, 0; 0, 0, -k_6, 0, k_9, 0, 0, 0, k_6, 0, k_{10}, 0; 0, k_5, 0, 0, 0, k_7, 0, -k_5, 0, 0, 0, k_8; -k_1, 0, 0, 0, 0, 0, k_1, 0, 0, 0, 0, 0; 0, -k_2, 0, 0, 0, -k_5, 0, k_2, 0, 0, 0, -k_5; 0, 0, -k_3, 0, k_6, 0, 0, 0, k_3, 0, k_6, 0; 0, 0, 0, -k_4, 0, 0, 0, 0, 0, k_4, 0, 0; 0, 0, -k_6, 0, k_{10}, 0, 0, 0, k_6, 0, k_9, 0; 0, k_5, 0, 0, 0, k_8, 0, -k_5, 0, 0, 0, k_7]
+@{end eq}
+
+> **Nota**: Cuando Iy=G=J=0 (elemento barra), los DOF rotacionales tienen rigidez cero → matriz singular con solver JS (mathjs). El solver WASM (Eigen) detecta y elimina estos DOF automáticamente.
+
+## 2. Matriz de Transformación — Frame
+> Transforma coordenadas locales a globales
+> Ref: getTransformationMatrix.cpp, líneas 30-74
+
+### 2.1 Cosenos Directores
+@{eq left}
+l = (x_j - x_i)/L
+m = (y_j - y_i)/L
+n = (z_j - z_i)/L
+D = √(l^2 + m^2)
+@{end eq}
+
+### 2.2 Matriz de Cosenos Directores λ (3×3)
+> Caso general (D ≠ 0):
+
+@{eq}
+λ = [l, m, n; -m/D, l/D, 0; -ln/D, -mn/D, D]
+@{end eq}
+
+> Caso especial — elemento vertical hacia arriba (n = 1):
+@{eq}
+λ = [0, 0, 1; 0, 1, 0; -1, 0, 0]
+@{end eq}
+
+> Caso especial — elemento vertical hacia abajo (n = -1):
+@{eq}
+λ = [0, 0, -1; 0, 1, 0; 1, 0, 0]
+@{end eq}
+
+### 2.3 Matriz de Transformación T (12×12)
+@{eq}
+T = [λ, 0, 0, 0; 0, λ, 0, 0; 0, 0, λ, 0; 0, 0, 0, λ]
+@{end eq}
+
+## 3. Ensamblaje Global
+> Ref: getGlobalStiffnessMatrix.cpp
+
+### 3.1 Rigidez Global del Elemento
+@{eq}
+K^{(e)}_{global} = T^T · k_{local} · T
+@{end eq}
+
+### 3.2 Ensamblaje por Triplets (Sparse)
+@{eq left}
+K_{global} = ∑_{e=1}^{n_e} K^{(e)}_{global}
+@{end eq}
+
+> Se usa formato sparse (Eigen::SparseMatrix) con triplets para ensamblaje eficiente. Los valores duplicados en la misma posición se suman automáticamente.
+
+## 4. Sistema de Ecuaciones
+> Ref: deform.cpp
+
+### 4.1 Ecuación de Equilibrio
+@{eq}
+K · u = F
+@{end eq}
+
+### 4.2 Partición por Condiciones de Contorno
+> Se eliminan DOF restringidos (supports) y DOF con rigidez cero (solo WASM)
+@{eq left}
+K_{ff} · u_f = F_f
+@{end eq}
+
+> Donde f = índices libres (free)
+
+### 4.3 Resolución
+@{eq left}
+u_f = K_{ff}^{-1} · F_f
+@{end eq}
+
+> Solver JS: LU factorización (mathjs lup + lusolve)
+> Solver WASM: SparseLU (Eigen)
+
+### 4.4 Reacciones
+@{eq}
+R = K · u
+@{end eq}
+
+## 5. Elemento Shell (Placa Triangular — Mindlin-Reissner)
+> Elemento de 3 nodos con 6 DOF/nodo: [u, v, w, θx, θy, θz]
+> Ref: getLocalStiffnessMatrix.cpp, líneas 563-649
+
+### 5.1 Propiedades
+@{eq left}
+E | Módulo de elasticidad
+ν | Relación de Poisson
+t | Espesor de la placa
+G = E/(2(1+ν)) | Módulo de corte
+@{end eq}
+
+### 5.2 Matriz Constitutiva de Flexión — Isotrópica
+@{eq}
+D_b = Et^3/(12(1-ν^2)) · [1, ν, 0; ν, 1, 0; 0, 0, (1-ν)/2]
+@{end eq}
+
+### 5.3 Matriz Constitutiva de Flexión — Ortotrópica
+@{eq left}
+ν_{yx} = E_y·ν_{xy}/E_x
+d = 1 - ν_{xy}·ν_{yx}
+Q_{11} = E_x/d
+Q_{22} = E_y/d
+Q_{12} = ν_{xy}·E_y/d
+Q_{66} = G_{xy}
+@{end eq}
+
+@{eq}
+D_b = t^3/12 · [Q_{11}, Q_{12}, 0; Q_{12}, Q_{22}, 0; 0, 0, Q_{66}]
+@{end eq}
+
+### 5.4 Matriz Constitutiva de Corte — Isotrópica
+> Factor de corrección de corte κ = 5/6 (Mindlin-Reissner)
+@{eq}
+D_s = κ·G·t · [1, 0; 0, 1]
+@{end eq}
+
+### 5.5 Matriz Constitutiva de Corte — Ortotrópica
+@{eq}
+D_s = κ·G_{xy}·t · [1, 0; 0, 1]
+@{end eq}
+
+### 5.6 Matriz B de Deformación-Flexión (CST)
+> Funciones de forma lineales del triángulo (Constant Strain Triangle)
+@{eq left}
+A_e = 1/2·|(x_2-x_1)(y_3-y_1) - (x_3-x_1)(y_1-y_2)|
+@{end eq}
+
+@{eq left}
+∂N_1/∂x = (y_2-y_3)/(2A_e)
+∂N_1/∂y = (x_3-x_2)/(2A_e)
+∂N_2/∂x = (y_3-y_1)/(2A_e)
+∂N_2/∂y = -(x_3-x_1)/(2A_e)
+∂N_3/∂x = (y_1-y_2)/(2A_e)
+∂N_3/∂y = (x_2-x_1)/(2A_e)
+@{end eq}
+
+> Matriz B de flexión (3×18) — curvaturas κ = B_b · d:
+@{eq left}
+κ_{xx} = ∂θ_y/∂x
+κ_{yy} = -∂θ_x/∂y
+κ_{xy} = ∂θ_y/∂y - ∂θ_x/∂x
+@{end eq}
+
+### 5.7 Matriz B de Corte — CS-FEM
+> Cell-Smoothed Finite Element Method
+> El triángulo se subdivide en 3 sub-triángulos desde el centroide
+
+@{eq left}
+x_c = (x_1 + x_2 + x_3)/3
+y_c = (y_1 + y_2 + y_3)/3
+@{end eq}
+
+> Las matrices de deformación de corte se suavizan (smooth) sobre los sub-triángulos para evitar bloqueo por corte (shear locking):
+
+@{eq}
+B_s = (1/A_e)·∑_{c=1}^{3} A_c · B_s^{(c)}
+@{end eq}
+
+### 5.8 Rigidez de Placa (Flexión + Corte)
+@{eq}
+K_p = (B_b^T · D_b · B_b + B_s^T · D_s · B_s) · A_e
+@{end eq}
+
+### 5.9 Rigidez de Membrana — Formulación ANDES
+> Allman's Drilling DOF + Natural Strain formulation
+> Combina rigidez básica (Kb) + estabilización higher-order (Kh)
+
+@{eq}
+K_m = K_b + K_h
+@{end eq}
+
+> Donde Kb usa formulación de membrana lineal y Kh es la estabilización ANDES con parámetro α = 1/8
+
+### 5.10 Rigidez Total del Shell (18×18)
+> Se mapean DOF de membrana [u,v,θz] y placa [w,θx,θy] en la matriz completa 18×18
+
+@{eq}
+K_{shell} = K_p + K_m^{mapped}
+@{end eq}
+
+## 6. Transformación Shell (3D)
+> Ref: getTransformationMatrix.cpp, líneas 77-175
+
+### 6.1 Normal al Plano del Elemento
+@{eq left}
+n = (∂X/∂ξ) × (∂X/∂η)
+e_z = n/|n|
+@{end eq}
+
+### 6.2 Ejes Locales
+@{eq left}
+e_x = (e_{global,x} - (e_{global,x}·e_z)·e_z) / |...|
+e_y = e_z × e_x
+@{end eq}
+
+### 6.3 Matriz de Transformación (18×18)
+@{eq}
+T_{shell} = [R, 0, 0, 0, 0, 0; 0, R, 0, 0, 0, 0; 0, 0, R, 0, 0, 0; 0, 0, 0, R, 0, 0; 0, 0, 0, 0, R, 0; 0, 0, 0, 0, 0, R]
+@{end eq}
+
+> Donde R = [e_x; e_y; e_z] es la matriz de rotación 3×3
+
+## 7. Smart Defaults (Hekatan)
+> Agregado en hekatanAwatif.ts para evitar singularidad con solver JS
+
+@{eq left}
+I_{small} = A^2 · 0.01
+I_y = I_z ∨ I_{small}
+I_z = I_y ∨ I_{small}
+G = E/2.6
+J = I_z + I_y ∨ I_{small}
+@{end eq}
+
+> Factor 0.01: ~1% de rigidez a flexión vs axial. Suficiente para estabilidad numérica, suficientemente pequeño para preservar comportamiento de cercha.

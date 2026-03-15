@@ -1,0 +1,257 @@
+@{config bg:book, align:right, header:on, startpage:470, color:black}
+---
+# 13 Analisis Modal - Porticos Espaciales
+---
+@{config align:left}
+
+## Problem 13.1 - Portico Espacial (Paz & Kim, 6th Ed. Fig 13.5)
+
+@{text}
+Portico espacial de un piso con 8 nodos (4 libres, 4 empotrados)
+y 8 elementos (4 columnas W24x146, 4 vigas W14x84).
+Analisis modal con masa concentrada y condensacion estatica.
+Transformacion T automatica con cross products (3er nodo de referencia).
+@{end text}
+
+> Unidades: ksi, in, kip, s
+
+@{awatif 700 400}
+// Base Y=0 (fijos): 0,2,5,7
+node 0 0 0
+node 0 1.2 0
+node 0 0 1.2
+node 0 1.2 1.2
+node 1.2 1.2 1.2
+node 1.2 0 1.2
+node 1.2 1.2 0
+node 1.2 0 0
+// Columnas W24x146
+element frame 0 1 E:29500 A:42.7 Iz:4580 Iy:391
+element frame 2 3 E:29500 A:42.7 Iz:4580 Iy:391
+element frame 5 4 E:29500 A:42.7 Iz:4580 Iy:391
+element frame 7 6 E:29500 A:42.7 Iz:4580 Iy:391
+// Vigas W14x84
+element frame 1 6 E:29500 A:24.7 Iz:928 Iy:225
+element frame 3 4 E:29500 A:24.7 Iz:928 Iy:225
+element frame 1 3 E:29500 A:24.7 Iz:928 Iy:225
+element frame 6 4 E:29500 A:24.7 Iz:928 Iy:225
+// Apoyos
+support 0 fixed
+support 2 fixed
+support 5 fixed
+support 7 fixed
+@{end awatif}
+> -Fig. 13.5- Portico espacial Problem 13.1
+
+---
+## 1. Propiedades del Material
+@{cells} |E_s = 29500|nu = 0.3|G_s = E_s/(2*(1+nu))|
+> E_s, G_s en ksi
+
+## 2. Secciones
+> W24x146 (Columnas) - A, I en in^2/in^4
+@{cells} |A_c = 42.7|I_c33 = 4580|I_c22 = 391|J_c = 12.6|
+
+> W14x84 (Vigas)
+@{cells} |A_g = 24.7|I_g33 = 928|I_g22 = 225|J_g = 4.47|
+
+## 3. Geometria (in) — Z-up (convencion libro)
+> Cubo 120x120x120: 4 fijos (base Z=0), 4 libres (techo Z=120)
+> 1:(0,0,0) 2:(0,0,120) 3:(0,120,0) 4:(0,120,120)
+> 5:(120,120,120) 6:(120,120,0) 7:(120,0,120) 8:(120,0,0)
+
+nodes = [[0,0,0],[0,0,120],[0,120,0],[0,120,120],[120,120,120],[120,120,0],[120,0,120],[120,0,0]]
+
+## 4. Conectividad (n1, n2, nref)
+> Columnas: fijo→libre. Vigas: libre→libre
+> nref define orientacion ejes locales via cross product
+
+conn = [[1,2,8],[3,4,6],[6,5,3],[8,7,1],[2,7,4],[4,5,2],[2,4,7],[7,5,4]]
+
+## 5. Masa Concentrada
+> m = 0.001 kip*s^2/in por DOF traslacional en cada nodo libre
+m = 0.001
+
+---
+## 6. Rigidez Local + Auto-T + Ensamblaje
+
+> Propiedades por elemento (4 col + 4 vigas)
+n_e = 8
+A_el = [[A_c],[A_c],[A_c],[A_c],[A_g],[A_g],[A_g],[A_g]]
+Iz_el = [[I_c33],[I_c33],[I_c33],[I_c33],[I_g33],[I_g33],[I_g33],[I_g33]]
+Iy_el = [[I_c22],[I_c22],[I_c22],[I_c22],[I_g22],[I_g22],[I_g22],[I_g22]]
+J_el = [[J_c],[J_c],[J_c],[J_c],[J_g],[J_g],[J_g],[J_g]]
+
+> Calcular K_global de cada elemento y guardar en cell array
+K_glob = cell(n_e)
+
+for el = 1:n_e
+i1 = conn[el, 1]
+i2 = conn[el, 2]
+i3 = conn[el, 3]
+x1 = nodes[i1, 1]
+y1 = nodes[i1, 2]
+z1 = nodes[i1, 3]
+x2 = nodes[i2, 1]
+y2 = nodes[i2, 2]
+z2 = nodes[i2, 3]
+x3 = nodes[i3, 1]
+y3 = nodes[i3, 2]
+z3 = nodes[i3, 3]
+dx = x2 - x1
+dy = y2 - y1
+dz = z2 - z1
+Le = sqrt(dx^2 + dy^2 + dz^2)
+exx = dx/Le
+exy = dy/Le
+exz = dz/Le
+v31x = x3 - x1
+v31y = y3 - y1
+v31z = z3 - z1
+cyx = v31y*dz - v31z*dy
+cyy = v31z*dx - v31x*dz
+cyz = v31x*dy - v31y*dx
+cym = sqrt(cyx^2 + cyy^2 + cyz^2)
+eyx = cyx/cym
+eyy_v = cyy/cym
+eyz = cyz/cym
+ezx = exy*eyz - exz*eyy_v
+ezy = exz*eyx - exx*eyz
+ezz = exx*eyy_v - exy*eyx
+H = [[exx,exy,exz],[eyx,eyy_v,eyz],[ezx,ezy,ezz]]
+T = zeros(12, 12)
+for ii = 1:3
+for jj = 1:3
+T[ii, jj] = H[ii, jj]
+T[ii+3, jj+3] = H[ii, jj]
+T[ii+6, jj+6] = H[ii, jj]
+T[ii+9, jj+9] = H[ii, jj]
+end
+end
+Ae = A_el[el, 1]
+Ize = Iz_el[el, 1]
+Iye = Iy_el[el, 1]
+Je = J_el[el, 1]
+EIz = E_s*Ize
+EIy = E_s*Iye
+GJ = G_s*Je
+EA = E_s*Ae
+k = [[EA/Le,0,0,0,0,0,-(EA/Le),0,0,0,0,0],[0,(12*EIz)/Le^3,0,0,0,(6*EIz)/Le^2,0,-((12*EIz)/Le^3),0,0,0,(6*EIz)/Le^2],[0,0,(12*EIy)/Le^3,0,-((6*EIy)/Le^2),0,0,0,-((12*EIy)/Le^3),0,-((6*EIy)/Le^2),0],[0,0,0,GJ/Le,0,0,0,0,0,-(GJ/Le),0,0],[0,0,-((6*EIy)/Le^2),0,(4*EIy)/Le,0,0,0,(6*EIy)/Le^2,0,(2*EIy)/Le,0],[0,(6*EIz)/Le^2,0,0,0,(4*EIz)/Le,0,-((6*EIz)/Le^2),0,0,0,(2*EIz)/Le],[-(EA/Le),0,0,0,0,0,EA/Le,0,0,0,0,0],[0,-((12*EIz)/Le^3),0,0,0,-((6*EIz)/Le^2),0,(12*EIz)/Le^3,0,0,0,-((6*EIz)/Le^2)],[0,0,-((12*EIy)/Le^3),0,(6*EIy)/Le^2,0,0,0,(12*EIy)/Le^3,0,(6*EIy)/Le^2,0],[0,0,0,-(GJ/Le),0,0,0,0,0,GJ/Le,0,0],[0,0,-((6*EIy)/Le^2),0,(2*EIy)/Le,0,0,0,(6*EIy)/Le^2,0,(4*EIy)/Le,0],[0,(6*EIz)/Le^2,0,0,0,(2*EIz)/Le,0,-((6*EIz)/Le^2),0,0,0,(4*EIz)/Le]]
+Kg = transpose(T)*k*T
+cset(K_glob, el, Kg)
+end
+
+---
+## 7. Ensamblaje Global (24 DOFs libres)
+> Nodos libres: 2(DOFs 1-6), 4(7-12), 5(13-18), 7(19-24)
+> Nodos fijos: 1, 3, 6, 8
+
+K_G = zeros(24, 24)
+
+> 4 Columnas: solo submatriz [7:12,7:12] contribuye (extremo libre)
+> Col 1→2: DOFs 1-6
+for i = 1:6
+for j = 1:6
+K_G[i, j] = K_G[i, j] + K_glob{1}[i+6, j+6]
+K_G[i+6, j+6] = K_G[i+6, j+6] + K_glob{2}[i+6, j+6]
+K_G[i+12, j+12] = K_G[i+12, j+12] + K_glob{3}[i+6, j+6]
+K_G[i+18, j+18] = K_G[i+18, j+18] + K_glob{4}[i+6, j+6]
+end
+end
+
+> Viga 5: 2→7 (DOFs 1-6 → 19-24)
+for i = 1:6
+for j = 1:6
+K_G[i, j] = K_G[i, j] + K_glob{5}[i, j]
+K_G[i, j+18] = K_G[i, j+18] + K_glob{5}[i, j+6]
+K_G[i+18, j] = K_G[i+18, j] + K_glob{5}[i+6, j]
+K_G[i+18, j+18] = K_G[i+18, j+18] + K_glob{5}[i+6, j+6]
+end
+end
+
+> Viga 6: 4→5 (DOFs 7-12 → 13-18)
+for i = 1:6
+for j = 1:6
+K_G[i+6, j+6] = K_G[i+6, j+6] + K_glob{6}[i, j]
+K_G[i+6, j+12] = K_G[i+6, j+12] + K_glob{6}[i, j+6]
+K_G[i+12, j+6] = K_G[i+12, j+6] + K_glob{6}[i+6, j]
+K_G[i+12, j+12] = K_G[i+12, j+12] + K_glob{6}[i+6, j+6]
+end
+end
+
+> Viga 7: 2→4 (DOFs 1-6 → 7-12)
+for i = 1:6
+for j = 1:6
+K_G[i, j] = K_G[i, j] + K_glob{7}[i, j]
+K_G[i, j+6] = K_G[i, j+6] + K_glob{7}[i, j+6]
+K_G[i+6, j] = K_G[i+6, j] + K_glob{7}[i+6, j]
+K_G[i+6, j+6] = K_G[i+6, j+6] + K_glob{7}[i+6, j+6]
+end
+end
+
+> Viga 8: 7→5 (DOFs 19-24 → 13-18)
+for i = 1:6
+for j = 1:6
+K_G[i+18, j+18] = K_G[i+18, j+18] + K_glob{8}[i, j]
+K_G[i+18, j+12] = K_G[i+18, j+12] + K_glob{8}[i, j+6]
+K_G[i+12, j+18] = K_G[i+12, j+18] + K_glob{8}[i+6, j]
+K_G[i+12, j+12] = K_G[i+12, j+12] + K_glob{8}[i+6, j+6]
+end
+end
+
+---
+## 8. Condensacion Estatica
+> DOFs traslacionales (t): 1,2,3,7,8,9,13,14,15,19,20,21
+> DOFs rotacionales (r): 4,5,6,10,11,12,16,17,18,22,23,24
+> K* = K_tt - K_tr * K_rr^-1 * K_rt
+
+it = [[1],[2],[3],[7],[8],[9],[13],[14],[15],[19],[20],[21]]
+ir = [[4],[5],[6],[10],[11],[12],[16],[17],[18],[22],[23],[24]]
+
+K_tt = zeros(12,12)
+K_tr = zeros(12,12)
+K_rr = zeros(12,12)
+for i = 1:12
+for j = 1:12
+ri = it[i,1]
+rj = it[j,1]
+ci = ir[i,1]
+cj = ir[j,1]
+K_tt[i,j] = K_G[ri, rj]
+K_tr[i,j] = K_G[ri, cj]
+K_rr[i,j] = K_G[ci, cj]
+end
+end
+
+K_star = K_tt - K_tr*inv(K_rr)*transpose(K_tr)
+
+---
+## 9. Eigenvalores - Frecuencias Naturales
+> M = m*I(12x12), eigenvalores de K*/m
+
+ev = eigenvalues(K_star/m)
+
+> Frecuencias (Hz) - ordenar menor a mayor
+omega1 = sqrt(ev.(1))
+f1 = omega1/(2*pi)
+
+omega2 = sqrt(ev.(2))
+f2 = omega2/(2*pi)
+
+omega3 = sqrt(ev.(3))
+f3 = omega3/(2*pi)
+
+omega4 = sqrt(ev.(4))
+f4 = omega4/(2*pi)
+
+---
+## 10. Resumen
+
+@{text}
+Frecuencias naturales del portico espacial con masa concentrada
+y condensacion estatica. Estructura: cubo 120x120x120 in,
+4 columnas W24x146, 4 vigas W14x84.
+@{end text}
+
+> Primeras 4 frecuencias (Hz):
+@{cells} |f_1 = f1|f_2 = f2|f_3 = f3|f_4 = f4|

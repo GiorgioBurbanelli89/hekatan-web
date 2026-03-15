@@ -1,0 +1,351 @@
+# Funciones de Forma — Interactivo
+> De la interpolacion lineal a las funciones de forma N_1 y N_2
+
+---
+## 1. Interpolacion Lineal — La Idea Basica
+
+> Dados dos puntos (x_1, y_1) y (x_2, y_2), queremos encontrar el valor y en cualquier punto x entre ellos.
+
+> La recta que pasa por dos puntos es:
+
+@{eq}
+y = y_1 + (y_2 - y_1) · (x - x_1)/(x_2 - x_1)
+@{end eq}
+
+> Esto es simplemente una **proporcion**: cuanto has avanzado de x_1 a x_2, esa misma fraccion avanzas de y_1 a y_2.
+
+@{canvas 560 180}
+slider xp 0 10 4 label:"Punto x (entre x_1 y x_2)"
+
+let x1 = 1
+let x2 = 9
+let y1v = 2
+let y2v = 7
+let frac = (xp-x1)/(x2-x1)
+let yp = y1v + (y2v-y1v)*frac
+let px = 60 + xp*48
+let py = 160 - yp*20
+let p1x = 60 + x1*48
+let p1y = 160 - y1v*20
+let p2x = 60 + x2*48
+let p2y = 160 - y2v*20
+
+# Linea de interpolacion
+line p1x,p1y p2x,p2y color:#1565c0 width:3
+
+# Punto 1
+circle p1x,p1y 7 fill:#2196f3
+text p1x-10,p1y-12 "(x_1, y_1)" color:#2196f3 font:"bold 11px sans-serif"
+
+# Punto 2
+circle p2x,p2y 7 fill:#e53935
+text p2x-10,p2y-12 "(x_2, y_2)" color:#e53935 font:"bold 11px sans-serif"
+
+# Punto interpolado
+circle px,py 8 fill:#ff9800
+text px,py-14 "y = {yp:.2f}" color:#ff9800 font:"bold 12px sans-serif"
+
+# Eje horizontal de referencia
+line 50,160 500,160 color:#999 width:1
+
+display "Fraccion recorrida: (x - x_1)/(x_2 - x_1) = {frac:.3f}" color:#333
+display "y = y_1 + (y_2 - y_1) x fraccion = {y1v:.0f} + 5 x {frac:.3f} = {yp:.2f}" color:#1565c0
+@{end canvas}
+
+> Mueve el deslizador. La fraccion (x - x_1)/(x_2 - x_1) va de 0 a 1 conforme x va de x_1 a x_2.
+
+---
+## 2. Reordenando — Aparecen N_1 y N_2
+
+> Partimos de la formula de interpolacion:
+
+@{eq}
+y = y_1 + (y_2 - y_1) · (x - x_1)/(x_2 - x_1)
+@{end eq}
+
+> **Paso 1**: Distribuimos (y_2 - y_1) dentro del parentesis:
+
+@{eq}
+y = y_1 + y_2 · (x - x_1)/(x_2 - x_1) - y_1 · (x - x_1)/(x_2 - x_1)
+@{end eq}
+
+> **Paso 2**: Sacamos y_1 como factor comun. El termino y_1 aparece dos veces: solo y suelto, lo reescribimos como y_1 · 1 = y_1 · (x_2 - x_1)/(x_2 - x_1):
+
+@{eq}
+y = y_1 · (x_2 - x_1)/(x_2 - x_1) - y_1 · (x - x_1)/(x_2 - x_1) + y_2 · (x - x_1)/(x_2 - x_1)
+@{end eq}
+
+> **Paso 3**: Factorizamos y_1 (mismo denominador):
+
+@{eq}
+y = y_1 · (x_2 - x_1 - x + x_1)/(x_2 - x_1) + y_2 · (x - x_1)/(x_2 - x_1)
+@{end eq}
+
+> **Paso 4**: Simplificamos el numerador: x_2 - x_1 - x + x_1 = x_2 - x
+
+@{eq}
+y = y_1 · (x_2 - x)/(x_2 - x_1) + y_2 · (x - x_1)/(x_2 - x_1)
+@{end eq}
+
+> Ahora cada termino tiene la forma **y_i multiplicado por una fraccion**. Esas fracciones son las funciones de forma.
+
+> Definimos las **funciones de forma**:
+
+@{eq}
+N_1 = (x_2 - x)/(x_2 - x_1)  |  peso del nodo 1 (lo que falta)
+@{end eq}
+
+@{eq}
+N_2 = (x - x_1)/(x_2 - x_1)  |  peso del nodo 2 (lo recorrido)
+@{end eq}
+
+> Entonces la interpolacion se escribe como:
+
+@{eq}
+y = N_1 · y_1 + N_2 · y_2
+@{end eq}
+
+> **Observa**: N_1 + N_2 = 1 siempre. Son pesos que suman 100%. Cuando x = x_1, N_1 = 1 y N_2 = 0. Cuando x = x_2, N_1 = 0 y N_2 = 1.
+
+---
+## 3. Coordenada Natural xi
+
+> Para simplificar, usamos la **coordenada natural** xi que va de 0 a 1:
+
+@{eq}
+ξ = (x - x_1)/(x_2 - x_1)
+@{end eq}
+
+> Con esto las funciones de forma se simplifican a:
+
+@{eq}
+N_1 = 1 - ξ        N_2 = ξ
+@{end eq}
+
+> Y la interpolacion queda:
+
+@{eq}
+y = (1 - ξ) · y_1 + ξ · y_2
+@{end eq}
+
+> Ahora podemos visualizarlo interactivamente.
+
+---
+## 4. El Aro en la Barra
+
+> Mueve el deslizador. N_1 = lo que falta para llegar al nodo 2, N_2 = lo recorrido desde el nodo 1.
+
+@{canvas 560 200}
+# Slider interactivo
+slider xi 0 1 0.4 label:"Posicion del aro (xi)"
+
+# Variables computadas
+let n1 = 1 - xi
+let n2 = xi
+let aroX = 60 + xi * 440
+let u = n1 * 2 + n2 * 6
+
+# Barra principal
+line 60,50 500,50 color:#1565c0 width:4
+
+# Nodos
+circle 60,50 8 fill:#2196f3
+circle 500,50 8 fill:#e53935
+text 60,35 "Nodo 1" color:#2196f3
+text 500,35 "Nodo 2" color:#e53935
+
+# Aro deslizante
+circle aroX,50 12 stroke:#ff9800 width:3
+text aroX,30 "xi = {xi:.2f}" color:#ff9800 font:"bold 12px sans-serif"
+
+# Flechas de distancia
+bracket 60,80 aroX,80 color:#e53935 label:"N_2 = {n2:.2f}"
+bracket aroX,80 500,80 color:#2196f3 label:"N_1 = {n1:.2f}"
+
+# Barra de influencia (azul = N_1, rojo = N_2)
+rect 60,120 n1*440,20 fill:#2196f380
+rect 60+n1*440,120 n2*440,20 fill:#e5393580
+
+# Resultado
+text 280,170 "u = {n1:.2f} x 2mm + {n2:.2f} x 6mm = {u:.2f} mm" size:13
+
+# Valores mostrados debajo
+display "N_1 = 1 - xi = {n1:.2f}" color:#2196f3 bold
+display "N_2 = xi = {n2:.2f}" color:#e53935 bold
+display "u = N_1*u_1 + N_2*u_2 = {u:.2f} mm" color:#333
+@{end canvas}
+
+> **Instrucciones**: Mueve el deslizador. Observa como:
+> - Cuando el aro esta en el **nodo 1** (xi=0): N_1=1 (100%), N_2=0 (0%), u=2mm
+> - Cuando esta en la **mitad** (xi=0.5): N_1=0.5, N_2=0.5, u=4mm
+> - Cuando esta en el **nodo 2** (xi=1): N_1=0 (0%), N_2=1 (100%), u=6mm
+
+> N_1 y N_2 son las **distancias invertidas**: N_1 = lo que falta, N_2 = lo recorrido.
+
+---
+## 5. Grafica de N_1 y N_2
+
+@{plot}
+width: 560
+height: 300
+x = 0 : 1
+y = 0 : 1
+xlabel: xi
+ylabel: N
+title: Funciones de Forma
+y = 1 - x | color: #2196f3 | width: 3 | label: "N_1 = 1 - xi"
+y = x | color: #e53935 | width: 3 | label: "N_2 = xi"
+@{end plot}
+
+> **Observa**: N_1 (azul) baja de 1 a 0, N_2 (rojo) sube de 0 a 1. Se cruzan en xi=0.5 donde ambos valen 0.5. La suma siempre es 1.
+
+---
+## 6. Animacion Automatica
+
+> El aro se mueve solo. Observa como N_1 y N_2 cambian en tiempo real. Usa los botones de velocidad o pausa.
+
+@{canvas 560 200}
+# Animacion: xi se mueve automaticamente de 0 a 1 y vuelve
+animate xi 0 1 duration:3 loop:bounce
+
+# Variables computadas
+let n1 = 1 - xi
+let n2 = xi
+let aroX = 60 + xi * 440
+let u = n1 * 2 + n2 * 6
+
+# Barra principal
+line 60,50 500,50 color:#1565c0 width:4
+
+# Nodos
+circle 60,50 8 fill:#2196f3
+circle 500,50 8 fill:#e53935
+text 60,35 "Nodo 1" color:#2196f3
+text 500,35 "Nodo 2" color:#e53935
+
+# Aro animado
+circle aroX,50 12 stroke:#ff9800 width:3
+text aroX,30 "xi = {xi:.2f}" color:#ff9800 font:"bold 12px sans-serif"
+
+# Flechas
+bracket 60,80 aroX,80 color:#e53935 label:"N_2 = {n2:.2f}"
+bracket aroX,80 500,80 color:#2196f3 label:"N_1 = {n1:.2f}"
+
+# Barra de influencia
+rect 60,120 n1*440,20 fill:#2196f380
+rect 60+n1*440,120 n2*440,20 fill:#e5393580
+
+# Resultado
+text 280,170 "u = {n1:.2f} x 2mm + {n2:.2f} x 6mm = {u:.2f} mm" size:13
+
+display "N_1 = 1 - xi = {n1:.2f}" color:#2196f3 bold
+display "N_2 = xi = {n2:.2f}" color:#e53935 bold
+display "u = {u:.2f} mm" color:#333
+@{end canvas}
+
+> La animacion usa **bounce**: el aro va de nodo 1 a nodo 2 y vuelve. Puedes pausar, cambiar velocidad (0.5x, 1x, 2x, 4x).
+
+---
+## 7. awatif C++ — Matriz de Rigidez del Frame
+
+> Asi se ve el codigo real en awatif-fem. Primero las variables, luego la matriz 12x12.
+
+> **Codigo C++ — Variables de rigidez** (getLocalStiffnessMatrix.cpp lineas 68-75):
+
+@{code cpp}
+const double EA_L   = E * A / L;           // rigidez axial
+const double EIz_L3 = E * Iz / (L*L*L);    // corte plano yz
+const double EIy_L3 = E * Iy / (L*L*L);    // corte plano xz
+const double GJ_L   = G * J / L;           // torsion
+const double EIz_L2 = E * Iz / (L*L);      // momento yz
+const double EIy_L2 = E * Iy / (L*L);      // momento xz
+const double EIz_L  = E * Iz / L;          // flexion yz
+const double EIy_L  = E * Iy / L;          // flexion xz
+@{end code}
+
+> Cada variable combina propiedades del material (E, G) con geometria de la seccion (A, I_z, I_y, J) y la longitud del elemento L.
+
+> **En formulas renderizadas:**
+
+@{eq}
+EA/L | rigidez axial
+@{end eq}
+
+@{eq}
+12EI_z/L^3 | corte en plano yz
+@{end eq}
+
+@{eq}
+GJ/L | rigidez torsional
+@{end eq}
+
+@{eq}
+4EI_z/L  ,  2EI_z/L | momentos flectores
+@{end eq}
+
+> **Codigo C++ — Matriz 12x12** (lineas 78-89):
+
+@{code cpp}
+kLocal << EA_L,  0,  0,  0,  0,  0,  -EA_L,  0,  0,  0,  0,  0,
+  0, 12*EIz_L3, 0, 0, 0,  6*EIz_L2,  0, -12*EIz_L3, 0, 0, 0,  6*EIz_L2,
+  0, 0, 12*EIy_L3, 0, -6*EIy_L2, 0,  0, 0, -12*EIy_L3, 0, -6*EIy_L2, 0,
+  0, 0, 0, GJ_L, 0, 0,  0, 0, 0, -GJ_L, 0, 0,
+  0, 0, -6*EIy_L2, 0, 4*EIy_L, 0,  0, 0, 6*EIy_L2, 0, 2*EIy_L, 0,
+  0, 6*EIz_L2, 0, 0, 0, 4*EIz_L,  0, -6*EIz_L2, 0, 0, 0, 2*EIz_L,
+  -EA_L, 0, 0, 0, 0, 0,  EA_L, 0, 0, 0, 0, 0,
+  0, -12*EIz_L3, 0, 0, 0, -6*EIz_L2,  0, 12*EIz_L3, 0, 0, 0, -6*EIz_L2,
+  0, 0, -12*EIy_L3, 0, 6*EIy_L2, 0,  0, 0, 12*EIy_L3, 0, 6*EIy_L2, 0,
+  0, 0, 0, -GJ_L, 0, 0,  0, 0, 0, GJ_L, 0, 0,
+  0, 0, -6*EIy_L2, 0, 2*EIy_L, 0,  0, 0, 6*EIy_L2, 0, 4*EIy_L, 0,
+  0, 6*EIz_L2, 0, 0, 0, 2*EIz_L,  0, -6*EIz_L2, 0, 0, 0, 4*EIz_L;
+@{end code}
+
+> **Estructura de la matriz** — Los 12 DOFs son [u, v, w, theta_x, theta_y, theta_z] por nodo:
+
+@{eq}
+K_{local} = [K_{11} , K_{12}; K_{21} , K_{22}]    (12x12)
+@{end eq}
+
+> Donde K_{11} y K_{22} son 6x6 (rigidez de cada nodo), K_{12} = K_{21}^T son el acoplamiento entre nodos.
+
+> **De donde salen los coeficientes?** De integrar B^T · D · B sobre el elemento, donde B viene de las funciones de forma:
+
+@{eq}
+K = ∫_0^L B^T · D · B  dx
+@{end eq}
+
+> Para el termino axial (barra simple, 2 DOF):
+
+@{eq}
+B = [-1/L ;  1/L]  |  derivadas de N_1 y N_2
+@{end eq}
+
+@{eq}
+K_{axial} = EA/L · [1 , -1; -1 , 1]
+@{end eq}
+
+> Para flexion (viga, 4 DOF por plano) se usan funciones de forma **cubicas** (Hermite):
+
+@{eq}
+H_1 = 1 - 3ξ^2 + 2ξ^3  |  desplazamiento nodo 1
+@{end eq}
+
+@{eq}
+H_2 = L(ξ - 2ξ^2 + ξ^3)  |  rotacion nodo 1
+@{end eq}
+
+@{eq}
+H_3 = 3ξ^2 - 2ξ^3  |  desplazamiento nodo 2
+@{end eq}
+
+@{eq}
+H_4 = L(-ξ^2 + ξ^3)  |  rotacion nodo 2
+@{end eq}
+
+> De ahi sale la integral que produce los coeficientes 12, 6, 4, 2 que ves en el C++:
+
+@{eq}
+K_{flexion} = EI/L^3 · [12 , 6L , -12 , 6L; 6L , 4L^2 , -6L , 2L^2; -12 , -6L , 12 , -6L; 6L , 2L^2 , -6L , 4L^2]
+@{end eq}
+
+> **Resumen**: N_1 = 1 - ξ y N_2 = ξ (lineales) producen K_{axial}. Las Hermite H_1...H_4 (cubicas) producen K_{flexion}. awatif las combina en una sola matriz 12x12.

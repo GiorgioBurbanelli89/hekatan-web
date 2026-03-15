@@ -157,6 +157,24 @@ export function execCommands(engine: CadEngine, cmdText: string): void {
           break;
         }
 
+        case "support": case "sup": case "apoyo": {
+          // support cx cy type [size] [color]
+          // type: pinned|pin, roller, fixed
+          const supType = tokens[3]?.toLowerCase() || "pinned";
+          const supSize = tokens.length >= 5 && !tokens[4].startsWith("#") ? n[4] : undefined;
+          const supColor = tokens.find((t, i) => i >= 3 && t.startsWith("#"));
+          engine.support2d(n[1], Y(n[2]), supType, supSize, supColor);
+          break;
+        }
+
+        case "pload": case "cargap": case "pointload": {
+          // pload x y dx dy [label] [color]
+          const plLabel = tokens.length >= 6 && !tokens[5].startsWith("#") ? tokens[5] : undefined;
+          const plColor = tokens.find((t, i) => i >= 5 && t.startsWith("#"));
+          engine.pload(n[1], Y(n[2]), n[3], Y(n[4]) - Y(n[2]), plLabel, plColor);
+          break;
+        }
+
         case "axes": case "ejes": {
           // axes x y [length] [2d|3d] [labelX] [labelY] [labelZ]
           const aLen = tokens.length >= 4 && !isNaN(n[3]) ? n[3] : undefined;

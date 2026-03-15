@@ -558,7 +558,7 @@ export interface CellResult {
 export interface LineResult {
   lineIndex: number;
   input: string;
-  type: "assignment" | "expression" | "comment" | "heading" | "empty" | "directive" | "cells" | "draw" | "draw3d" | "draw3difc" | "importifc" | "image64" | "hrule" | "eqline" | "plot" | "svg" | "three" | "error";
+  type: "assignment" | "expression" | "comment" | "heading" | "empty" | "directive" | "cells" | "draw" | "draw3d" | "draw3difc" | "importifc" | "image64" | "hrule" | "eqline" | "plot" | "svg" | "html" | "three" | "canvas" | "awatif" | "error";
   varName?: string;
   value?: any;
   display?: string;
@@ -580,8 +580,14 @@ export interface LineResult {
   plotCommands?: string[];
   /** For type "svg": raw SVG lines */
   svgLines?: string[];
+  /** For type "html": raw HTML lines */
+  htmlLines?: string[];
   /** For type "three": Three.js DSL command lines */
   threeLines?: string[];
+  /** For type "canvas": interactive 2D canvas DSL lines */
+  canvasLines?: string[];
+  /** For type "awatif": awatif FEM DSL + JS lines */
+  awatifLines?: string[];
   /** For type "importifc": IFC file path/URL and optional filter */
   ifcFile?: string;
   ifcFilter?: string;
@@ -1481,6 +1487,67 @@ export class HekatanEvaluator {
         continue;
       }
 
+      // @{html}...@{end html} - Raw HTML passthrough block
+      if (/^@\{html\}\s*$/i.test(trimmed)) {
+        const htmlStartLine = i;
+        const htmlLines: string[] = [];
+        i++;
+        while (i < lines.length && !/^@\{end\s+html\}/i.test(lines[i].trim())) {
+          htmlLines.push(lines[i]);
+          i++;
+        }
+        results.push({
+          lineIndex: htmlStartLine, input: raw,
+          type: "html",
+          htmlLines,
+        });
+        continue;
+      }
+
+      // @{code lang}...@{end code} - Syntax-highlighted code display block
+      const codeMatch = trimmed.match(/^@\{code\s*(.*?)\}\s*$/i);
+      if (codeMatch) {
+        const codeLang = (codeMatch[1] || "").trim();
+        const codeStartLine = i;
+        const codeLines: string[] = [];
+        i++;
+        while (i < lines.length && !/^@\{end\s+code\}/i.test(lines[i].trim())) {
+          codeLines.push(lines[i]);
+          i++;
+        }
+        // Build highlighted HTML
+        let escaped = codeLines.join("\n")
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const lang = codeLang.toLowerCase();
+        if (lang === "cpp" || lang === "c++" || lang === "c") {
+          escaped = escaped.replace(/(\/\/[^\n]*)/g, '<span style="color:#6a9955">$1</span>');
+          escaped = escaped.replace(/\b(const|double|int|float|void|return|if|else|for|while|auto|struct|class|template|typename|using|namespace|static|inline|extern|unsigned|long|short|char|bool|true|false|nullptr|new|delete|this|public|private|protected|virtual|override|include|define)\b/g,
+            '<span style="color:#569cd6">$1</span>');
+          escaped = escaped.replace(/\b(\d+\.?\d*(?:[eE][+-]?\d+)?)\b/g, '<span style="color:#b5cea8">$1</span>');
+          escaped = escaped.replace(/("(?:[^"\\]|\\.)*")/g, '<span style="color:#ce9178">$1</span>');
+        } else if (lang === "js" || lang === "javascript" || lang === "ts" || lang === "typescript") {
+          escaped = escaped.replace(/(\/\/[^\n]*)/g, '<span style="color:#6a9955">$1</span>');
+          escaped = escaped.replace(/\b(const|let|var|function|return|if|else|for|while|class|new|this|import|export|from|async|await|try|catch|throw|typeof|instanceof)\b/g,
+            '<span style="color:#569cd6">$1</span>');
+          escaped = escaped.replace(/\b(\d+\.?\d*)\b/g, '<span style="color:#b5cea8">$1</span>');
+          escaped = escaped.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g, '<span style="color:#ce9178">$1</span>');
+        } else if (lang === "python" || lang === "py") {
+          escaped = escaped.replace(/(#[^\n]*)/g, '<span style="color:#6a9955">$1</span>');
+          escaped = escaped.replace(/\b(def|class|return|if|elif|else|for|while|import|from|as|with|try|except|raise|lambda|yield|pass|break|continue|and|or|not|in|is|True|False|None)\b/g,
+            '<span style="color:#569cd6">$1</span>');
+          escaped = escaped.replace(/\b(\d+\.?\d*)\b/g, '<span style="color:#b5cea8">$1</span>');
+          escaped = escaped.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span style="color:#ce9178">$1</span>');
+        }
+        const langLabel = codeLang ? `<div style="position:absolute;top:6px;right:12px;font-size:11px;color:#888;font-family:sans-serif">${codeLang}</div>` : "";
+        const codeHtml = `<div style="position:relative;margin:8px 0"><pre style="background:#1e1e1e;color:#d4d4d4;padding:16px 16px 12px;border-radius:6px;font-size:13px;line-height:1.5;overflow-x:auto;font-family:'Consolas','Monaco','Courier New',monospace;margin:0">${langLabel}${escaped}</pre></div>`;
+        results.push({
+          lineIndex: codeStartLine, input: raw,
+          type: "html",
+          htmlLines: [codeHtml],
+        });
+        continue;
+      }
+
       // @{three}...@{end three} or @{three W H}...@{end three} - Three.js 3D scene block
       const threeMatch = trimmed.match(/^@\{three(?:\s+(\d+)\s+(\d+))?\s*\}$/i);
       if (threeMatch) {
@@ -1499,6 +1566,50 @@ export class HekatanEvaluator {
           threeLines,
           drawWidth: threeW,
           drawHeight: threeH,
+        });
+        continue;
+      }
+
+      // @{canvas}...@{end canvas} or @{canvas W H}...@{end canvas} - Interactive 2D canvas block
+      const canvasMatch = trimmed.match(/^@\{canvas(?:\s+(\d+)\s+(\d+))?\s*\}$/i);
+      if (canvasMatch) {
+        const canvasStartLine = i;
+        const canvasLines: string[] = [];
+        const canvasW = canvasMatch[1] ? parseInt(canvasMatch[1]) : undefined;
+        const canvasH = canvasMatch[2] ? parseInt(canvasMatch[2]) : undefined;
+        i++;
+        while (i < lines.length && !/^@\{end\s+canvas\}/i.test(lines[i].trim())) {
+          canvasLines.push(lines[i]);
+          i++;
+        }
+        results.push({
+          lineIndex: canvasStartLine, input: raw,
+          type: "canvas",
+          canvasLines,
+          drawWidth: canvasW,
+          drawHeight: canvasH,
+        });
+        continue;
+      }
+
+      // @{awatif}...@{end awatif} or @{awatif W H}...@{end awatif} - Awatif FEM block
+      const awatifMatch = trimmed.match(/^@\{awatif(?:\s+(\d+)\s+(\d+))?\s*\}$/i);
+      if (awatifMatch) {
+        const awatifStartLine = i;
+        const awatifLines: string[] = [];
+        const awW = awatifMatch[1] ? parseInt(awatifMatch[1]) : undefined;
+        const awH = awatifMatch[2] ? parseInt(awatifMatch[2]) : undefined;
+        i++;
+        while (i < lines.length && !/^@\{end\s+awatif\}/i.test(lines[i].trim())) {
+          awatifLines.push(lines[i]);
+          i++;
+        }
+        results.push({
+          lineIndex: awatifStartLine, input: raw,
+          type: "awatif",
+          awatifLines,
+          drawWidth: awW,
+          drawHeight: awH,
         });
         continue;
       }
@@ -3150,8 +3261,8 @@ export class HekatanEvaluator {
       // ── Regular expression/assignment ──
       try {
         await this._evalLine(trimmed);
-      } catch (_e) {
-        // Silently ignore errors in loop body
+      } catch (_e: any) {
+        // silently skip errors in loop body
       }
     }
   }

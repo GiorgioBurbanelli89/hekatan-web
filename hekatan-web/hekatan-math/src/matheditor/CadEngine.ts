@@ -469,6 +469,76 @@ export class CadEngine {
     this.endBatch();
   }
 
+  /** support2d: structural support symbol (pinned/roller/fixed) in 2D
+   *  Syntax: support cx cy type [size] [color]
+   *  type: pinned|pin, roller, fixed
+   *  Draws relative to the point (cx,cy) with automatic hatching */
+  support2d(cx: number, cy: number, type: string, size?: number, color?: string): void {
+    const c = color || this.currentColor;
+    const sz = size || 12; // pixel size
+    this.beginBatch();
+    const px = this.toPx(cx);
+    const py = this.toPx(cy);
+    switch (type) {
+      case "pinned": case "pin": case "articulado": {
+        // Triangle
+        this.line(cx, cy, cx - sz / this.escala, cy + sz * 1.2 / this.escala, c);
+        this.line(cx - sz / this.escala, cy + sz * 1.2 / this.escala, cx + sz / this.escala, cy + sz * 1.2 / this.escala, c);
+        this.line(cx + sz / this.escala, cy + sz * 1.2 / this.escala, cx, cy, c);
+        // Base line
+        this.line(cx - sz * 1.3 / this.escala, cy + sz * 1.2 / this.escala, cx + sz * 1.3 / this.escala, cy + sz * 1.2 / this.escala, c);
+        // Hatching
+        const oldLw = this.currentLineWidth;
+        this.currentLineWidth = 0.5;
+        for (let i = -3; i <= 3; i++) {
+          const hx = cx + i * sz * 0.35 / this.escala;
+          const by = cy + sz * 1.2 / this.escala;
+          this.line(hx, by, hx - sz * 0.3 / this.escala, by + sz * 0.4 / this.escala, c);
+        }
+        this.currentLineWidth = oldLw;
+        break;
+      }
+      case "roller": case "rodillo": {
+        // Triangle
+        this.line(cx, cy, cx - sz / this.escala, cy + sz * 1.0 / this.escala, c);
+        this.line(cx - sz / this.escala, cy + sz * 1.0 / this.escala, cx + sz / this.escala, cy + sz * 1.0 / this.escala, c);
+        this.line(cx + sz / this.escala, cy + sz * 1.0 / this.escala, cx, cy, c);
+        // Circle below
+        this.circle(cx, cy + sz * 1.0 / this.escala + sz * 0.3 / this.escala, sz * 0.3 / this.escala, c);
+        // Base line
+        this.line(cx - sz * 1.3 / this.escala, cy + sz * 1.0 / this.escala + sz * 0.6 / this.escala, cx + sz * 1.3 / this.escala, cy + sz * 1.0 / this.escala + sz * 0.6 / this.escala, c);
+        break;
+      }
+      case "fixed": case "empotrado": {
+        // Wall line
+        this.line(cx - sz / this.escala, cy, cx + sz / this.escala, cy, c);
+        // Hatching
+        const oldLw2 = this.currentLineWidth;
+        this.currentLineWidth = 0.5;
+        for (let i = -3; i <= 3; i++) {
+          const hx = cx + i * sz * 0.3 / this.escala;
+          this.line(hx, cy, hx - sz * 0.3 / this.escala, cy + sz * 0.4 / this.escala, c);
+        }
+        this.currentLineWidth = oldLw2;
+        break;
+      }
+    }
+    this.endBatch();
+  }
+
+  /** pload: point load arrow with label
+   *  Syntax: pload x y dx dy [label] [color]
+   *  Draws an arrow from (x+dx,y+dy) to (x,y) with optional label */
+  pload(x: number, y: number, dx: number, dy: number, label?: string, color?: string): void {
+    const c = color || "#e53935";
+    this.beginBatch();
+    this.arrow(x + dx, y + dy, x, y, c);
+    if (label) {
+      this.text(x + dx * 1.1, y + dy * 1.1, label, c);
+    }
+    this.endBatch();
+  }
+
   support3d(x: number, y: number, z: number, type: string, angle?: number): void {
     const c = this.currentColor;
     const sz = 1.5;

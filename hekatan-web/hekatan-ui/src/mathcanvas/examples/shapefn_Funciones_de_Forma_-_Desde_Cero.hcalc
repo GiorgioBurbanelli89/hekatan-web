@@ -1,0 +1,873 @@
+# Funciones de Forma — Desde Cero
+> Guia visual para entender elementos finitos sin conocimientos previos
+> Con ejemplos interactivos usando el solver C++/WASM
+
+---
+## 1. El Problema: Conocemos Poco, Necesitamos Mucho
+
+> Imagina una barra de acero sujeta en un extremo. Tiras del otro extremo con una fuerza F. La barra se estira. Pero... cuanto se estira cada punto intermedio?
+
+@{draw 600 180}
+grid off
+bg #f8f8ff
+# Apoyo empotrado
+support 60 90 fixed #555
+# Barra
+lw 2.5
+color #1565c0
+line 60 90 460 90
+# Nodos
+cnode 60 90 A 6 #333
+cnode 460 90 B 6 #e53935
+cnode 260 90 ? 5 #ff9800
+# Fuerza
+color #e53935
+lw 2
+arrow 510 90 465 90 #e53935
+fs 14
+text 520 93 F
+# Pregunta
+color #888
+fs 11
+text 260 115 Cuanto se mueve ESTE punto?
+@{end draw}
+
+> **El problema**: Solo podemos calcular el desplazamiento en los EXTREMOS (nodos). Pero necesitamos saber que pasa en CUALQUIER punto intermedio.
+
+> **La solucion**: Las funciones de forma son la formula para calcular esos puntos intermedios. Son un **promedio ponderado por distancia**: mientras mas cerca estas de un nodo, mas te afecta ese nodo.
+
+---
+## 2. Ejemplo con Numeros (sin formulas)
+
+> Antes de cualquier formula, veamos un ejemplo concreto. Tenemos una barra de **10 metros**. El nodo 1 se movio **2 mm** y el nodo 2 se movio **6 mm**:
+
+@{draw 600 160}
+grid off
+bg #f0f8ff
+# Barra
+lw 2.5
+color #1565c0
+line 80 50 520 50
+# Nodos
+cnode 80 50 . 7 #2196f3
+cnode 520 50 . 7 #e53935
+# Valores
+color #2196f3
+fs 13
+text 50 30 u_1 = 2 mm
+color #e53935
+text 490 30 u_2 = 6 mm
+# Etiquetas
+color #888
+fs 10
+text 80 75 Nodo 1
+text 520 75 Nodo 2
+text 300 140 L = 10 m
+# Pregunta
+color #ff9800
+fs 12
+text 300 75 Cuanto se movio este punto?
+cnode 300 50 ? 6 #ff9800
+@{end draw}
+
+> **Pregunta**: cuanto se movio el punto que esta justo en la **mitad** (a 5 metros)?
+
+> Tu intuicion te dice: si un extremo se movio 2mm y el otro 6mm, la mitad se movio... **4mm**. Simplemente el promedio. Y tienes razon!
+
+> **Otro punto**: a **2.5 metros** del inicio (un cuarto del camino). Este punto esta mas cerca del nodo 1 (que se movio 2mm), asi que se movera mas parecido a 2 que a 6. Como calculamos?
+
+> Pensemos: esta al 25% del camino, entonces el nodo 1 influye **75%** y el nodo 2 influye **25%**:
+
+@{eq left}
+u = 75% · 2mm + 25% · 6mm
+u = 0.75 · 2 + 0.25 · 6
+u = 1.5 + 1.5 = 3 mm
+@{end eq}
+
+> Y a **7.5 metros** (tres cuartos del camino, cerca del nodo 2):
+
+@{eq left}
+u = 25% · 2mm + 75% · 6mm
+u = 0.25 · 2 + 0.75 · 6
+u = 0.5 + 4.5 = 5 mm
+@{end eq}
+
+> Veamos todos los resultados juntos:
+
+@{draw 600 200}
+grid off
+bg #fff8f0
+# Barra
+lw 2.5
+color #1565c0
+line 60 55 540 55
+# Nodos
+cnode 60 55 . 7 #2196f3
+cnode 540 55 . 7 #e53935
+# Valores conocidos
+color #2196f3
+fs 13
+text 30 30 2 mm
+color #e53935
+text 530 30 6 mm
+# Puntos intermedios
+cnode 180 55 . 5 #ff9800
+color #ff9800
+fs 11
+text 150 80 x=2.5m
+text 150 95 75% nodo1 + 25% nodo2
+fs 12
+text 150 115 u = 3 mm
+# Mitad
+cnode 300 55 . 5 #4caf50
+color #4caf50
+fs 11
+text 275 80 x=5m
+text 275 95 50% + 50%
+fs 12
+text 275 115 u = 4 mm
+# Tres cuartos
+cnode 420 55 . 5 #9c27b0
+color #9c27b0
+fs 11
+text 410 80 x=7.5m
+text 410 95 25% nodo1 + 75% nodo2
+fs 12
+text 410 115 u = 5 mm
+# Longitud
+color #888
+fs 10
+text 300 175 L = 10 m
+@{end draw}
+
+> **Eso es todo lo que hacen las funciones de forma**: calculan esos porcentajes (75%-25%, 50%-50%, 25%-75%) automaticamente. El porcentaje del nodo 1 se llama **N_1** y el porcentaje del nodo 2 se llama **N_2**. La formula completa es:
+
+@{eq}
+u = N_1 · u_1 + N_2 · u_2    (2.1)
+@{end eq}
+
+> donde N_1 = 1 - xi y N_2 = xi. Pero que es xi? Eso lo vemos en la siguiente seccion.
+
+---
+## 3. Interpolacion con Temperatura
+
+> El mismo concepto funciona con cualquier valor, no solo desplazamientos. Por ejemplo, si sabes la temperatura en dos ciudades, puedes estimar la temperatura en un pueblo que esta entre ambas:
+
+@{draw 600 200}
+grid off
+bg #fff8f0
+# Linea base
+color #ccc
+lw 1
+line 80 150 520 150
+# Linea de interpolacion
+color #333
+lw 2
+line 80 70 520 120
+# Lineas punteadas
+lw 1
+dash 3 3
+color #2196f3
+line 80 80 80 150
+color #e53935
+line 520 130 520 150
+color #ff9800
+line 300 103 300 150
+dash 0
+# Ciudad A
+cnode 80 70 A 8 #2196f3
+color #2196f3
+fs 11
+text 80 55 Ciudad A
+fs 13
+text 80 40 20 C
+# Ciudad B
+cnode 520 120 B 8 #e53935
+color #e53935
+fs 11
+text 520 105 Ciudad B
+fs 13
+text 520 90 30 C
+# Pueblo intermedio
+cnode 300 95 ? 7 #ff9800
+color #ff9800
+fs 13
+text 370 80 25 C
+color #888
+fs 10
+text 300 170 50% del camino
+@{end draw}
+
+> El pueblo esta a mitad de camino (50%), asi que estimamos: 20 + 0.5 * (30 - 20) = **25 C**
+
+> Esto es **interpolacion lineal**. Es exactamente lo que hace una funcion de forma.
+
+---
+## 4. Que es xi (x_i)? (la coordenada normalizada)
+
+> En la seccion anterior usamos porcentajes (25%, 50%, 75%). Para las formulas, necesitamos una forma de expresar "en que porcentaje del camino estoy". A eso le llamamos **xi** (se escribe con la letra griega ξ). Es simplemente la posicion dividida por la longitud total:
+
+@{draw 600 160}
+grid off
+bg #f0f8ff
+# Barra
+lw 2.5
+color #1565c0
+line 80 50 520 50
+# Nodos
+cnode 80 50 A 6 #2196f3
+cnode 520 50 B 6 #e53935
+# Xi = 0 y Xi = 1
+color #2196f3
+fs 12
+text 80 30 xi = 0
+color #e53935
+text 520 30 xi = 1
+# Punto intermedio al 25%
+cnode 190 50 . 4 #ff9800
+color #ff9800
+fs 11
+text 190 75 xi = 0.25
+text 190 90 (25% del camino)
+# Punto intermedio al 50%
+cnode 300 50 . 4 #ff9800
+text 300 75 xi = 0.50
+text 300 90 (mitad)
+# Punto intermedio al 75%
+cnode 410 50 . 4 #ff9800
+text 410 75 xi = 0.75
+# Formula
+color #333
+fs 11
+text 300 135 xi = posicion / longitud total (va de 0 a 1)
+@{end draw}
+
+> **Es como un porcentaje**: xi = 0 es el inicio de la barra, xi = 1 es el final, xi = 0.5 es justo la mitad. No importa si la barra mide 2m o 200m, xi siempre va de 0 a 1.
+
+> La formula es simplemente:
+
+@{eq}
+ξ = x/L | donde x = distancia desde el inicio, L = longitud total
+@{end eq}
+
+> Ejemplo: una barra de 8 metros. Un punto a 2m del inicio tiene xi = 2/8 = 0.25. Un punto a 6m tiene xi = 6/8 = 0.75.
+
+---
+## 5. Deduciendo N_1 y N_2 con matematicas
+
+> Necesitamos una formula que nos diga el desplazamiento en CUALQUIER punto de la barra, conociendo solo lo que pasa en los extremos (nodos A y B). Vamos a construirla paso a paso con ecuaciones.
+
+> **Paso 1: La ecuacion de la recta**. Recordemos la ecuacion que ya conoces del colegio:
+
+@{eq}
+y = m · x + b    (5.1)
+@{end eq}
+
+> donde **m** es la pendiente (cuanto sube o baja la recta) y **b** es donde cruza el eje vertical (el valor cuando x=0). Las funciones de forma son rectas, asi que tienen esta misma forma. Solo cambiamos x por xi:
+
+@{eq}
+N(ξ) = m · ξ + b
+@{end eq}
+
+> Tenemos 2 incognitas (m y b). Necesitamos 2 condiciones para encontrarlas.
+
+### Deduciendo N_1 (funcion del nodo izquierdo)
+
+> N_1 mide cuanto influye el nodo 1 (izquierdo). Mientras te alejas del nodo 1, su influencia **decrece** (como una rampa que baja). Por eso la pendiente sera negativa.
+
+> **Condiciones para N_1:** En su propio nodo (xi=0) la influencia es 100%, en el otro nodo (xi=1) la influencia es 0%:
+
+@{eq left}
+N_1(0) = 1 | 100% de influencia en su propio nodo
+N_1(1) = 0 | 0% de influencia en el nodo contrario
+@{end eq}
+
+> **Encontrar b:** Reemplazamos xi=0 en la ecuacion de la recta N = m*xi + b:
+
+@{eq left}
+N_1(0) = m · 0 + b = b
+@{end eq}
+
+> Sabemos que N_1(0) debe valer 1, entonces:
+
+@{eq left}
+b = 1 => b = 1
+@{end eq}
+
+> **Encontrar m:** Ahora reemplazamos xi=1 y b=1:
+
+@{eq left}
+N_1(1) = m · 1 + 1 = m + 1
+@{end eq}
+
+> Sabemos que N_1(1) debe valer 0, entonces:
+
+@{eq left}
+m + 1 = 0 => m = -1
+@{end eq}
+
+> La pendiente es negativa (m=-1) porque N_1 **decrece**: baja de 100% a 0%.
+
+> **Resultado:** Reemplazamos m=-1 y b=1 en la ecuacion de la recta y = m*x + b:
+
+@{eq left}
+y = m · x + b | formula general de la recta
+N_1(ξ) = m · ξ + b | cambiamos x por xi
+N_1(ξ) = (-1) · ξ + (1) | reemplazamos m=-1 y b=1
+N_1(ξ) = -ξ + 1 | resolvemos: (-1)*xi = -xi
+N_1(ξ) = 1 - ξ | reordenamos: -xi+1 es lo mismo que 1-xi    (5.2)
+@{end eq}
+
+> **Verificacion de N_1** — reemplazando valores de xi en la formula 1-xi:
+
+@{eq left}
+ξ = 0: N_1 = 1 - 0 = 1 | 100% de influencia en su nodo
+ξ = 0.25: N_1 = 1 - 0.25 = 0.75 | 75%
+ξ = 0.5: N_1 = 1 - 0.5 = 0.5 | 50%
+ξ = 0.75: N_1 = 1 - 0.75 = 0.25 | 25%
+ξ = 1: N_1 = 1 - 1 = 0 | 0% en el nodo contrario
+@{end eq}
+
+### Deduciendo N_2 (funcion del nodo derecho)
+
+> N_2 mide cuanto influye el nodo 2 (derecho). Mientras te acercas al nodo 2, su influencia **crece** (como una rampa que sube). Por eso la pendiente sera positiva. El proceso es identico a N_1, solo cambian las condiciones:
+
+> **Condiciones para N_2:** En el nodo 1 (xi=0) la influencia es 0%, en su propio nodo (xi=1) la influencia es 100%:
+
+@{eq left}
+N_2(0) = 0 | 0% de influencia en el nodo contrario
+N_2(1) = 1 | 100% de influencia en su propio nodo
+@{end eq}
+
+> **Encontrar b:** Reemplazamos xi=0 en N = m*xi + b:
+
+@{eq left}
+N_2(0) = m · 0 + b = b = 0 => b = 0
+@{end eq}
+
+> **Encontrar m:** Reemplazamos xi=1 y b=0:
+
+@{eq left}
+N_2(1) = m · 1 + 0 = m = 1 => m = 1
+@{end eq}
+
+> La pendiente es positiva (m=1) porque N_2 **crece**: sube de 0% a 100%.
+
+> **Resultado:** Reemplazamos m=1 y b=0:
+
+@{eq left}
+N_2(ξ) = m · ξ + b | ecuacion de la recta
+N_2(ξ) = (1) · ξ + (0) | reemplazamos m=1 y b=0
+N_2(ξ) = ξ | simplificamos    (5.3)
+@{end eq}
+
+> **Verificacion de N_2:**
+
+@{eq left}
+ξ = 0: N_2 = 0 | 0% en el nodo contrario
+ξ = 0.25: N_2 = 0.25 | 25%
+ξ = 0.5: N_2 = 0.5 | 50%
+ξ = 0.75: N_2 = 0.75 | 75%
+ξ = 1: N_2 = 1 | 100% en su propio nodo
+@{end eq}
+
+> **Resultado final**:
+
+@{eq left}
+N_1(ξ) = 1 - ξ | Baja de 1 a 0 (influencia del nodo A)
+N_2(ξ) = ξ | Sube de 0 a 1 (influencia del nodo B)
+@{end eq}
+
+> Asi se ven graficadas. Fijate que N1 baja y N2 sube, se cruzan justo en xi=0.5:
+
+@{plot}
+x = 0 : 1
+y = -0.1 : 1.15
+y = 1-x | color: #2196f3 | width: 3 | label: "N_1 = 1 - xi"
+y = x | color: #e53935 | width: 3 | label: "N_2 = xi"
+hline 0 #ccc
+hline 1 #eee
+point 0 1 #2196f3
+point 1 0 #2196f3
+point 0 0 #e53935
+point 1 1 #e53935
+text 0.05 0.85 "(0, 1)" size:10 color:#2196f3
+text 0.85 0.05 "(1, 0)" size:10 color:#2196f3
+text 0.05 0.12 "(0, 0)" size:10 color:#e53935
+text 0.78 0.92 "(1, 1)" size:10 color:#e53935
+text 0.42 0.42 "se cruzan" size:9 color:#333
+@{end plot}
+
+---
+## 5b. Usando N_1 y N_2: ejemplo paso a paso
+
+> Ahora que tenemos N1 y N2, para que sirven? Para calcular el desplazamiento u en CUALQUIER punto intermedio, usando esta formula:
+
+@{eq}
+u(ξ) = N_1(ξ) · u_A + N_2(ξ) · u_B    (5.4)
+@{end eq}
+
+> Esto dice: el desplazamiento en un punto = (peso de A) * (valor de A) + (peso de B) * (valor de B). Los "pesos" son N1 y N2.
+
+> **Ejemplo**: Barra de L = 10 m. El nodo A no se mueve (u_A = 0 mm). El nodo B se mueve 4 mm (u_B = 4 mm). Cuanto se mueve cada punto intermedio?
+
+> **Punto a x = 2.5 m** (un cuarto del camino):
+
+@{eq left}
+ξ = x/L = 2.5/10 = 0.25 | Primero: calcular xi
+N_1 = 1 - ξ = 1 - 0.25 = 0.75 | Segundo: evaluar N1
+N_2 = ξ = 0.25 | Tercero: evaluar N2
+u = N_1 · u_A + N_2 · u_B | Cuarto: reemplazar en la formula
+u = 0.75 · 0 + 0.25 · 4 | Quinto: sustituir valores
+u = 0 + 1 = 1 mm | Resultado
+@{end eq}
+
+> **Punto a x = 5 m** (la mitad):
+
+@{eq left}
+ξ = 5/10 = 0.5
+N_1 = 1 - 0.5 = 0.5
+N_2 = 0.5
+u = 0.5 · 0 + 0.5 · 4 = 2 mm
+@{end eq}
+
+> **Punto a x = 7.5 m** (tres cuartos):
+
+@{eq left}
+ξ = 7.5/10 = 0.75
+N_1 = 1 - 0.75 = 0.25
+N_2 = 0.75
+u = 0.25 · 0 + 0.75 · 4 = 3 mm
+@{end eq}
+
+> Veamos estos resultados en un dibujo:
+
+@{draw 600 200}
+grid off
+bg #fff8f0
+# Barra
+lw 2.5
+color #1565c0
+line 60 55 540 55
+# Nodos
+cnode 60 55 A 7 #2196f3
+cnode 540 55 B 7 #e53935
+# Valores conocidos
+color #2196f3
+fs 13
+text 60 30 u = 0 mm
+color #e53935
+text 540 30 u = 4 mm
+# x=2.5m
+cnode 180 55 . 5 #ff9800
+color #ff9800
+fs 10
+text 150 80 x=2.5m
+text 150 93 xi=0.25
+text 150 106 N1=0.75  N2=0.25
+fs 12
+text 150 125 u = 1 mm
+# x=5m
+cnode 300 55 . 5 #4caf50
+color #4caf50
+fs 10
+text 275 80 x=5m
+text 275 93 xi=0.50
+text 275 106 N1=0.50  N2=0.50
+fs 12
+text 275 125 u = 2 mm
+# x=7.5m
+cnode 420 55 . 5 #9c27b0
+color #9c27b0
+fs 10
+text 410 80 x=7.5m
+text 410 93 xi=0.75
+text 410 106 N1=0.25  N2=0.75
+fs 12
+text 410 125 u = 3 mm
+# Longitud
+color #888
+fs 10
+text 300 175 L = 10 m
+@{end draw}
+
+> **Observa el patron**: u_A=0, u_B=4. A un cuarto del camino u=1, a la mitad u=2, a tres cuartos u=3. Es una variacion lineal (proporcional), que es justo lo que hacen las funciones de forma lineales N1 y N2.
+
+> **Segundo ejemplo** (para que quede claro): ahora AMBOS nodos se mueven. u_A = 2 mm, u_B = 6 mm.
+
+> Punto a x = 5m (la mitad, xi = 0.5):
+
+@{eq left}
+u = N_1 · u_A + N_2 · u_B
+u = 0.5 · 2 + 0.5 · 6
+u = 1 + 3 = 4 mm | Promedio de 2 y 6
+@{end eq}
+
+> Punto a x = 2.5m (xi = 0.25):
+
+@{eq left}
+u = 0.75 · 2 + 0.25 · 6
+u = 1.5 + 1.5 = 3 mm | Mas cerca de A, se parece mas al valor de A
+@{end eq}
+
+> Punto a x = 7.5m (xi = 0.75):
+
+@{eq left}
+u = 0.25 · 2 + 0.75 · 6
+u = 0.5 + 4.5 = 5 mm | Mas cerca de B, se parece mas al valor de B
+@{end eq}
+
+> **Conclusion**: N1 y N2 son simplemente "pesos" que reparten la influencia de cada nodo. Cerca de un nodo, ese nodo pesa mas. Lejos, pesa menos. Es la interpolacion mas simple posible: una linea recta entre dos puntos.
+
+---
+## 5. Propiedad Magica: N1 + N2 = 1 Siempre
+
+> Fijate en algo curioso: si sumas N1 + N2 en cualquier punto, siempre da 1. Esto es OBLIGATORIO, porque si ambos nodos se mueven igual (digamos 3 mm los dos), entonces TODOS los puntos deben moverse 3 mm. Veamoslo:
+
+@{plot}
+x = 0 : 1
+y = -0.1 : 1.15
+y = 1-x | color: #2196f3 | width: 2 | label: "N1"
+y = x | color: #e53935 | width: 2 | label: "N2"
+y = (1-x)+x | color: #4caf50 | width: 2.5 | label: "N1 + N2 = 1"
+hline 0 #ccc
+@{end plot}
+
+> La linea verde es siempre 1. Esto se llama **particion de la unidad**. Es un chequeo: si tus funciones de forma no suman 1, estan mal.
+
+---
+## 6. Ejemplo Real: Barra con Fuerza (FEM en vivo)
+
+> Ya sabemos la teoria. Veamosla funcionar con el solver real de C++/WASM. Definimos una barra de 6m dividida en 3 pedazos (4 nodos), empotrada en un extremo, con una fuerza de 100 kN tirando del otro:
+
+E_barra = 200000000
+A_barra = 0.01
+F_barra = 100
+
+@{awatif 800 400}
+node 0 0 0
+node 2 0 0
+node 4 0 0
+node 6 0 0
+element frame 0 1 E:$E_barra A:$A_barra Iz:0.00001 Iy:0.00001 G:80000000 J:0.00002
+element frame 1 2 E:$E_barra A:$A_barra Iz:0.00001 Iy:0.00001 G:80000000 J:0.00002
+element frame 2 3 E:$E_barra A:$A_barra Iz:0.00001 Iy:0.00001 G:80000000 J:0.00002
+support 0 fixed
+load 3 fx:$F_barra
+solve static
+show deformed scale:5000
+@{end awatif}
+
+> El solver calcula el desplazamiento en cada nodo. Entre nodos, las funciones N1 y N2 interpolan. Activa "Forma deformada" para verlo.
+
+> Podemos verificar: la solucion exacta para este caso es u = F*L/(E*A):
+
+u_analitico = F_barra*6/(E_barra*A_barra)
+
+> Como la barra se estira linealmente (proporcional a x), las funciones N1 y N2 que son lineales dan la solucion EXACTA. Pero... que pasa cuando la deformada NO es una linea recta?
+
+---
+## 7. El Problema de la Viga: Lo Lineal No Alcanza
+
+> Ahora imagina una viga horizontal apoyada en ambos extremos. Le pones una carga en el medio y se CURVA hacia abajo. La deformada ya no es una linea recta, es una CURVA:
+
+@{draw 600 220}
+grid off
+bg #f0f8ff
+# Apoyos
+support 65 115 pinned #1565c0
+support 535 115 roller #e53935
+# Viga original (recta - punteada)
+color #ccc
+lw 2
+dash 5 5
+line 65 115 535 115
+dash 0
+color #aaa
+fs 10
+text 300 108 Posicion original
+# Viga deformada (curva)
+color #1565c0
+lw 3
+line 65 115 105 122
+line 105 122 155 135
+line 155 135 205 148
+line 205 148 255 158
+line 255 158 305 163
+line 305 163 355 160
+line 355 160 405 152
+line 405 152 455 140
+line 455 140 505 127
+line 505 127 535 118
+# Carga puntual
+pload 300 110 0 -40 P #e53935
+# Flecha de deflexion
+color #ff9800
+lw 1
+dash 3 3
+line 300 115 300 163
+dash 0
+lw 1.5
+arrow 320 115 320 163 #ff9800
+fs 10
+text 335 140 deflexion
+# Texto inferior
+color #333
+fs 12
+text 300 195 La deformada es una CURVA, no una linea recta
+@{end draw}
+
+> Si usaramos las funciones lineales N1 y N2 para interpolar, la deformada entre nodos seria una linea recta. Pero la realidad es una curva. Con N1 y N2 no se puede representar una curva. Necesitamos funciones mas sofisticadas.
+
+---
+## 8. Funciones de Hermite: Curvas para Vigas
+
+> Para barras solo necesitabamos saber cuanto se MUEVE cada nodo (1 valor por nodo → 2 funciones N1, N2).
+
+> Pero una viga que se flexiona no solo se mueve, tambien GIRA. Piensa en un trampolin: el extremo baja Y se inclina. Entonces cada nodo de viga tiene DOS valores:
+> - **v** = cuanto se mueve verticalmente (el desplazamiento)
+> - **theta** = cuanto se inclina (la rotacion o pendiente)
+
+@{draw 600 160}
+grid off
+bg #fff8f0
+# Nodo con desplazamiento
+cnode 150 80 v 8 #2196f3
+color #2196f3
+lw 2.5
+arrow 150 78 150 40 #2196f3
+fs 11
+text 165 55 v (desplazamiento)
+# Nodo con rotacion
+cnode 450 80 R 8 #e53935
+color #ccc
+lw 1
+line 420 80 480 80
+color #e53935
+lw 2.5
+line 420 65 480 95
+fs 11
+text 420 50 theta (rotacion)
+# Texto inferior
+color #333
+fs 11
+text 300 140 Cada nodo tiene 2 valores: cuanto se mueve Y cuanto gira
+@{end draw}
+
+> Como tenemos 2 nodos con 2 valores cada uno (v y theta), necesitamos 4 funciones de forma. Se llaman **funciones de Hermite** y son polinomios cubicos (de grado 3, es decir con xi al cubo):
+
+> Cada funcion "activa" UN solo valor de UN solo nodo y deja los demas en cero:
+
+@{eq left}
+H_1(ξ) = 1 - 3ξ^2 + 2ξ^3 | Desplazamiento del nodo izquierdo
+H_2(ξ) = ξ - 2ξ^2 + ξ^3 | Rotacion del nodo izquierdo
+H_3(ξ) = 3ξ^2 - 2ξ^3 | Desplazamiento del nodo derecho
+H_4(ξ) = -ξ^2 + ξ^3 | Rotacion del nodo derecho
+@{end eq}
+
+@{plot}
+x = 0 : 1
+y = -0.2 : 1.15
+y = 1-3*x^2+2*x^3 | color: #2196f3 | width: 3 | label: "H1 (desp izq)"
+y = x-2*x^2+x^3 | color: #4caf50 | width: 3 | label: "H2 (rot izq)"
+y = 3*x^2-2*x^3 | color: #e53935 | width: 3 | label: "H3 (desp der)"
+y = -x^2+x^3 | color: #ff9800 | width: 3 | label: "H4 (rot der)"
+hline 0 #ccc
+point 0 1 #2196f3
+point 1 1 #e53935
+@{end plot}
+
+> **Leamos la grafica como leimos N1 y N2**:
+> - **H1** (azul): vale 1 en xi=0, y 0 en xi=1. Es la influencia del DESPLAZAMIENTO del nodo izquierdo. Parecida a N1 pero es una curva suave, no una recta.
+> - **H2** (verde): empieza subiendo (pendiente positiva) y vuelve a 0. Es la influencia de la ROTACION del nodo izquierdo. Es mas pequena porque las rotaciones son angulos chiquitos.
+> - **H3** (rojo): empieza en 0 y sube a 1. Influencia del desplazamiento del nodo derecho. Parecida a N2 pero curva.
+> - **H4** (naranja): negativa y pequena. Influencia de la rotacion del nodo derecho.
+
+> La deformada de la viga se calcula igual que antes, pero ahora mezclamos 4 valores en vez de 2:
+
+@{eq}
+v(ξ) = H_1 · v_i + H_2 · L · θ_i + H_3 · v_j + H_4 · L · θ_j    (7.1)
+@{end eq}
+
+---
+## 9. Por que Cubicas y No Cuadraticas?
+
+> Podrias preguntar: por que grado 3 y no grado 2? La respuesta viene de la fisica. La ecuacion que gobierna una viga (se llama Euler-Bernoulli) dice:
+
+@{eq}
+EI · d^4v/dx^4 = q(x)    (8.1)
+@{end eq}
+
+> Cuando no hay carga distribuida (q=0), la solucion de esta ecuacion es un polinomio de grado 3 (cubico). Las funciones de Hermite SON cubicas, asi que pueden representar esta solucion EXACTAMENTE. Si fueran cuadraticas, no podrian.
+
+> Veamos el problema visualmente. Una viga simplemente apoyada (v=0 en ambos extremos) con carga:
+
+@{plot}
+x = 0 : 1
+y = -0.1 : 1.1
+y = 4*x*(1-x) | color: #1565c0 | width: 3 | label: "Deformada real (curva)"
+y = 0 | color: #e53935 | width: 2 | label: "Lineal: v=0 en ambos nodos"
+hline 0 #ccc
+text 0.5 0.85 "Error enorme!" size:11 color:#e53935
+@{end plot}
+
+> Con interpolacion lineal (rojo), si ambos nodos tienen v=0 (son apoyos), el resultado seria v=0 en TODO el elemento. Pero la realidad (azul) muestra una curva con deflexion en el centro. Las funciones cubicas de Hermite pueden capturar esto porque tambien consideran las ROTACIONES de los nodos, no solo los desplazamientos.
+
+---
+## 10. De las Funciones de Forma a la Matriz de Rigidez
+
+> Este es el paso clave. Todo lo anterior (N1, N2, H1-H4) lleva a construir la famosa **matriz de rigidez K**. La K es una tabla de numeros que dice: "si muevo el nodo X una cierta cantidad, que fuerzas aparecen?"
+
+> Las funciones de forma se usan asi:
+
+> **Paso 1**: Derivar las funciones de forma (la derivada segunda da la curvatura, que es la deformacion de una viga)
+
+@{eq left}
+B(ξ) = d^2H/dx^2 | Segunda derivada = curvatura
+@{end eq}
+
+> **Paso 2**: Integrar el producto de derivadas sobre la longitud del elemento (esto "acumula" la rigidez)
+
+@{eq}
+K = ∫_0^L B^T · EI · B · dx    (9.1)
+@{end eq}
+
+> **Paso 3**: Al resolver la integral, salen estos numeros famosos que aparecen en todos los libros de estructuras:
+
+@{eq left}
+12EI/L^3 | Fuerza por desplazamiento unitario
+6EI/L^2 | Acoplamiento fuerza-rotacion
+4EI/L | Momento por rotacion unitaria (mismo nodo)
+2EI/L | Momento por rotacion unitaria (nodo opuesto)
+@{end eq}
+
+> Estos numeros NO se inventan. Salen directamente de integrar las funciones de Hermite. Ahora sabes DE DONDE vienen los coeficientes 12EI/L^3 que aparecen en la matriz de rigidez de una viga.
+
+---
+## 11. Viga SIN subdivision — Solo 1 Elemento
+
+> Veamos esto con el solver real. Una viga voladizo (empotrada en un extremo) de 6m con UN solo elemento, carga en la punta:
+
+E_v = 200000000
+Iz_v = 0.0001333
+A_v = 0.04
+
+@{awatif 800 400}
+node 0 0 0
+node 6 0 0
+element frame 0 1 E:$E_v A:$A_v Iz:$Iz_v Iy:$Iz_v G:80000000 J:0.0002
+support 0 fixed
+load 1 fz:-50
+solve static
+show deformed scale:200
+@{end awatif}
+
+> El solver calcula bien el desplazamiento en la punta. Pero en el visor la deformada entre los 2 nodos se dibuja como linea recta. La forma real deberia ser una curva cubica. Con un solo elemento no podemos "ver" la curvatura intermedia.
+
+---
+## 12. Viga CON subdivision — 7 Elementos
+
+> Ahora la misma viga, pero dividida en 7 pedazos. Cada pedazo tiene sus propias funciones H1-H4. Con mas nodos intermedios, el solver calcula desplazamientos en mas puntos:
+
+@{awatif 800 400}
+node 0 0 0
+node 0.857 0 0
+node 1.714 0 0
+node 2.571 0 0
+node 3.429 0 0
+node 4.286 0 0
+node 5.143 0 0
+node 6 0 0
+element frame 0 1 E:$E_v A:$A_v Iz:$Iz_v Iy:$Iz_v G:80000000 J:0.0002
+element frame 1 2 E:$E_v A:$A_v Iz:$Iz_v Iy:$Iz_v G:80000000 J:0.0002
+element frame 2 3 E:$E_v A:$A_v Iz:$Iz_v Iy:$Iz_v G:80000000 J:0.0002
+element frame 3 4 E:$E_v A:$A_v Iz:$Iz_v Iy:$Iz_v G:80000000 J:0.0002
+element frame 4 5 E:$E_v A:$A_v Iz:$Iz_v Iy:$Iz_v G:80000000 J:0.0002
+element frame 5 6 E:$E_v A:$A_v Iz:$Iz_v Iy:$Iz_v G:80000000 J:0.0002
+element frame 6 7 E:$E_v A:$A_v Iz:$Iz_v Iy:$Iz_v G:80000000 J:0.0002
+support 0 fixed
+load 7 fz:-50
+solve static
+show deformed scale:200
+@{end awatif}
+
+> Ahora SI se ve la curvatura real del voladizo. Cada nodo intermedio tiene su desplazamiento calculado, y las funciones H1-H4 interpolan suavemente entre ellos. Mas elementos = mas puntos de calculo = mejor aproximacion de la curva real.
+
+---
+## 13. Resumen: El Camino Completo
+
+@{draw 600 300}
+grid off
+bg #f8f8ff
+# Titulo
+color #333
+fs 14
+text 300 25 Resumen: Funciones de Forma en FEM
+# Paso 1
+color #1565c0
+lw 2
+rect 30 45 160 50
+fs 11
+text 110 75 1. Dividir en
+text 110 90 elementos
+# Flecha 1-2
+color #333
+lw 1.5
+arrow 195 70 225 70 #333
+# Paso 2
+color #4caf50
+lw 2
+rect 230 45 160 50
+fs 11
+text 310 75 2. Funciones de
+text 310 90 forma N(x)
+# Flecha 2-3
+color #333
+lw 1.5
+arrow 395 70 425 70 #333
+# Paso 3
+color #ff9800
+lw 2
+rect 430 45 140 50
+fs 11
+text 500 75 3. Derivar N
+text 500 90 B = dN/dx
+# Flecha abajo
+color #333
+lw 1.5
+arrow 500 100 500 130 #333
+# Paso 4
+color #e53935
+lw 2
+rect 380 135 240 50
+fs 11
+text 500 160 4. Integrar:
+fs 10
+text 500 175 K = integral(BT EI B dx)
+# Flecha izq
+color #333
+lw 1.5
+arrow 375 160 250 160 #333
+# Paso 5
+color #9c27b0
+lw 2
+rect 50 135 195 50
+fs 11
+text 147 160 5. Ensamblar K global
+fs 10
+text 147 175 y resolver K*u = F
+# Flecha abajo
+color #333
+lw 1.5
+arrow 147 190 147 220 #333
+# Resultado
+color #3f51b5
+lw 2
+rect 50 225 520 55
+fs 12
+text 310 250 6. Desplazamientos u en cada nodo
+fs 10
+text 310 268 Funciones de forma interpolan entre nodos -> deformada continua
+@{end draw}
+
+> **En resumen**: Las funciones de forma son la BASE de todo el metodo de elementos finitos. Son funciones matematicas que dicen como repartir la influencia de cada nodo a los puntos intermedios. De ellas se deriva la matriz de rigidez, que es el corazon del FEM.

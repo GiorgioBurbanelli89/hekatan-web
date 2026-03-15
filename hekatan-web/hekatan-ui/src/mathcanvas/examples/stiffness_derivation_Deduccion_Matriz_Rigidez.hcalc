@@ -1,0 +1,752 @@
+# Deduccion de la Matriz de Rigidez — Del Resorte al Frame 3D
+> Paso a paso: como se construye la matriz 12x12 de un elemento frame
+
+---
+## 1. Por que una Matriz? — De 2 Ecuaciones a F = K · u
+
+> Imagina un resorte conectado entre dos nodos. Lo estiras. Que fuerzas aparecen?
+
+> El resorte tiene rigidez k. Si el nodo 2 se mueve u_2 y el nodo 1 se mueve u_1, la fuerza interna es:
+
+@{eq}
+F_{resorte} = k · (u_2 - u_1)
+@{end eq}
+
+> Ahora escribimos el **equilibrio** en cada nodo por separado:
+
+> **Nodo 1**: La fuerza que el resorte ejerce sobre el nodo 1 es opuesta (reaccion):
+
+@{eq}
+F_1 = -k · (u_2 - u_1)
+@{end eq}
+
+> Expandimos el parentesis:
+
+@{eq}
+F_1 = -k · u_2 + k · u_1
+@{end eq}
+
+> Reordenamos (primero u_1, luego u_2):
+
+@{eq}
+F_1 = k · u_1 + (-k) · u_2
+@{end eq}
+
+> **Nodo 2**: La fuerza que el resorte ejerce sobre el nodo 2 es directa (accion):
+
+@{eq}
+F_2 = k · (u_2 - u_1)
+@{end eq}
+
+> Expandimos:
+
+@{eq}
+F_2 = -k · u_1 + k · u_2
+@{end eq}
+
+> Reordenamos:
+
+@{eq}
+F_2 = (-k) · u_1 + k · u_2
+@{end eq}
+
+> Ahora tenemos **2 ecuaciones con 2 incognitas** (u_1 y u_2):
+
+@{eq}
+F_1 = k · u_1 + (-k) · u_2
+@{end eq}
+
+@{eq}
+F_2 = (-k) · u_1 + k · u_2
+@{end eq}
+
+> **Observa el patron**: cada ecuacion es una suma de "coeficiente × incognita". Los coeficientes son: k, -k, -k, k.
+
+> Esos 4 coeficientes se pueden organizar en una **tabla** (= matriz):
+
+@{eq}
+[F_1 ; F_2] = [k , -k; -k , k] · [u_1 ; u_2]
+@{end eq}
+
+> **Por que funciona esto?** Porque la multiplicacion matriz × vector produce exactamente las mismas 2 ecuaciones:
+
+> Fila 1 de la matriz × vector: k·u_1 + (-k)·u_2 = F_1 ✓
+
+> Fila 2 de la matriz × vector: (-k)·u_1 + k·u_2 = F_2 ✓
+
+> La matriz **NO** agrega informacion nueva. Es solo una forma compacta de escribir las ecuaciones. Pero es poderosa porque permite resolver sistemas grandes (100 ecuaciones) con algoritmos de computadora.
+
+> Sacando factor comun k:
+
+@{eq}
+K = k · [1 , -1; -1 , 1]    (2×2)
+@{end eq}
+
+> Este patron [1,-1;-1,1] es **la base de todo**. Aparece siempre que dos nodos estan conectados.
+
+---
+## 2. Barra Axial — De una Barra Continua a K (2 DOF)
+
+> Un resorte es puntual. Pero una barra de acero tiene **longitud L**, **area A**, y **modulo de elasticidad E**. Como obtenemos su rigidez?
+
+> **Paso 1 — Interpolar el desplazamiento**
+
+> La barra va de x=0 (nodo 1) a x=L (nodo 2). En cualquier punto intermedio x, el desplazamiento u(x) es una mezcla de u_1 y u_2:
+
+@{eq}
+u(x) = N_1(x) · u_1 + N_2(x) · u_2
+@{end eq}
+
+> Donde N_1 y N_2 son las **funciones de forma** (ya las derivamos en el ejemplo anterior):
+
+@{eq}
+N_1 = 1 - x/L | vale 1 en nodo 1, vale 0 en nodo 2
+@{end eq}
+
+@{eq}
+N_2 = x/L | vale 0 en nodo 1, vale 1 en nodo 2
+@{end eq}
+
+> **Paso 2 — La deformacion: que es y por que es una derivada**
+
+> La **deformacion** (strain, simbolo ε) mide **cuanto se estira** un material. Es un concepto simple:
+
+> Imagina una barra de 100 mm. La estiras y ahora mide 101 mm. Se alargo 1 mm. La deformacion es:
+
+@{eq}
+ε = ΔL/L = 1/100 = 0.01  |  1% de estiramiento
+@{end eq}
+
+> Eso funciona si **toda la barra** se estira igual. Pero que pasa si una parte se estira mas que otra? Por ejemplo, el lado izquierdo no se mueve y el lado derecho se estira mucho.
+
+> Para medir la deformacion **en cada punto**, tomamos un pedacito de barra de longitud dx en la posicion x:
+
+> **Antes de deformar**: el pedacito va de x a x + dx (longitud = dx).
+
+> **Despues de deformar**: el punto x se mueve a x + u(x), y el punto x+dx se mueve a (x+dx) + u(x+dx).
+
+> La nueva longitud del pedacito es:
+
+@{eq}
+L_{nuevo} = [x + dx + u(x+dx)] - [x + u(x)] = dx + u(x+dx) - u(x)
+@{end eq}
+
+> El estiramiento del pedacito es:
+
+@{eq}
+ΔL = L_{nuevo} - L_{original} = u(x+dx) - u(x)
+@{end eq}
+
+> La deformacion local (en ese punto x) es:
+
+@{eq}
+ε(x) = ΔL/L_{original} = [u(x+dx) - u(x)]/dx
+@{end eq}
+
+> Si hacemos dx → 0 (pedacito infinitesimal), esa fraccion **es exactamente la definicion de derivada**:
+
+@{eq}
+ε = lim  [u(x+dx) - u(x)]/dx = du/dx
+@{end eq}
+
+> **Resumen**: ε = du/dx porque la deformacion es "cuanto cambia el desplazamiento por unidad de longitud", y eso es literalmente lo que mide la derivada.
+
+> **Paso 2b — Calcular ε para nuestra barra**
+
+> Ya sabemos que u(x) = (1 - x/L)·u_1 + (x/L)·u_2. Derivamos:
+
+@{eq}
+du/dx = d/dx[(1 - x/L) · u_1] + d/dx[(x/L) · u_2]
+@{end eq}
+
+> La derivada de (1 - x/L) respecto a x es -1/L. La derivada de x/L es 1/L:
+
+@{eq}
+dN_1/dx = -1/L    ,    dN_2/dx = 1/L
+@{end eq}
+
+> Entonces:
+
+@{eq}
+ε = du/dx = -1/L · u_1 + 1/L · u_2 = (u_2 - u_1)/L
+@{end eq}
+
+> **Verificacion intuitiva**: si u_1 = 0 (nodo 1 fijo) y u_2 = 1 mm (nodo 2 se mueve 1 mm), y L = 100 mm:
+
+@{eq}
+ε = (1 - 0)/100 = 0.01 = 1%  |  ✓ igual que ΔL/L
+@{end eq}
+
+> Escribimos ε como producto de una fila **B** por un vector **u**:
+
+@{eq}
+ε = [-1/L ,  1/L] · [u_1 ; u_2] = B · u
+@{end eq}
+
+> **B** se llama la "matriz de deformacion-desplazamiento". Son las derivadas de las funciones de forma. B conecta lo que sabes (desplazamientos de los nodos) con lo que quieres calcular (deformacion en cualquier punto).
+
+> **Paso 3 — Del esfuerzo a la fuerza**
+
+> La ley de Hooke dice que el esfuerzo (tension interna) es:
+
+@{eq}
+σ = E · ε  |  esfuerzo = modulo × deformacion
+@{end eq}
+
+> Donde E es el modulo de Young del material (ej: 200 GPa para acero).
+
+> **Paso 4 — Energia y la formula magica**
+
+> La energia almacenada en la barra deformada es:
+
+@{eq}
+U = 1/2 · ∫_0^L σ · ε · A  dx
+@{end eq}
+
+> A es el area de la seccion transversal. Sustituyendo σ = E·ε y ε = B·u:
+
+@{eq}
+U = 1/2 · ∫_0^L (B · u)^T · EA · (B · u)  dx
+@{end eq}
+
+> Como u es constante (no depende de x), sale de la integral:
+
+@{eq}
+U = 1/2 · u^T · (∫_0^L B^T · EA · B  dx) · u
+@{end eq}
+
+> La **matriz de rigidez** es lo que esta entre parentesis:
+
+@{eq}
+K = ∫_0^L B^T · EA · B  dx
+@{end eq}
+
+> Esta es la **formula central** de elementos finitos. Todo lo demas es calcular B y hacer la integral.
+
+> **Paso 5 — Hacer la integral**
+
+> B = [-1/L, 1/L] es constante, asi que sale de la integral:
+
+> Primero, B^T · B (una columna por una fila = una matriz):
+
+@{eq}
+B^T · B = [-1/L ; 1/L] · [-1/L ,  1/L] = [1/L^2 , -1/L^2; -1/L^2 , 1/L^2]
+@{end eq}
+
+> La integral de una constante en [0,L] es simplemente multiplicar por L:
+
+@{eq}
+K = EA · [1/L^2 , -1/L^2; -1/L^2 , 1/L^2] · L = EA/L · [1 , -1; -1 , 1]
+@{end eq}
+
+@{eq}
+K_{axial} = EA/L · [1 , -1; -1 , 1]    (2×2)
+@{end eq}
+
+> **Conclusion**: Una barra axial es un resorte con k = EA/L. El patron [1,-1;-1,1] es el mismo de la Seccion 1.
+
+### Ejemplo numerico interactivo
+
+> Mueve los sliders para cambiar E, A, L y u_2. El canvas **calcula en vivo** K, F y la deformacion:
+
+@{canvas 700 340}
+slider E_mpa 50000 400000 200000
+slider A_mm2 10 500 100
+slider L_mm 100 3000 1000
+slider u2_mm 0 2 0.5
+let k = E_mpa * A_mm2 / L_mm
+let F1 = -1 * k * u2_mm
+let F2 = k * u2_mm
+let eps = u2_mm / L_mm
+let sigma = E_mpa * eps
+
+rect 0,0 700,340 fill:#f8f8f0
+text 350,28 "CALCULO EN VIVO -- Barra Axial" color:#1a1a2e size:16 font:"bold 16px monospace"
+
+text 20,60 "Datos:" size:13 align:left font:"13px monospace"
+text 20,80 "  E = {E_mpa:.0f} MPa" size:13 align:left font:"13px monospace"
+text 20,100 "  A = {A_mm2:.0f} mm²" size:13 align:left font:"13px monospace"
+text 20,120 "  L = {L_mm:.0f} mm" size:13 align:left font:"13px monospace"
+text 20,140 "  u_1 = 0 (fijo),  u_2 = {u2_mm:.3f} mm" size:13 align:left font:"13px monospace"
+
+text 20,175 "Paso 1: Rigidez" color:#0d47a1 size:14 align:left font:"bold 14px monospace"
+text 20,195 "  k = EA/L = {E_mpa:.0f} x {A_mm2:.0f} / {L_mm:.0f} = {k:.1f} N/mm" size:13 align:left font:"13px monospace"
+
+text 20,225 "Paso 2: F = K · u" color:#0d47a1 size:14 align:left font:"bold 14px monospace"
+text 20,245 "  F_1 = -k·u_2 = -{k:.1f} x {u2_mm:.3f} = {F1:.1f} N  (reaccion)" size:13 align:left font:"13px monospace"
+text 20,265 "  F_2 =  k·u_2 =  {k:.1f} x {u2_mm:.3f} = {F2:.1f} N  (aplicada)" size:13 align:left font:"13px monospace"
+
+text 20,300 "Paso 3: Deformacion" color:#0d47a1 size:14 align:left font:"bold 14px monospace"
+text 20,320 "  eps = u_2/L = {u2_mm:.3f}/{L_mm:.0f} = {eps:.6f}   sigma = E·eps = {sigma:.2f} MPa" size:13 align:left font:"13px monospace"
+@{end canvas}
+
+> **Verifica**: F_1 + F_2 = 0 siempre (equilibrio). Si u_2 = 0, no hay fuerza. Si L aumenta, k baja (barra mas flexible).
+
+---
+## 3. Viga en Flexion — Por que se Necesitan Cubicas (4 DOF)
+
+> Para flexion (doblar una viga), las funciones de forma lineales **no sirven**. Aqui explicamos por que paso a paso.
+
+> **El problema**: una viga se dobla. La deflexion v(x) no es una linea recta, es una **curva**. La ecuacion que gobierna la flexion es:
+
+@{eq}
+EI · d^4v/dx^4 = q(x)  |  ecuacion de Euler-Bernoulli
+@{end eq}
+
+> Es de **4to orden** (4ta derivada). Para resolver una ecuacion de 4to orden necesitas **4 condiciones de frontera**, no 2.
+
+> **Que condiciones?** En cada nodo de la viga conocemos dos cosas:
+
+@{eq}
+v_1 , θ_1 | desplazamiento vertical y rotacion en nodo 1
+@{end eq}
+
+@{eq}
+v_2 , θ_2 | desplazamiento vertical y rotacion en nodo 2
+@{end eq}
+
+> La rotacion θ es la pendiente de la curva: θ = dv/dx.
+
+> Con **4 DOF** necesitamos una funcion con **4 coeficientes** → polinomio de grado 3:
+
+@{eq}
+v(ξ) = a_0 + a_1 · ξ + a_2 · ξ^2 + a_3 · ξ^3
+@{end eq}
+
+> Donde ξ = x/L (coordenada normalizada, va de 0 a 1).
+
+> **Paso 1 — Imponer las 4 condiciones**
+
+> En ξ = 0 (nodo 1):
+
+@{eq}
+v(0) = a_0 = v_1  |  el desplazamiento en nodo 1 es v_1
+@{end eq}
+
+@{eq}
+v'(0) = a_1 = θ_1 · L  |  la pendiente en nodo 1 es θ_1
+@{end eq}
+
+> (Nota: v' = dv/dξ, pero θ = dv/dx = (dv/dξ)/L, asi que dv/dξ = θ·L)
+
+> En ξ = 1 (nodo 2):
+
+@{eq}
+v(1) = a_0 + a_1 + a_2 + a_3 = v_2
+@{end eq}
+
+@{eq}
+v'(1) = a_1 + 2a_2 + 3a_3 = θ_2 · L
+@{end eq}
+
+> **Paso 2 — Resolver el sistema**
+
+> Ya tenemos a_0 = v_1 y a_1 = θ_1·L. Sustituimos en las otras dos ecuaciones:
+
+> De v(1) = v_2:
+
+@{eq}
+v_1 + θ_1 · L + a_2 + a_3 = v_2
+@{end eq}
+
+@{eq}
+a_2 + a_3 = v_2 - v_1 - θ_1 · L    (ecuacion A)
+@{end eq}
+
+> De v'(1) = θ_2·L:
+
+@{eq}
+θ_1 · L + 2a_2 + 3a_3 = θ_2 · L
+@{end eq}
+
+@{eq}
+2a_2 + 3a_3 = (θ_2 - θ_1) · L    (ecuacion B)
+@{end eq}
+
+> De (A): a_2 = v_2 - v_1 - θ_1·L - a_3. Sustituimos en (B):
+
+@{eq}
+2(v_2 - v_1 - θ_1 · L - a_3) + 3a_3 = (θ_2 - θ_1) · L
+@{end eq}
+
+@{eq}
+2(v_2 - v_1) - 2θ_1 · L - 2a_3 + 3a_3 = θ_2 · L - θ_1 · L
+@{end eq}
+
+@{eq}
+a_3 = θ_2 · L - θ_1 · L + 2θ_1 · L - 2(v_2 - v_1)
+@{end eq}
+
+@{eq}
+a_3 = 2(v_1 - v_2) + L(θ_1 + θ_2)
+@{end eq}
+
+> Y de (A):
+
+@{eq}
+a_2 = v_2 - v_1 - θ_1 · L - a_3 = 3(v_2 - v_1) - L(2θ_1 + θ_2)
+@{end eq}
+
+> **Paso 3 — Reagrupar por DOF**
+
+> Sustituimos a_0, a_1, a_2, a_3 en v(ξ) y agrupamos los terminos que multiplican a v_1, θ_1, v_2, θ_2:
+
+@{eq}
+v(ξ) = H_1 · v_1 + H_2 · θ_1 + H_3 · v_2 + H_4 · θ_2
+@{end eq}
+
+> Las **funciones de Hermite** son:
+
+@{eq}
+H_1 = 1 - 3ξ^2 + 2ξ^3  |  "campana" del desplazamiento nodo 1
+@{end eq}
+
+@{eq}
+H_2 = L(ξ - 2ξ^2 + ξ^3)  |  "campana" de la rotacion nodo 1
+@{end eq}
+
+@{eq}
+H_3 = 3ξ^2 - 2ξ^3  |  "campana" del desplazamiento nodo 2
+@{end eq}
+
+@{eq}
+H_4 = L(-ξ^2 + ξ^3)  |  "campana" de la rotacion nodo 2
+@{end eq}
+
+> **Verificacion rapida**: H_1(0)=1, H_1(1)=1-3+2=0 ✓. H_3(0)=0, H_3(1)=3-2=1 ✓.
+
+---
+## 4. De Hermite a la Matriz K de Flexion (4×4)
+
+> Ahora usamos la misma formula K = ∫ B^T · D · B dx pero con las funciones de Hermite.
+
+> **Diferencia clave con la barra axial**: en flexion, el esfuerzo NO depende de la primera derivada (ε = du/dx), sino de la **segunda derivada** (curvatura):
+
+@{eq}
+κ = d^2v/dx^2  |  curvatura = segunda derivada
+@{end eq}
+
+> El momento flector es:
+
+@{eq}
+M = EI · κ = EI · d^2v/dx^2
+@{end eq}
+
+> **Paso 1 — Calcular las segundas derivadas**
+
+> Necesitamos d^2H/dξ^2 (derivamos dos veces respecto a ξ):
+
+> Para H_1 = 1 - 3ξ^2 + 2ξ^3:
+
+@{eq}
+H_1' = -6ξ + 6ξ^2    →    H_1'' = -6 + 12ξ
+@{end eq}
+
+> Para H_2 = L(ξ - 2ξ^2 + ξ^3):
+
+@{eq}
+H_2' = L(1 - 4ξ + 3ξ^2)    →    H_2'' = L(-4 + 6ξ)
+@{end eq}
+
+> Para H_3 = 3ξ^2 - 2ξ^3:
+
+@{eq}
+H_3' = 6ξ - 6ξ^2    →    H_3'' = 6 - 12ξ
+@{end eq}
+
+> Para H_4 = L(-ξ^2 + ξ^3):
+
+@{eq}
+H_4' = L(-2ξ + 3ξ^2)    →    H_4'' = L(-2 + 6ξ)
+@{end eq}
+
+> La curvatura necesita d^2v/dx^2, no d^2v/dξ^2. Como ξ = x/L:
+
+@{eq}
+d^2v/dx^2 = 1/L^2 · d^2v/dξ^2
+@{end eq}
+
+> Entonces B para flexion es:
+
+@{eq}
+B = 1/L^2 · [H_1'' ,  H_2'' ,  H_3'' ,  H_4'']
+@{end eq}
+
+> **Paso 2 — La integral K = ∫ B^T · EI · B dx**
+
+> A diferencia de la barra axial, aqui B **depende de ξ** (no es constante). Cambiamos variable: dx = L · dξ:
+
+@{eq}
+K = ∫_0^1 B^T · EI · B · L  dξ
+@{end eq}
+
+> Sustituyendo B = (1/L^2) · [H_1'', H_2'', H_3'', H_4'']:
+
+@{eq}
+K = EI/L^3 · ∫_0^1 [H_1'' ; H_2'' ; H_3'' ; H_4''] · [H_1'' , H_2'' , H_3'' , H_4'']  dξ
+@{end eq}
+
+> Esto produce una **matriz 4×4**. Cada termino K_{ij} es una integral de un producto de polinomios.
+
+> **Paso 3 — Calcular K_{11} (ejemplo detallado)**
+
+@{eq}
+K_{11} = EI/L^3 · ∫_0^1 (H_1'')^2  dξ
+@{end eq}
+
+> Sustituimos H_1'' = -6 + 12ξ:
+
+@{eq}
+(H_1'')^2 = (-6 + 12ξ)^2 = 36 - 144ξ + 144ξ^2
+@{end eq}
+
+> Integramos termino a termino:
+
+@{eq}
+∫_0^1 36  dξ = 36
+@{end eq}
+
+@{eq}
+∫_0^1 -144ξ  dξ = -144 · ξ^2/2 |_0^1 = -72
+@{end eq}
+
+@{eq}
+∫_0^1 144ξ^2  dξ = 144 · ξ^3/3 |_0^1 = 48
+@{end eq}
+
+> Sumando:
+
+@{eq}
+36 - 72 + 48 = 12
+@{end eq}
+
+@{eq}
+K_{11} = 12 · EI/L^3
+@{end eq}
+
+> **Paso 4 — Calcular K_{12} (segundo ejemplo)**
+
+@{eq}
+K_{12} = EI/L^3 · ∫_0^1 H_1'' · H_2''  dξ
+@{end eq}
+
+> H_1'' · H_2'' = (-6 + 12ξ) · L(-4 + 6ξ):
+
+@{eq}
+= L · (24 - 36ξ - 48ξ + 72ξ^2) = L · (24 - 84ξ + 72ξ^2)
+@{end eq}
+
+> Integramos:
+
+@{eq}
+∫_0^1 (24 - 84ξ + 72ξ^2)  dξ = 24 - 42 + 24 = 6
+@{end eq}
+
+@{eq}
+K_{12} = 6 · L · EI/L^3 = 6EI/L^2
+@{end eq}
+
+> **Paso 5 — Calcular K_{22} (tercer ejemplo)**
+
+@{eq}
+K_{22} = EI/L^3 · ∫_0^1 (H_2'')^2  dξ
+@{end eq}
+
+> (H_2'')^2 = L^2(-4 + 6ξ)^2 = L^2(16 - 48ξ + 36ξ^2):
+
+@{eq}
+∫_0^1 (16 - 48ξ + 36ξ^2)  dξ = 16 - 24 + 12 = 4
+@{end eq}
+
+@{eq}
+K_{22} = 4 · L^2 · EI/L^3 = 4EI/L
+@{end eq}
+
+> **Resultado completo** (integrando todos los terminos):
+
+@{eq}
+K_{flexion} = EI/L^3 · [12 , 6L , -12 , 6L; 6L , 4L^2 , -6L , 2L^2; -12 , -6L , 12 , -6L; 6L , 2L^2 , -6L , 4L^2]    (4×4)
+@{end eq}
+
+> Los coeficientes **12, 6, 4, 2** salen de las integrales de polinomios. No son arbitrarios.
+
+---
+## 5. Torsion — Mismo Patron (2 DOF)
+
+> La torsion es **identica** a la barra axial, cambiando:
+
+@{eq}
+u → θ_x | desplazamiento axial → rotacion
+@{end eq}
+
+@{eq}
+EA → GJ | rigidez axial → rigidez torsional
+@{end eq}
+
+> Mismas funciones de forma lineales, misma integral:
+
+@{eq}
+K_{torsion} = GJ/L · [1 , -1; -1 , 1]    (2×2)
+@{end eq}
+
+---
+## 6. Ensamblaje — De Piezas Sueltas a la Matriz Completa
+
+> **Viga 2D (6 DOF)**: combinamos axial + flexion. Cada nodo tiene 3 DOF:
+
+@{eq}
+[u , v , θ]  |  axial , transversal , rotacion
+@{end eq}
+
+> K_{axial} actua en DOFs [u_1, u_2] = posiciones (1,4) de los 6 DOF.
+
+> K_{flexion} actua en DOFs [v_1, θ_1, v_2, θ_2] = posiciones (2,3,5,6).
+
+> Cada termino se coloca en su posicion. Los demas son cero:
+
+@{eq}
+K_{6×6} = [EA/L , 0 , 0 , -EA/L , 0 , 0; 0 , 12EI/L^3 , 6EI/L^2 , 0 , -12EI/L^3 , 6EI/L^2; 0 , 6EI/L^2 , 4EI/L , 0 , -6EI/L^2 , 2EI/L; -EA/L , 0 , 0 , EA/L , 0 , 0; 0 , -12EI/L^3 , -6EI/L^2 , 0 , 12EI/L^3 , -6EI/L^2; 0 , 6EI/L^2 , 2EI/L , 0 , -6EI/L^2 , 4EI/L]
+@{end eq}
+
+> **Frame 3D (12 DOF)**: cada nodo tiene 6 DOF: [u, v, w, θ_x, θ_y, θ_z]. Se ensamblan 4 piezas:
+
+@{eq}
+K_{axial}(2×2) | DOFs [u_1, u_2]  →  k = EA/L
+@{end eq}
+
+@{eq}
+K_{torsion}(2×2) | DOFs [θ_{x1}, θ_{x2}]  →  k = GJ/L
+@{end eq}
+
+@{eq}
+K_{flex,z}(4×4) | DOFs [v_1, θ_{z1}, v_2, θ_{z2}]  →  EI_z
+@{end eq}
+
+@{eq}
+K_{flex,y}(4×4) | DOFs [w_1, θ_{y1}, w_2, θ_{y2}]  →  EI_y
+@{end eq}
+
+@{eq}
+K_{12×12} = K_{axial} ⊕ K_{flex,z} ⊕ K_{flex,y} ⊕ K_{torsion}
+@{end eq}
+
+---
+## 7. awatif C++ — El Codigo Real
+
+> Asi se ve todo esto en el codigo C++ de awatif-fem.
+
+> **Variables de rigidez** (getLocalStiffnessMatrix.cpp):
+
+@{code cpp}
+const double EA_L   = E * A / L;           // rigidez axial
+const double EIz_L3 = E * Iz / (L*L*L);    // corte plano yz
+const double EIy_L3 = E * Iy / (L*L*L);    // corte plano xz
+const double GJ_L   = G * J / L;           // torsion
+const double EIz_L2 = E * Iz / (L*L);      // momento yz
+const double EIy_L2 = E * Iy / (L*L);      // momento xz
+const double EIz_L  = E * Iz / L;          // flexion yz
+const double EIy_L  = E * Iy / L;          // flexion xz
+@{end code}
+
+> Cada variable corresponde a un coeficiente que dedujimos:
+
+@{eq}
+EA\_L = EA/L | rigidez axial (Seccion 2)
+@{end eq}
+
+@{eq}
+EIz\_L3 = 12EI_z/L^3 | coeficiente 12 de la Seccion 4
+@{end eq}
+
+@{eq}
+GJ\_L = GJ/L | torsion (Seccion 5)
+@{end eq}
+
+@{eq}
+EIz\_L2 = 6EI_z/L^2 | coeficiente 6 de la Seccion 4
+@{end eq}
+
+@{eq}
+EIz\_L = 4EI_z/L  ,  2EI_z/L | coeficientes 4 y 2 de la Seccion 4
+@{end eq}
+
+> **La matriz 12×12 completa** — estructura por bloques 2×2 de 6×6:
+
+@{eq left}
+K_{local} = [K_{11}, K_{12}; K_{21}, K_{22}]   donde K_{21} = K_{12}^T (simetrica)
+@{end eq}
+
+> **Bloque K_11** (nodo 1 → nodo 1): rigidez directa
+
+@{eq}
+K_{11} = [EA/L, 0, 0, 0, 0, 0; 0, 12EI_z/L^3, 0, 0, 0, 6EI_z/L^2; 0, 0, 12EI_y/L^3, 0, -6EI_y/L^2, 0; 0, 0, 0, GJ/L, 0, 0; 0, 0, -6EI_y/L^2, 0, 4EI_y/L, 0; 0, 6EI_z/L^2, 0, 0, 0, 4EI_z/L]
+@{end eq}
+
+> **Bloque K_12** (nodo 1 → nodo 2): acoplamiento (signos invertidos en corte, mismos en momento)
+
+@{eq}
+K_{12} = [-EA/L, 0, 0, 0, 0, 0; 0, -12EI_z/L^3, 0, 0, 0, -6EI_z/L^2; 0, 0, -12EI_y/L^3, 0, 6EI_y/L^2, 0; 0, 0, 0, -GJ/L, 0, 0; 0, 0, 6EI_y/L^2, 0, 2EI_y/L, 0; 0, -6EI_z/L^2, 0, 0, 0, 2EI_z/L]
+@{end eq}
+
+> **Bloque K_22** (nodo 2 → nodo 2): igual a K_11 (simetria)
+
+@{eq}
+K_{22} = K_{11}
+@{end eq}
+
+> En la K 12×12, cada DOF esta **desacoplado por tipo**. Si miramos solo la diagonal de K_11:
+
+@{eq left}
+u_x → EA/L | rigidez axial
+@{end eq}
+
+@{eq left}
+u_y → 12EI_z/L^3 | rigidez transversal (plano xy)
+@{end eq}
+
+@{eq left}
+u_z → 12EI_y/L^3 | rigidez transversal (plano xz)
+@{end eq}
+
+@{eq left}
+θ_x → GJ/L | rigidez torsional
+@{end eq}
+
+@{eq left}
+θ_y → 4EI_y/L | rigidez flexional (plano xz)
+@{end eq}
+
+@{eq left}
+θ_z → 4EI_z/L | rigidez flexional (plano xy)
+@{end eq}
+
+> **Los ceros de la K 12×12 significan desacoplamiento**: la fuerza axial NO produce flexion, la torsion NO produce corte, etc. Cada tipo de deformacion vive en su propio "canal" de la matriz.
+
+---
+### ¿La K 12×12 da lo mismo que la K 2×2 para carga axial?
+
+> **Si, exactamente lo mismo.** Cuando solo hay fuerza axial (Fx), los unicos DOFs activos son u_x. Todos los demas (u_y, u_z, θ_x, θ_y, θ_z) tienen carga cero y condiciones de contorno cero, por lo que producen desplazamiento cero.
+
+> La K 12×12 se "reduce" automaticamente a la K 2×2 axial porque:
+
+@{eq}
+[EA/L, 0, ..., 0; 0, 12EI_z/L^3, ...; ...; 0, ..., 0] · [u_x; 0; 0; 0; 0; 0] = [F_x; 0; 0; 0; 0; 0]
+@{end eq}
+
+> Solo sobrevive la primera fila: EA/L · u_x = F_x → que es exactamente K_axial · u = F
+
+> **En resumen**: la K 12×12 de awatif **contiene** a la K 2×2 axial. Las filas/columnas extra no afectan porque se multiplican por cero. Esto lo comprobamos numericamente en la Seccion 9.
+
+> **Resumen del viaje**:
+
+@{eq}
+Resorte → Barra → Viga → Torsion → Viga 2D → Frame 3D
+@{end eq}
+
+@{eq}
+k[1,-1;-1,1] → EA/L[...] → EI/L^3[12,6,4,2] → GJ/L[...] → 6×6 → 12×12
+@{end eq}
+
+> Cada paso agrega DOFs pero la idea es siempre la misma: **interpolar con funciones de forma, derivar para obtener B, integrar B^T · D · B**.
+
+> Ver ejemplo **"Verificacion K 12×12"** para la comprobacion completa con awatif y MathCanvas usando la K 12×12, cell arrays K_loc{i}, y ensamblaje con for i=1:n.

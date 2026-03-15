@@ -1,0 +1,374 @@
+@{config bg:bookwarm, align:left, header:on, color:black, notation:eng}
+---
+# Portico con Subdivision 1D-Mesh
+---
+## Como funciona deform.cpp de awatif
+
+@{text}
+Este documento explica paso a paso como el solucionador FEM de awatif (deform.cpp)
+resuelve un portico simple con subdivision de elementos (1d-mesh). La subdivision
+consiste en dividir un elemento largo en varios sub-elementos mas cortos, lo cual
+mejora la precision de la solucion especialmente cuando hay cargas distribuidas
+o cuando se necesita capturar modos de deformacion intermedios.
+@{end text}
+
+---
+## 1. Descripcion del Modelo
+
+@{text}
+Portico plano de un vano con dos columnas y una viga. Las columnas no se subdividen
+(1 elemento cada una) pero la viga se subdivide en 4 sub-elementos. Los apoyos
+en la base son empotrados (6 GDL restringidos por nodo).
+@{end text}
+
+@{draw 500 320}
+grid off
+bg #fff8f0
+# Marco del portico
+color #2255aa
+lw 2.5
+# Columna izquierda: nodo 0 -> nodo 1
+line 80 280 80 80
+# Viga: nodo 1 -> nodo 2 -> nodo 3 -> nodo 4 -> nodo 5
+line 80 80 185 80
+line 185 80 290 80
+line 290 80 395 80
+line 395 80 420 80
+# Columna derecha: nodo 5 -> nodo 6
+line 420 80 420 280
+# Nodos
+color #cc3333
+lw 1
+circle 80 280 5
+circle 80 80 5
+circle 185 80 5
+circle 290 80 5
+circle 395 80 5
+circle 420 80 5
+circle 420 280 5
+# Etiquetas de nodos
+color #333
+font 11
+text 55 290 N0
+text 55 72 N1
+text 178 65 N2
+text 283 65 N3
+text 388 65 N4
+text 428 72 N5
+text 428 290 N6
+# Apoyos empotrados
+color #555
+lw 1.5
+line 60 280 100 280
+line 60 280 60 300
+line 65 300 60 280
+line 70 300 65 280
+line 75 300 70 280
+line 80 300 75 280
+line 85 300 80 280
+line 90 300 85 280
+line 95 300 90 280
+line 100 300 95 280
+line 400 280 440 280
+line 400 280 400 300
+line 405 300 400 280
+line 410 300 405 280
+line 415 300 410 280
+line 420 300 415 280
+line 425 300 420 280
+line 430 300 425 280
+line 435 300 430 280
+line 440 300 435 280
+# Carga Fx en nodo 5
+color #cc3333
+lw 2
+arrow 460 80 425 80
+text 462 75 Fx
+# Dimensiones
+color #888
+lw 0.5
+font 10
+text 230 100 W = 20 ft
+text 30 180 H = 12 ft
+# Etiquetas de elementos
+color #2255aa
+font 10
+text 50 180 E0
+text 125 55 E1
+text 230 55 E2
+text 335 55 E3
+text 400 55 E4
+text 445 180 E5
+@{end draw}
+
+---
+## 2. Datos del Modelo
+
+> Propiedades del material y seccion (acero W12x65)
+E = 29000
+A = 19.1
+Iz = 533
+G = 11200
+J = 2.18
+Iy = 174
+
+> Geometria
+H = 12
+W = 20
+
+> Carga aplicada (fuerza horizontal en nodo 5)
+Fx = 10
+
+---
+## 3. Coordenadas Nodales y Conectividad
+
+@{text}
+El 1d-mesh subdivide la viga en 4 sub-elementos iguales, creando 3 nodos
+intermedios (N2, N3, N4). En deform.cpp, los nodos se pasan como un arreglo
+plano: [x1,y1,z1, x2,y2,z2, ...]. Aunque el portico es 2D, awatif siempre
+trabaja en 3D (z=0 para elementos planos).
+@{end text}
+
+> Longitud de cada sub-elemento de la viga
+n_sub = 4
+Lbeam = W/n_sub
+
+> 7 Nodos: 4 de la geometria original + 3 intermedios en la viga
+
+@{eq}
+Nodos = [0; 0; 0, 0; H; 0, L_{beam}; H; 0, 2L_{beam}; H; 0, 3L_{beam}; H; 0, W; H; 0, W; 0; 0]
+@{end eq}
+
+@{text}
+La conectividad define 6 elementos de 2 nodos cada uno.
+El arreglo element_indices es plano: [n1,n2, n1,n2, ...] y element_sizes
+indica cuantos nodos tiene cada elemento (siempre 2 para frames).
+@{end text}
+
+@{eq}
+Conectividad: E_0=[0;1], E_1=[1;2], E_2=[2;3], E_3=[3;4], E_4=[4;5], E_5=[5;6]
+@{end eq}
+
+---
+## 4. Matriz de Rigidez Local (12x12)
+
+@{text}
+La funcion getLocalStiffnessMatrixFrame() construye la matriz de rigidez de un
+elemento viga-columna Euler-Bernoulli en coordenadas locales. Cada elemento
+tiene 2 nodos con 6 GDL cada uno: [dx, dy, dz, rx, ry, rz], dando una
+matriz 12x12. La matriz combina efectos axiales (EA/L), flexion en dos
+planos (EIz, EIy), y torsion (GJ/L).
+@{end text}
+
+@{eq}
+K_{local} = [K_{ii}, K_{ij}; K_{ji}, K_{jj}]    (bloques 6x6)    (4.1)
+@{end eq}
+
+> Estructura del bloque diagonal K_ii (nodo i):
+
+@{eq left}
+K_{ii} = [EA/L, 0, 0, 0, 0, 0;
+0, 12EI_z/L^3, 0, 0, 0, 6EI_z/L^2;
+0, 0, 12EI_y/L^3, 0, -6EI_y/L^2, 0;
+0, 0, 0, GJ/L, 0, 0;
+0, 0, -6EI_y/L^2, 0, 4EI_y/L, 0;
+0, 6EI_z/L^2, 0, 0, 0, 4EI_z/L]
+@{end eq}
+
+@{text}
+Los terminos clave son:
+- EA/L: rigidez axial (traccion/compresion)
+- 12EI/L^3: rigidez a corte por flexion
+- 6EI/L^2: acoplamiento corte-momento
+- 4EI/L: rigidez a flexion (nodo propio)
+- 2EI/L: rigidez a flexion (nodo opuesto, en K_ij)
+- GJ/L: rigidez torsional
+@{end text}
+
+---
+## 5. Matriz de Transformacion
+
+@{text}
+La funcion getTransformationMatrixFrame() rota la matriz local al sistema global.
+Calcula los cosenos directores (l, m, n) del eje del elemento y construye una
+matriz lambda 3x3 que se repite 4 veces en la diagonal de T (12x12).
+@{end text}
+
+@{eq}
+T = [lambda, 0, 0, 0; 0, lambda, 0, 0; 0, 0, lambda, 0; 0, 0, 0, lambda]    (4.2)
+@{end eq}
+
+@{text}
+Para la columna izquierda (vertical, de N0 a N1):
+  l = 0, m = 1, n = 0 (apunta en Y)
+  D = sqrt(l^2 + m^2) = 1
+  lambda = [[0, 1, 0], [-1, 0, 0], [0, 0, 1]]
+
+Para los sub-elementos de la viga (horizontales):
+  l = 1, m = 0, n = 0 (apunta en X)
+  D = 1
+  lambda = [[1, 0, 0], [0, 1, 0], [0, 0, 1]] = I (identidad)
+
+La matriz global del elemento se obtiene como:
+@{end text}
+
+@{eq}
+K_{global}^{(e)} = T^T · K_{local} · T    (4.3)
+@{end eq}
+
+---
+## 6. Ensamblaje de la Matriz Global
+
+@{text}
+La funcion getGlobalStiffnessMatrix() en awatif ensambla la matriz global K
+usando triplets de Eigen (formato COO para matrices sparse). Para cada
+elemento, mapea los indices locales a indices globales: el GDL j del
+nodo i del elemento corresponde al indice global = nodeIndex * 6 + j.
+@{end text}
+
+> Grados de libertad totales
+n_nodos = 7
+dof = n_nodos*6
+
+@{text}
+La matriz global K es de 42x42. Los triplets permiten que Eigen sume
+automaticamente las contribuciones de elementos que comparten nodos.
+Por ejemplo, el nodo N1 (junta superior izquierda) recibe contribuciones
+del elemento E0 (columna) y E1 (primer sub-elemento de la viga).
+@{end text}
+
+---
+## 7. Condiciones de Frontera
+
+@{text}
+En deform.cpp, las condiciones de apoyo se procesan en dos etapas:
+
+1. getFreeIndices(): recorre el mapa de supports y marca como "fijo"
+   cada GDL donde support[i] = true. Retorna la lista de indices libres.
+
+2. getZerosIndices(): detecta filas/columnas con diagonal cero en K
+   (GDL sin rigidez, como rotacion alrededor de X para elementos 2D).
+   Estos se eliminan para evitar singularidad.
+
+3. reducedIndices = freeIndices - zeroIndices (interseccion).
+@{end text}
+
+> Nodos empotrados: N0 y N6 (6 GDL fijos cada uno = 12 GDL fijos)
+> GDL fijos: 0-5 (nodo 0) y 36-41 (nodo 6)
+dof_libres = dof - 12
+
+@{text}
+Ademas, en un portico 2D en el plano XY, los GDL fuera del plano
+(dz, rx, ry) no tienen rigidez. La funcion getZerosIndices() los
+detecta automaticamente y los elimina del sistema reducido.
+@{end text}
+
+---
+## 8. Solucion del Sistema
+
+@{text}
+Con la matriz reducida K_r y el vector de fuerzas reducido F_r, deform.cpp
+usa el solver iterativo ConjugateGradient de Eigen:
+@{end text}
+
+@{eq}
+K_r · U_r = F_r    (8.1)
+@{end eq}
+
+@{text}
+Despues de resolver, los desplazamientos reducidos se mapean de vuelta
+al vector global U_global (de tamanho dof) colocando cada valor en su
+indice original. Los GDL fijos permanecen en cero.
+@{end text}
+
+---
+## 9. Calculo de Reacciones
+
+@{text}
+Las reacciones se calculan multiplicando la matriz global completa
+por el vector de desplazamientos global:
+@{end text}
+
+@{eq}
+R = K · U - F    (9.1)
+@{end eq}
+
+@{text}
+Donde F es el vector de cargas externas. La resta F se hace porque
+en nodos con apoyo que tambien tienen carga aplicada, la reaccion
+neta es K*U - F. En deform.cpp esto se calcula solo para nodos
+que tienen al menos un GDL restringido (hasSupport = true).
+@{end text}
+
+---
+## 10. Ejemplo Numerico Simplificado (2D)
+
+@{text}
+Para verificar el procedimiento, resolvemos el portico con las
+propiedades definidas anteriormente usando el motor matematico de
+Hekatan. Simplificamos a 2D (3 GDL por nodo: dx, dy, rz) con
+7 nodos = 21 GDL totales.
+@{end text}
+
+> Longitudes de elementos
+Lcol = H
+Lv = W/n_sub
+
+> Rigideces para las columnas (verticales: ejes locales rotados)
+EA_col = E*A/Lcol
+EIz_col_L3 = E*Iz/(Lcol^3)
+EIz_col_L2 = E*Iz/(Lcol^2)
+EIz_col_L = E*Iz/Lcol
+
+> Rigideces para sub-elementos de la viga (horizontales)
+EA_v = E*A/Lv
+EIz_v_L3 = E*Iz/(Lv^3)
+EIz_v_L2 = E*Iz/(Lv^2)
+EIz_v_L = E*Iz/Lv
+
+@{text}
+En un analisis 2D simplificado (3 GDL por nodo: dx, dy, theta_z),
+cada elemento tiene una matriz de 6x6. La matriz global seria de
+21x21. Con 6 GDL fijos en N0 y 6 en N6 (en 2D: 3+3=6 fijos),
+el sistema reducido tiene 21-6 = 15 GDL.
+
+El resultado final de deform.cpp devuelve:
+- deformations: mapa nodeIndex -> [dx, dy, dz, rx, ry, rz] para cada nodo
+- reactions: mapa nodeIndex -> [Rx, Ry, Rz, Mx, My, Mz] solo en nodos apoyados
+@{end text}
+
+---
+## 11. Ventajas de la Subdivision 1D-Mesh
+
+@{text}
+1. Precision: Con subdivision, se capturan mejor las deformaciones intermedias
+   de la viga. Sin subdivision, solo se conocen desplazamientos en los extremos.
+
+2. Cargas distribuidas: Si se aplicaran cargas distribuidas, se pueden convertir
+   en cargas nodales equivalentes en los nodos intermedios.
+
+3. Post-proceso: Los nodos intermedios permiten graficar la deformada con mayor
+   resolucion, mostrando la curvatura real de la viga.
+
+4. Compatibilidad: En awatif, el solver 3D siempre usa 6 GDL por nodo. Los GDL
+   sin rigidez se eliminan automaticamente via getZerosIndices(), permitiendo
+   usar el mismo codigo para porticos 2D, 3D, rejillas y elementos shell.
+@{end text}
+
+---
+## 12. Resumen del Flujo en deform.cpp
+
+@{text}
+1. Parsear entradas WASM: nodos, conectividad, propiedades, apoyos, cargas
+2. Construir vector de fuerzas F_global (getForces)
+3. Ensamblar K_global (getGlobalStiffnessMatrix):
+   - Para cada elemento: K_local -> T -> K_global_elem = T^T * K_local * T
+   - Acumular triplets en la matriz sparse global
+4. Agregar rigideces de resortes a la diagonal de K_global
+5. Determinar GDL libres (getFreeIndices) y GDL sin rigidez (getZerosIndices)
+6. Reducir K y F a los GDL activos
+7. Resolver K_r * U_r = F_r con ConjugateGradient
+8. Mapear U_r de vuelta a U_global (GDL fijos = 0)
+9. Calcular reacciones: R = K * U - F (solo en nodos apoyados)
+10. Empaquetar resultados en memoria WASM para TypeScript
+@{end text}

@@ -1,0 +1,480 @@
+# Subdivision 1D-Mesh — Elementos Finitos
+> Tecnica de subdivision de barras para mejorar precision en analisis FEM
+> Solver: C++/Eigen compilado a WebAssembly (awatif-fem)
+
+---
+## 1. Que es el 1D-Mesh?
+
+> El 1D-Mesh consiste en dividir un elemento largo (viga o columna) en varios sub-elementos mas cortos, creando nodos intermedios. Esto mejora la precision de la deformada y permite capturar curvatura intermedia.
+
+@{svg 600 200}
+background #f8f8ff
+// Elemento SIN subdivision
+text 20 25 "Sin subdivision (1 elemento)" size:13 bold color:#555
+line 60 60 540 60 stroke:#2196f3 width:3
+circle 60 60 6 fill:#e53935 stroke:#b71c1c width:2
+circle 540 60 6 fill:#e53935 stroke:#b71c1c width:2
+text 60 80 "N0" size:11 color:#333 anchor:middle
+text 540 80 "N1" size:11 color:#333 anchor:middle
+text 300 50 "L" size:12 italic color:#888 anchor:middle
+// Elemento CON subdivision (4 sub-elementos)
+text 20 125 "Con 1D-Mesh (4 sub-elementos)" size:13 bold color:#555
+line 60 160 540 160 stroke:#1565c0 width:3
+circle 60 160 6 fill:#e53935 stroke:#b71c1c width:2
+circle 180 160 5 fill:#ff9800 stroke:#e65100 width:2
+circle 300 160 5 fill:#ff9800 stroke:#e65100 width:2
+circle 420 160 5 fill:#ff9800 stroke:#e65100 width:2
+circle 540 160 6 fill:#e53935 stroke:#b71c1c width:2
+text 60 180 "N0" size:11 color:#333 anchor:middle
+text 180 180 "N1" size:10 color:#e65100 anchor:middle
+text 300 180 "N2" size:10 color:#e65100 anchor:middle
+text 420 180 "N3" size:10 color:#e65100 anchor:middle
+text 540 180 "N4" size:11 color:#333 anchor:middle
+text 120 148 "L/4" size:10 italic color:#888 anchor:middle
+text 240 148 "L/4" size:10 italic color:#888 anchor:middle
+text 360 148 "L/4" size:10 italic color:#888 anchor:middle
+text 480 148 "L/4" size:10 italic color:#888 anchor:middle
+@{end svg}
+
+> Los nodos naranjas son nodos intermedios creados por la subdivision. El solver FEM calcula desplazamientos en TODOS los nodos, permitiendo ver la deformada con mayor resolucion.
+
+---
+## 2. Funciones de Forma (Shape Functions)
+
+> La matriz de rigidez NO se inventa: se DERIVA de las funciones de forma. Estas funciones interpolan el desplazamiento en cualquier punto del elemento a partir de los valores nodales.
+
+### 2.1 Axial — Funciones Lineales
+
+> Para el desplazamiento axial u(x), se usan funciones lineales de 2 nodos:
+
+@{eq left}
+N_1(ξ) = 1 - ξ | Nodo i (vale 1 en i, 0 en j)
+N_2(ξ) = ξ | Nodo j (vale 0 en i, 1 en j)
+ξ = x/L_e | Coordenada normalizada [0,1]
+@{end eq}
+
+@{eq}
+u(ξ) = N_1(ξ) · u_i + N_2(ξ) · u_j    (2.1)
+@{end eq}
+
+@{plot}
+x = 0 : 1
+y = -0.1 : 1.1
+y = 1-x | color: #2196f3 | width: 2.5 | label: "N1 = 1-x"
+y = x | color: #e53935 | width: 2.5 | label: "N2 = x"
+hline 0 #ccc
+hline 1 #eee
+point 0 1 #2196f3
+point 1 0 #2196f3
+point 0 0 #e53935
+point 1 1 #e53935
+@{end plot}
+
+> De estas funciones lineales se obtiene la rigidez axial: B = dN/dx, K_axial = integral(B^T * EA * B * dx) = EA/L
+
+### 2.2 Flexion — Polinomios Cubicos de Hermite
+
+> Para el desplazamiento transversal v(x), se necesitan 4 funciones de forma (2 por nodo: desplazamiento + rotacion). Son los **polinomios de Hermite** que garantizan continuidad C1 (desplazamiento Y pendiente continuos):
+
+@{eq left}
+H_1(ξ) = 1 - 3ξ^2 + 2ξ^3 | Desplazamiento nodo i
+H_2(ξ) = ξ - 2ξ^2 + ξ^3 | Rotacion nodo i (×L_e)
+H_3(ξ) = 3ξ^2 - 2ξ^3 | Desplazamiento nodo j
+H_4(ξ) = -ξ^2 + ξ^3 | Rotacion nodo j (×L_e)
+@{end eq}
+
+@{eq}
+v(ξ) = H_1 · v_i + H_2 · L_e · θ_i + H_3 · v_j + H_4 · L_e · θ_j    (2.2)
+@{end eq}
+
+@{plot}
+x = 0 : 1
+y = -0.2 : 1.1
+y = 1-3*x^2+2*x^3 | color: #2196f3 | width: 2.5 | label: "H1 (vi)"
+y = x-2*x^2+x^3 | color: #4caf50 | width: 2.5 | label: "H2 (θi)"
+y = 3*x^2-2*x^3 | color: #e53935 | width: 2.5 | label: "H3 (vj)"
+y = -x^2+x^3 | color: #ff9800 | width: 2.5 | label: "H4 (θj)"
+hline 0 #ccc
+point 0 1 #2196f3
+point 1 0 #2196f3
+point 0 0 #e53935
+point 1 1 #e53935
+@{end plot}
+
+> Observa las propiedades clave:
+> - H1 vale 1 en ξ=0, 0 en ξ=1, con pendiente 0 en ambos extremos
+> - H2 tiene pendiente 1 en ξ=0, pendiente 0 en ξ=1
+> - H3 es el espejo de H1
+> - H4 es el espejo (negativo) de H2
+
+### 2.3 De las Funciones de Forma a la Matriz de Rigidez
+
+> La matriz de rigidez se obtiene integrando las segundas derivadas de las funciones de forma (curvatura):
+
+@{eq left}
+B = d^2N/dx^2 | Matriz de deformacion (curvatura)
+K_{flexion} = ∫_0^{L_e} B^T · EI · B · dx    (2.3)
+@{end eq}
+
+> Las segundas derivadas de los polinomios de Hermite son:
+
+@{eq left}
+H_1'' = (-6 + 12ξ)/L_e^2
+H_2'' = (-4 + 6ξ)/L_e
+H_3'' = (6 - 12ξ)/L_e^2
+H_4'' = (-2 + 6ξ)/L_e
+@{end eq}
+
+> Al integrar B^T * EI * B sobre el elemento, se obtienen exactamente los coeficientes 12EI/L^3, 6EI/L^2, 4EI/L, 2EI/L de la matriz de rigidez.
+
+> **Por que importa para el 1D-mesh**: Al subdividir, L_e se reduce. Los polinomios cubicos de Hermite son EXACTOS para vigas con carga puntual (la solucion es cubica). Para cargas distribuidas, la solucion real es de grado 4+, y un solo elemento cubico no puede representarla. Con subdivision, cada sub-elemento aproxima su porcion de la curva con un cubico, mejorando la precision global.
+
+---
+## 3. Matriz de Rigidez Local 12×12
+
+> Cada sub-elemento sigue siendo un elemento frame Euler-Bernoulli con 6 DOF por nodo: [u, v, w, rx, ry, rz]. La matriz local 12x12 es identica para cualquier elemento frame:
+
+@{eq left}
+E | Modulo de elasticidad
+A | Area de la seccion
+I_z | Momento de inercia (flexion XY)
+I_y | Momento de inercia (flexion XZ)
+G | Modulo de corte
+J | Constante torsional
+L_e | Longitud del SUB-elemento = L/n
+@{end eq}
+
+> Coeficientes de rigidez para un sub-elemento de longitud L_e:
+
+@{eq left}
+k_1 = EA/L_e
+k_2 = 12EI_z/L_e^3
+k_3 = 12EI_y/L_e^3
+k_4 = GJ/L_e
+k_5 = 6EI_z/L_e^2
+k_6 = 6EI_y/L_e^2
+k_7 = 4EI_z/L_e
+k_8 = 2EI_z/L_e
+k_9 = 4EI_y/L_e
+k_{10} = 2EI_y/L_e
+@{end eq}
+
+> Nota: al subdividir, L_e = L/n es menor que L, lo que aumenta los coeficientes de rigidez (especialmente los terminos 12EI/L^3 que son proporcionales a 1/L^3).
+
+@{eq}
+K_{local} = [k_1, 0, 0, 0, 0, 0, -k_1, 0, 0, 0, 0, 0; 0, k_2, 0, 0, 0, k_5, 0, -k_2, 0, 0, 0, k_5; 0, 0, k_3, 0, -k_6, 0, 0, 0, -k_3, 0, -k_6, 0; 0, 0, 0, k_4, 0, 0, 0, 0, 0, -k_4, 0, 0; 0, 0, -k_6, 0, k_9, 0, 0, 0, k_6, 0, k_{10}, 0; 0, k_5, 0, 0, 0, k_7, 0, -k_5, 0, 0, 0, k_8; -k_1, 0, 0, 0, 0, 0, k_1, 0, 0, 0, 0, 0; 0, -k_2, 0, 0, 0, -k_5, 0, k_2, 0, 0, 0, -k_5; 0, 0, -k_3, 0, k_6, 0, 0, 0, k_3, 0, k_6, 0; 0, 0, 0, -k_4, 0, 0, 0, 0, 0, k_4, 0, 0; 0, 0, -k_6, 0, k_{10}, 0, 0, 0, k_6, 0, k_9, 0; 0, k_5, 0, 0, 0, k_8, 0, -k_5, 0, 0, 0, k_7]    (2.1)
+@{end eq}
+
+---
+## 4. Transformacion y Ensamblaje
+
+> Para cada sub-elemento se construye la matriz de transformacion T (12x12) y se rota al sistema global:
+
+@{eq}
+K_{global}^{(e)} = T^T · K_{local} · T    (3.1)
+@{end eq}
+
+> La ventaja del 1D-mesh es que los nodos intermedios COMPARTEN dos sub-elementos adyacentes. El ensamblaje acumula las contribuciones de ambos sub-elementos en los DOFs del nodo compartido:
+
+@{svg 600 160}
+background #fff8f0
+// Sub-elemento A
+line 60 80 250 80 stroke:#2196f3 width:3
+text 155 65 "Elemento A" size:11 color:#2196f3 anchor:middle
+// Sub-elemento B
+line 250 80 440 80 stroke:#4caf50 width:3
+text 345 65 "Elemento B" size:11 color:#4caf50 anchor:middle
+// Nodos
+circle 60 80 6 fill:#e53935 stroke:#b71c1c width:2
+circle 250 80 7 fill:#ff9800 stroke:#e65100 width:2
+circle 440 80 6 fill:#e53935 stroke:#b71c1c width:2
+text 60 105 "N_i" size:12 color:#333 anchor:middle
+text 250 105 "N_k (compartido)" size:11 color:#e65100 anchor:middle
+text 440 105 "N_j" size:12 color:#333 anchor:middle
+// Formula
+text 300 140 "K(N_k) = K_A(nodo j) + K_B(nodo i)" size:11 italic color:#555 anchor:middle
+@{end svg}
+
+@{eq}
+K_{global} = ∑_{e=1}^{n_{elem}} K_{global}^{(e)}    (3.2)
+@{end eq}
+
+---
+## 5. Sistema de Ecuaciones y Solucion
+
+@{eq}
+K · u = F    (4.1)
+@{end eq}
+
+> Se eliminan DOF restringidos (apoyos) y DOF con rigidez cero (deteccion automatica del solver WASM):
+
+@{eq}
+K_{ff} · u_f = F_f    (4.2)
+@{end eq}
+
+> El solver Eigen (C++) usa SparseLU para resolver el sistema. Despues mapea los desplazamientos de vuelta al vector global:
+
+@{eq}
+R = K · u - F    (4.3)
+@{end eq}
+
+---
+## 6. Ejemplo — Portico SIN subdivision
+
+> Portico simple: 2 columnas de 4m, viga de 6m
+> Un solo elemento por barra (4 nodos, 4 elementos)
+> Carga lateral H = 100 kN en esquina superior izquierda
+
+@{columns 3}
+E = 200000000
+A = 0.04
+Iz = 0.0001333
+Iy = 0.0001333
+G = 80000000
+J = 0.0002
+@{end columns}
+
+H_carga = 100
+W_carga = 50
+
+@{awatif 800 500}
+// 4 nodos esquina
+node 0 0 0
+node 6 0 0
+node 0 0 4
+node 6 0 4
+// 2 columnas + 1 viga = 3 elementos
+element frame 0 2 E:$E A:$A Iz:$Iz Iy:$Iy G:$G J:$J
+element frame 1 3 E:$E A:$A Iz:$Iz Iy:$Iy G:$G J:$J
+element frame 2 3 E:$E A:$A Iz:$Iz Iy:$Iy G:$G J:$J
+support 0 fixed
+support 1 fixed
+load 2 fx:$H_carga fz:-$W_carga
+load 3 fz:-$W_carga
+solve static
+show deformed scale:100
+@{end awatif}
+
+> Observa que la deformada de la viga aparece como una LINEA RECTA entre los nodos 2 y 3. Esto es porque sin subdivision, el solver solo calcula desplazamientos en los extremos.
+
+---
+## 7. Ejemplo — Portico CON 1D-Mesh (7 sub-elementos por barra)
+
+> Mismo portico pero ahora cada barra se subdivide en 7 sub-elementos
+> Esto crea nodos intermedios que revelan la curvatura real
+
+n = 7
+span = 10
+h = 10
+P = 10
+
+@{awatif 900 600}
+// --- Columna izquierda: n+1 nodos, de (0,0,0) a (0,0,h) ---
+node 0 0 0
+node 0 0 1.4286
+node 0 0 2.8571
+node 0 0 4.2857
+node 0 0 5.7143
+node 0 0 7.1429
+node 0 0 8.5714
+node 0 0 10
+// --- Viga superior: n nodos adicionales ---
+node 1.4286 0 10
+node 2.8571 0 10
+node 4.2857 0 10
+node 5.7143 0 10
+node 7.1429 0 10
+node 8.5714 0 10
+node 10 0 10
+// --- Columna derecha: n nodos ---
+node 10 0 8.5714
+node 10 0 7.1429
+node 10 0 5.7143
+node 10 0 4.2857
+node 10 0 2.8571
+node 10 0 1.4286
+node 10 0 0
+// --- Elementos columna izquierda (0→7) ---
+element frame 0 1 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 1 2 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 2 3 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 3 4 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 4 5 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 5 6 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 6 7 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+// --- Elementos viga superior (7→14) ---
+element frame 7 8 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 8 9 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 9 10 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 10 11 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 11 12 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 12 13 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 13 14 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+// --- Elementos columna derecha (14→21) ---
+element frame 14 15 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 15 16 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 16 17 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 17 18 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 18 19 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 19 20 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+element frame 20 21 E:10 A:10 Iz:10 Iy:10 G:10 J:10
+// --- Apoyos empotrados ---
+support 0 fixed
+support 21 fixed
+// --- Carga lateral ---
+load 14 fx:$P
+solve static
+show deformed scale:1
+@{end awatif}
+
+> Ahora la deformada muestra la CURVATURA REAL: las columnas se flexionan suavemente y la viga muestra la deflexion intermedia. Cada nodo intermedio tiene su propio desplazamiento calculado por el solver.
+
+---
+## 8. Comparacion Visual
+
+> La diferencia fundamental es la resolucion de la deformada:
+
+@{svg 600 220}
+background #f0f8ff
+// SIN subdivision
+text 300 20 "Comparacion de deformadas" size:14 bold color:#333 anchor:middle
+// Marco original
+line 80 200 80 80 stroke:#ccc width:1 dash:5,5
+line 80 80 280 80 stroke:#ccc width:1 dash:5,5
+line 280 80 280 200 stroke:#ccc width:1 dash:5,5
+// Deformada sin subdivision (lineas rectas)
+line 80 200 95 80 stroke:#e53935 width:2.5
+line 95 80 295 85 stroke:#e53935 width:2.5
+line 295 85 280 200 stroke:#e53935 width:2.5
+text 180 65 "Sin mesh" size:11 color:#e53935 anchor:middle
+// Marco original (derecha)
+line 340 200 340 80 stroke:#ccc width:1 dash:5,5
+line 340 80 540 80 stroke:#ccc width:1 dash:5,5
+line 540 80 540 200 stroke:#ccc width:1 dash:5,5
+// Deformada con subdivision (curva suave)
+line 340 200 342 170 stroke:#1565c0 width:2.5
+line 342 170 347 145 stroke:#1565c0 width:2.5
+line 347 145 352 120 stroke:#1565c0 width:2.5
+line 352 120 355 100 stroke:#1565c0 width:2.5
+line 355 100 357 88 stroke:#1565c0 width:2.5
+line 357 88 358 82 stroke:#1565c0 width:2.5
+line 358 82 370 83 stroke:#1565c0 width:2.5
+line 370 83 400 86 stroke:#1565c0 width:2.5
+line 400 86 440 88 stroke:#1565c0 width:2.5
+line 440 88 480 87 stroke:#1565c0 width:2.5
+line 480 87 520 85 stroke:#1565c0 width:2.5
+line 520 85 540 84 stroke:#1565c0 width:2.5
+line 540 84 540 200 stroke:#1565c0 width:2.5
+text 440 70 "Con 1D-mesh" size:11 color:#1565c0 anchor:middle
+// Nodos intermedios
+circle 342 170 3 fill:#ff9800
+circle 347 145 3 fill:#ff9800
+circle 352 120 3 fill:#ff9800
+circle 355 100 3 fill:#ff9800
+circle 357 88 3 fill:#ff9800
+circle 358 82 3 fill:#ff9800
+circle 370 83 3 fill:#ff9800
+circle 400 86 3 fill:#ff9800
+circle 440 88 3 fill:#ff9800
+circle 480 87 3 fill:#ff9800
+circle 520 85 3 fill:#ff9800
+@{end svg}
+
+---
+## 9. Visualizacion 3D del Portico Subdividido
+
+> Vista 3D interactiva del portico con nodos intermedios visibles:
+
+@{three}
+background #f0f4f8
+gridhelper size:12 divisions:12
+axes
+// Columna izquierda
+cylinder 0 5 0 r:0.08 h:10 color:#1565c0
+// Viga superior
+cylinder 5 10 0 r:0.08 h:10 color:#1565c0 rotation:0,0,90
+// Columna derecha
+cylinder 10 5 0 r:0.08 h:10 color:#1565c0
+// Nodos de esquina
+sphere 0 0 0 r:0.2 color:#e53935
+sphere 0 10 0 r:0.2 color:#e53935
+sphere 10 10 0 r:0.2 color:#e53935
+sphere 10 0 0 r:0.2 color:#e53935
+// Nodos intermedios columna izquierda
+sphere 0 1.43 0 r:0.12 color:#ff9800
+sphere 0 2.86 0 r:0.12 color:#ff9800
+sphere 0 4.29 0 r:0.12 color:#ff9800
+sphere 0 5.71 0 r:0.12 color:#ff9800
+sphere 0 7.14 0 r:0.12 color:#ff9800
+sphere 0 8.57 0 r:0.12 color:#ff9800
+// Nodos intermedios viga
+sphere 1.43 10 0 r:0.12 color:#ff9800
+sphere 2.86 10 0 r:0.12 color:#ff9800
+sphere 4.29 10 0 r:0.12 color:#ff9800
+sphere 5.71 10 0 r:0.12 color:#ff9800
+sphere 7.14 10 0 r:0.12 color:#ff9800
+sphere 8.57 10 0 r:0.12 color:#ff9800
+// Nodos intermedios columna derecha
+sphere 10 8.57 0 r:0.12 color:#ff9800
+sphere 10 7.14 0 r:0.12 color:#ff9800
+sphere 10 5.71 0 r:0.12 color:#ff9800
+sphere 10 4.29 0 r:0.12 color:#ff9800
+sphere 10 2.86 0 r:0.12 color:#ff9800
+sphere 10 1.43 0 r:0.12 color:#ff9800
+// Flecha de carga
+arrow 12 10 0 10.3 10 0 color:#e53935
+camera 8 8 15 lookat:5,5,0
+@{end three}
+
+> Rojo: nodos de esquina (geometria original). Naranja: nodos intermedios (creados por 1D-mesh). La flecha roja indica la carga lateral.
+
+---
+## 10. Efecto de la Densidad de Mesh
+
+> La precision mejora con mas sub-elementos, pero hay rendimientos decrecientes:
+
+@{plot}
+x = 1 : 20
+y = 0 : 105
+y = 100*(1-1/(x^2)) | color: #1565c0 | width: 2 | label: "Precision (%)"
+hline 99 #ccc
+text 12 96 "99% precision" size:10 color:#888
+point 1 0 #e53935
+point 3 89 #ff9800
+point 5 96 #4caf50
+point 7 98 #1565c0
+point 10 99 #9c27b0
+text 1 -6 "n=1" size:9 color:#e53935 anchor:middle
+text 3 84 "n=3" size:9 color:#ff9800 anchor:middle
+text 5 91 "n=5" size:9 color:#4caf50 anchor:middle
+text 7 93 "n=7" size:9 color:#1565c0 anchor:middle
+text 10 94 "n=10" size:9 color:#9c27b0 anchor:middle
+@{end plot}
+
+> Para la mayoria de estructuras, n=5 a n=7 sub-elementos por barra es suficiente. Mas alla de n=10, la mejora es marginal pero el costo computacional crece.
+
+---
+## 11. Flujo del Solver C++/WASM
+
+> El solver deform.cpp de awatif ejecuta estos pasos:
+
+@{eq left}
+1. Parsear entradas WASM: nodos, conectividad, propiedades, apoyos, cargas
+2. Construir F_{global} (vector de fuerzas)
+3. Para cada elemento: K_{local} → T → K_{global}^{(e)} = T^T · K_{local} · T
+4. Ensamblar K_{global} (sparse, triplets de Eigen)
+5. Determinar GDL libres y GDL sin rigidez
+6. Reducir K y F → sistema K_r · u_r = F_r
+7. Resolver con SparseLU (Eigen C++)
+8. Mapear u_r → u_{global}
+9. Calcular reacciones: R = K · u - F
+10. Empaquetar resultados → memoria WASM → TypeScript
+@{end eq}
+
+---
+## 12. Ventajas del 1D-Mesh
+
+> 1. **Precision**: Captura curvatura intermedia de la deformada
+> 2. **Cargas distribuidas**: Nodos intermedios para cargas nodales equivalentes
+> 3. **Post-proceso**: Graficos de deformada, cortante y momento con alta resolucion
+> 4. **Compatibilidad**: Mismo solver 3D (6 DOF/nodo) para 2D, 3D, rejillas y shells

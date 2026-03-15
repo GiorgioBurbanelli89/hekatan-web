@@ -1,0 +1,512 @@
+@{config bg:book, align:right, header:on, startpage:265, color:black}
+---
+# 6 Porticos Espaciales
+---
+@{config align:left}
+
+## 6.1 Introduccion
+
+@{text}
+El metodo de rigidez para analisis presentado en el Capitulo 4 para porticos planos y en
+el Capitulo 5 para porticos de rejilla puede extenderse facilmente al analisis de porticos
+espaciales o tridimensionales. El portico plano o el portico de rejilla tiene tres coordenadas
+nodales en cada junta; sin embargo, el portico espacial tiene un total de seis coordenadas
+nodales en cada junta: tres componentes traslacionales a lo largo de los ejes X, Y y Z y tres
+componentes rotacionales alrededor de estos ejes. En consecuencia, un elemento de viga de
+un portico espacial tiene para sus dos juntas un total de 12 coordenadas nodales; por lo
+tanto, la matriz de rigidez del elemento resultante sera de dimension 12 x 12.
+@{end text}
+
+## 6.2 Matriz de Rigidez del Elemento
+
+@{text}
+La Figura 6.1 muestra el elemento de viga de un portico espacial con sus 12 coordenadas
+nodales numeradas consecutivamente. La convencion adoptada es etiquetar primero los tres
+desplazamientos traslacionales de la primera junta, seguidos de los tres desplazamientos
+rotacionales de la misma junta, continuando con los tres desplazamientos traslacionales
+de la segunda junta y finalmente los tres desplazamientos rotacionales de la segunda junta.
+@{end text}
+
+@{draw 600 200}
+grid off
+bg #fff8f0
+# Beam element with 12 DOF (Fig 6.1)
+# Axes
+color #333
+lw 1
+arrow 30 130 30 25
+text 25 18 y
+arrow 30 130 580 130
+text 585 133 x
+arrow 30 130 10 155
+text 2 163 z
+# Beam body (hatched rectangle)
+color #777
+lw 1.5
+rect 80 115 420 30
+# Hatching
+color #bbb
+lw 0.5
+line 80 118 80 142
+line 100 118 100 142
+line 120 118 120 142
+line 140 118 140 142
+line 160 118 160 142
+line 180 118 180 142
+line 200 118 200 142
+line 220 118 220 142
+line 240 118 240 142
+line 260 118 260 142
+line 280 118 280 142
+line 300 118 300 142
+line 320 118 320 142
+line 340 118 340 142
+line 360 118 360 142
+line 380 118 380 142
+line 400 118 400 142
+line 420 118 420 142
+line 440 118 440 142
+line 460 118 460 142
+line 480 118 480 142
+line 500 118 500 142
+# Node 1 arrows (left)
+color #333
+lw 1
+arrow 30 130 78 130
+text 40 125 d_1,P_1
+arrow 80 80 80 113
+text 60 72 d_2,P_2
+arrow 60 155 80 145
+text 38 163 d_3,P_3
+# Node 1 rotational (double arrows)
+arrow 20 130 5 130
+text 3 122 d_4,P_4
+arrow 80 58 80 48
+text 56 45 d_5,P_5
+arrow 42 170 30 178
+text 20 185 d_6,P_6
+# Node 2 arrows (right)
+arrow 502 130 550 130
+text 552 125 d_7,P_7
+arrow 500 80 500 113
+text 510 72 d_8,P_8
+arrow 520 155 500 145
+text 520 163 d_9,P_9
+# Node 2 rotational
+arrow 560 130 575 130
+text 577 125 d_10,P_10
+arrow 500 58 500 48
+text 510 45 d_11,P_11
+arrow 520 170 510 178
+text 510 185 d_12,P_12
+# Labels
+color #555
+text 250 110 G,E,I,m,J,A
+# Length dimension
+color #666
+lw 0.5
+line 80 165 80 175
+line 500 165 500 175
+arrow 82 170 498 170
+text 275 180 L
+@{end draw}
+> -Fig. 6.1- Elemento de viga de un portico espacial mostrando fuerzas y desplazamientos en las coordenadas nodales.
+
+@{text}
+La matriz de rigidez para un segmento de viga uniforme tridimensional se obtiene
+facilmente por la combinacion de la matriz de rigidez axial de la ec. (4.3), la matriz de
+rigidez torsional de la ec. (6.6) y la matriz de rigidez flexural de la ec. (1.11). La matriz
+de rigidez flexural se utiliza dos veces para formar la matriz de rigidez de un elemento de
+un portico espacial, considerando los efectos flexurales en los dos planos principales de la
+seccion transversal.
+@{end text}
+
+@{config render:frac=off}
+@{eq size:12}
+{P_1; P_2; P_3; P_4; P_5; P_6; P_7; P_8; P_9; P_{10}; P_{11}; P_{12}} = [EA/L, 0, 0, 0, 0, 0, -EA/L, 0, 0, 0, 0, 0; 0, 12EI_z/L^3, 0, 0, 0, 6EI_z/L^2, 0, -12EI_z/L^3, 0, 0, 0, 6EI_z/L^2; 0, 0, 12EI_y/L^3, 0, -6EI_y/L^2, 0, 0, 0, -12EI_y/L^3, 0, -6EI_y/L^2, 0; 0, 0, 0, GJ/L, 0, 0, 0, 0, 0, -GJ/L, 0, 0; 0, 0, -6EI_y/L^2, 0, 4EI_y/L, 0, 0, 0, 6EI_y/L^2, 0, 2EI_y/L, 0; 0, 6EI_z/L^2, 0, 0, 0, 4EI_z/L, 0, -6EI_z/L^2, 0, 0, 0, 2EI_z/L; -EA/L, 0, 0, 0, 0, 0, EA/L, 0, 0, 0, 0, 0; 0, -12EI_z/L^3, 0, 0, 0, -6EI_z/L^2, 0, 12EI_z/L^3, 0, 0, 0, -6EI_z/L^2; 0, 0, -12EI_y/L^3, 0, 6EI_y/L^2, 0, 0, 0, 12EI_y/L^3, 0, 6EI_y/L^2, 0; 0, 0, 0, -GJ/L, 0, 0, 0, 0, 0, GJ/L, 0, 0; 0, 0, -6EI_y/L^2, 0, 2EI_y/L, 0, 0, 0, 6EI_y/L^2, 0, 4EI_y/L, 0; 0, 6EI_z/L^2, 0, 0, 0, 2EI_z/L, 0, -6EI_z/L^2, 0, 0, 0, 4EI_z/L] {d_1; d_2; d_3; d_4; d_5; d_6; d_7; d_8; d_9; d_{10}; d_{11}; d_{12}}   (6.1)
+@{end eq}
+@{config render:frac=on}
+
+@{pagebreak}
+## 6.7 Matriz de Masa del Elemento
+
+@{text}
+La matriz de masa consistente para un segmento de viga uniforme de un portico
+tridimensional se obtiene facilmente combinando las matrices de masa consistentes: la
+ec. (4.3) para efectos axiales, la ec. (6.6) para efectos torsionales y la ec. (2.6) para
+efectos flexurales. La combinacion apropiada de estas matrices resulta en la matriz de
+masa consistente para el elemento de viga uniforme de un portico tridimensional:
+@{end text}
+
+@{config render:frac=off}
+@{eq size:12}
+[M_L] = mL/420 [140, 0, 0, 0, 0, 0, 70, 0, 0, 0, 0, 0; 0, 156, 0, 0, 0, 22L, 0, 54, 0, 0, 0, -13L; 0, 0, 156, 0, -22L, 0, 0, 0, 54, 0, 13L, 0; 0, 0, 0, 140I_p/A, 0, 0, 0, 0, 0, 70I_p/A, 0, 0; 0, 0, -22L, 0, 4L^2, 0, 0, 0, -13L, 0, -3L^2, 0; 0, 22L, 0, 0, 0, 4L^2, 0, 13L, 0, 0, 0, -3L^2; 70, 0, 0, 0, 0, 0, 140, 0, 0, 0, 0, 0; 0, 54, 0, 0, 0, 13L, 0, 156, 0, 0, 0, -22L; 0, 0, 54, 0, -13L, 0, 0, 0, 156, 0, 22L, 0; 0, 0, 0, 70I_p/A, 0, 0, 0, 0, 0, 140I_p/A, 0, 0; 0, 0, 13L, 0, -3L^2, 0, 0, 0, -22L, 0, 4L^2, 0; 0, -13L, 0, 0, 0, -3L^2, 0, 22L, 0, 0, 0, 4L^2]   (6.20)
+@{end eq}
+@{config render:frac=on}
+
+@{eq size:12}
+[M_L] = mL/2 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]   (6.19)
+@{end eq}
+
+@{pagebreak}
+@{config startpage:281}
+## 6.8 Ejemplo Ilustrativo 6.3
+
+@{text}
+Para el portico espacial mostrado en la Figura 6.11, determinar las frecuencias naturales.
+El portico tiene cuatro columnas W24x146 de altura 15 ft (180 in) y cuatro vigas,
+dos W14x82 en la direccion X de longitud 20 ft (240 in) y dos W14x82
+en la direccion Y de longitud 9.5 ft (114 in). Una masa concentrada de
+m = 0.001 kip*s^2/in se asigna a cada DOF traslacional en los cuatro nodos libres.
+@{end text}
+
+@{draw 700 500}
+grid off
+bg #ffffff
+proj oblique 45 0.5
+
+# Ejes
+color #888
+arrow3d -2 0 0 3 0 0
+label3d 3.5 0 0 X left
+arrow3d -2 0 0 -2 5 0
+label3d -2 5.5 0 Y left
+arrow3d -2 0 0 -2 0 4
+label3d -2 0 4.5 Z left
+
+# Base (z=0)
+color #aaa
+lw 1
+line3d 0 0 0 12 0 0
+line3d 12 0 0 12 5.7 0
+line3d 12 5.7 0 0 5.7 0
+line3d 0 5.7 0 0 0 0
+
+# Columnas
+color #333
+lw 2
+line3d 0 0 0 0 0 9
+line3d 12 0 0 12 0 9
+line3d 12 5.7 0 12 5.7 9
+line3d 0 5.7 0 0 5.7 9
+
+# Vigas X (arriba)
+color #0066cc
+lw 2
+line3d 0 0 9 12 0 9
+line3d 0 5.7 9 12 5.7 9
+
+# Vigas Y (arriba)
+color #cc6600
+lw 2
+line3d 0 0 9 0 5.7 9
+line3d 12 0 9 12 5.7 9
+
+# Nodos base (fijos)
+color #333
+node3d 0 0 0 1 0.4
+node3d 12 0 0 3 0.4
+node3d 12 5.7 0 6 0.4
+node3d 0 5.7 0 8 0.4
+
+# Nodos libres (arriba)
+color #cc0000
+node3d 0 0 9 2 0.5
+node3d 12 0 9 4 0.5
+node3d 12 5.7 9 5 0.5
+node3d 0 5.7 9 7 0.5
+
+# Apoyo empotrado
+color #333
+lw 1
+line3d -0.5 -0.5 0 0.5 -0.5 0
+line3d -0.5 -0.5 0 0 0 0
+line3d 0.5 -0.5 0 0 0 0
+line3d 11.5 -0.5 0 12.5 -0.5 0
+line3d 11.5 -0.5 0 12 0 0
+line3d 12.5 -0.5 0 12 0 0
+line3d 11.5 6.2 0 12.5 6.2 0
+line3d 11.5 6.2 0 12 5.7 0
+line3d 12.5 6.2 0 12 5.7 0
+line3d -0.5 6.2 0 0.5 6.2 0
+line3d -0.5 6.2 0 0 5.7 0
+line3d 0.5 6.2 0 0 5.7 0
+
+# Dimensiones
+color #666
+fontsize 11
+label3d 6 -1 0 240 in center
+label3d -1.5 2.85 0 114 in center
+label3d -1 0 4.5 180 in center
+
+# Secciones
+fontsize 10
+color #0066cc
+label3d 6 -2 9 W14x82 center
+color #333
+label3d -2 0 4.5 W24x146 left
+
+# Carga
+color #cc0000
+lw 1.5
+arrow3d 0 -3.5 9 0 -0.5 9
+label3d 0 -4 9 F=1 kip (Y) left
+
+fit
+@{end draw}
+> -Fig. 6.11- Space frame - Ejemplo Ilustrativo 6.3 (Paz & Leigh)
+
+---
+## 1. Propiedades del Material
+@{cells} |E_s = 29500 & ksi|nu = 0.3|G_s = E_s/(2*(1 + nu)) & ksi|
+
+## 2. Secciones
+> W24x146 (Columnas) - AISC 9th Ed.
+@{cells} |A_c = 42.7 & in^2|I_c33 = 4580 & in^4|I_c22 = 391 & in^4|J_c = 12.6 & in^4|
+
+> W14x82 (Vigas) - AISC 9th Ed.
+@{cells} |A_g = 24.0 & in^2|I_g33 = 882 & in^4|I_g22 = 148 & in^4|J_g = 5.07 & in^4|
+
+## 3. Geometria
+@{cells} |L_c = 180 & in|L_gx = 240 & in|L_gy = 114 & in|
+
+## 4. Masa Concentrada
+> m = 0.001 kip*s^2/in por DOF traslacional en cada nodo libre (2, 4, 5, 7)
+m = 0.001
+
+---
+## 5. Rigidez Local (n_e = 8 elementos, Eq 6.1)
+> Propiedades por elemento (vectores)
+> e=1..4: Columna W24x146 (L=180), e=5,6: Viga X W14x82 (L=240), e=7,8: Viga Y W14x82 (L=114)
+> Vigas con alma vertical: Iz=I_22 (eje debil, flexion horizontal), Iy=I_33 (eje fuerte, flexion vertical)
+
+n_e = 8
+A_el = [[A_c],[A_c],[A_c],[A_c],[A_g],[A_g],[A_g],[A_g]]
+Iz_el = [[I_c33],[I_c33],[I_c33],[I_c33],[I_g22],[I_g22],[I_g22],[I_g22]]
+Iy_el = [[I_c22],[I_c22],[I_c22],[I_c22],[I_g33],[I_g33],[I_g33],[I_g33]]
+J_el = [[J_c],[J_c],[J_c],[J_c],[J_g],[J_g],[J_g],[J_g]]
+L_el = [[L_c],[L_c],[L_c],[L_c],[L_gx],[L_gx],[L_gy],[L_gy]]
+
+> Rigidez local 12x12 para cada elemento
+K_loc = cell(n_e)
+for el = 1:n_e
+Le = L_el[el,1]
+ea = E_s*A_el[el,1]/Le
+vz = 12*E_s*Iz_el[el,1]/Le^3
+sz = 6*E_s*Iz_el[el,1]/Le^2
+fz = 4*E_s*Iz_el[el,1]/Le
+gz = 2*E_s*Iz_el[el,1]/Le
+vy = 12*E_s*Iy_el[el,1]/Le^3
+sy = 6*E_s*Iy_el[el,1]/Le^2
+fy = 4*E_s*Iy_el[el,1]/Le
+gy_k = 2*E_s*Iy_el[el,1]/Le
+gj = G_s*J_el[el,1]/Le
+k = [[ea,0,0,0,0,0,-ea,0,0,0,0,0],[0,vz,0,0,0,sz,0,-vz,0,0,0,sz],[0,0,vy,0,-sy,0,0,0,-vy,0,-sy,0],[0,0,0,gj,0,0,0,0,0,-gj,0,0],[0,0,-sy,0,fy,0,0,0,sy,0,gy_k,0],[0,sz,0,0,0,fz,0,-sz,0,0,0,gz],[-ea,0,0,0,0,0,ea,0,0,0,0,0],[0,-vz,0,0,0,-sz,0,vz,0,0,0,-sz],[0,0,-vy,0,sy,0,0,0,vy,0,sy,0],[0,0,0,-gj,0,0,0,0,0,gj,0,0],[0,0,-sy,0,gy_k,0,0,0,sy,0,fy,0],[0,sz,0,0,0,gz,0,-sz,0,0,0,fz]]
+cset(K_loc, el, k)
+end
+
+> Columna (e=1): K_loc{1}
+K_loc{1}
+> Viga X (e=5): K_loc{5}
+K_loc{5}
+> Viga Y (e=7): K_loc{7}
+K_loc{7}
+
+---
+## 6. Transformacion a Coordenadas Globales
+> Matrices de rotacion 12x12 por tipo de elemento
+> Columna (vertical Z): local x->global Z, local y->global X, local z->global Y
+T_col = [[0,0,1,0,0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,1,0,0,0],[0,0,0,0,0,0,1,0,0,0,0,0],[0,0,0,0,0,0,0,1,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,0,0,0,0,1,0]]
+
+> Viga Y (horizontal Y): local x->global Y, local y->-global X, local z->global Z
+T_by = [[0,1,0,0,0,0,0,0,0,0,0,0],[-1,0,0,0,0,0,0,0,0,0,0,0],[0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,0,0,0,0],[0,0,0,-1,0,0,0,0,0,0,0,0],[0,0,0,0,0,1,0,0,0,0,0,0],[0,0,0,0,0,0,0,1,0,0,0,0],[0,0,0,0,0,0,-1,0,0,0,0,0],[0,0,0,0,0,0,0,0,1,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,0,0,-1,0,0],[0,0,0,0,0,0,0,0,0,0,0,1]]
+
+> K global = T' * K_local * T
+> Viga X: T = I (sin rotacion)
+K_col_g = transpose(T_col)*K_loc{1}*T_col
+K_bx_g = K_loc{5}
+K_by_g = transpose(T_by)*K_loc{7}*T_by
+
+---
+## 7. Ensamblaje Global (24 DOFs libres)
+> Nodos libres: 2(DOFs 1-6), 4(7-12), 5(13-18), 7(19-24)
+> Nodos fijos: 1, 3, 6, 8 (base empotrada)
+> Columnas: base fija -> solo submatriz [7:12,7:12] contribuye
+
+K_G = zeros(24, 24)
+
+> 4 Columnas identicas: K_col_g[7:12,7:12] a cada nodo libre
+for i = 1:6
+for j = 1:6
+K_G[i, j] = K_G[i, j] + K_col_g[i+6, j+6]
+K_G[i+6, j+6] = K_G[i+6, j+6] + K_col_g[i+6, j+6]
+K_G[i+12, j+12] = K_G[i+12, j+12] + K_col_g[i+6, j+6]
+K_G[i+18, j+18] = K_G[i+18, j+18] + K_col_g[i+6, j+6]
+end
+end
+
+> Viga X1: nodos 2->4 (DOFs 1-6 -> 7-12)
+for i = 1:6
+for j = 1:6
+K_G[i, j] = K_G[i, j] + K_bx_g[i, j]
+K_G[i, j+6] = K_G[i, j+6] + K_bx_g[i, j+6]
+K_G[i+6, j] = K_G[i+6, j] + K_bx_g[i+6, j]
+K_G[i+6, j+6] = K_G[i+6, j+6] + K_bx_g[i+6, j+6]
+end
+end
+
+> Viga X2: nodos 7->5 (DOFs 19-24 -> 13-18)
+for i = 1:6
+for j = 1:6
+K_G[i+18, j+18] = K_G[i+18, j+18] + K_bx_g[i, j]
+K_G[i+18, j+12] = K_G[i+18, j+12] + K_bx_g[i, j+6]
+K_G[i+12, j+18] = K_G[i+12, j+18] + K_bx_g[i+6, j]
+K_G[i+12, j+12] = K_G[i+12, j+12] + K_bx_g[i+6, j+6]
+end
+end
+
+> Viga Y1: nodos 2->7 (DOFs 1-6 -> 19-24)
+for i = 1:6
+for j = 1:6
+K_G[i, j] = K_G[i, j] + K_by_g[i, j]
+K_G[i, j+18] = K_G[i, j+18] + K_by_g[i, j+6]
+K_G[i+18, j] = K_G[i+18, j] + K_by_g[i+6, j]
+K_G[i+18, j+18] = K_G[i+18, j+18] + K_by_g[i+6, j+6]
+end
+end
+
+> Viga Y2: nodos 4->5 (DOFs 7-12 -> 13-18)
+for i = 1:6
+for j = 1:6
+K_G[i+6, j+6] = K_G[i+6, j+6] + K_by_g[i, j]
+K_G[i+6, j+12] = K_G[i+6, j+12] + K_by_g[i, j+6]
+K_G[i+12, j+6] = K_G[i+12, j+6] + K_by_g[i+6, j]
+K_G[i+12, j+12] = K_G[i+12, j+12] + K_by_g[i+6, j+6]
+end
+end
+
+> Matriz de rigidez global ensamblada (24x24)
+K_G
+
+---
+## 8. Condensacion Estatica y Masa
+> DOFs traslacionales (t): 1,2,3,7,8,9,13,14,15,19,20,21
+> DOFs rotacionales (r): 4,5,6,10,11,12,16,17,18,22,23,24
+> K* = K_tt - K_tr * K_rr^-1 * K_rt
+
+it = [[1],[2],[3],[7],[8],[9],[13],[14],[15],[19],[20],[21]]
+ir = [[4],[5],[6],[10],[11],[12],[16],[17],[18],[22],[23],[24]]
+
+K_tt = zeros(12,12)
+K_tr = zeros(12,12)
+K_rr = zeros(12,12)
+for i = 1:12
+for j = 1:12
+ri = it[i,1]
+rj = it[j,1]
+ci = ir[i,1]
+cj = ir[j,1]
+K_tt[i,j] = K_G[ri, rj]
+K_tr[i,j] = K_G[ri, cj]
+K_rr[i,j] = K_G[ci, cj]
+end
+end
+
+> Condensacion: K* = K_tt - K_tr * K_rr^-1 * K_rt
+K_star = K_tt - K_tr*inv(K_rr)*transpose(K_tr)
+
+> Extraer K_y (DOFs Uy: indices 2,5,8,11 de K_star)
+> Extraer K_x (DOFs Ux: indices 1,4,7,10 de K_star)
+iy = [[2],[5],[8],[11]]
+ix = [[1],[4],[7],[10]]
+
+K_y = zeros(4,4)
+K_x = zeros(4,4)
+for i = 1:4
+for j = 1:4
+ri = iy[i,1]
+rj = iy[j,1]
+K_y[i,j] = K_star[ri, rj]
+ri = ix[i,1]
+rj = ix[j,1]
+K_x[i,j] = K_star[ri, rj]
+end
+end
+
+> Masa condensada: M = m*I(4x4)
+M_cond = m*[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+
+K_y
+K_x
+
+---
+## 9. Eigenvalores - Direccion Y
+> omega^2 = eigenvalores de K_y/m
+ev_y = eigenvalues(K_y/m)
+
+omega_y1 = sqrt(ev_y.(1))
+f_y1 = omega_y1/(2*3.14159265)
+
+omega_y2 = sqrt(ev_y.(2))
+f_y2 = omega_y2/(2*3.14159265)
+
+---
+## 10. Eigenvalores - Direccion X
+ev_x = eigenvalues(K_x/m)
+
+omega_x1 = sqrt(ev_x.(1))
+f_x1 = omega_x1/(2*3.14159265)
+
+omega_x2 = sqrt(ev_x.(2))
+f_x2 = omega_x2/(2*3.14159265)
+
+---
+## 11. Comparacion de Frecuencias (Hz)
+
+> Frecuencias del libro (Table 6.7):
+@{cells} |f_book1 = 22.4356 & Hz|f_book2 = 24.5403 & Hz|f_book3 = 48.9979 & Hz|f_book4 = 54.8184 & Hz|
+
+> Frecuencias SAP2000:
+@{cells} |f_sap1 = 22.4071 & Hz|f_sap2 = 24.5127 & Hz|f_sap3 = 48.8388 & Hz|f_sap4 = 54.6857 & Hz|
+
+> Frecuencias MathCanvas (Timoshenko):
+@{cells} |f_mc1 = f_y1 & Hz|f_mc2 = f_y2 & Hz|f_mc3 = f_x1 & Hz|f_mc4 = f_x2 & Hz|
+
+> Errores vs SAP2000:
+@{cells} |err1 = (f_mc1 - f_sap1)/f_sap1*100 & %|err2 = (f_mc2 - f_sap2)/f_sap2*100 & %|
+@{cells} |err3 = (f_mc3 - f_sap3)/f_sap3*100 & %|err4 = (f_mc4 - f_sap4)/f_sap4*100 & %|
+
+---
+## 12. Verificacion Estatica
+> Carga F = 1 kip en J2, direccion Y
+F_yv = [[1],[0],[0],[0]]
+u_yv = lsolve(K_y, F_yv)
+@{cells} |u_J2 = u_yv.(1) & in|k_eff = 1/u_J2 & kip/in|
+
+---
+## 13. Tiempo-Historia (Newmark-Beta)
+> Funcion triangular unitaria, F = 1 kip en J2 dir Y
+> dt = 0.01 s, 50 pasos, sin amortiguamiento
+> Integracion directa Newmark (aceleracion promedio)
+
+@{html}
+<svg width="720" height="340" xmlns="http://www.w3.org/2000/svg" style="background:#fff;border:1px solid #ddd"><line x1="65.0" y1="30" x2="65.0" y2="295" stroke="#eee"/><text x="65.0" y="310" text-anchor="middle" font-size="11" fill="#666">0.0</text><line x1="192.0" y1="30" x2="192.0" y2="295" stroke="#eee"/><text x="192.0" y="310" text-anchor="middle" font-size="11" fill="#666">0.1</text><line x1="319.0" y1="30" x2="319.0" y2="295" stroke="#eee"/><text x="319.0" y="310" text-anchor="middle" font-size="11" fill="#666">0.2</text><line x1="446.0" y1="30" x2="446.0" y2="295" stroke="#eee"/><text x="446.0" y="310" text-anchor="middle" font-size="11" fill="#666">0.3</text><line x1="573.0" y1="30" x2="573.0" y2="295" stroke="#eee"/><text x="573.0" y="310" text-anchor="middle" font-size="11" fill="#666">0.4</text><line x1="700.0" y1="30" x2="700.0" y2="295" stroke="#eee"/><text x="700.0" y="310" text-anchor="middle" font-size="11" fill="#666">0.5</text><line x1="65" y1="295.0" x2="700" y2="295.0" stroke="#eee"/><text x="60" y="299.0" text-anchor="end" font-size="10" fill="#666">-0.0520</text><line x1="65" y1="242.0" x2="700" y2="242.0" stroke="#eee"/><text x="60" y="246.0" text-anchor="end" font-size="10" fill="#666">-0.0341</text><line x1="65" y1="189.0" x2="700" y2="189.0" stroke="#eee"/><text x="60" y="193.0" text-anchor="end" font-size="10" fill="#666">-0.0162</text><line x1="65" y1="136.0" x2="700" y2="136.0" stroke="#eee"/><text x="60" y="140.0" text-anchor="end" font-size="10" fill="#666">0.0017</text><line x1="65" y1="83.0" x2="700" y2="83.0" stroke="#eee"/><text x="60" y="87.0" text-anchor="end" font-size="10" fill="#666">0.0196</text><line x1="65" y1="30.0" x2="700" y2="30.0" stroke="#eee"/><text x="60" y="34.0" text-anchor="end" font-size="10" fill="#666">0.0375</text><line x1="65" y1="141.0" x2="700" y2="141.0" stroke="#ccc" stroke-dasharray="4,3"/><line x1="65" y1="30" x2="65" y2="295" stroke="#333"/><line x1="65" y1="295" x2="700" y2="295" stroke="#333"/><path d="M65.0,141.0L77.7,129.0L90.4,86.6L103.1,50.6L115.8,95.7L128.5,204.3L141.2,269.3L153.9,223.5L166.6,109.9L179.3,53.6L192.0,119.6L204.7,212.9L217.4,203.8L230.1,109.2L242.8,62.6L255.5,124.8L268.2,204.8L280.9,193.6L293.6,113.2L306.3,76.3L319.0,127.7L331.7,191.2L344.4,183.1L357.1,122.3L369.8,92.7L382.5,126.9L395.2,173.3L407.9,174.1L420.6,136.2L433.3,109.6L446.0,121.7L458.7,153.0L471.4,168.4L484.1,153.8L496.8,125.0L509.5,112.3L522.2,132.5L534.9,166.8L547.6,173.2L560.3,137.0L573.0,99.7L585.7,114.2L598.4,169.3L611.1,192.1L623.8,144.5L636.5,85.6L649.2,99.8L661.9,175.1L674.6,208.4L687.3,147.3L700.0,72.1" fill="none" stroke="#2196f3" stroke-width="2"/><path d="M65.0,141.0L77.7,129.2L90.4,86.9L103.1,50.7L115.8,95.7L128.5,204.2L141.2,269.1L153.9,223.4L166.6,109.9L179.3,53.6L192.0,119.6L204.7,212.9L217.4,203.8L230.1,109.2L242.8,62.6L255.5,124.8L268.2,204.8L280.9,193.6L293.6,113.2L306.3,76.3L319.0,127.7L331.7,191.2L344.4,183.1L357.1,122.3L369.8,92.7L382.5,126.9L395.2,173.3L407.9,174.1L420.6,136.2L433.3,109.6L446.0,121.7L458.7,153.0L471.4,168.4L484.1,153.8L496.8,125.0L509.5,112.3L522.2,132.5L534.9,166.8L547.6,173.2L560.3,137.0L573.0,99.7L585.7,114.2L598.4,169.3L611.1,192.1L623.8,144.5L636.5,85.6L649.2,99.8L661.9,175.1L674.6,208.4L687.3,147.3L700.0,72.1" fill="none" stroke="#4caf50" stroke-width="1.5" stroke-dasharray="6,3"/><circle cx="65.0" cy="141.0" r="4" fill="#f44336" opacity="0.8"/><circle cx="77.7" cy="129.0" r="4" fill="#f44336" opacity="0.8"/><circle cx="90.4" cy="86.0" r="4" fill="#f44336" opacity="0.8"/><circle cx="103.1" cy="48.5" r="4" fill="#f44336" opacity="0.8"/><circle cx="115.8" cy="92.7" r="4" fill="#f44336" opacity="0.8"/><circle cx="128.5" cy="203.8" r="4" fill="#f44336" opacity="0.8"/><circle cx="192.0" cy="113.5" r="4" fill="#f44336" opacity="0.8"/><circle cx="319.0" cy="118.6" r="4" fill="#f44336" opacity="0.8"/><circle cx="446.0" cy="121.5" r="4" fill="#f44336" opacity="0.8"/><circle cx="573.0" cy="118.9" r="4" fill="#f44336" opacity="0.8"/><circle cx="700.0" cy="110.3" r="4" fill="#f44336" opacity="0.8"/><line x1="85" y1="42" x2="110" y2="42" stroke="#2196f3" stroke-width="2"/><text x="115" y="46" font-size="11" fill="#333">MathCanvas J2</text><line x1="235" y1="42" x2="260" y2="42" stroke="#4caf50" stroke-width="1.5" stroke-dasharray="6,3"/><text x="265" y="46" font-size="11" fill="#333">MathCanvas J7</text><circle cx="405" cy="42" r="4" fill="#f44336"/><text x="415" y="46" font-size="11" fill="#333">SAP2000 J2</text><text x="360" y="335" text-anchor="middle" font-size="12" fill="#333">Tiempo (s)</text><text x="15" y="170" text-anchor="middle" font-size="12" fill="#333" transform="rotate(-90,15,170)">Uy (in)</text><text x="360" y="18" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">Tiempo-Historia: Desplazamiento Y (Newmark-Beta)</text></svg>
+@{end html}
+
+---
+## 14. Comparacion Multi-Software
+> Frecuencias naturales (Hz) - Space Frame Ej 6.3
+> Modelo: 4 columnas W24x146 (L=180in), 4 vigas W14x82 (L_x=240in, L_y=114in)
+> Masa concentrada m=0.001 kip*s^2/in en 4 nodos libres
+> Resultados pendientes de: OpenSees, EasyFEM, CalculiX, Salome-Meca, Awatif
+
+@{html}
+<table style="border-collapse:collapse;margin:10px auto;font-size:12px;width:90%">
+<tr style="background:#e3f2fd"><th style="padding:6px 12px;border:1px solid #bbb">Modo</th><th style="padding:6px 12px;border:1px solid #bbb">Libro (Paz)</th><th style="padding:6px 12px;border:1px solid #bbb">SAP2000</th><th style="padding:6px 12px;border:1px solid #bbb">MathCanvas</th><th style="padding:6px 12px;border:1px solid #bbb">OpenSees</th><th style="padding:6px 12px;border:1px solid #bbb">EasyFEM</th><th style="padding:6px 12px;border:1px solid #bbb">CalculiX</th><th style="padding:6px 12px;border:1px solid #bbb">Salome-Meca</th><th style="padding:6px 12px;border:1px solid #bbb">Awatif</th></tr>
+<tr><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">1 (Y)</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">22.436</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">22.407</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#2196f3;font-weight:bold">23.02</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td></tr>
+<tr><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">2 (Y)</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">24.540</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">24.513</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#2196f3;font-weight:bold">25.70</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td></tr>
+<tr><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">3 (X)</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">48.998</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">48.839</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#2196f3;font-weight:bold">51.97</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td></tr>
+<tr><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">4 (X)</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">54.818</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center">54.686</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#2196f3;font-weight:bold">57.29</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td><td style="padding:4px 12px;border:1px solid #ddd;text-align:center;color:#999">-</td></tr>
+</table>
+<p style="text-align:center;font-size:11px;color:#666;margin-top:5px">Celdas en gris (-) pendientes de verificacion. Modelo: vigas Timoshenko, masa concentrada.</p>
+@{end html}

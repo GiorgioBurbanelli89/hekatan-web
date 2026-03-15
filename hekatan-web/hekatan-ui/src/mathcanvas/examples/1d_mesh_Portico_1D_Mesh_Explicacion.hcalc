@@ -1,0 +1,534 @@
+@{config bg:bookwarm, align:left, header:on, color:black, notation:eng}
+---
+# Subdivision 1D-Mesh en Porticos
+---
+## Que es la subdivision 1D-Mesh?
+
+@{text}
+En analisis estructural por elementos finitos (FEM), los elementos viga
+solo calculan desplazamientos en sus nodos extremos. Esto significa que
+un elemento de viga larga aparecera como una linea recta entre dos
+puntos desplazados, sin mostrar la curvatura real de la deformada.
+
+La tecnica 1D-Mesh consiste en subdividir cada elemento largo en
+varios sub-elementos cortos, insertando nodos intermedios. Esto permite:
+@{end text}
+
+@{text}
+1. Ver la curvatura real de la viga deformada
+2. Aplicar cargas distribuidas como fuerzas nodales en multiples puntos
+3. Mayor precision en los resultados de momentos y cortantes
+4. Capturar modos de vibracion intermedios (analisis modal)
+@{end text}
+
+---
+## Modelo: Portico Simple con 1D-Mesh
+
+@{draw 520 340}
+grid off
+bg #fff8f0
+# Marco del portico
+color #2255aa
+lw 2.5
+# Columna izquierda: nodo 0 -> nodo 1
+line 80 280 80 80
+# Viga subdividida: nodo 1 -> 4 -> 5 -> 6 -> nodo 2
+line 80 80 165 80
+line 165 80 250 80
+line 250 80 335 80
+line 335 80 420 80
+# Columna derecha: nodo 2 -> nodo 3
+line 420 80 420 280
+# Nodos principales (joints)
+color #cc3333
+lw 1
+circle 80 280 6
+circle 80 80 6
+circle 420 80 6
+circle 420 280 6
+# Nodos intermedios del 1d-mesh
+color #ee9b00
+circle 165 80 4
+circle 250 80 4
+circle 335 80 4
+# Etiquetas de nodos
+color #333
+font 12
+text 55 295 0
+text 55 72 1
+text 428 72 2
+text 428 295 3
+color #ee9b00
+font 10
+text 158 65 4
+text 243 65 5
+text 328 65 6
+# Apoyos empotrados
+color #555
+lw 1.5
+line 60 280 100 280
+line 65 300 60 280
+line 70 300 65 280
+line 75 300 70 280
+line 80 300 75 280
+line 85 300 80 280
+line 90 300 85 280
+line 95 300 90 280
+line 100 300 95 280
+line 400 280 440 280
+line 405 300 400 280
+line 410 300 405 280
+line 415 300 410 280
+line 420 300 415 280
+line 425 300 420 280
+line 430 300 425 280
+line 435 300 430 280
+line 440 300 435 280
+# Carga Fx en nodo 2
+color #cc3333
+lw 2
+arrow 460 80 425 80
+font 12
+text 462 75 Fx
+# Dimensiones
+color #888
+lw 0.5
+font 11
+text 215 100 W
+text 30 180 H
+# Sub-elementos
+color #2255aa
+font 9
+text 110 55 e0
+text 195 55 e1
+text 280 55 e2
+text 365 55 e3
+text 50 180 e4 (col)
+text 435 180 e5 (col)
+# Leyenda
+color #cc3333
+font 10
+text 60 322 Nodos principales (joints)
+color #ee9b00
+text 260 322 Nodos intermedios (1d-mesh)
+@{end draw}
+
+---
+## Datos del Problema
+
+> Propiedades del material (Acero)
+E = 200000000
+
+> Seccion transversal
+A = 0.01
+Iz = 0.0000833
+
+> Geometria
+H = 10
+W = 10
+
+> Carga horizontal en nodo 2
+Fx = 10
+
+---
+## Subdivision de la Viga
+
+@{text}
+La viga original va del nodo 1 al nodo 2 con longitud W.
+Se subdivide en n_sub = 4 sub-elementos iguales, creando
+3 nodos intermedios (4, 5, 6).
+@{end text}
+
+n_sub = 4
+Lv = W/n_sub
+
+@{eq}
+L_{viga} = W/n_{sub}    (1)
+@{end eq}
+
+---
+## Coordenadas Nodales
+
+@{text}
+7 nodos en total. Las columnas son verticales (eje Z en awatif).
+La viga es horizontal en X. Y=0 para todo (portico plano).
+@{end text}
+
+@{eq left}
+N_0 = [0, 0, 0]    base izquierda (apoyo)
+N_1 = [0, 0, H]    tope izquierdo
+N_2 = [W, 0, H]    tope derecho
+N_3 = [W, 0, 0]    base derecha (apoyo)
+N_4 = [L_v, 0, H]    intermedio 1
+N_5 = [2L_v, 0, H]    intermedio 2
+N_6 = [3L_v, 0, H]    intermedio 3
+@{end eq}
+
+---
+## Conectividad (6 elementos)
+
+@{eq left}
+e_0: [1, 4]    viga sub 1
+e_1: [4, 5]    viga sub 2
+e_2: [5, 6]    viga sub 3
+e_3: [6, 2]    viga sub 4
+e_4: [0, 1]    columna izquierda
+e_5: [2, 3]    columna derecha
+@{end eq}
+
+---
+## Matriz de Rigidez Local 2D (6x6)
+
+@{text}
+En 2D simplificado, cada nodo tiene 3 GDL: [u_x, u_z, theta_y].
+Cada elemento tiene 2 nodos = 6 GDL. La matriz de rigidez local
+para una viga Euler-Bernoulli en 2D es:
+@{end text}
+
+@{eq}
+K_L = [EA/L, 0, 0, -EA/L, 0, 0; 0, 12EI/L^3, 6EI/L^2, 0, -12EI/L^3, 6EI/L^2; 0, 6EI/L^2, 4EI/L, 0, -6EI/L^2, 2EI/L; -EA/L, 0, 0, EA/L, 0, 0; 0, -12EI/L^3, -6EI/L^2, 0, 12EI/L^3, -6EI/L^2; 0, 6EI/L^2, 2EI/L, 0, -6EI/L^2, 4EI/L]    (2)
+@{end eq}
+
+---
+## Rigideces Numericas
+
+> Sub-elementos de la viga (L = 2.5 m)
+k1v = E*A/Lv
+k2v = 12*E*Iz/(Lv^3)
+k3v = 6*E*Iz/(Lv^2)
+k4v = 4*E*Iz/Lv
+k5v = 2*E*Iz/Lv
+
+> Columnas (L = 10 m)
+Lcol = H
+k1c = E*A/Lcol
+k2c = 12*E*Iz/(Lcol^3)
+k3c = 6*E*Iz/(Lcol^2)
+k4c = 4*E*Iz/Lcol
+k5c = 2*E*Iz/Lcol
+
+---
+## Matriz de Transformacion
+
+@{text}
+Para las vigas (horizontales, eje local = eje X global):
+T = Identidad (no se necesita rotacion).
+
+Para las columnas (verticales, eje local apunta en +Z global):
+Se necesita rotar 90 grados. Los cosenos directores son:
+l = 0, m = 0, n = 1 (apunta en Z).
+@{end text}
+
+@{eq left}
+T_{col} = [0, 0, 1, 0, 0, 0; 0, 1, 0, 0, 0, 0; -1, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 1; 0, 0, 0, 0, 1, 0; 0, 0, 0, -1, 0, 0]    (3)
+@{end eq}
+
+@{text}
+Nota: En awatif (Three.js), Z es vertical. El eje local x del elemento
+apunta de nodo_i a nodo_j. Para una columna vertical, local_x = [0,0,1]
+(global Z). La transformacion rota los GDL locales [dx,dy,dz,rx,ry,rz]
+a coordenadas globales.
+@{end text}
+
+---
+## Ensamblaje Global
+
+@{text}
+La matriz global K tiene 7 nodos x 3 GDL = 21x21. Cada elemento
+contribuye a los GDL de sus dos nodos. Los indices globales para
+el nodo i son: [3i, 3i+1, 3i+2].
+
+Ejemplo: el elemento e0 (nodos 1 y 4) contribuye a los GDL:
+- Nodo 1: indices 3, 4, 5
+- Nodo 4: indices 12, 13, 14
+@{end text}
+
+@{eq}
+K_{global}(3i..3i+2, 3j..3j+2) += T^T · K_{local} · T    (4)
+@{end eq}
+
+---
+## Condiciones de Frontera
+
+@{text}
+Empotramientos en nodo 0 y nodo 3:
+- Nodo 0: GDL 0, 1, 2 fijos (u_x=0, u_z=0, theta=0)
+- Nodo 3: GDL 9, 10, 11 fijos
+
+Esto reduce el sistema de 21 a 15 GDL libres.
+Adicionalmente, los GDL fuera del plano (u_y, r_x, r_z en 3D)
+tienen rigidez cero y se eliminan automaticamente.
+@{end text}
+
+> GDL totales y libres
+n_nodos = 7
+dof_total = n_nodos*3
+dof_fijos = 2*3
+dof_libres = dof_total - dof_fijos
+
+---
+## Vector de Cargas
+
+@{text}
+La unica carga es Fx = 10 kN en el nodo 2.
+En el vector global F de 21 componentes, solo la posicion 6
+(que es el GDL u_x del nodo 2, indice = 2*3 = 6) tiene valor.
+@{end text}
+
+@{eq left}
+F = [0, 0, 0, 0, 0, 0, F_x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]^T    (5)
+@{end eq}
+
+---
+## Solucion: K_r · U_r = F_r
+
+@{text}
+El solver de Eigen (ConjugateGradient para sparse) resuelve el
+sistema reducido. Los desplazamientos se mapean al vector global.
+
+El resultado son los desplazamientos de los 7 nodos. Los nodos
+intermedios (4, 5, 6) muestran la curvatura de la viga:
+@{end text}
+
+@{eq}
+K_r · U_r = F_r    (6)
+@{end eq}
+
+@{eq}
+U_i = K_r^{-1} · F_r    (7)
+@{end eq}
+
+---
+## Comparacion: Sin vs Con 1D-Mesh
+
+@{draw 520 320}
+grid off
+bg #fff8f0
+# === Sin subdivision (izquierda) ===
+color #888
+font 12
+text 80 25 SIN subdivision
+# Estructura original
+color #aaa
+lw 1
+line 40 280 40 80
+line 40 80 220 80
+line 220 80 220 280
+# Deformada (solo 2 nodos en la viga -> linea recta)
+color #cc3333
+lw 2.5
+line 44 280 52 85
+line 52 85 224 82
+line 224 82 220 280
+# Nodos
+color #cc3333
+circle 44 280 4
+circle 52 85 4
+circle 224 82 4
+circle 220 280 4
+# Carga
+color #ee9b00
+lw 1.5
+arrow 245 82 228 82
+font 10
+text 248 77 Fx
+# Etiqueta
+color #888
+font 9
+text 55 55 Viga recta (2 nodos)
+
+# === Con subdivision (derecha) ===
+color #888
+font 12
+text 320 25 CON 1D-mesh (n=4)
+# Estructura original
+color #aaa
+lw 1
+line 280 280 280 80
+line 280 80 460 80
+line 460 80 460 280
+# Deformada con curvatura (7 nodos -> viga curva)
+color #2255aa
+lw 2.5
+line 284 280 292 85
+# Viga con curvatura visible
+line 292 85 325 78
+line 325 78 370 76
+line 370 76 415 79
+line 415 79 464 82
+line 464 82 460 280
+# Nodos
+color #2255aa
+circle 284 280 4
+circle 292 85 4
+circle 464 82 4
+circle 460 280 4
+# Nodos intermedios
+color #ee9b00
+circle 325 78 3
+circle 370 76 3
+circle 415 79 3
+# Carga
+color #ee9b00
+lw 1.5
+arrow 485 82 468 82
+font 10
+text 488 77 Fx
+# Etiqueta
+color #888
+font 9
+text 295 55 Viga curva (5 nodos)
+# Flecha de curvatura
+color #2255aa
+lw 0.5
+font 9
+text 340 62 curvatura visible
+@{end draw}
+
+---
+## Aplicacion de Cargas Sismicas vs Gravitatorias
+
+@{draw 520 320}
+grid off
+bg #fff8f0
+# === Carga sismica Fx (izquierda) ===
+color #888
+font 12
+text 60 25 Sismo Fx
+# Estructura
+color #aaa
+lw 1
+line 40 280 40 80
+line 40 80 220 80
+line 220 80 220 280
+# Nodos principales
+color #2255aa
+lw 1
+circle 40 280 4
+circle 40 80 4
+circle 220 80 4
+circle 220 280 4
+# Nodos intermedios
+color #ccc
+circle 85 80 3
+circle 130 80 3
+circle 175 80 3
+# Carga Fx: UN solo nodo (nodo 2, esquina)
+color #cc3333
+lw 2
+arrow 250 80 225 80
+font 11
+text 252 75 Fx
+# Apoyos
+color #555
+lw 1
+line 25 280 55 280
+line 30 295 25 280
+line 35 295 30 280
+line 40 295 35 280
+line 45 295 40 280
+line 50 295 45 280
+line 55 295 50 280
+line 205 280 235 280
+line 210 295 205 280
+line 215 295 210 280
+line 220 295 215 280
+line 225 295 220 280
+line 230 295 225 280
+line 235 295 230 280
+# Etiqueta
+color #cc3333
+font 9
+text 40 310 1 flecha = 1 carga puntual
+
+# === Carga gravitatoria Fz (derecha) ===
+color #888
+font 12
+text 320 25 Gravedad Fz
+# Estructura
+color #aaa
+lw 1
+line 280 280 280 80
+line 280 80 460 80
+line 460 80 460 280
+# Nodos principales
+color #2255aa
+lw 1
+circle 280 280 4
+circle 280 80 4
+circle 460 80 4
+circle 460 280 4
+# Nodos intermedios
+color #ccc
+circle 325 80 3
+circle 370 80 3
+circle 415 80 3
+# Cargas Fz distribuidas: TODOS los nodos de la viga
+color #cc3333
+lw 1.5
+arrow 280 50 280 75
+arrow 325 50 325 75
+arrow 370 50 370 75
+arrow 415 50 415 75
+arrow 460 50 460 75
+font 9
+text 275 44 Fz
+text 320 44 Fz
+text 365 44 Fz
+text 410 44 Fz
+text 455 44 Fz
+# Apoyos
+color #555
+lw 1
+line 265 280 295 280
+line 270 295 265 280
+line 275 295 270 280
+line 280 295 275 280
+line 285 295 280 280
+line 290 295 285 280
+line 295 295 290 280
+line 445 280 475 280
+line 450 295 445 280
+line 455 295 450 280
+line 460 295 455 280
+line 465 295 460 280
+line 470 295 465 280
+line 475 295 470 280
+# Etiqueta
+color #cc3333
+font 9
+text 290 310 5 flechas = carga distribuida
+@{end draw}
+
+@{text}
+Regla de aplicacion de cargas:
+- Sismo (Fx, Fy): UN nodo por eje, en el ultimo portico
+  sin nodos consecutivos en la direccion de la fuerza.
+- Gravedad (Fz = CM + CV): TODOS los nodos libres de la viga,
+  incluyendo los intermedios del 1d-mesh.
+- Solo se agregan entradas al mapa de cargas cuando el valor
+  es distinto de cero (como en el ejemplo original 1d-mesh de awatif).
+@{end text}
+
+---
+## Resumen del Flujo en deform.cpp
+
+@{text}
+1. ENTRADA: nodos[], elementos[], apoyos, cargas, propiedades (E, A, I, G, J)
+2. Construir F_global: vector de fuerzas nodales
+3. Para cada elemento:
+   a. K_local = getLocalStiffnessMatrix(E, A, Iz, Iy, G, J, L)  [12x12]
+   b. T = getTransformationMatrix(nodo_i, nodo_j)  [12x12]
+   c. K_global_elem = T^T * K_local * T
+   d. Acumular triplets (i, j, valor) en K_sparse
+4. Determinar GDL libres (quitar apoyos + diagonales cero)
+5. Reducir K y F al sistema libre
+6. Resolver K_r * U_r = F_r (ConjugateGradient de Eigen)
+7. Expandir U_r al vector global (GDL fijos = 0)
+8. Calcular reacciones: R = K * U - F
+9. SALIDA: desplazamientos por nodo, reacciones en apoyos
+@{end text}
+
+@{eq}
+K_r · U_r = F_r  =>  U_r = K_r^{-1} · F_r    (resumen)
+@{end eq}

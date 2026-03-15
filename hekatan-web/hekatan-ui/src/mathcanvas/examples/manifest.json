@@ -136,5 +136,29 @@
     "name": "Newton-Raphson No Lineal",
     "filename": "newtonNL_Newton-Raphson_No_Lineal.hcalc",
     "size": 2869
+  },
+  {
+    "key": "mesh1d",
+    "name": "1D Mesh - Subdivision de Elementos",
+    "filename": "mesh1d_1D_Mesh_-_Subdivision_de_Elementos.hcalc",
+    "size": 8500
+  },
+  {
+    "key": "shapefn",
+    "name": "Funciones de Forma - Desde Cero",
+    "filename": "shapefn_Funciones_de_Forma_-_Desde_Cero.hcalc",
+    "size": 9200
+  },
+  {
+    "key": "fem_verify",
+    "name": "Verificacion K 12x12 - awatif vs MathCanvas",
+    "filename": "fem_verify_Verificacion_K12x12_awatif_vs_mathcanvas.hcalc",
+    "size": 4200
+  },
+  {
+    "key": "barra_axial",
+    "name": "Barra Axial 1-DOF (Verificacion)",
+    "filename": "barra_axial_Barra_Axial_1-DOF_Verificacion.hcalc",
+    "size": 1200
   }
 ]

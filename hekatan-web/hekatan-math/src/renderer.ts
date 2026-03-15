@@ -392,9 +392,12 @@ export function renderEquationText(text: string): string {
       }
     }
 
-    // Arrow ->
+    // Arrows: -> → , => ⇒
     if (ch === "-" && i + 1 < len && text[i + 1] === ">") {
-      html += "→"; i += 2; continue;
+      html += " → "; i += 2; continue;
+    }
+    if (ch === "=" && i + 1 < len && text[i + 1] === ">") {
+      html += " ⇒ "; i += 2; continue;
     }
     // Comparison shortcuts
     if (ch === ">" && i + 1 < len && text[i + 1] === "=") { html += "≥"; i += 2; continue; }

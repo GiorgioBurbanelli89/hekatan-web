@@ -6,6 +6,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "hekatan-math": resolve(__dirname, "../hekatan-math/src"),
+      "awatif-fem": resolve(__dirname, "../hekatan-math/src/awatif-fem"),
+      "awatif-ui": resolve(__dirname, "src/awatif-ui"),
+      "awatif-mesh": resolve(__dirname, "../hekatan-math/src/awatif-mesh"),
     },
   },
   server: {
@@ -15,6 +18,7 @@ export default defineConfig({
     exclude: ["web-ifc"],
   },
   build: {
+    target: "esnext",
     rollupOptions: {
       input: {
         main: resolve(__dirname, "index.html"),

@@ -166,7 +166,36 @@ body { font-family: 'Segoe UI', 'Arial Nova', Helvetica, sans-serif; background:
   padding: 6px 14px; background: #f0f0f0; border-bottom: 1px solid #d0d0d0;
   font-size: 0.85rem; font-weight: 600; color: #555;
   flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
 }
+/* ─── Code editor zoom & maximize controls ─── */
+.code-editor-controls {
+  display: flex; gap: 4px; margin-left: auto;
+}
+.code-ctrl-btn {
+  width: 26px; height: 22px;
+  border: 1px solid #bbb; border-radius: 3px;
+  background: #fff; color: #444;
+  font-size: 14px; font-weight: bold;
+  cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  padding: 0; line-height: 1;
+  transition: background 0.12s;
+}
+.code-ctrl-btn:hover { background: #e8e8e8; }
+.editor-fullscreen {
+  position: fixed !important;
+  top: 0 !important; left: 0 !important;
+  width: 100vw !important; height: 100vh !important;
+  z-index: 99999 !important;
+  background: #fff;
+  margin: 0; padding: 0;
+  display: flex; flex-direction: column;
+}
+.editor-fullscreen .code-editor-wrap {
+  flex: 1;
+}
+.editor-fullscreen .canvas-container { display: none !important; }
 /* ─── Code Editor with Syntax Layer ─── */
 .code-editor-wrap {
   flex: 1; position: relative; display: flex; overflow: hidden;
@@ -923,6 +952,26 @@ sup.unit {
 .eq-black .out-comment,
 .eq-black .out-text {
   color: #000 !important;
+}
+
+/* When eq-block has an explicit font-size (via size: param), force all children to inherit */
+.eq-block[style*="font-size"] * {
+  font-size: inherit !important;
+}
+.eq-block[style*="font-size"] .eq-cell {
+  padding: 0 2pt;
+  line-height: 1.2;
+}
+.eq-block[style*="font-size"] .eq-mat {
+  margin-left: 2pt;
+  margin-right: 2pt;
+}
+.eq-block[style*="font-size"] .eq-brace-l,
+.eq-block[style*="font-size"] .eq-brace-r {
+  width: 3px;
+}
+.eq-block[style*="font-size"] .dvc {
+  padding: 0 1px;
 }
 
 /* ─── @{eq} Vector (curly braces) and Matrix (square brackets) ─── */
@@ -3893,4 +3942,405 @@ body.cm-custom-dark .debug-input {
 }
 body.cm-custom-dark .debug-output {
   color: #ccc;
+}
+
+/* ─── Generic maximize button for @{svg}, @{plot} ─── */
+.hk-maximizable { position: relative; }
+.hk-max-toolbar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 100;
+}
+.hk-max-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #666;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.9);
+  color: #333;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.hk-max-btn:hover { background: #fff; transform: scale(1.1); }
+.hk-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  z-index: 99999 !important;
+  background: #fff !important;
+  margin: 0 !important;
+  padding: 20px !important;
+  border: none !important;
+  overflow: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+.hk-fullscreen svg {
+  max-width: 95vw !important;
+  max-height: 90vh !important;
+  width: 90vw !important;
+  height: auto !important;
+}
+.hk-fullscreen .hk-max-toolbar {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 100000;
+}
+.hk-fullscreen .hk-max-btn {
+  width: 36px;
+  height: 36px;
+  font-size: 22px;
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* ─── @{three} toolbar & maximize ─── */
+.three-toolbar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 100;
+  display: flex;
+  gap: 4px;
+}
+.three-btn-maximize {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #666;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.9);
+  color: #333;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.three-btn-maximize:hover {
+  background: #fff;
+  transform: scale(1.1);
+}
+.three-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  z-index: 99999 !important;
+  background: #222 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+}
+.three-fullscreen .three-toolbar {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 100000;
+}
+.three-fullscreen .three-btn-maximize {
+  width: 36px;
+  height: 36px;
+  font-size: 22px;
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* ─── @{awatif} FEM Viewer Containment ─── */
+.awatif-output { margin: 0.5em 0; }
+.awatif-output > div { position: relative; }
+.awatif-output #viewer {
+  position: relative !important;
+  top: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: auto !important;
+}
+
+/* ─── Awatif toolbar & maximize ─── */
+.awatif-toolbar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 100;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.awatif-pattern-select {
+  height: 28px;
+  padding: 2px 6px;
+  border: 1px solid #666;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.9);
+  color: #333;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.awatif-btn-maximize {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #666;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.9);
+  color: #333;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.awatif-btn-maximize:hover {
+  background: #fff;
+  transform: scale(1.1);
+}
+
+/* Fullscreen overlay — must escape all parent containers */
+.awatif-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  z-index: 99999 !important;
+  background: #1a1a2e !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+.awatif-fullscreen > div[style] {
+  width: 100% !important;
+  height: 100% !important;
+}
+.awatif-fullscreen #viewer {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+.awatif-fullscreen .awatif-toolbar {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 100000;
+}
+.awatif-fullscreen .awatif-btn-maximize,
+.awatif-fullscreen .awatif-btn-settings {
+  width: 36px;
+  height: 36px;
+  font-size: 22px;
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.awatif-btn-settings {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #666;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.9);
+  color: #333;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.awatif-btn-settings:hover { background: #fff; transform: scale(1.1); }
+.awatif-btn-settings.active { background: #e0e0ff; border-color: #44f; }
+.awatif-btn-inspect {
+  height: 28px;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.85);
+  color: #333;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 8px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: background 0.15s, transform 0.1s;
+}
+.awatif-btn-inspect:hover { background: #fff; transform: scale(1.05); }
+.awatif-btn-inspect.active { background: #ff4444; color: #fff; border-color: #ff4444; }
+
+/* ── Tweakpane touch-friendly in fullscreen ── */
+.awatif-fullscreen #settings {
+  left: 12px;
+  top: 12px;
+  width: 320px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* Bigger tap targets for tweakpane controls */
+.awatif-fullscreen .tp-dfwv,
+.awatif-fullscreen .tp-fldv,
+.awatif-fullscreen .tp-lblv {
+  min-height: 36px;
+}
+.awatif-fullscreen .tp-sldv_k {
+  height: 24px !important;
+}
+/* Make tweakpane number inputs editable by tap (bigger touch area) */
+.awatif-fullscreen .tp-txtv_i {
+  font-size: 14px !important;
+  min-height: 32px !important;
+  padding: 4px 8px !important;
+}
+/* Tweakpane slider: add +/- buttons for touch control */
+.awatif-fullscreen .tp-sldtxtv {
+  position: relative;
+}
+
+/* ── Awatif settings toggle panel ── */
+.awatif-settings-panel {
+  position: absolute;
+  top: 40px;
+  right: 6px;
+  z-index: 101;
+  background: rgba(30,30,50,0.95);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  max-height: calc(100% - 52px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+  min-width: 240px;
+}
+.awatif-fullscreen .awatif-settings-panel {
+  position: fixed;
+  top: 56px;
+  right: 12px;
+  z-index: 100001;
+  max-height: calc(100vh - 80px);
+}
+.awatif-settings-panel.open { display: block; }
+.awatif-settings-panel label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  color: #ddd;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.awatif-settings-panel label:last-child { border-bottom: none; }
+.awatif-settings-panel input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #6cf;
+}
+.awatif-settings-panel select {
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #2a2a3e;
+  color: #ddd;
+  font-size: 13px;
+  flex: 1;
+  cursor: pointer;
+}
+.awatif-settings-panel .setting-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  color: #ddd;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.awatif-settings-panel .setting-row span { min-width: 80px; }
+.awatif-settings-panel .setting-row input[type="number"] {
+  width: 70px;
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #2a2a3e;
+  color: #ddd;
+  font-size: 14px;
+  text-align: center;
+}
+.awatif-settings-panel .btn-step {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #3a3a5e;
+  color: #ddd;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+.awatif-settings-panel .btn-step:active { background: #5a5a8e; }
+
+/* ── Awatif Tweakpane parameters panel (bottom-right, like awatif v2) ── */
+.awatif-output #parameters {
+  position: absolute;
+  bottom: 0px;
+  right: 8px;
+  z-index: 101;
+  width: 300px;
+}
+.awatif-fullscreen #parameters {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  z-index: 100001;
+  width: 300px;
 }

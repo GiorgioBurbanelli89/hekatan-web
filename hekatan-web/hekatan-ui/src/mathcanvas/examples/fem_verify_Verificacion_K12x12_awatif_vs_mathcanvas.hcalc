@@ -1,0 +1,453 @@
+# Verificacion FEM: K 12×12 — awatif vs MathCanvas
+> Ensamblamos la matriz de rigidez 12×12 completa con for i=1:n y comparamos con awatif
+
+---
+## 1. Datos del Problema
+
+> Barra axial de 6 m, 3 elementos frame, empotrada en nodo 0, fuerza F=100 kN en nodo 3
+
+@{cells} |E_v = 200000000|A_v = 0.01|Iz_v = 0.00001|Iy_v = 0.00001|
+@{cells} |G_v = 80000000|J_v = 0.00002|L_total = 6|F_v = 100|
+@{cells} |nEl = 3|nNod = 4|nDOF_nod = 6|
+
+> DOFs totales:
+
+nDOF = nNod * nDOF_nod
+
+> Longitud de cada elemento:
+
+dL = L_total / nEl
+
+---
+## 2. Solucion con awatif (referencia)
+
+> awatif usa Eigen C++/WASM con la misma K 12×12. Veremos que MathCanvas da identico resultado.
+
+@{awatif 800 400}
+node 0 0 0
+node 2 0 0
+node 4 0 0
+node 6 0 0
+element frame 0 1 E:$E_v A:$A_v Iz:$Iz_v Iy:$Iy_v G:$G_v J:$J_v
+element frame 1 2 E:$E_v A:$A_v Iz:$Iz_v Iy:$Iy_v G:$G_v J:$J_v
+element frame 2 3 E:$E_v A:$A_v Iz:$Iz_v Iy:$Iy_v G:$G_v J:$J_v
+support 0 fixed
+load 3 fx:$F_v
+solve explicit
+show deformed scale:5000 nodeResults:deformations
+@{end awatif}
+
+---
+## 3. Coeficientes de Rigidez (mismos que el C++ de awatif)
+
+> Calculamos las 8 variables del C++ usando las mismas formulas:
+
+@{eq left}
+EA\_L = EA/L | rigidez axial
+@{end eq}
+
+EA_L = E_v * A_v / dL
+
+@{eq left}
+EIz\_L3 = EI_z/L^3 | coeficiente base flexion z
+@{end eq}
+
+EIz_L3 = E_v * Iz_v / (dL^3)
+
+@{eq left}
+EIy\_L3 = EI_y/L^3 | coeficiente base flexion y
+@{end eq}
+
+EIy_L3 = E_v * Iy_v / (dL^3)
+
+@{eq left}
+GJ\_L = GJ/L | rigidez torsional
+@{end eq}
+
+GJ_L = G_v * J_v / dL
+
+EIz_L2 = E_v * Iz_v / (dL^2)
+
+EIy_L2 = E_v * Iy_v / (dL^2)
+
+EIz_L1 = E_v * Iz_v / dL
+
+EIy_L1 = E_v * Iy_v / dL
+
+---
+## 4. Matriz Local K_e (12×12) — con variables
+
+> Construimos K_local idéntica al C++ de awatif, usando zeros(12,12) y asignando cada coeficiente:
+
+Kl = zeros(12, 12)
+
+> **Fila 1 (u1 — axial)**:
+
+Kl[1,1] = EA_L
+Kl[1,7] = -EA_L
+
+> **Fila 2 (v1 — flexion plano xy)**:
+
+Kl[2,2] = 12*EIz_L3
+Kl[2,6] = 6*EIz_L2
+Kl[2,8] = -12*EIz_L3
+Kl[2,12] = 6*EIz_L2
+
+> **Fila 3 (w1 — flexion plano xz)**:
+
+Kl[3,3] = 12*EIy_L3
+Kl[3,5] = -6*EIy_L2
+Kl[3,9] = -12*EIy_L3
+Kl[3,11] = -6*EIy_L2
+
+> **Fila 4 (θx1 — torsion)**:
+
+Kl[4,4] = GJ_L
+Kl[4,10] = -GJ_L
+
+> **Fila 5 (θy1 — rotacion xz)**:
+
+Kl[5,3] = -6*EIy_L2
+Kl[5,5] = 4*EIy_L1
+Kl[5,9] = 6*EIy_L2
+Kl[5,11] = 2*EIy_L1
+
+> **Fila 6 (θz1 — rotacion xy)**:
+
+Kl[6,2] = 6*EIz_L2
+Kl[6,6] = 4*EIz_L1
+Kl[6,8] = -6*EIz_L2
+Kl[6,12] = 2*EIz_L1
+
+> **Fila 7 (u2 — axial nodo 2)**:
+
+Kl[7,1] = -EA_L
+Kl[7,7] = EA_L
+
+> **Fila 8 (v2)**:
+
+Kl[8,2] = -12*EIz_L3
+Kl[8,6] = -6*EIz_L2
+Kl[8,8] = 12*EIz_L3
+Kl[8,12] = -6*EIz_L2
+
+> **Fila 9 (w2)**:
+
+Kl[9,3] = -12*EIy_L3
+Kl[9,5] = 6*EIy_L2
+Kl[9,9] = 12*EIy_L3
+Kl[9,11] = 6*EIy_L2
+
+> **Fila 10 (θx2)**:
+
+Kl[10,4] = -GJ_L
+Kl[10,10] = GJ_L
+
+> **Fila 11 (θy2)**:
+
+Kl[11,3] = -6*EIy_L2
+Kl[11,5] = 2*EIy_L1
+Kl[11,9] = 6*EIy_L2
+Kl[11,11] = 4*EIy_L1
+
+> **Fila 12 (θz2)**:
+
+Kl[12,2] = 6*EIz_L2
+Kl[12,6] = 2*EIz_L1
+Kl[12,8] = -6*EIz_L2
+Kl[12,12] = 4*EIz_L1
+
+> Resultado: K_local 12×12 (identica a getLocalStiffnessMatrixFrame.cpp):
+
+Kl
+
+---
+## 5. Cell Array de K locales — K_loc{i}
+
+> Guardamos la K local de cada elemento. Como la barra es uniforme, todas son iguales:
+
+K_loc = cell(nEl)
+for i = 1:nEl
+  K_loc{i} = Kl
+end
+
+> K_loc{1} (elemento 0→1):
+
+K_loc{1}
+
+---
+## 6. Ensamblaje Global K (24×24) — for i=1:n
+
+> Ensamblamos K global (nDOF × nDOF) con el algoritmo clasico de FEM directo:
+
+@{eq}
+K_{global}[dof_i + r, dof_i + c] += K^{(e)}[r, c]
+@{end eq}
+
+@{eq}
+K_{global}[dof_i + r, dof_j + c] += K^{(e)}[r, 6+c]
+@{end eq}
+
+@{eq}
+K_{global}[dof_j + r, dof_i + c] += K^{(e)}[6+r, c]
+@{end eq}
+
+@{eq}
+K_{global}[dof_j + r, dof_j + c] += K^{(e)}[6+r, 6+c]
+@{end eq}
+
+> donde dof_i = 6*(nodo_i - 1), dof_j = 6*(nodo_j - 1):
+
+KG = zeros(nDOF, nDOF)
+for e = 1:nEl
+  di = 6*(e - 1)
+  dj = 6*e
+  for r = 1:6
+    for c = 1:6
+      KG[di+r, di+c] = KG[di+r, di+c] + K_loc{e}[r, c]
+      KG[di+r, dj+c] = KG[di+r, dj+c] + K_loc{e}[r, 6+c]
+      KG[dj+r, di+c] = KG[dj+r, di+c] + K_loc{e}[6+r, c]
+      KG[dj+r, dj+c] = KG[dj+r, dj+c] + K_loc{e}[6+r, 6+c]
+    end
+  end
+end
+
+> K global ensamblada (24×24):
+
+KG
+
+---
+## 7. Vector de Fuerzas (24×1)
+
+> Fuerza axial F en nodo 3 (DOF 19 = 6*3 + 1):
+
+FG = zeros(nDOF, 1)
+FG[19, 1] = F_v
+
+FG
+
+---
+## 8. Condiciones de Contorno — Eliminar DOFs fijos
+
+> Nodo 0 empotrado = DOFs 1 a 6 fijos. Eliminamos filas/columnas 1:6:
+
+@{eq left}
+K_R = K_{global}[7:24, 7:24] | (18×18)
+@{end eq}
+
+KR = submat(KG, 7, nDOF, 7, nDOF)
+
+@{eq left}
+F_R = F_{global}[7:24] | (18×1)
+@{end eq}
+
+FR = submat(FG, 7, nDOF, 1, 1)
+
+> K reducida (18×18):
+
+KR
+
+> F reducida (18×1):
+
+FR
+
+---
+## 9. Resolver K_R · u_R = F_R
+
+@{eq}
+u_R = K_R^{-1} · F_R
+@{end eq}
+
+uR = lsolve(KR, FR)
+
+> Vector de desplazamientos libres (18×1):
+
+uR
+
+---
+## 10. Comparacion con awatif y solucion analitica
+
+> **Solucion analitica** (solo axial):
+
+@{eq left}
+u = FL/(EA) = 100 × 6 / (200000000 × 0.01) = 0.0003 m
+@{end eq}
+
+u_analitico = F_v * L_total / (E_v * A_v)
+
+> **Desplazamiento axial del nodo 3** (DOF u_x del nodo 3 = posicion 13 en u_R):
+
+u_nodo3_x = uR[13, 1]
+
+> **Error**:
+
+error_abs = abs(u_nodo3_x - u_analitico)
+
+> **Desplazamientos axiales de cada nodo** (u_x en posiciones 1, 7, 13 de u_R):
+
+u_nodo1_x = uR[1, 1]
+u_nodo2_x = uR[7, 1]
+u_nodo3_x_v2 = uR[13, 1]
+
+> Verificacion lineal: u_i = F·x_i / (EA)
+
+u1_exacto = F_v * 1 * dL / (E_v * A_v)
+u2_exacto = F_v * 2 * dL / (E_v * A_v)
+u3_exacto = F_v * 3 * dL / (E_v * A_v)
+
+> **Los DOFs transversales (v, w, θ) deben ser cero** porque solo hay carga axial:
+
+u_nodo3_uy = uR[14, 1]
+u_nodo3_uz = uR[15, 1]
+u_nodo3_rx = uR[16, 1]
+
+> Todos cero ✓ — la K 12×12 da exactamente lo mismo que la K 2×2 axial.
+
+---
+## 11. Reacciones
+
+> R = K_global · u_completo - F_global
+
+u_full = zeros(nDOF, 1)
+for i = 1:18
+  u_full[6+i, 1] = uR[i, 1]
+end
+
+R = KG * u_full - FG
+
+> Reaccion en nodo 0:
+
+R_nodo0 = submat(R, 1, 6, 1, 1)
+
+R_nodo0
+
+> R_x debe ser -100 (equilibra F=100) ✓
+
+> **Conclusion parcial**: MathCanvas con K 12×12 da exactamente el mismo resultado que awatif C++/WASM.
+
+---
+---
+# PARTE B: Verificacion con K 2×2 (solo axial)
+
+> Ahora hacemos **exactamente lo mismo** pero con la K simplificada de 2×2 (1 DOF por nodo). Debe dar el mismo u_x porque solo hay carga axial.
+
+---
+## B1. Matriz Local K_e (2×2)
+
+> Solo rigidez axial EA/L:
+
+@{eq}
+K_e = EA/L [1, -1; -1, 1]
+@{end eq}
+
+ke_2 = E_v * A_v / dL
+
+Ke_2 = ke_2 * [[1, -1], [-1, 1]]
+
+Ke_2
+
+---
+## B2. Cell Array de K locales — Kloc2{i}
+
+Kloc2 = cell(nEl)
+for i = 1:nEl
+  Kloc2{i} = Ke_2
+end
+
+> Kloc2{1}:
+
+Kloc2{1}
+
+---
+## B3. Ensamblaje Global K (4×4) — for i=1:n
+
+@{eq}
+K_G[i,i] += k_e,  K_G[i,i+1] += -k_e
+@{end eq}
+
+@{eq}
+K_G[i+1,i] += -k_e,  K_G[i+1,i+1] += k_e
+@{end eq}
+
+nNod2 = nEl + 1
+KG2 = zeros(nNod2, nNod2)
+for e = 1:nEl
+  for r = 1:2
+    for c = 1:2
+      KG2[e+r-1, e+c-1] = KG2[e+r-1, e+c-1] + Kloc2{e}[r, c]
+    end
+  end
+end
+
+> K global ensamblada (4×4):
+
+KG2
+
+---
+## B4. Vector de Fuerzas (4×1)
+
+FG2 = zeros(nNod2, 1)
+FG2[nNod2, 1] = F_v
+
+FG2
+
+---
+## B5. Condiciones de Contorno — Eliminar nodo 1
+
+> Nodo 0 fijo → eliminar fila/col 1:
+
+KR2 = submat(KG2, 2, nNod2, 2, nNod2)
+
+KR2
+
+FR2 = submat(FG2, 2, nNod2, 1, 1)
+
+FR2
+
+---
+## B6. Resolver
+
+@{eq}
+u = K_R^{-1} · F_R
+@{end eq}
+
+uR2 = lsolve(KR2, FR2)
+
+uR2
+
+---
+## B7. Comparacion Final: K 12×12 vs K 2×2 vs Analitico
+
+> **Solucion analitica**:
+
+u_anal = F_v * L_total / (E_v * A_v)
+
+> **K 12×12** (DOF axial nodo 3):
+
+u_12x12 = uR[13, 1]
+
+> **K 2×2** (nodo 3):
+
+u_2x2 = uR2[3, 1]
+
+> **Errores**:
+
+err_12_vs_anal = abs(u_12x12 - u_anal)
+
+err_2_vs_anal = abs(u_2x2 - u_anal)
+
+err_12_vs_2 = abs(u_12x12 - u_2x2)
+
+> **Desplazamientos en cada nodo (las 3 soluciones)**:
+
+@{cells} |u1_12 = uR[1,1]|u1_2 = uR2[1,1]|u1_ex = F_v*dL/(E_v*A_v)|
+@{cells} |u2_12 = uR[7,1]|u2_2 = uR2[2,1]|u2_ex = F_v*2*dL/(E_v*A_v)|
+@{cells} |u3_12 = uR[13,1]|u3_2 = uR2[3,1]|u3_ex = F_v*3*dL/(E_v*A_v)|
+
+> **Conclusion**: Las 3 soluciones son **identicas**:
+> - K 12×12 (awatif/MathCanvas): u = 0.0003 m
+> - K 2×2 (MathCanvas): u = 0.0003 m
+> - Analitica FL/(EA): u = 0.0003 m
+> - Error = 0 en todos los casos ✓
+
+> La K 12×12 contiene a la K 2×2. Los DOFs extra (v, w, θ) se anulan porque no hay cargas transversales ni momentos.

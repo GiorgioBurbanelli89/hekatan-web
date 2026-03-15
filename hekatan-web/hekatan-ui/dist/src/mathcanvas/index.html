@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hekatan Math Editor</title>
-  <script type="module" crossorigin src="/assets/mathcanvas-BdCtId_V.js"></script>
+  <script type="module" crossorigin src="/assets/mathcanvas-DANT6Vtn.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
-  <link rel="modulepreload" crossorigin href="/assets/casManager-GTGDkSkn.js">
-  <link rel="modulepreload" crossorigin href="/assets/parser-C_EzRoS9.js">
-  <link rel="stylesheet" crossorigin href="/assets/mathcanvas-CyFgf7X8.css">
+  <link rel="modulepreload" crossorigin href="/assets/casManager-B-S-PBKl.js">
+  <link rel="modulepreload" crossorigin href="/assets/parser-CLTtnWRP.js">
+  <link rel="stylesheet" crossorigin href="/assets/mathcanvas-DxPTkSbK.css">
 </head>
 <body>
   <!-- ═══ Menu Bar ═══ -->
@@ -200,15 +200,16 @@
       <option value="black">Black</option>
       <option value="dark">Dark</option>
     </select>
-    <span class="toolbar-label" title="Fuente para títulos, descripciones y comentarios">Texto:</span>
+    <span class="toolbar-label" title="Fuente y tamaño de texto">Txt:</span>
     <select id="fontTextSelect" class="theme-select" title="Fuente para títulos, descripciones y comentarios">
       <option value="segoeui">Segoe UI</option>
       <option value="georgia">Georgia</option>
       <option value="tahoma">Tahoma</option>
       <option value="cambria">Cambria</option>
-      <option value="times">Times New Roman</option>
+      <option value="times" selected>Times New Roman</option>
     </select>
-    <span class="toolbar-label" title="Fuente para ecuaciones, variables y valores">Expr:</span>
+    <input type="number" id="fontTextSize" class="size-input" value="12" min="8" max="24" step="1" title="Tamaño de texto (pt)">
+    <span class="toolbar-label" title="Fuente y tamaño de ecuaciones">Eq:</span>
     <select id="fontExprSelect" class="theme-select" title="Fuente para ecuaciones, variables y valores">
       <option value="stix">STIX Two Math</option>
       <option value="cambria">Cambria Math</option>
@@ -216,6 +217,7 @@
       <option value="georgiapro">Georgia Pro</option>
       <option value="century">Century Schoolbook</option>
     </select>
+    <input type="number" id="fontExprSize" class="size-input" value="12" min="8" max="24" step="1" title="Tamaño de expresiones (pt)">
     <span class="toolbar-label" title="Esquema de colores del output">Color:</span>
     <select id="colorModeSelect" class="theme-select" title="Esquema de colores del output">
       <option value="classic">Clásico</option>
@@ -300,6 +302,7 @@
       <button class="keypad-tab" data-tab="operators">Operators</button>
       <button class="keypad-tab" data-tab="functions">Functions</button>
       <button class="keypad-tab" data-tab="blocks">Blocks</button>
+      <button class="keypad-tab" data-tab="matrices">Matrices</button>
     </div>
     <div class="keypad-content" id="keypadContent">
       <!-- Populated by JS -->
