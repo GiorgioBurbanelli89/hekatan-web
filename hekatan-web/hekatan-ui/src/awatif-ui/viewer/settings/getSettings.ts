@@ -8,7 +8,6 @@ import "./styles.css";
 export type Settings = {
   gridSize: State<number>;
   displayScale: State<number>;
-  deformScale: State<number>;
   nodes: State<boolean>;
   elements: State<boolean>;
   nodesIndexes: State<boolean>;
@@ -27,7 +26,6 @@ export type Settings = {
 export type SettingsObj = {
   gridSize?: number;
   displayScale?: number;
-  deformScale?: number;
   nodes?: boolean;
   elements?: boolean;
   nodesIndexes?: boolean;
@@ -139,7 +137,6 @@ export function getDefaultSettings(settingsObj: SettingsObj): Settings {
   return {
     gridSize: van.state(settingsObj?.gridSize ?? 20),
     displayScale: van.state(settingsObj?.displayScale ?? 1),
-    deformScale: van.state(settingsObj?.deformScale ?? 1),
     nodes: van.state(settingsObj?.nodes ?? true),
     elements: van.state(settingsObj?.elements ?? true),
     nodesIndexes: van.state(settingsObj?.nodesIndexes ?? false),

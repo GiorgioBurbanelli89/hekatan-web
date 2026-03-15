@@ -25,6 +25,16 @@ import { shellResults } from "./objects/shellResults";
 import "./styles.css";
 import { getLegend } from "../color-map/getLegend";
 
+export interface ViewerContext3D {
+  scene: THREE.Scene;
+  perspCamera: THREE.PerspectiveCamera;
+  orthoCamera: THREE.OrthographicCamera;
+  controls: OrbitControls;
+  renderer: THREE.WebGLRenderer;
+  render: () => void;
+  setActiveCamera: (cam: THREE.Camera) => void;
+}
+
 export function getViewer({
   mesh,
   settingsObj,
@@ -49,7 +59,10 @@ export function getViewer({
     0.1,
     2 * 1e6 // supported view till 1e6
   );
+  const orthoCamera = new THREE.OrthographicCamera(-10, 10, 10, -10, -1000, 2e6);
+  let activeCamera: THREE.Camera = camera;
   const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.localClippingEnabled = true;
   const controls = new OrbitControls(camera, renderer.domElement);
 
   const settings = getDefaultSettings(settingsObj);
@@ -89,9 +102,16 @@ export function getViewer({
     for (const entry of entries) {
       const width = entry.target?.clientWidth;
       const height = entry.target?.clientHeight;
+      if (width === 0 || height === 0) continue;
 
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
+
+      const aspect = width / height;
+      const frustumHalf = orthoCamera.top;
+      orthoCamera.left = -frustumHalf * aspect;
+      orthoCamera.right = frustumHalf * aspect;
+      orthoCamera.updateProjectionMatrix();
 
       renderer.setSize(width, height);
       viewerRender();
@@ -129,7 +149,14 @@ export function getViewer({
 
   // Object's functions (Actions)
   function viewerRender() {
-    renderer.render(scene, camera);
+    renderer.render(scene, activeCamera);
+  }
+
+  function setActiveCamera(cam: THREE.Camera) {
+    activeCamera = cam;
+    controls.object = cam;
+    controls.update();
+    viewerRender();
   }
 
   // Optional inputs
@@ -233,22 +260,25 @@ export function getViewer({
       viewerRender,
     });
 
-  // Expose settings for external touch-friendly panels
-  (viewerElm as any).__settings = settings;
-
-  // Expose Three.js context for inspect/raycasting
+  // Expose Three.js context for external use (view switching, etc.)
   (viewerElm as any).__ctx = {
     scene,
-    camera,
+    perspCamera: camera,
+    orthoCamera,
     controls,
     renderer,
     render: viewerRender,
-  };
+    setActiveCamera,
+  } as ViewerContext3D;
 
   return viewerElm;
 }
 
 // Utils
+// Reference scale: locked on first analysis so load changes produce visible differences
+let _refScale: number | null = null;
+let _refNodeCount: number = 0;
+
 function deriveNodes(
   mesh: Mesh | undefined,
   settings: Settings
@@ -256,14 +286,55 @@ function deriveNodes(
   return van.derive(() => {
     if (!settings.deformedShape.val) return mesh?.nodes?.val ?? [];
 
-    const scale = settings.deformScale.val;
+    const nodes = mesh?.nodes?.val ?? [];
+    const deformations = mesh?.deformOutputs?.val?.deformations;
+    if (!deformations || deformations.size === 0) return nodes;
+
+    // Compute max deformation
+    let maxDeform = 0;
+    deformations.forEach((d) => {
+      for (let i = 0; i < 3; i++) maxDeform = Math.max(maxDeform, Math.abs(d[i]));
+    });
+
+    let modelExtent = 1;
+    if (nodes.length > 1) {
+      const mins = [Infinity, Infinity, Infinity];
+      const maxs = [-Infinity, -Infinity, -Infinity];
+      for (const n of nodes) {
+        for (let i = 0; i < 3; i++) { mins[i] = Math.min(mins[i], n[i]); maxs[i] = Math.max(maxs[i], n[i]); }
+      }
+      modelExtent = Math.max(maxs[0] - mins[0], maxs[1] - mins[1], maxs[2] - mins[2], 1);
+    }
+
+    const targetFraction = 0.05; // 5% of model size for initial/reference loads
+    const autoScale = maxDeform > 1e-12 ? (modelExtent * targetFraction) / maxDeform : 1;
+
+    // Lock reference scale on first analysis or when geometry changes (node count changes)
+    if (_refScale === null || nodes.length !== _refNodeCount) {
+      _refScale = autoScale;
+      _refNodeCount = nodes.length;
+    }
+
+    // Use the locked reference scale so bigger loads → bigger visual deformation
+    // Apply user display scale as multiplier (displayScale=0→auto, >0→manual)
+    const userScale = settings.displayScale.val;
+    let finalScale = userScale === 0 ? _refScale : (userScale > 0 ? _refScale * userScale : _refScale / (-userScale));
+
+    // Soft cap using sqrt: proportional growth but diminishing returns for very large loads
+    // This avoids both: (1) constant deformation (old auto-scale) and (2) absurdly large shapes
+    const maxFraction = 0.30; // max 30% of model size
+    const maxVisual = maxDeform * finalScale;
+    if (maxVisual > modelExtent * maxFraction) {
+      // Smooth transition: sqrt-based soft cap
+      const ratio = maxVisual / (modelExtent * maxFraction);
+      finalScale = finalScale / Math.sqrt(ratio);
+    }
+
     return (
-      mesh?.nodes?.val.map((node, index) => {
-        const d = mesh?.deformOutputs?.val.deformations
-          ?.get(index)
-          ?.slice(0, 3) ?? [0, 0, 0];
-        return node.map((n, i) => n + d[i] * scale) as Node;
-      }) ?? []
+      nodes.map((node, index) => {
+        const d = deformations.get(index)?.slice(0, 3) ?? [0, 0, 0];
+        return node.map((n, i) => n + d[i] * finalScale) as Node;
+      })
     );
   });
 }
@@ -287,21 +358,21 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
     const nodeBendingXY = new Map<number, number[]>();
 
     mesh.analyzeOutputs?.val?.bendingXX?.forEach((vals, elementIndex) => {
-      nodeBendingXX.set(mesh.elements?.val[elementIndex]?.[0], [vals[0]]);
-      nodeBendingXX.set(mesh.elements?.val[elementIndex]?.[1], [vals[1]]);
-      nodeBendingXX.set(mesh.elements?.val[elementIndex]?.[2], [vals[2]]);
+      nodeBendingXX.set(mesh.elements.val[elementIndex][0], [vals[0]]);
+      nodeBendingXX.set(mesh.elements.val[elementIndex][1], [vals[1]]);
+      nodeBendingXX.set(mesh.elements.val[elementIndex][2], [vals[2]]);
     });
 
     mesh.analyzeOutputs?.val?.bendingYY?.forEach((vals, elementIndex) => {
-      nodeBendingYY.set(mesh.elements?.val[elementIndex]?.[0], [vals[0]]);
-      nodeBendingYY.set(mesh.elements?.val[elementIndex]?.[1], [vals[1]]);
-      nodeBendingYY.set(mesh.elements?.val[elementIndex]?.[2], [vals[2]]);
+      nodeBendingYY.set(mesh.elements.val[elementIndex][0], [vals[0]]);
+      nodeBendingYY.set(mesh.elements.val[elementIndex][1], [vals[1]]);
+      nodeBendingYY.set(mesh.elements.val[elementIndex][2], [vals[2]]);
     });
 
     mesh.analyzeOutputs?.val?.bendingXY?.forEach((vals, elementIndex) => {
-      nodeBendingXY.set(mesh.elements?.val[elementIndex]?.[0], [vals[0]]);
-      nodeBendingXY.set(mesh.elements?.val[elementIndex]?.[1], [vals[1]]);
-      nodeBendingXY.set(mesh.elements?.val[elementIndex]?.[2], [vals[2]]);
+      nodeBendingXY.set(mesh.elements.val[elementIndex][0], [vals[0]]);
+      nodeBendingXY.set(mesh.elements.val[elementIndex][1], [vals[1]]);
+      nodeBendingXY.set(mesh.elements.val[elementIndex][2], [vals[2]]);
     });
 
     const resultMapper = {
@@ -312,9 +383,9 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
     };
 
     const values = [];
-    (mesh.nodes?.val ?? []).forEach((_, i) => {
+    mesh.nodes.val.forEach((_, i) => {
       const resultMap = resultMapper[settings.shellResults.val];
-      if (!resultMap || !resultMap[0]) return;
+      if (!resultMap) return;
       if (!resultMap[0].has(i)) {
         values.push(0);
         return;

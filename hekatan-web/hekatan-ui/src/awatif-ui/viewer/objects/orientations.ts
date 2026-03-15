@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import van, { State } from "vanjs-core";
-import { Node, Mesh } from "awatif-fem";
+import { Node } from "awatif-fem";
+import { Structure } from "awatif-fem";
 import { Settings } from "../settings/getSettings";
 
 import { getTransformationMatrixBeam } from "./utils/getTransformationMatrixBeam";
@@ -9,7 +10,7 @@ import { getAverage } from "./utils/getAverage";
 import { getTransformationMatrixShell } from "./utils/getTransformationMatrixShell";
 
 export function orientations(
-  structure: Mesh,
+  structure: Structure,
   settings: Settings,
   derivedNodes: State<Node[]>,
   derivedDisplayScale: State<number>

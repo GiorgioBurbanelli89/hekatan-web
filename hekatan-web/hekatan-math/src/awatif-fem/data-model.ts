@@ -32,6 +32,8 @@ export type ElementInputs = {
   torsionalConstants?: Map<number, number>;
   thicknesses?: Map<number, number>;
   poissonsRatios?: Map<number, number>;
+  densities?: Map<number, number>; // mass density per element (rho)
+  polarMomentsOfInertia?: Map<number, number>; // I0 (polar moment of inertia, Paz formulation)
 };
 
 export type DeformOutputs = {
@@ -54,4 +56,10 @@ export type AnalyzeOutputs = {
   membraneXY?: Map<number, [number, number, number]>;
   tranverseShearX?: Map<number, [number, number, number]>;
   tranverseShearY?: Map<number, [number, number, number]>;
+};
+
+export type ModalOutputs = {
+  frequencies?: number[];    // natural frequencies [Hz]
+  modeShapes?: number[][];   // mode shapes [mode_index][dof_index]
+  massParticipation?: number[][]; // [mode_index][6] ratios (ux,uy,uz,rx,ry,rz)
 };
