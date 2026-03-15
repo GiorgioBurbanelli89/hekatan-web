@@ -160,5 +160,23 @@
     "name": "Barra Axial 1-DOF (Verificacion)",
     "filename": "barra_axial_Barra_Axial_1-DOF_Verificacion.hcalc",
     "size": 1200
+  },
+  {
+    "key": "cantilever_fy",
+    "name": "Cantilever - Carga Vertical (Fy)",
+    "filename": "cantilever_fy_Cantilever_Carga_Vertical_Fy.hcalc",
+    "size": 3500
+  },
+  {
+    "key": "cantilever_fx",
+    "name": "Cantilever - Carga Axial (Fx)",
+    "filename": "cantilever_fx_Cantilever_Carga_Axial_Fx.hcalc",
+    "size": 3200
+  },
+  {
+    "key": "cantilever_fxfy",
+    "name": "Cantilever - Carga Combinada (Fx+Fy)",
+    "filename": "cantilever_fxfy_Cantilever_Carga_Combinada_FxFy.hcalc",
+    "size": 3800
   }
 ]

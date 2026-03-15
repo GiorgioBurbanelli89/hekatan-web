@@ -1,0 +1,155 @@
+# Viga en Voladizo — Carga Vertical
+> Viga empotrada de 4 m, carga vertical P en el extremo libre
+> Deflexion analitica: δ = PL³/(3EI)
+
+---
+## Datos
+
+@{cells} |E_c = 200000000|A_c = 0.01|Iz_c = 8.33e-5|Iy_c = 8.33e-5|
+@{cells} |G_c = 80000000|J_c = 1.41e-4|L_c = 4|P_c = 50|
+
+---
+## Solucion Analitica
+
+> Deflexion maxima en el extremo libre:
+
+@{eq left}
+δ = PL^3/(3EI)
+@{end eq}
+
+delta_analitico = P_c * L_c^3 / (3 * E_c * Iz_c)
+
+> Rotacion en el extremo libre:
+
+@{eq left}
+θ = PL^2/(2EI)
+@{end eq}
+
+theta_analitico = P_c * L_c^2 / (2 * E_c * Iz_c)
+
+---
+## Modelo FEM — Carga Vertical Fy
+
+> 5 nodos, 4 elementos, empotramiento en nodo 0, fuerza **fy** en nodo 4
+
+@{awatif 800 400}
+node 0 0 0
+node 1 0 0
+node 2 0 0
+node 3 0 0
+node 4 0 0
+element frame 0 1 E:$E_c A:$A_c Iz:$Iz_c Iy:$Iy_c G:$G_c J:$J_c
+element frame 1 2 E:$E_c A:$A_c Iz:$Iz_c Iy:$Iy_c G:$G_c J:$J_c
+element frame 2 3 E:$E_c A:$A_c Iz:$Iz_c Iy:$Iy_c G:$G_c J:$J_c
+element frame 3 4 E:$E_c A:$A_c Iz:$Iz_c Iy:$Iy_c G:$G_c J:$J_c
+support 0 fixed
+load 4 fy:$P_c
+solve explicit
+show deformed scale:500 nodeResults:deformations
+@{end awatif}
+
+---
+## Comprobacion MathCanvas — K 12x12
+
+> Ensamblamos manualmente la K global y resolvemos con lsolve
+
+nEl_c = 4
+nNod_c = 5
+nDOF_c = nNod_c * 6
+dL_c = L_c / nEl_c
+
+> Coeficientes de rigidez:
+
+EA_L_c = E_c * A_c / dL_c
+EIz_L3_c = E_c * Iz_c / (dL_c^3)
+EIy_L3_c = E_c * Iy_c / (dL_c^3)
+GJ_L_c = G_c * J_c / dL_c
+EIz_L2_c = E_c * Iz_c / (dL_c^2)
+EIy_L2_c = E_c * Iy_c / (dL_c^2)
+EIz_L1_c = E_c * Iz_c / dL_c
+EIy_L1_c = E_c * Iy_c / dL_c
+
+> Matriz local K_e (12x12):
+
+Kl_c = zeros(12, 12)
+Kl_c[1,1] = EA_L_c
+Kl_c[1,7] = -EA_L_c
+Kl_c[2,2] = 12*EIz_L3_c
+Kl_c[2,6] = 6*EIz_L2_c
+Kl_c[2,8] = -12*EIz_L3_c
+Kl_c[2,12] = 6*EIz_L2_c
+Kl_c[3,3] = 12*EIy_L3_c
+Kl_c[3,5] = -6*EIy_L2_c
+Kl_c[3,9] = -12*EIy_L3_c
+Kl_c[3,11] = -6*EIy_L2_c
+Kl_c[4,4] = GJ_L_c
+Kl_c[4,10] = -GJ_L_c
+Kl_c[5,3] = -6*EIy_L2_c
+Kl_c[5,5] = 4*EIy_L1_c
+Kl_c[5,9] = 6*EIy_L2_c
+Kl_c[5,11] = 2*EIy_L1_c
+Kl_c[6,2] = 6*EIz_L2_c
+Kl_c[6,6] = 4*EIz_L1_c
+Kl_c[6,8] = -6*EIz_L2_c
+Kl_c[6,12] = 2*EIz_L1_c
+Kl_c[7,1] = -EA_L_c
+Kl_c[7,7] = EA_L_c
+Kl_c[8,2] = -12*EIz_L3_c
+Kl_c[8,6] = -6*EIz_L2_c
+Kl_c[8,8] = 12*EIz_L3_c
+Kl_c[8,12] = -6*EIz_L2_c
+Kl_c[9,3] = -12*EIy_L3_c
+Kl_c[9,5] = 6*EIy_L2_c
+Kl_c[9,9] = 12*EIy_L3_c
+Kl_c[9,11] = 6*EIy_L2_c
+Kl_c[10,4] = -GJ_L_c
+Kl_c[10,10] = GJ_L_c
+Kl_c[11,3] = -6*EIy_L2_c
+Kl_c[11,5] = 2*EIy_L1_c
+Kl_c[11,9] = 6*EIy_L2_c
+Kl_c[11,11] = 4*EIy_L1_c
+Kl_c[12,2] = 6*EIz_L2_c
+Kl_c[12,6] = 2*EIz_L1_c
+Kl_c[12,8] = -6*EIz_L2_c
+Kl_c[12,12] = 4*EIz_L1_c
+
+> Ensamblaje global (30x30):
+
+KG_c = zeros(nDOF_c, nDOF_c)
+for e = 1:nEl_c
+  di_c = 6*(e - 1)
+  dj_c = 6*e
+  for r = 1:6
+    for c = 1:6
+      KG_c[di_c+r, di_c+c] = KG_c[di_c+r, di_c+c] + Kl_c[r, c]
+      KG_c[di_c+r, dj_c+c] = KG_c[di_c+r, dj_c+c] + Kl_c[r, 6+c]
+      KG_c[dj_c+r, di_c+c] = KG_c[dj_c+r, di_c+c] + Kl_c[6+r, c]
+      KG_c[dj_c+r, dj_c+c] = KG_c[dj_c+r, dj_c+c] + Kl_c[6+r, 6+c]
+    end
+  end
+end
+
+> Vector de fuerzas (carga fy en nodo 4, DOF 26 = 6*4 + 2):
+
+FG_c = zeros(nDOF_c, 1)
+FG_c[26, 1] = P_c
+
+> Condiciones de contorno (nodo 0 empotrado = DOFs 1:6):
+
+KR_c = submat(KG_c, 7, nDOF_c, 7, nDOF_c)
+FR_c = submat(FG_c, 7, nDOF_c, 1, 1)
+
+> Resolver:
+
+uR_c = lsolve(KR_c, FR_c)
+
+> **Deflexion vertical nodo 4** (DOF uy del nodo 4 = posicion 20 en uR):
+
+uy_nodo4 = uR_c[20, 1]
+
+> **Comparacion**:
+
+@{cells} |delta_anal = delta_analitico|delta_fem = uy_nodo4|
+error_fy = abs(uy_nodo4 - delta_analitico)
+
+> Con 4 elementos la solucion FEM converge al valor analitico ✓

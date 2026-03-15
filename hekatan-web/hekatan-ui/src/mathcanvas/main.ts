@@ -15760,6 +15760,497 @@ err_12_vs_2 = abs(u_12x12 - u_2x2)
 
   },
 
+  awatif_cantilever_vertical: {
+
+    name: "Cantilever — Carga Vertical (Fy)",
+
+    code: `# Viga en Voladizo — Carga Vertical
+> Viga empotrada de 4 m, carga vertical P en el extremo libre
+> Deflexion analitica: δ = PL³/(3EI)
+
+---
+## Datos
+
+@{cells} |E_c = 200000000|A_c = 0.01|Iz_c = 8.33e-5|Iy_c = 8.33e-5|
+@{cells} |G_c = 80000000|J_c = 1.41e-4|L_c = 4|P_c = 50|
+
+---
+## Solucion Analitica
+
+> Deflexion maxima en el extremo libre:
+
+@{eq left}
+δ = PL^3/(3EI)
+@{end eq}
+
+delta_analitico = P_c * L_c^3 / (3 * E_c * Iz_c)
+
+> Rotacion en el extremo libre:
+
+@{eq left}
+θ = PL^2/(2EI)
+@{end eq}
+
+theta_analitico = P_c * L_c^2 / (2 * E_c * Iz_c)
+
+---
+## Modelo FEM — Carga Vertical Fy
+
+> 5 nodos, 4 elementos, empotramiento en nodo 0, fuerza **fy** en nodo 4
+
+@{awatif 800 400}
+node 0 0 0
+node 1 0 0
+node 2 0 0
+node 3 0 0
+node 4 0 0
+element frame 0 1 E:$E_c A:$A_c Iz:$Iz_c Iy:$Iy_c G:$G_c J:$J_c
+element frame 1 2 E:$E_c A:$A_c Iz:$Iz_c Iy:$Iy_c G:$G_c J:$J_c
+element frame 2 3 E:$E_c A:$A_c Iz:$Iz_c Iy:$Iy_c G:$G_c J:$J_c
+element frame 3 4 E:$E_c A:$A_c Iz:$Iz_c Iy:$Iy_c G:$G_c J:$J_c
+support 0 fixed
+load 4 fy:$P_c
+solve explicit
+show deformed scale:500 nodeResults:deformations
+@{end awatif}
+
+---
+## Comprobacion MathCanvas — K 12x12
+
+> Ensamblamos manualmente la K global y resolvemos con lsolve
+
+nEl_c = 4
+nNod_c = 5
+nDOF_c = nNod_c * 6
+dL_c = L_c / nEl_c
+
+> Coeficientes de rigidez:
+
+EA_L_c = E_c * A_c / dL_c
+EIz_L3_c = E_c * Iz_c / (dL_c^3)
+EIy_L3_c = E_c * Iy_c / (dL_c^3)
+GJ_L_c = G_c * J_c / dL_c
+EIz_L2_c = E_c * Iz_c / (dL_c^2)
+EIy_L2_c = E_c * Iy_c / (dL_c^2)
+EIz_L1_c = E_c * Iz_c / dL_c
+EIy_L1_c = E_c * Iy_c / dL_c
+
+> Matriz local K_e (12x12):
+
+Kl_c = zeros(12, 12)
+Kl_c[1,1] = EA_L_c
+Kl_c[1,7] = -EA_L_c
+Kl_c[2,2] = 12*EIz_L3_c
+Kl_c[2,6] = 6*EIz_L2_c
+Kl_c[2,8] = -12*EIz_L3_c
+Kl_c[2,12] = 6*EIz_L2_c
+Kl_c[3,3] = 12*EIy_L3_c
+Kl_c[3,5] = -6*EIy_L2_c
+Kl_c[3,9] = -12*EIy_L3_c
+Kl_c[3,11] = -6*EIy_L2_c
+Kl_c[4,4] = GJ_L_c
+Kl_c[4,10] = -GJ_L_c
+Kl_c[5,3] = -6*EIy_L2_c
+Kl_c[5,5] = 4*EIy_L1_c
+Kl_c[5,9] = 6*EIy_L2_c
+Kl_c[5,11] = 2*EIy_L1_c
+Kl_c[6,2] = 6*EIz_L2_c
+Kl_c[6,6] = 4*EIz_L1_c
+Kl_c[6,8] = -6*EIz_L2_c
+Kl_c[6,12] = 2*EIz_L1_c
+Kl_c[7,1] = -EA_L_c
+Kl_c[7,7] = EA_L_c
+Kl_c[8,2] = -12*EIz_L3_c
+Kl_c[8,6] = -6*EIz_L2_c
+Kl_c[8,8] = 12*EIz_L3_c
+Kl_c[8,12] = -6*EIz_L2_c
+Kl_c[9,3] = -12*EIy_L3_c
+Kl_c[9,5] = 6*EIy_L2_c
+Kl_c[9,9] = 12*EIy_L3_c
+Kl_c[9,11] = 6*EIy_L2_c
+Kl_c[10,4] = -GJ_L_c
+Kl_c[10,10] = GJ_L_c
+Kl_c[11,3] = -6*EIy_L2_c
+Kl_c[11,5] = 2*EIy_L1_c
+Kl_c[11,9] = 6*EIy_L2_c
+Kl_c[11,11] = 4*EIy_L1_c
+Kl_c[12,2] = 6*EIz_L2_c
+Kl_c[12,6] = 2*EIz_L1_c
+Kl_c[12,8] = -6*EIz_L2_c
+Kl_c[12,12] = 4*EIz_L1_c
+
+> Ensamblaje global (30x30):
+
+KG_c = zeros(nDOF_c, nDOF_c)
+for e = 1:nEl_c
+  di_c = 6*(e - 1)
+  dj_c = 6*e
+  for r = 1:6
+    for c = 1:6
+      KG_c[di_c+r, di_c+c] = KG_c[di_c+r, di_c+c] + Kl_c[r, c]
+      KG_c[di_c+r, dj_c+c] = KG_c[di_c+r, dj_c+c] + Kl_c[r, 6+c]
+      KG_c[dj_c+r, di_c+c] = KG_c[dj_c+r, di_c+c] + Kl_c[6+r, c]
+      KG_c[dj_c+r, dj_c+c] = KG_c[dj_c+r, dj_c+c] + Kl_c[6+r, 6+c]
+    end
+  end
+end
+
+> Vector de fuerzas (carga fy en nodo 4, DOF 26 = 6*4 + 2):
+
+FG_c = zeros(nDOF_c, 1)
+FG_c[26, 1] = P_c
+
+> Condiciones de contorno (nodo 0 empotrado = DOFs 1:6):
+
+KR_c = submat(KG_c, 7, nDOF_c, 7, nDOF_c)
+FR_c = submat(FG_c, 7, nDOF_c, 1, 1)
+
+> Resolver:
+
+uR_c = lsolve(KR_c, FR_c)
+
+> **Deflexion vertical nodo 4** (DOF uy del nodo 4 = posicion 20 en uR):
+
+uy_nodo4 = uR_c[20, 1]
+
+> **Comparacion**:
+
+@{cells} |delta_anal = delta_analitico|delta_fem = uy_nodo4|
+error_fy = abs(uy_nodo4 - delta_analitico)
+
+> Con 4 elementos la solucion FEM converge al valor analitico ✓
+`,
+
+  },
+
+  awatif_cantilever_axial: {
+
+    name: "Cantilever — Carga Axial (Fx)",
+
+    code: `# Viga en Voladizo — Carga Axial
+> Viga empotrada de 4 m, carga axial F en el extremo libre
+> Desplazamiento analitico: u = FL/(EA)
+
+---
+## Datos
+
+@{cells} |E_a = 200000000|A_a = 0.01|Iz_a = 8.33e-5|Iy_a = 8.33e-5|
+@{cells} |G_a = 80000000|J_a = 1.41e-4|L_a = 4|F_a = 100|
+
+---
+## Solucion Analitica
+
+> Desplazamiento axial en el extremo libre:
+
+@{eq left}
+u = FL/(EA)
+@{end eq}
+
+u_analitico_a = F_a * L_a / (E_a * A_a)
+
+---
+## Modelo FEM — Carga Axial Fx
+
+> 5 nodos, 4 elementos, empotramiento en nodo 0, fuerza **fx** en nodo 4
+
+@{awatif 800 400}
+node 0 0 0
+node 1 0 0
+node 2 0 0
+node 3 0 0
+node 4 0 0
+element frame 0 1 E:$E_a A:$A_a Iz:$Iz_a Iy:$Iy_a G:$G_a J:$J_a
+element frame 1 2 E:$E_a A:$A_a Iz:$Iz_a Iy:$Iy_a G:$G_a J:$J_a
+element frame 2 3 E:$E_a A:$A_a Iz:$Iz_a Iy:$Iy_a G:$G_a J:$J_a
+element frame 3 4 E:$E_a A:$A_a Iz:$Iz_a Iy:$Iy_a G:$G_a J:$J_a
+support 0 fixed
+load 4 fx:$F_a
+solve explicit
+show deformed scale:5000 nodeResults:deformations
+@{end awatif}
+
+---
+## Comprobacion MathCanvas — K 12x12
+
+> Ensamblamos manualmente y resolvemos
+
+nEl_a = 4
+nNod_a = 5
+nDOF_a = nNod_a * 6
+dL_a = L_a / nEl_a
+
+> Coeficientes de rigidez:
+
+EA_L_a = E_a * A_a / dL_a
+EIz_L3_a = E_a * Iz_a / (dL_a^3)
+EIy_L3_a = E_a * Iy_a / (dL_a^3)
+GJ_L_a = G_a * J_a / dL_a
+EIz_L2_a = E_a * Iz_a / (dL_a^2)
+EIy_L2_a = E_a * Iy_a / (dL_a^2)
+EIz_L1_a = E_a * Iz_a / dL_a
+EIy_L1_a = E_a * Iy_a / dL_a
+
+> Matriz local K_e (12x12):
+
+Kl_a = zeros(12, 12)
+Kl_a[1,1] = EA_L_a
+Kl_a[1,7] = -EA_L_a
+Kl_a[2,2] = 12*EIz_L3_a
+Kl_a[2,6] = 6*EIz_L2_a
+Kl_a[2,8] = -12*EIz_L3_a
+Kl_a[2,12] = 6*EIz_L2_a
+Kl_a[3,3] = 12*EIy_L3_a
+Kl_a[3,5] = -6*EIy_L2_a
+Kl_a[3,9] = -12*EIy_L3_a
+Kl_a[3,11] = -6*EIy_L2_a
+Kl_a[4,4] = GJ_L_a
+Kl_a[4,10] = -GJ_L_a
+Kl_a[5,3] = -6*EIy_L2_a
+Kl_a[5,5] = 4*EIy_L1_a
+Kl_a[5,9] = 6*EIy_L2_a
+Kl_a[5,11] = 2*EIy_L1_a
+Kl_a[6,2] = 6*EIz_L2_a
+Kl_a[6,6] = 4*EIz_L1_a
+Kl_a[6,8] = -6*EIz_L2_a
+Kl_a[6,12] = 2*EIz_L1_a
+Kl_a[7,1] = -EA_L_a
+Kl_a[7,7] = EA_L_a
+Kl_a[8,2] = -12*EIz_L3_a
+Kl_a[8,6] = -6*EIz_L2_a
+Kl_a[8,8] = 12*EIz_L3_a
+Kl_a[8,12] = -6*EIz_L2_a
+Kl_a[9,3] = -12*EIy_L3_a
+Kl_a[9,5] = 6*EIy_L2_a
+Kl_a[9,9] = 12*EIy_L3_a
+Kl_a[9,11] = 6*EIy_L2_a
+Kl_a[10,4] = -GJ_L_a
+Kl_a[10,10] = GJ_L_a
+Kl_a[11,3] = -6*EIy_L2_a
+Kl_a[11,5] = 2*EIy_L1_a
+Kl_a[11,9] = 6*EIy_L2_a
+Kl_a[11,11] = 4*EIy_L1_a
+Kl_a[12,2] = 6*EIz_L2_a
+Kl_a[12,6] = 2*EIz_L1_a
+Kl_a[12,8] = -6*EIz_L2_a
+Kl_a[12,12] = 4*EIz_L1_a
+
+> Ensamblaje global (30x30):
+
+KG_a = zeros(nDOF_a, nDOF_a)
+for e = 1:nEl_a
+  di_a = 6*(e - 1)
+  dj_a = 6*e
+  for r = 1:6
+    for c = 1:6
+      KG_a[di_a+r, di_a+c] = KG_a[di_a+r, di_a+c] + Kl_a[r, c]
+      KG_a[di_a+r, dj_a+c] = KG_a[di_a+r, dj_a+c] + Kl_a[r, 6+c]
+      KG_a[dj_a+r, di_a+c] = KG_a[dj_a+r, di_a+c] + Kl_a[6+r, c]
+      KG_a[dj_a+r, dj_a+c] = KG_a[dj_a+r, dj_a+c] + Kl_a[6+r, 6+c]
+    end
+  end
+end
+
+> Vector de fuerzas (carga fx en nodo 4, DOF 25 = 6*4 + 1):
+
+FG_a = zeros(nDOF_a, 1)
+FG_a[25, 1] = F_a
+
+> Condiciones de contorno (nodo 0 empotrado = DOFs 1:6):
+
+KR_a = submat(KG_a, 7, nDOF_a, 7, nDOF_a)
+FR_a = submat(FG_a, 7, nDOF_a, 1, 1)
+
+> Resolver:
+
+uR_a = lsolve(KR_a, FR_a)
+
+> **Desplazamiento axial nodo 4** (DOF ux del nodo 4 = posicion 19 en uR):
+
+ux_nodo4 = uR_a[19, 1]
+
+> **Comparacion**:
+
+@{cells} |u_anal_a = u_analitico_a|u_fem_a = ux_nodo4|
+error_fx = abs(ux_nodo4 - u_analitico_a)
+
+> Solucion exacta: error = 0 (elementos lineales bajo carga axial pura) ✓
+`,
+
+  },
+
+  awatif_cantilever_combined: {
+
+    name: "Cantilever — Carga Combinada (Fx+Fy)",
+
+    code: `# Viga en Voladizo — Carga Combinada Fx + Fy
+> Viga empotrada de 4 m con carga axial y vertical simultanea
+> Se combinan ambos efectos: axial + flexion
+
+---
+## Datos
+
+@{cells} |E_m = 200000000|A_m = 0.01|Iz_m = 8.33e-5|Iy_m = 8.33e-5|
+@{cells} |G_m = 80000000|J_m = 1.41e-4|L_m = 4|Fx_m = 100|Fy_m = 50|
+
+---
+## Solucion Analitica
+
+> Desplazamiento axial (por Fx):
+
+@{eq left}
+u_x = F_xL/(EA)
+@{end eq}
+
+ux_analitico_m = Fx_m * L_m / (E_m * A_m)
+
+> Deflexion vertical (por Fy):
+
+@{eq left}
+u_y = F_yL^3/(3EI_z)
+@{end eq}
+
+uy_analitico_m = Fy_m * L_m^3 / (3 * E_m * Iz_m)
+
+> Desplazamiento resultante:
+
+u_resultante_m = sqrt(ux_analitico_m^2 + uy_analitico_m^2)
+
+---
+## Modelo FEM — Carga Combinada Fx + Fy
+
+> 5 nodos, 4 elementos, empotramiento en nodo 0, fuerzas **fx** y **fy** en nodo 4
+
+@{awatif 800 400}
+node 0 0 0
+node 1 0 0
+node 2 0 0
+node 3 0 0
+node 4 0 0
+element frame 0 1 E:$E_m A:$A_m Iz:$Iz_m Iy:$Iy_m G:$G_m J:$J_m
+element frame 1 2 E:$E_m A:$A_m Iz:$Iz_m Iy:$Iy_m G:$G_m J:$J_m
+element frame 2 3 E:$E_m A:$A_m Iz:$Iz_m Iy:$Iy_m G:$G_m J:$J_m
+element frame 3 4 E:$E_m A:$A_m Iz:$Iz_m Iy:$Iy_m G:$G_m J:$J_m
+support 0 fixed
+load 4 fx:$Fx_m fy:$Fy_m
+solve explicit
+show deformed scale:500 nodeResults:deformations
+@{end awatif}
+
+---
+## Comprobacion MathCanvas — K 12x12
+
+> Ensamblamos manualmente con carga combinada
+
+nEl_m = 4
+nNod_m = 5
+nDOF_m = nNod_m * 6
+dL_m = L_m / nEl_m
+
+> Coeficientes de rigidez:
+
+EA_L_m = E_m * A_m / dL_m
+EIz_L3_m = E_m * Iz_m / (dL_m^3)
+EIy_L3_m = E_m * Iy_m / (dL_m^3)
+GJ_L_m = G_m * J_m / dL_m
+EIz_L2_m = E_m * Iz_m / (dL_m^2)
+EIy_L2_m = E_m * Iy_m / (dL_m^2)
+EIz_L1_m = E_m * Iz_m / dL_m
+EIy_L1_m = E_m * Iy_m / dL_m
+
+> Matriz local K_e (12x12):
+
+Kl_m = zeros(12, 12)
+Kl_m[1,1] = EA_L_m
+Kl_m[1,7] = -EA_L_m
+Kl_m[2,2] = 12*EIz_L3_m
+Kl_m[2,6] = 6*EIz_L2_m
+Kl_m[2,8] = -12*EIz_L3_m
+Kl_m[2,12] = 6*EIz_L2_m
+Kl_m[3,3] = 12*EIy_L3_m
+Kl_m[3,5] = -6*EIy_L2_m
+Kl_m[3,9] = -12*EIy_L3_m
+Kl_m[3,11] = -6*EIy_L2_m
+Kl_m[4,4] = GJ_L_m
+Kl_m[4,10] = -GJ_L_m
+Kl_m[5,3] = -6*EIy_L2_m
+Kl_m[5,5] = 4*EIy_L1_m
+Kl_m[5,9] = 6*EIy_L2_m
+Kl_m[5,11] = 2*EIy_L1_m
+Kl_m[6,2] = 6*EIz_L2_m
+Kl_m[6,6] = 4*EIz_L1_m
+Kl_m[6,8] = -6*EIz_L2_m
+Kl_m[6,12] = 2*EIz_L1_m
+Kl_m[7,1] = -EA_L_m
+Kl_m[7,7] = EA_L_m
+Kl_m[8,2] = -12*EIz_L3_m
+Kl_m[8,6] = -6*EIz_L2_m
+Kl_m[8,8] = 12*EIz_L3_m
+Kl_m[8,12] = -6*EIz_L2_m
+Kl_m[9,3] = -12*EIy_L3_m
+Kl_m[9,5] = 6*EIy_L2_m
+Kl_m[9,9] = 12*EIy_L3_m
+Kl_m[9,11] = 6*EIy_L2_m
+Kl_m[10,4] = -GJ_L_m
+Kl_m[10,10] = GJ_L_m
+Kl_m[11,3] = -6*EIy_L2_m
+Kl_m[11,5] = 2*EIy_L1_m
+Kl_m[11,9] = 6*EIy_L2_m
+Kl_m[11,11] = 4*EIy_L1_m
+Kl_m[12,2] = 6*EIz_L2_m
+Kl_m[12,6] = 2*EIz_L1_m
+Kl_m[12,8] = -6*EIz_L2_m
+Kl_m[12,12] = 4*EIz_L1_m
+
+> Ensamblaje global (30x30):
+
+KG_m = zeros(nDOF_m, nDOF_m)
+for e = 1:nEl_m
+  di_m = 6*(e - 1)
+  dj_m = 6*e
+  for r = 1:6
+    for c = 1:6
+      KG_m[di_m+r, di_m+c] = KG_m[di_m+r, di_m+c] + Kl_m[r, c]
+      KG_m[di_m+r, dj_m+c] = KG_m[di_m+r, dj_m+c] + Kl_m[r, 6+c]
+      KG_m[dj_m+r, di_m+c] = KG_m[dj_m+r, di_m+c] + Kl_m[6+r, c]
+      KG_m[dj_m+r, dj_m+c] = KG_m[dj_m+r, dj_m+c] + Kl_m[6+r, 6+c]
+    end
+  end
+end
+
+> Vector de fuerzas (fx en DOF 25, fy en DOF 26 del nodo 4):
+
+FG_m = zeros(nDOF_m, 1)
+FG_m[25, 1] = Fx_m
+FG_m[26, 1] = Fy_m
+
+> Condiciones de contorno (nodo 0 empotrado = DOFs 1:6):
+
+KR_m = submat(KG_m, 7, nDOF_m, 7, nDOF_m)
+FR_m = submat(FG_m, 7, nDOF_m, 1, 1)
+
+> Resolver:
+
+uR_m = lsolve(KR_m, FR_m)
+
+> **Desplazamientos nodo 4** (DOF 19=ux, DOF 20=uy):
+
+ux_nodo4_m = uR_m[19, 1]
+uy_nodo4_m = uR_m[20, 1]
+u_res_fem = sqrt(ux_nodo4_m^2 + uy_nodo4_m^2)
+
+> **Comparacion Analitico vs FEM**:
+
+@{cells} |ux_anal = ux_analitico_m|ux_fem = ux_nodo4_m|err_ux = abs(ux_nodo4_m - ux_analitico_m)|
+@{cells} |uy_anal = uy_analitico_m|uy_fem = uy_nodo4_m|
+@{cells} |u_res_anal = u_resultante_m|u_res_f = u_res_fem|
+
+> **Axial**: error = 0 (solucion exacta) ✓
+> **Flexion**: converge con 4 elementos — error decrece con mas elementos ✓
+> La carga combinada **fx:100 fy:50** produce desplazamiento axial Y vertical simultaneamente
+`,
+
+  },
+
   awatif_barra_axial: {
 
     name: "Barra Axial 1-DOF (Verificacion)",
