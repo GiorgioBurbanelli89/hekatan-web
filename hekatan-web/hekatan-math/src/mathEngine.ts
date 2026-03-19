@@ -482,6 +482,158 @@ math.import({
     for (let i = 0; i < count; i++) arr.push([start + (end - start) * i / (count - 1)]);
     return (math as any).matrix(arr);
   },
+  // ── Row max/min of absolute values (for time history post-processing) ──
+  // rowmax(M, row) → max of absolute values in row `row` of matrix M
+  rowmax: function (M: any, row: number) {
+    const data = (M as any).toArray();
+    const r = data[row - 1]; // 1-indexed
+    if (!r) return 0;
+    let mx = 0;
+    for (let j = 0; j < r.length; j++) {
+      const v = Math.abs(Array.isArray(r[j]) ? r[j][0] : r[j]);
+      if (v > mx) mx = v;
+    }
+    return mx;
+  },
+
+  // ── Newmark-beta time integration ──────────────────────────────────
+  // newmark(M, K, F, tdur, dt, tload)
+  //   M     = mass matrix (NxN)
+  //   K     = stiffness matrix (NxN)
+  //   F     = force vector (Nx1) — applied during [0, tload]
+  //   tdur  = total duration (s)
+  //   dt    = time step (s)
+  //   tload = load duration (s) — force is constant F for t<=tload, then 0
+  // Returns: { t: time vector, u: displacement matrix (nDof x nSteps) }
+  newmark: function (M: any, K: any, F: any, tdur: number, dt: number, tload: number) {
+    const nDof = (M as any).size()[0];
+    const nSteps = Math.round(tdur / dt) + 1;
+    // Newmark parameters (average acceleration)
+    const gamma = 0.5, beta = 0.25;
+    // Convert to arrays for speed
+    const Marr: number[][] = (M as any).toArray();
+    const Karr: number[][] = (K as any).toArray();
+    const Farr: number[] = [];
+    const fData = (F as any).toArray();
+    for (let i = 0; i < nDof; i++) {
+      Farr.push(Array.isArray(fData[i]) ? fData[i][0] : fData[i]);
+    }
+    // Effective stiffness: Keff = K + a0*M  where a0 = 1/(beta*dt^2)
+    const a0 = 1 / (beta * dt * dt);
+    const a1 = gamma / (beta * dt);
+    const a2 = 1 / (beta * dt);
+    const a3 = 1 / (2 * beta) - 1;
+    const a4 = gamma / beta - 1;
+    const a5 = dt / 2 * (gamma / beta - 2);
+    // Keff = K + a0*M
+    const Keff: number[][] = [];
+    for (let i = 0; i < nDof; i++) {
+      Keff.push([]);
+      for (let j = 0; j < nDof; j++) {
+        Keff[i][j] = Karr[i][j] + a0 * Marr[i][j];
+      }
+    }
+    // LU decomposition of Keff (simple Gaussian elimination with partial pivoting)
+    const L: number[][] = Array.from({length: nDof}, () => new Array(nDof).fill(0));
+    const U: number[][] = Array.from({length: nDof}, () => new Array(nDof).fill(0));
+    const P: number[] = Array.from({length: nDof}, (_, i) => i); // pivot
+    // Copy Keff to U
+    for (let i = 0; i < nDof; i++) for (let j = 0; j < nDof; j++) U[i][j] = Keff[i][j];
+    for (let k = 0; k < nDof; k++) {
+      // Partial pivoting
+      let maxVal = Math.abs(U[k][k]), maxRow = k;
+      for (let i = k + 1; i < nDof; i++) {
+        if (Math.abs(U[i][k]) > maxVal) { maxVal = Math.abs(U[i][k]); maxRow = i; }
+      }
+      if (maxRow !== k) {
+        [U[k], U[maxRow]] = [U[maxRow], U[k]];
+        [P[k], P[maxRow]] = [P[maxRow], P[k]];
+        for (let j = 0; j < k; j++) [L[k][j], L[maxRow][j]] = [L[maxRow][j], L[k][j]];
+      }
+      L[k][k] = 1;
+      for (let i = k + 1; i < nDof; i++) {
+        L[i][k] = U[i][k] / U[k][k];
+        for (let j = k; j < nDof; j++) U[i][j] -= L[i][k] * U[k][j];
+      }
+    }
+    function luSolve(rhs: number[]): number[] {
+      // Apply pivot
+      const pb: number[] = new Array(nDof);
+      for (let i = 0; i < nDof; i++) pb[i] = rhs[P[i]];
+      // Forward substitution (L*y = pb)
+      const y = new Array(nDof).fill(0);
+      for (let i = 0; i < nDof; i++) {
+        y[i] = pb[i];
+        for (let j = 0; j < i; j++) y[i] -= L[i][j] * y[j];
+      }
+      // Back substitution (U*x = y)
+      const x = new Array(nDof).fill(0);
+      for (let i = nDof - 1; i >= 0; i--) {
+        x[i] = y[i];
+        for (let j = i + 1; j < nDof; j++) x[i] -= U[i][j] * x[j];
+        x[i] /= U[i][i];
+      }
+      return x;
+    }
+    // Time integration
+    const u: number[][] = Array.from({length: nDof}, () => new Array(nSteps).fill(0));
+    const v: number[][] = Array.from({length: nDof}, () => new Array(nSteps).fill(0));
+    const a: number[][] = Array.from({length: nDof}, () => new Array(nSteps).fill(0));
+    const tArr: number[] = new Array(nSteps);
+    // Initial conditions: u0=0, v0=0, a0 = M^-1 * F(0)
+    tArr[0] = 0;
+    const F0 = Farr.slice(); // F at t=0 (tload > 0 assumed)
+    // a(0) = M^-1 * F(0) — solve M*a = F
+    const Meff: number[][] = [];
+    for (let i = 0; i < nDof; i++) { Meff.push(Marr[i].slice()); }
+    // Simple solve for initial acceleration (Gaussian elimination on M)
+    const Ma = Array.from({length: nDof}, (_, i) => [...Marr[i]]);
+    const Mb = F0.slice();
+    for (let k = 0; k < nDof; k++) {
+      let mx = Math.abs(Ma[k][k]), mr = k;
+      for (let i = k+1; i < nDof; i++) if (Math.abs(Ma[i][k]) > mx) { mx = Math.abs(Ma[i][k]); mr = i; }
+      if (mr !== k) { [Ma[k], Ma[mr]] = [Ma[mr], Ma[k]]; [Mb[k], Mb[mr]] = [Mb[mr], Mb[k]]; }
+      for (let i = k+1; i < nDof; i++) {
+        const f = Ma[i][k] / Ma[k][k];
+        for (let j = k; j < nDof; j++) Ma[i][j] -= f * Ma[k][j];
+        Mb[i] -= f * Mb[k];
+      }
+    }
+    for (let i = nDof-1; i >= 0; i--) {
+      a[i][0] = Mb[i];
+      for (let j = i+1; j < nDof; j++) a[i][0] -= Ma[i][j] * a[j][0];
+      a[i][0] /= Ma[i][i];
+    }
+    // Time stepping
+    for (let n = 0; n < nSteps - 1; n++) {
+      const t_next = (n + 1) * dt;
+      tArr[n + 1] = t_next;
+      // Force at t_next
+      const Fn: number[] = t_next <= tload ? Farr.slice() : new Array(nDof).fill(0);
+      // Effective force: Feff = F(n+1) + M*(a0*u(n) + a2*v(n) + a3*a(n))
+      const Feff: number[] = new Array(nDof).fill(0);
+      for (let i = 0; i < nDof; i++) {
+        let Mu_i = 0;
+        for (let j = 0; j < nDof; j++) {
+          Mu_i += Marr[i][j] * (a0 * u[j][n] + a2 * v[j][n] + a3 * a[j][n]);
+        }
+        Feff[i] = Fn[i] + Mu_i;
+      }
+      // Solve Keff * u(n+1) = Feff
+      const u_next = luSolve(Feff);
+      for (let i = 0; i < nDof; i++) {
+        u[i][n + 1] = u_next[i];
+        // Update acceleration and velocity
+        const a_new = a0 * (u[i][n+1] - u[i][n]) - a2 * v[i][n] - a3 * a[i][n];
+        const v_new = v[i][n] + dt * ((1 - gamma) * a[i][n] + gamma * a_new);
+        a[i][n + 1] = a_new;
+        v[i][n + 1] = v_new;
+      }
+    }
+    // Return displacement matrix (nDof x nSteps) as math.js matrix
+    return (math as any).matrix(u);
+  },
+
 }, { override: true });
 
 // ─── Fix sqrt/cbrt of Unit values with fractional exponents ─────────
@@ -494,6 +646,13 @@ const _origSqrt = math.sqrt.bind(math);
 const _origCbrt = math.cbrt.bind(math);
 math.import({
   sqrt: function (x: any) {
+    // Element-wise sqrt for matrices/arrays (MATLAB-style)
+    if (x && typeof x === "object" && typeof x.map === "function" && x.type !== "Unit") {
+      return x.map((v: any) => Math.sqrt(v));
+    }
+    if (Array.isArray(x)) {
+      return x.map((v: any) => typeof v === "number" ? Math.sqrt(v) : _origSqrt(v));
+    }
     if (x && typeof x === "object" && x.type === "Unit") {
       const result = _origSqrt(x);
       // Check for fractional exponents in result units
@@ -904,12 +1063,64 @@ export class HekatanEvaluator {
     let i = start;
 
     while (i < limit) {
-      const raw = lines[i];
-      const trimmed = raw.replace(/%.*$/, "").trim(); // strip % comments
+      let raw = lines[i];
+      let trimmed = raw.replace(/%.*$/, "").trim(); // strip % comments
+
+      // MATLAB-style line continuation: ... or unclosed brackets join with next line(s)
+      let joinMore = true;
+      while (joinMore && i + 1 < limit) {
+        joinMore = false;
+        // Check for ... continuation
+        if (trimmed.endsWith("...")) {
+          trimmed = trimmed.slice(0, -3).trim() + " " + lines[i + 1].replace(/%.*$/, "").trim();
+          i++;
+          raw = trimmed;
+          joinMore = true;
+          continue;
+        }
+        // Check for unclosed brackets
+        let depth = 0, inStr = false;
+        for (const ch of trimmed) {
+          if (ch === '"' || ch === "'") inStr = !inStr;
+          if (!inStr) {
+            if (ch === '[') depth++;
+            if (ch === ']') depth--;
+          }
+        }
+        if (depth > 0) {
+          trimmed = trimmed.trimEnd() + " " + lines[i + 1].replace(/%.*$/, "").trim();
+          i++;
+          raw = trimmed;
+          joinMore = true;
+        }
+      }
 
       if (!trimmed || trimmed.startsWith("//")) { i++; continue; }
       if (trimmed === "break") return "break";
       if (trimmed === "continue") return "continue";
+
+      // Semicolon-separated statements on one line (MATLAB-style)
+      // Use _splitBySemicolon to respect brackets (don't split [1,2;3,4] matrices)
+      if (trimmed.includes(";") && !trimmed.startsWith("for ") && !trimmed.startsWith("@{")) {
+        let code = trimmed;
+        const cmtIdx = code.indexOf("//");
+        if (cmtIdx >= 0) code = code.slice(0, cmtIdx);
+        const parts = this._splitBySemicolon(code);
+        if (parts.length > 1) {
+          for (const part of parts) {
+            if (part === "break") return "break";
+            if (part === "continue") return "continue";
+            try {
+              let processed = part;
+              processed = this._fixRangeSlicing(processed, scope);
+              processed = this._fixNx1Indexing(processed, scope);
+              this.mathjs.evaluate(processed, scope);
+            } catch (_) { /* skip */ }
+          }
+          i++;
+          continue;
+        }
+      }
 
       // ── for var = start:step:end ─────────
       const forMatch = trimmed.match(/^for\s+(\w+)\s*=\s*(.+)$/i);
@@ -1002,8 +1213,11 @@ export class HekatanEvaluator {
             if (scope[name] !== undefined) return `subset(${name}, index(${args}))`;
             return m;
           });
-          // Convert semicolons inside brackets to commas (MATLAB→math.js matrix syntax)
-          processed = this._semicolonToCommaInBrackets(processed);
+          // NOTE: Do NOT call _semicolonToCommaInBrackets here — math.js natively
+          // supports [1,2;3,4] as row separator, converting ; to , would flatten matrices.
+          // Apply range slicing and Nx1 indexing fixes (using local scope)
+          processed = this._fixRangeSlicing(processed, scope);
+          processed = this._fixNx1Indexing(processed, scope);
           math.evaluate(processed, scope);
         } catch {
           // Silently skip errors in function body
@@ -1107,7 +1321,106 @@ export class HekatanEvaluator {
   /** Evalua documento completo linea por linea */
   async evalDocument(text: string): Promise<LineResult[]> {
     this.reset();
-    const lines = text.split("\n");
+    // Pre-process: handle semicolon-separated statements (MATLAB-style)
+    // Rules:
+    //   "a=2; b=3; c=4;"  → trailing ; → all hidden (like MATLAB suppress output)
+    //   "a=2; b=3; c=4"   → no trailing ; → split into separate visible lines
+    //   "M = [[1,2;3,4]]" → ; inside [] → NOT split (matrix row separator)
+    // Skip: directives (@{...}), comments (>, //, #)
+    const rawLinesOrig = text.split("\n");
+    // Pre-pass: join MATLAB-style line continuations:
+    //   1. ... at end of line → strip ... and join with next line
+    //   2. Unclosed brackets [ → keep joining until brackets balance
+    const rawLines: string[] = [];
+    const rawLineMap: number[] = []; // maps joined rawLines index → original line index
+    for (let ri = 0; ri < rawLinesOrig.length; ri++) {
+      let joined = rawLinesOrig[ri];
+      const startRi = ri;
+      // Join continuation lines
+      let needsMore = true;
+      while (needsMore && ri + 1 < rawLinesOrig.length) {
+        needsMore = false;
+        const stripped = joined.replace(/%.*$/, "").replace(/\/\/.*$/, "");
+        // Check for ... continuation
+        if (stripped.trim().endsWith("...")) {
+          const trimPos = joined.replace(/%.*$/, "").replace(/\/\/.*$/, "").lastIndexOf("...");
+          joined = joined.substring(0, trimPos).trimEnd() + " " + rawLinesOrig[ri + 1].trim();
+          ri++;
+          needsMore = true;
+          continue;
+        }
+        // Check for unclosed brackets (count [ and ] ignoring strings)
+        let depth = 0, inStr = false;
+        for (const ch of stripped) {
+          if (ch === '"' || ch === "'") inStr = !inStr;
+          if (!inStr) {
+            if (ch === '[') depth++;
+            if (ch === ']') depth--;
+          }
+        }
+        if (depth > 0) {
+          joined = joined.trimEnd() + " " + rawLinesOrig[ri + 1].trim();
+          ri++;
+          needsMore = true;
+        }
+      }
+      rawLines.push(joined);
+      rawLineMap.push(startRi);
+    }
+    const lines: string[] = [];
+    // Map from expanded line index → original raw line index (for data-line)
+    const lineMap: number[] = [];
+    for (let ri = 0; ri < rawLines.length; ri++) {
+      const line = rawLines[ri];
+      const t = line.trim();
+      // Skip lines that can't have semicolons or shouldn't be split
+      if (t.startsWith("@{") || t.startsWith(">") || t.startsWith("//") || t.startsWith("#") ||
+          t.startsWith("'") || t.startsWith('"') || !t.includes(";")) {
+        lines.push(line);
+        lineMap.push(rawLineMap[ri]);
+        continue;
+      }
+      // Check if line ends with ; (trailing semicolon = suppress output)
+      const trailingSemicolon = t.endsWith(";");
+      // Split by ; but NOT inside brackets [], strings, or parens
+      const parts: string[] = [];
+      let depth = 0, sqDepth = 0;
+      let current = "";
+      let inStr = false;
+      for (let ci = 0; ci < t.length; ci++) {
+        const ch = t[ci];
+        if (ch === '"' || ch === "'") inStr = !inStr;
+        if (!inStr) {
+          if (ch === '(') depth++;
+          if (ch === ')') depth--;
+          if (ch === '[') sqDepth++;
+          if (ch === ']') sqDepth--;
+          if (ch === ';' && depth === 0 && sqDepth === 0) {
+            const part = current.trim();
+            if (part) parts.push(part);
+            current = "";
+            continue;
+          }
+        }
+        current += ch;
+      }
+      const last = current.trim();
+      if (last) parts.push(last);
+      if (parts.length === 0) { lines.push(line); lineMap.push(ri); continue; }
+      if (trailingSemicolon) {
+        // All parts hidden: wrap each in a single-line @{hide}/@{end hide}
+        for (const part of parts) {
+          lines.push("@{hide}");   lineMap.push(ri);
+          lines.push(part);        lineMap.push(rawLineMap[ri]);
+          lines.push("@{end hide}"); lineMap.push(ri);
+        }
+      } else {
+        // All parts visible as separate lines
+        for (const part of parts) {
+          lines.push(part);        lineMap.push(rawLineMap[ri]);
+        }
+      }
+    }
     const results: LineResult[] = [];
     let inDirective = false;
 
@@ -1120,21 +1433,21 @@ export class HekatanEvaluator {
         inDirective = false;
         // @{end config} — mark for renderer to reset
         if (/^@\{end\s+config\}/i.test(trimmed)) {
-          results.push({ lineIndex: i, input: raw, type: "directive", display: "config:end" });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "config:end" });
           continue;
         }
         // @{end columns} — mark for renderer to close columns
         if (/^@\{end\s+columns\}/i.test(trimmed)) {
-          results.push({ lineIndex: i, input: raw, type: "directive", display: "end:columns" });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "end:columns" });
           continue;
         }
         // @{end hide} — restore visibility
         if (/^@\{end\s+hide\}/i.test(trimmed)) {
           this.hideMode = "none";
-          results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
           continue;
         }
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         continue;
       }
 
@@ -1272,10 +1585,10 @@ export class HekatanEvaluator {
         cfgParts.push(`sqrt=${this.renderFlags.sqrt ? "on" : "off"}`);
         if (this.matVisSize >= 0) cfgParts.push(`matvis=${this.matVisSize}`);
         if (this.unitsStrip) cfgParts.push(`units=${this._unitsForce},${this._unitsLength}`);
-        results.push({ lineIndex: i, input: raw, type: "directive", display: `config:${cfgParts.join(",")}` });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: `config:${cfgParts.join(",")}` });
         // Emit align directive if present (renderer handles align:X)
         if (alignMatch) {
-          results.push({ lineIndex: i, input: raw, type: "directive", display: `align:${alignMatch[1]}` });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: `align:${alignMatch[1]}` });
         }
         continue;
       }
@@ -1284,26 +1597,26 @@ export class HekatanEvaluator {
       const cellsMatch = trimmed.match(/^@\{cells(?:\s+(f|r|fr))?\}\s*\|/);
       if (cellsMatch) {
         const cellsMode = cellsMatch[1] as "f" | "r" | "fr" | undefined;
-        const cellsResult = this._evalCells(i, raw, trimmed, cellsMode);
+        const cellsResult = this._evalCells(lineMap[i], raw, trimmed, cellsMode);
         results.push(cellsResult);
         continue;
       }
 
       // @{pagebreak} - standalone directive, does NOT consume subsequent lines
       if (/^@\{pagebreak\}/i.test(trimmed)) {
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         continue;
       }
 
       // @{noheader} - skip header/footer on this page
       if (/^@\{noheader\s*\}/i.test(trimmed)) {
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         continue;
       }
 
       // @{columns N} - layout directive, does NOT consume subsequent lines
       if (/^@\{columns\s+\d+\}/i.test(trimmed)) {
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         continue;
       }
 
@@ -1319,14 +1632,14 @@ export class HekatanEvaluator {
         } else {
           this.hideMode = "all";
         }
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         continue;
       }
 
       // @{show} — alias for @{end hide}
       if (/^@\{show\}\s*$/i.test(trimmed)) {
         this.hideMode = "none";
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         continue;
       }
 
@@ -1335,7 +1648,7 @@ export class HekatanEvaluator {
       const modeMatch = trimmed.match(/^@\{mode(?:\s+(f|r|fr))?\}\s*$/i);
       if (modeMatch) {
         this._displayMode = modeMatch[1] as "f" | "r" | "fr" | undefined;
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         continue;
       }
 
@@ -1343,7 +1656,7 @@ export class HekatanEvaluator {
       const alignMatch = trimmed.match(/^@\{align(?::([^}]+))?\}\s*$/i);
       if (alignMatch) {
         const align = (alignMatch[1] || "left").toLowerCase().trim();
-        results.push({ lineIndex: i, input: raw, type: "directive", display: `align:${align}` });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: `align:${align}` });
         continue;
       }
 
@@ -1355,13 +1668,13 @@ export class HekatanEvaluator {
         const opts = (textMatch[1] || "").toLowerCase().trim();
         const alignMatch = opts.match(/\b(left|center|right)\b/);
         const align = alignMatch ? alignMatch[1] : "left";
-        results.push({ lineIndex: i, input: raw, type: "directive", display: `text:${align}` });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: `text:${align}` });
         i++;
         let paraBuffer = "";  // accumulate consecutive lines into one paragraph
         let paraStartLine = i;
         const flushPara = () => {
           if (paraBuffer) {
-            results.push({ lineIndex: paraStartLine, input: paraBuffer, type: "comment", display: paraBuffer });
+            results.push({ lineIndex: lineMap[paraStartLine], input: paraBuffer, type: "comment", display: paraBuffer });
             paraBuffer = "";
           }
         };
@@ -1376,7 +1689,7 @@ export class HekatanEvaluator {
               paraBuffer = paraBuffer ? paraBuffer + " " + before : before;
             }
             flushPara();
-            results.push({ lineIndex: i, input: tLine, type: "directive", display: "text:end" });
+            results.push({ lineIndex: lineMap[i], input: tLine, type: "directive", display: "text:end" });
             // Text after @{end text} goes back to normal processing
             const endMatch = tLine.substring(endIdx).match(/@\{end\s+text\}/i)!;
             const after = tLine.substring(endIdx + endMatch[0].length).trim();
@@ -1389,7 +1702,7 @@ export class HekatanEvaluator {
           if (!tTrimmed) {
             // Blank line = new paragraph
             flushPara();
-            results.push({ lineIndex: i, input: tLine, type: "empty" });
+            results.push({ lineIndex: lineMap[i], input: tLine, type: "empty" });
             paraStartLine = i + 1;
           } else {
             // Accumulate into current paragraph
@@ -1446,7 +1759,7 @@ export class HekatanEvaluator {
         this._registerMultilineFunction(funcName, params, outputs, bodyLines);
         // Emit a directive so the renderer knows a function was defined
         results.push({
-          lineIndex: funcStartLine, input: raw,
+          lineIndex: lineMap[funcStartLine], input: raw,
           type: "directive",
           display: `function:${funcName}(${params.join(", ")})`,
         });
@@ -1463,7 +1776,7 @@ export class HekatanEvaluator {
           i++;
         }
         results.push({
-          lineIndex: plotStartLine, input: raw,
+          lineIndex: lineMap[plotStartLine], input: raw,
           type: "plot",
           plotCommands,
         });
@@ -1480,7 +1793,7 @@ export class HekatanEvaluator {
           i++;
         }
         results.push({
-          lineIndex: svgStartLine, input: raw,
+          lineIndex: lineMap[svgStartLine], input: raw,
           type: "svg",
           svgLines,
         });
@@ -1497,7 +1810,7 @@ export class HekatanEvaluator {
           i++;
         }
         results.push({
-          lineIndex: htmlStartLine, input: raw,
+          lineIndex: lineMap[htmlStartLine], input: raw,
           type: "html",
           htmlLines,
         });
@@ -1541,7 +1854,7 @@ export class HekatanEvaluator {
         const langLabel = codeLang ? `<div style="position:absolute;top:6px;right:12px;font-size:11px;color:#888;font-family:sans-serif">${codeLang}</div>` : "";
         const codeHtml = `<div style="position:relative;margin:8px 0"><pre style="background:#1e1e1e;color:#d4d4d4;padding:16px 16px 12px;border-radius:6px;font-size:13px;line-height:1.5;overflow-x:auto;font-family:'Consolas','Monaco','Courier New',monospace;margin:0">${langLabel}${escaped}</pre></div>`;
         results.push({
-          lineIndex: codeStartLine, input: raw,
+          lineIndex: lineMap[codeStartLine], input: raw,
           type: "html",
           htmlLines: [codeHtml],
         });
@@ -1561,7 +1874,7 @@ export class HekatanEvaluator {
           i++;
         }
         results.push({
-          lineIndex: threeStartLine, input: raw,
+          lineIndex: lineMap[threeStartLine], input: raw,
           type: "three",
           threeLines,
           drawWidth: threeW,
@@ -1583,7 +1896,7 @@ export class HekatanEvaluator {
           i++;
         }
         results.push({
-          lineIndex: canvasStartLine, input: raw,
+          lineIndex: lineMap[canvasStartLine], input: raw,
           type: "canvas",
           canvasLines,
           drawWidth: canvasW,
@@ -1605,7 +1918,7 @@ export class HekatanEvaluator {
           i++;
         }
         results.push({
-          lineIndex: awatifStartLine, input: raw,
+          lineIndex: lineMap[awatifStartLine], input: raw,
           type: "awatif",
           awatifLines,
           drawWidth: awW,
@@ -1637,7 +1950,7 @@ export class HekatanEvaluator {
           this.namedFigures.set(drawName, { width: drawWidth, height: drawHeight, commands: [...drawCommands] });
         }
         results.push({
-          lineIndex: drawStartLine, input: raw,
+          lineIndex: lineMap[drawStartLine], input: raw,
           type: dtype,
           drawWidth, drawHeight, drawCommands, drawName, drawAlign,
         });
@@ -1671,7 +1984,7 @@ export class HekatanEvaluator {
           b64 = `data:${mime};base64,${b64}`;
         }
         results.push({
-          lineIndex: imgStartLine, input: raw,
+          lineIndex: lineMap[imgStartLine], input: raw,
           type: "image64",
           imageData: b64,
           imageName: imgName,
@@ -1689,12 +2002,12 @@ export class HekatanEvaluator {
         const stored = this.namedFigures.get(figName);
         if (stored) {
           results.push({
-            lineIndex: i, input: raw, type: "draw",
+            lineIndex: lineMap[i], input: raw, type: "draw",
             drawWidth: stored.width, drawHeight: stored.height,
             drawCommands: [...stored.commands], drawName: figName,
           });
         } else {
-          results.push({ lineIndex: i, input: raw, type: "error",
+          results.push({ lineIndex: lineMap[i], input: raw, type: "error",
             error: `Figura no encontrada: "${figName}"` });
         }
         continue;
@@ -1704,7 +2017,7 @@ export class HekatanEvaluator {
       const ifcMatch = trimmed.match(/^@\{import:ifc:([^\s}]+)(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(all|structural|columns|beams|slabs|rebar|plates|members|fasteners|connections|walls|openings))?\s*\}/i);
       if (ifcMatch) {
         results.push({
-          lineIndex: i, input: raw,
+          lineIndex: lineMap[i], input: raw,
           type: "importifc",
           ifcFile: ifcMatch[1],
           drawWidth: ifcMatch[2] ? parseInt(ifcMatch[2]) : 700,
@@ -1717,7 +2030,7 @@ export class HekatanEvaluator {
       // Inline @{eq}...@{end eq} on a single line
       const inlineEqMatch = trimmed.match(/^@\{eq\}(.+?)@\{end\s+eq\}\s*$/i);
       if (inlineEqMatch) {
-        results.push({ lineIndex: i, input: raw, type: "eqline", display: inlineEqMatch[1].trim() });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "eqline", display: inlineEqMatch[1].trim() });
         continue;
       }
 
@@ -1729,13 +2042,13 @@ export class HekatanEvaluator {
         const eqnName = eqnRefMatch[1].trim();
         const stored = this.namedEquations.get(eqnName);
         if (stored) {
-          results.push({ lineIndex: i, input: raw, type: "directive", display: `eq:${stored.align}` });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: `eq:${stored.align}` });
           for (const el of stored.lines) {
-            results.push({ lineIndex: i, input: el, type: "eqline", display: el.trim() });
+            results.push({ lineIndex: lineMap[i], input: el, type: "eqline", display: el.trim() });
           }
-          results.push({ lineIndex: i, input: "", type: "directive", display: "eq:end" });
+          results.push({ lineIndex: lineMap[i], input: "", type: "directive", display: "eq:end" });
         } else {
-          results.push({ lineIndex: i, input: raw, type: "error",
+          results.push({ lineIndex: lineMap[i], input: raw, type: "error",
             error: `Ecuación no encontrada: "${eqnName}"` });
         }
         continue;
@@ -1745,22 +2058,22 @@ export class HekatanEvaluator {
       if (eqMatch) {
         const eqAlign = eqMatch[1]?.toLowerCase() || "center";
         const eqSize = eqMatch[2] || "";
-        results.push({ lineIndex: i, input: raw, type: "directive", display: `eq:${eqAlign}:${eqSize}` });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: `eq:${eqAlign}:${eqSize}` });
         i++;
         const eqContentLines: string[] = [];
         while (i < lines.length && !/^@\{end\s+eq\}/i.test(lines[i].trim())) {
           const eLine = lines[i];
           const eTrimmed = eLine.trim();
           if (!eTrimmed) {
-            results.push({ lineIndex: i, input: eLine, type: "empty" });
+            results.push({ lineIndex: lineMap[i], input: eLine, type: "empty" });
           } else {
-            results.push({ lineIndex: i, input: eLine, type: "eqline", display: eTrimmed });
+            results.push({ lineIndex: lineMap[i], input: eLine, type: "eqline", display: eTrimmed });
             eqContentLines.push(eTrimmed);
           }
           i++;
         }
         if (i < lines.length) {
-          results.push({ lineIndex: i, input: lines[i], type: "directive", display: "eq:end" });
+          results.push({ lineIndex: lineMap[i], input: lines[i], type: "directive", display: "eq:end" });
         }
         // Auto-detect equation number (X.Y) at end of lines → store as named equation
         for (const el of eqContentLines) {
@@ -1775,11 +2088,11 @@ export class HekatanEvaluator {
       // @{directive} - block directives that consume lines until @{end}
       if (/^@\{\w+/.test(trimmed)) {
         inDirective = true;
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         continue;
       }
       if (inDirective) {
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         continue;
       }
 
@@ -1788,46 +2101,46 @@ export class HekatanEvaluator {
         const cmtIdx = trimmed.indexOf(this.commentDelimiter);
         if (cmtIdx === 0) {
           // Full-line comment — invisible in output
-          results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
           continue;
         }
         // Inline comment — strip comment part, continue processing the rest
         trimmed = trimmed.slice(0, cmtIdx).trim();
         if (!trimmed) {
-          results.push({ lineIndex: i, input: raw, type: "empty" });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "empty" });
           continue;
         }
       }
 
       // Linea vacia
       if (!trimmed) {
-        results.push({ lineIndex: i, input: raw, type: "empty" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "empty" });
         continue;
       }
 
       // Horizontal rule: --- (three or more dashes)
       if (/^-{3,}\s*$/.test(trimmed)) {
-        results.push({ lineIndex: i, input: raw, type: "hrule" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "hrule" });
         continue;
       }
 
       // Heading: # titulo
       if (/^#{1,6}\s/.test(trimmed)) {
-        results.push({ lineIndex: i, input: raw, type: "heading", display: trimmed });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "heading", display: trimmed });
         continue;
       }
 
       // Texto: > comentario
       if (trimmed.startsWith(">")) {
         const text = trimmed.slice(1).trim();
-        results.push({ lineIndex: i, input: raw, type: "comment", display: text });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "comment", display: text });
         continue;
       }
 
       // Comentario legacy: 'texto
       if (trimmed.startsWith("'")) {
         const text = trimmed.slice(1).trim();
-        results.push({ lineIndex: i, input: raw, type: "comment", display: text });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "comment", display: text });
         continue;
       }
 
@@ -1835,23 +2148,23 @@ export class HekatanEvaluator {
       if (/^for\s+/i.test(trimmed)) {
         const forMatch = trimmed.match(/^for\s+(\w+)\s*=\s*(.+)$/i);
         if (!forMatch) {
-          results.push({ lineIndex: i, input: raw, type: "error", error: `Sintaxis for invalida: ${trimmed}` });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "error", error: `Sintaxis for invalida: ${trimmed}` });
           continue;
         }
         const varName = forMatch[1];
         const rangeParts = forMatch[2].split(':').map(s => s.trim());
         if (rangeParts.length < 2 || rangeParts.length > 3) {
-          results.push({ lineIndex: i, input: raw, type: "error", error: `Sintaxis for invalida (usar for i = start:end[:step]): ${trimmed}` });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "error", error: `Sintaxis for invalida (usar for i = start:end[:step]): ${trimmed}` });
           continue;
         }
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         let startVal: number, endVal: number, step: number;
         try {
           startVal = Number(math.evaluate(rangeParts[0], this.scope));
           endVal = Number(math.evaluate(rangeParts[1], this.scope));
           step = rangeParts.length === 3 ? Number(math.evaluate(rangeParts[2], this.scope)) : 1;
         } catch (e: any) {
-          results.push({ lineIndex: i, input: raw, type: "error", error: e.message });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "error", error: e.message });
           continue;
         }
         // Collect body until matching 'end' or 'end for'
@@ -1864,12 +2177,12 @@ export class HekatanEvaluator {
           if (/^end(\s+(for|if|while))?\s*$/i.test(t)) {
             depth--;
             if (depth === 0) {
-              results.push({ lineIndex: i, input: lines[i], type: "directive", display: "" });
+              results.push({ lineIndex: lineMap[i], input: lines[i], type: "directive", display: "" });
               break;
             }
           }
           bodyLines.push(lines[i]);
-          results.push({ lineIndex: i, input: lines[i], type: "directive", display: "" });
+          results.push({ lineIndex: lineMap[i], input: lines[i], type: "directive", display: "" });
           i++;
         }
         // Execute loop
@@ -1887,10 +2200,10 @@ export class HekatanEvaluator {
         try {
           condResult = Boolean(math.evaluate(condExpr, this.scope));
         } catch (e: any) {
-          results.push({ lineIndex: i, input: raw, type: "error", error: e.message });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "error", error: e.message });
           continue;
         }
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         const thenLines: string[] = [];
         const elseLines: string[] = [];
         let inElse = false;
@@ -1902,19 +2215,19 @@ export class HekatanEvaluator {
           if (/^end(\s+(for|if|while))?\s*$/i.test(t)) {
             depth--;
             if (depth === 0) {
-              results.push({ lineIndex: i, input: lines[i], type: "directive", display: "" });
+              results.push({ lineIndex: lineMap[i], input: lines[i], type: "directive", display: "" });
               break;
             }
           }
           if (/^else\s*$/i.test(t) && depth === 1) {
             inElse = true;
-            results.push({ lineIndex: i, input: lines[i], type: "directive", display: "" });
+            results.push({ lineIndex: lineMap[i], input: lines[i], type: "directive", display: "" });
             i++;
             continue;
           }
           if (inElse) elseLines.push(lines[i]);
           else thenLines.push(lines[i]);
-          results.push({ lineIndex: i, input: lines[i], type: "directive", display: "" });
+          results.push({ lineIndex: lineMap[i], input: lines[i], type: "directive", display: "" });
           i++;
         }
         if (condResult) {
@@ -1927,7 +2240,7 @@ export class HekatanEvaluator {
 
       // ── Stray end/else keywords (not consumed by for/if) ───
       if (/^(end(\s+(for|if|while))?|else)\s*$/i.test(trimmed)) {
-        results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+        results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         continue;
       }
 
@@ -1939,7 +2252,7 @@ export class HekatanEvaluator {
         try {
           const innerResult = await this._evalLine(innerExpr);
           const lr: LineResult = {
-            lineIndex: i, input: raw,
+            lineIndex: lineMap[i], input: raw,
             type: innerResult.type as any ?? "expression",
             value: innerResult.value,
             display: innerResult.display,
@@ -1947,12 +2260,12 @@ export class HekatanEvaluator {
             displayHint: hint,
           };
           if (this.hideMode === "all") {
-            results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+            results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
           } else {
             results.push(lr);
           }
         } catch (e: any) {
-          results.push({ lineIndex: i, input: raw, type: "error", error: e.message || String(e) });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "error", error: e.message || String(e) });
         }
         continue;
       }
@@ -1963,19 +2276,19 @@ export class HekatanEvaluator {
         // Apply hide mode and display mode
         const dm = this._displayMode;
         if (this.hideMode === "all") {
-          results.push({ lineIndex: i, input: raw, type: "directive", display: "" });
+          results.push({ lineIndex: lineMap[i], input: raw, type: "directive", display: "" });
         } else if (this.hideMode === "function") {
-          const lr = { lineIndex: i, input: raw, ...result, hideExpr: true } as LineResult;
+          const lr = { lineIndex: lineMap[i], input: raw, ...result, hideExpr: true } as LineResult;
           if (dm) lr.displayMode = dm;
           results.push(lr);
         } else {
-          const lr = { lineIndex: i, input: raw, ...result } as LineResult;
+          const lr = { lineIndex: lineMap[i], input: raw, ...result } as LineResult;
           if (dm) lr.displayMode = dm;
           results.push(lr);
         }
       } catch (e: any) {
         results.push({
-          lineIndex: i, input: raw, type: "error",
+          lineIndex: lineMap[i], input: raw, type: "error",
           error: e.message || String(e)
         });
       }
@@ -3084,10 +3397,11 @@ export class HekatanEvaluator {
   }
 
   /** Transform range-indexed access: VAR[a:b, c:d] → subset(VAR, index([a,...,b], [c,...,d])) */
-  private _fixRangeSlicing(expr: string): string {
+  private _fixRangeSlicing(expr: string, scopeOverride?: Record<string, any>): string {
+    const sc = scopeOverride ?? this.scope;
     return expr.replace(/\b([a-zA-Z_]\w*)\[([^\]]*:[^\]]*)\]/g, (match, name, idxContent) => {
       // Only transform if the variable exists in scope
-      if (this.scope[name] === undefined) return match;
+      if (sc[name] === undefined) return match;
       // Split by top-level commas
       const parts = idxContent.split(",").map(s => s.trim());
       const indexArgs = parts.map(part => {
@@ -3095,8 +3409,8 @@ export class HekatanEvaluator {
         if (rangeMatch) {
           // Expand a:b → [a, a+1, ..., b]
           try {
-            const a = Math.round(Number(math.evaluate(rangeMatch[1], this.scope)));
-            const b = Math.round(Number(math.evaluate(rangeMatch[2], this.scope)));
+            const a = Math.round(Number(math.evaluate(rangeMatch[1], sc)));
+            const b = Math.round(Number(math.evaluate(rangeMatch[2], sc)));
             const arr: number[] = [];
             for (let i = a; i <= b; i++) arr.push(i);
             return `[${arr.join(",")}]`;
@@ -3106,12 +3420,20 @@ export class HekatanEvaluator {
         }
         return part;
       });
-      return `subset(${name}, index(${indexArgs.join(", ")}))`;
+      const subsetExpr = `subset(${name}, index(${indexArgs.join(", ")}))`;
+      // Auto-flatten when one dimension is scalar and the other is range (produces 1xN or Nx1)
+      const hasRange = parts.some(p => p.includes(":"));
+      const hasScalar = parts.some(p => !p.includes(":"));
+      if (hasRange && hasScalar && parts.length === 2) {
+        return `flatten(${subsetExpr})`;
+      }
+      return subsetExpr;
     });
   }
 
   /** Fix single-index access on Nx1 matrices: VAR[i] → VAR[i,1] */
-  private _fixNx1Indexing(expr: string): string {
+  private _fixNx1Indexing(expr: string, scopeOverride?: Record<string, any>): string {
+    const sc = scopeOverride ?? this.scope;
     let result = "";
     let i = 0;
     while (i < expr.length) {
@@ -3138,7 +3460,7 @@ export class HekatanEvaluator {
           else if (ch === "," && d === 0) { hasComma = true; break; }
         }
         if (!hasComma) {
-          const v = this.scope[name];
+          const v = sc[name];
           if (v && typeof v === "object" && typeof v.size === "function") {
             const sz = v.size();
             if (sz.length === 2 && sz[1] === 1) {

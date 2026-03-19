@@ -178,5 +178,35 @@
     "name": "Cantilever - Carga Combinada (Fx+Fy)",
     "filename": "cantilever_fxfy_Cantilever_Carga_Combinada_FxFy.hcalc",
     "size": 3800
+  },
+  {
+    "key": "cst_ej91",
+    "name": "Ejemplo 9.1 - CST Plane Stress",
+    "filename": "cst_ej91_Ejemplo_9.1_CST_Plane_Stress.hcalc",
+    "size": 3500
+  },
+  {
+    "key": "cst_ej91_awatif",
+    "name": "Ejemplo 9.1 - CST con Awatif",
+    "filename": "cst_ej91_awatif_Ejemplo_9.1_CST_Awatif.hcalc",
+    "size": 3800
+  },
+  {
+    "key": "opencivil_modal_rz",
+    "name": "OpenCivil - Modal con Rz",
+    "filename": "opencivil_modal_rz_OpenCivil_Modal_Rz.hcalc",
+    "size": 7500
+  },
+  {
+    "key": "spaceframe_modal",
+    "name": "Space Frame Modal (MATLAB)",
+    "filename": "spaceframe_modal_Space_Frame_Modal_MATLAB.hcalc",
+    "size": 7200
+  },
+  {
+    "key": "test_columns",
+    "name": "Test Columns",
+    "filename": "test_columns_Test_Columns.hcalc",
+    "size": 200
   }
 ]

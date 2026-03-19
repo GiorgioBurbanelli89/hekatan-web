@@ -14,7 +14,7 @@ import { HekatanEvaluator, math } from "hekatan-math/mathEngine.js";
 
 import type { LineResult, CellResult } from "hekatan-math/mathEngine.js";
 
-import { renderEquationText, setFractions, getFractions } from "hekatan-math/renderer.js";
+import { renderEquationText, renderInlineText, setFractions, getFractions } from "hekatan-math/renderer.js";
 
 
 
@@ -16307,6 +16307,746 @@ show deformed scale:5000 nodeResults:deformations
 
   },
 
+  cst_ej91: {
+
+    name: "Ejemplo 9.1 - CST Plane Stress",
+
+    code: `# Ejemplo 9.1 — Viga Cantilever con 2 Elementos CST (Plane Stress)
+> Placa delgada en voladizo modelada con 2 triangulos CST
+> Geometria: 96 x 60 in, espesor t = 0.5 in
+> Material: E = 15300 ksi, v = 0.25
+> Carga: P = 3 kips vertical en esquina superior derecha
+
+---
+## Datos del Problema
+
+@{cells} |E_p = 15300|nu_p = 0.25|t_p = 0.5|P_p = 3|
+
+---
+## Geometria — 4 Nodos
+
+> Nodo 1: (0, 0) — empotrado (borde izquierdo)
+> Nodo 2: (96, 0) — libre
+> Nodo 3: (96, 60) — libre (carga P hacia abajo)
+> Nodo 4: (0, 60) — empotrado (borde izquierdo)
+
+> DOFs: Nodo i tiene DOFs (2i-1, 2i)
+> DOFs fijos: 1,2,7,8 (nodos 1 y 4)
+> DOFs libres: 3,4,5,6 (nodos 2 y 3)
+
+> Area de cada triangulo:
+
+A_p = 0.5 * 96 * 60
+
+> Dos veces el area (D_0 = 2A):
+
+twoA_p = 2 * A_p
+
+---
+## Paso 1 — Matriz Constitutiva D (Plane Stress)
+
+@{eq left}
+[D] = E/(1-ν^2) [1, ν, 0; ν, 1, 0; 0, 0, (1-ν)/2] (9.15)
+@{end eq}
+
+cD_p = E_p / (1 - nu_p^2)
+
+D_p = [[cD_p, nu_p*cD_p, 0],[nu_p*cD_p, cD_p, 0],[0, 0, cD_p*(1 - nu_p)/2]]
+
+---
+## Paso 2 — Matrices B (Deformacion-Desplazamiento)
+
+@{eq left}
+[B] = 1/(2A) [β_1, 0, β_2, 0, β_3, 0; 0, γ_1, 0, γ_2, 0, γ_3; γ_1, β_1, γ_2, β_2, γ_3, β_3] (9.10)
+@{end eq}
+
+> Donde: β_i = y_j - y_m, γ_i = x_m - x_j (permutacion ciclica i,j,m)
+
+---
+### Elemento 1: nodos 4(0,60) → 2(96,0) → 3(96,60)
+
+> Coeficientes B:
+
+b1_e1 = 0 - 60
+b2_e1 = 60 - 60
+b3_e1 = 60 - 0
+g1_e1 = 96 - 96
+g2_e1 = 0 - 96
+g3_e1 = 96 - 0
+
+B1_p = (1/twoA_p) * [[b1_e1, 0, b2_e1, 0, b3_e1, 0],[0, g1_e1, 0, g2_e1, 0, g3_e1],[g1_e1, b1_e1, g2_e1, b2_e1, g3_e1, b3_e1]]
+
+---
+### Elemento 2: nodos 4(0,60) → 1(0,0) → 2(96,0)
+
+> Coeficientes B:
+
+b1_e2 = 0 - 0
+b2_e2 = 0 - 60
+b3_e2 = 60 - 0
+g1_e2 = 96 - 0
+g2_e2 = 0 - 96
+g3_e2 = 0 - 0
+
+B2_p = (1/twoA_p) * [[b1_e2, 0, b2_e2, 0, b3_e2, 0],[0, g1_e2, 0, g2_e2, 0, g3_e2],[g1_e2, b1_e2, g2_e2, b2_e2, g3_e2, b3_e2]]
+
+---
+## Paso 3 — Rigidez de Elementos
+
+@{eq left}
+[k] = [B]^T [D] [B] A t (9.25)
+@{end eq}
+
+> Elemento 1 — k1 (6x6):
+
+k1_p = t_p * A_p * transpose(B1_p) * D_p * B1_p
+
+> Elemento 2 — k2 (6x6):
+
+k2_p = t_p * A_p * transpose(B2_p) * D_p * B2_p
+
+---
+## Paso 4 — Ensamblaje K Reducida (4x4)
+
+> Mapeo de DOFs locales a globales:
+> Elem 1: local [1,2,3,4,5,6] → global [7,8,3,4,5,6]
+> Elem 2: local [1,2,3,4,5,6] → global [7,8,1,2,3,4]
+
+> DOFs libres = [3,4,5,6] → indices reducidos [1,2,3,4]
+
+> Elem 1: local DOFs 3-6 → global DOFs 3-6 → reducido 1-4
+> Elem 2: local DOFs 5-6 → global DOFs 3-4 → reducido 1-2
+
+KR_p = zeros(4, 4)
+
+> Contribucion Elemento 1 (local 3:6 → reducido 1:4):
+
+for i = 1:4
+  for j = 1:4
+    KR_p[i, j] = KR_p[i, j] + k1_p[i + 2, j + 2]
+  end
+end
+
+> Contribucion Elemento 2 (local 5:6 → reducido 1:2):
+
+for i = 1:2
+  for j = 1:2
+    KR_p[i, j] = KR_p[i, j] + k2_p[i + 4, j + 4]
+  end
+end
+
+---
+## Paso 5 — Vector de Fuerzas
+
+> Carga P = 3 kips hacia abajo en nodo 3 (DOF 6 = reducido 4):
+
+FR_p = [[0],[0],[0],[-P_p]]
+
+---
+## Paso 6 — Resolver Sistema
+
+@{eq left}
+[K_R]{u} = {F_R} (9.28)
+@{end eq}
+
+uR_p = lsolve(KR_p, FR_p)
+
+> **Desplazamientos en nodos libres:**
+
+@{cells} |ux_nodo2 = uR_p[1,1]|uy_nodo2 = uR_p[2,1]|
+@{cells} |ux_nodo3 = uR_p[3,1]|uy_nodo3 = uR_p[4,1]|
+
+---
+## Paso 7 — Esfuerzos en Elementos
+
+@{eq left}
+{σ} = [D][B]{q}_e (9.29)
+@{end eq}
+
+> **Elemento 1** — q = [0, 0, u3, u4, u5, u6]:
+
+q_e1 = [[0],[0],[uR_p[1,1]],[uR_p[2,1]],[uR_p[3,1]],[uR_p[4,1]]]
+sigma1_p = D_p * B1_p * q_e1
+
+> **Elemento 2** — q = [0, 0, 0, 0, u3, u4]:
+
+q_e2 = [[0],[0],[0],[0],[uR_p[1,1]],[uR_p[2,1]]]
+sigma2_p = D_p * B2_p * q_e2
+
+> **Esfuerzos Elemento 1:**
+
+@{cells} |sx_e1 = sigma1_p[1,1]|sy_e1 = sigma1_p[2,1]|txy_e1 = sigma1_p[3,1]|
+
+> **Esfuerzos Elemento 2:**
+
+@{cells} |sx_e2 = sigma2_p[1,1]|sy_e2 = sigma2_p[2,1]|txy_e2 = sigma2_p[3,1]|
+
+---
+## Comparacion con Valores del Libro
+
+> **Desplazamientos esperados (x10^-4 in):**
+> ux_nodo3 = 6.934, uy_nodo3 = -27.48
+> ux_nodo2 = -5.016, uy_nodo2 = -23.025
+
+> **Esfuerzos esperados (ksi):**
+> Elemento 1: sx = 0.00871, sy = -0.00762, txy = -0.00484
+> Elemento 2: sx = -0.00819, sy = -0.00205, txy = -0.0141
+`,
+
+  },
+
+  cst_ej91_awatif: {
+
+    name: "Ejemplo 9.1 - CST con Awatif",
+
+    code: `# Ejemplo 9.1 — CST Plane Stress con Awatif
+> Placa delgada en voladizo: 96 x 60 in, t = 0.5 in
+> E = 15300 ksi, v = 0.25, P = 3 kips hacia abajo
+> 2 elementos triangulares CST (Constant Strain Triangle)
+
+---
+## Modelo Awatif — 2 Elementos Shell Triangulares
+
+> 4 nodos en plano XY (z=0), carga en plano = plane stress
+> Awatif usa shell = CST membrana + DKT placa (6 DOF/nodo)
+> Para carga en plano, solo se activan DOFs de membrana (ux, uy)
+
+@{awatif 800 400}
+// --- Geometria: 4 nodos ---
+node 0 0 0       // nodo 0: (0,0) esquina inferior-izquierda — empotrado
+node 96 0 0      // nodo 1: (96,0) esquina inferior-derecha — libre
+node 96 60 0     // nodo 2: (96,60) esquina superior-derecha — libre, carga P
+node 0 60 0      // nodo 3: (0,60) esquina superior-izquierda — empotrado
+
+// --- 2 elementos triangulares ---
+// Diagonal de nodo 3 a nodo 1 divide el rectangulo
+element shell 3 1 2 E:15300 t:0.5 nu:0.25   // triangulo superior (nodos 3,1,2)
+element shell 3 0 1 E:15300 t:0.5 nu:0.25   // triangulo inferior (nodos 3,0,1)
+
+// --- Apoyos: borde izquierdo empotrado ---
+support 0 fixed   // nodo 0 (0,0) — todos DOFs fijos
+support 3 fixed   // nodo 3 (0,60) — todos DOFs fijos
+
+// --- Carga: P = 3 kips hacia abajo en nodo 2 ---
+load 2 fy:-3
+
+// --- Resolver y mostrar ---
+solve explicit
+show deformed scale:5000 nodeResults:deformations
+@{end awatif}
+
+---
+## Verificacion MathCanvas — CST Clasico (2 DOF/nodo)
+
+> El CST clasico usa solo 2 DOF/nodo (ux, uy) = 8 DOFs total
+> Awatif usa 6 DOF/nodo (ux,uy,uz,rx,ry,rz) = 24 DOFs total
+> Los resultados de membrana deben ser similares
+
+---
+### Datos
+
+E_p = 15300
+nu_p = 0.25
+t_p = 0.5
+P_p = 3
+
+---
+### Matriz D (Constitutiva Plane Stress)
+
+cD_p = E_p / (1 - nu_p^2)
+
+D_p = [[cD_p, nu_p*cD_p, 0],[nu_p*cD_p, cD_p, 0],[0, 0, cD_p*(1 - nu_p)/2]]
+
+---
+### Matrices B
+
+> Area de cada triangulo:
+
+A_p = 0.5 * 96 * 60
+twoA_p = 2 * A_p
+
+> Elemento 1: nodos 3(0,60), 1(96,0), 2(96,60)
+
+B1_p = (1/twoA_p) * [[-60, 0, 0, 0, 60, 0],[0, 0, 0, -96, 0, 96],[0, -60, -96, 0, 96, 60]]
+
+> Elemento 2: nodos 3(0,60), 0(0,0), 1(96,0)
+
+B2_p = (1/twoA_p) * [[0, 0, -60, 0, 60, 0],[0, 96, 0, -96, 0, 0],[96, 0, -96, -60, 0, 60]]
+
+---
+### Rigidez k = B'DB At
+
+k1_p = t_p * A_p * transpose(B1_p) * D_p * B1_p
+k2_p = t_p * A_p * transpose(B2_p) * D_p * B2_p
+
+---
+### Ensamblaje KR (4x4)
+
+> DOFs libres: nodo 1 (ux1,uy1) y nodo 2 (ux2,uy2) = reducido [1,2,3,4]
+> Elem 1 local [3,4,5,6] → global [3,4,5,6] → reducido [1,2,3,4]
+> Elem 2 local [5,6] → global [3,4] → reducido [1,2]
+
+KR_p = zeros(4, 4)
+
+for i = 1:4
+  for j = 1:4
+    KR_p[i, j] = KR_p[i, j] + k1_p[i + 2, j + 2]
+  end
+end
+
+for i = 1:2
+  for j = 1:2
+    KR_p[i, j] = KR_p[i, j] + k2_p[i + 4, j + 4]
+  end
+end
+
+---
+### Resolver
+
+FR_p = [[0],[0],[0],[-P_p]]
+uR_p = lsolve(KR_p, FR_p)
+
+> **Desplazamientos CST clasico:**
+
+@{cells} |ux_n1 = uR_p[1,1]|uy_n1 = uR_p[2,1]|
+@{cells} |ux_n2 = uR_p[3,1]|uy_n2 = uR_p[4,1]|
+
+---
+### Esfuerzos
+
+> Elemento 1:
+
+q_e1 = [[0],[0],[uR_p[1,1]],[uR_p[2,1]],[uR_p[3,1]],[uR_p[4,1]]]
+sigma1_p = D_p * B1_p * q_e1
+
+> Elemento 2:
+
+q_e2 = [[0],[0],[0],[0],[uR_p[1,1]],[uR_p[2,1]]]
+sigma2_p = D_p * B2_p * q_e2
+
+> **Esfuerzos Elemento 1** (sx, sy, txy):
+
+@{cells} |sx1 = sigma1_p[1,1]|sy1 = sigma1_p[2,1]|txy1 = sigma1_p[3,1]|
+
+> **Esfuerzos Elemento 2** (sx, sy, txy):
+
+@{cells} |sx2 = sigma2_p[1,1]|sy2 = sigma2_p[2,1]|txy2 = sigma2_p[3,1]|
+
+---
+## Comparacion Awatif vs CST Clasico
+
+> Awatif shell = CST membrana + DKT placa (6 DOF/nodo)
+> CST clasico = solo membrana (2 DOF/nodo)
+> Para carga en plano puro, los resultados de membrana deben coincidir
+> La diferencia viene del DOF de drilling (rz) en la formulacion de membrana de awatif
+`,
+
+  },
+
+  opencivil_modal_rz: {
+
+    name: "OpenCivil - Modal con Rz",
+
+    code: `@{config bg:book, align:left, header:on, color:black}
+---
+# Analisis Modal con Participacion Rz
+---
+
+@{text}
+Edificio de 1 piso, planta 2x2 (6m x 5m), 4 columnas de 3m, 4 vigas.
+Seccion 30x60cm, concreto C30. Basado en el modelo de OpenCivil.
+Se calcula la participacion de masa traslacional (Ux, Uy) y rotacional (Rz).
+@{end text}
+
+@{draw 600 400}
+grid off
+bg #fff8f0
+proj oblique 45 0.5
+
+# Ejes
+color #888
+arrow3d -1 0 0 8 0 0
+label3d 8.5 0 0 X left
+arrow3d -1 0 0 -1 7 0
+label3d -1 7.5 0 Y left
+arrow3d -1 0 0 -1 0 5
+label3d -1 0 5.5 Z left
+
+# Base (z=0) - lineas de referencia
+color #ccc
+lw 0.5
+line3d 0 0 0 6 0 0
+line3d 6 0 0 6 5 0
+line3d 6 5 0 0 5 0
+line3d 0 5 0 0 0 0
+
+# Columnas
+color #333
+lw 2
+line3d 0 0 0 0 0 3
+line3d 6 0 0 6 0 3
+line3d 6 5 0 6 5 3
+line3d 0 5 0 0 5 3
+
+# Vigas X
+color #0066cc
+lw 2
+line3d 0 0 3 6 0 3
+line3d 0 5 3 6 5 3
+
+# Vigas Y
+color #cc6600
+lw 2
+line3d 0 0 3 0 5 3
+line3d 6 0 3 6 5 3
+
+# Nodos base (fijos)
+color #333
+node3d 0 0 0 5 0.3
+node3d 6 0 0 6 0.3
+node3d 6 5 0 7 0.3
+node3d 0 5 0 8 0.3
+
+# Nodos libres
+color #cc0000
+node3d 0 0 3 1 0.5
+node3d 6 0 3 2 0.5
+node3d 6 5 3 3 0.5
+node3d 0 5 3 4 0.5
+
+# Dimensiones
+color #666
+fontsize 11
+label3d 3 -0.8 0 6.0 m center
+label3d -0.8 2.5 0 5.0 m center
+label3d -0.8 0 1.5 3.0 m center
+
+# Secciones
+fontsize 10
+color #0066cc
+label3d 3 -1.5 3 Vigas 30x60 center
+color #333
+label3d -2 0 1.5 Col 30x60 left
+
+fit
+@{end draw}
+> Edificio 1 piso - 4 columnas, 4 vigas, seccion 30x60cm C30
+
+---
+## 1. Propiedades del Material y Seccion
+@{cells} |E_c = 30000000 & kN/m^2|nu = 0.2|G_c = E_c/(2*(1 + nu)) & kN/m^2|
+
+> Seccion 30x60 cm
+@{cells} |b_s = 0.30 & m|h_s = 0.60 & m|
+@{cells} |A_s = b_s*h_s & m^2|Iz_s = b_s*h_s^3/12 & m^4|Iy_s = h_s*b_s^3/12 & m^4|
+J_s = 0.00371
+
+> Geometria
+@{cells} |L_col = 3 & m|L_bx = 6 & m|L_by = 5 & m|
+
+> Masa (peso propio)
+@{cells} |gamma = 24 & kN/m^3|g_acc = 9.80665 & m/s^2|
+
+---
+## 2. Rigidez Local 12x12 (Eq 6.1 Paz)
+> 3 tipos: columna (L=3m), viga X (L=6m), viga Y (L=5m)
+> Para vigas: Iz=Iy_s (debil, horizontal), Iy=Iz_s (fuerte, vertical)
+
+n_types = 3
+L_vec = [[L_col],[L_bx],[L_by]]
+Iz_vec = [[Iz_s],[Iy_s],[Iy_s]]
+Iy_vec = [[Iy_s],[Iz_s],[Iz_s]]
+
+K_loc = cell(n_types)
+for t = 1:n_types
+Le = L_vec[t,1]
+ea = E_c*A_s/Le
+vz = 12*E_c*Iz_vec[t,1]/Le^3
+sz = 6*E_c*Iz_vec[t,1]/Le^2
+fz = 4*E_c*Iz_vec[t,1]/Le
+gz = 2*E_c*Iz_vec[t,1]/Le
+vy = 12*E_c*Iy_vec[t,1]/Le^3
+sy = 6*E_c*Iy_vec[t,1]/Le^2
+fy = 4*E_c*Iy_vec[t,1]/Le
+gy_k = 2*E_c*Iy_vec[t,1]/Le
+gj = G_c*J_s/Le
+k = [[ea,0,0,0,0,0,-ea,0,0,0,0,0],[0,vz,0,0,0,sz,0,-vz,0,0,0,sz],[0,0,vy,0,-sy,0,0,0,-vy,0,-sy,0],[0,0,0,gj,0,0,0,0,0,-gj,0,0],[0,0,-sy,0,fy,0,0,0,sy,0,gy_k,0],[0,sz,0,0,0,fz,0,-sz,0,0,0,gz],[-ea,0,0,0,0,0,ea,0,0,0,0,0],[0,-vz,0,0,0,-sz,0,vz,0,0,0,-sz],[0,0,-vy,0,sy,0,0,0,vy,0,sy,0],[0,0,0,-gj,0,0,0,0,0,gj,0,0],[0,0,-sy,0,gy_k,0,0,0,sy,0,fy,0],[0,sz,0,0,0,gz,0,-sz,0,0,0,fz]]
+cset(K_loc, t, k)
+end
+
+---
+## 3. Transformacion a Coordenadas Globales
+> Columna (vertical Z): local x->Z, local y->X, local z->Y
+T_col = [[0,0,1,0,0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,1,0,0,0],[0,0,0,0,0,0,1,0,0,0,0,0],[0,0,0,0,0,0,0,1,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,0,0,0,0,1,0]]
+
+> Viga Y: local x->Y, local y->-X, local z->Z
+T_by = [[0,1,0,0,0,0,0,0,0,0,0,0],[-1,0,0,0,0,0,0,0,0,0,0,0],[0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,0,0,0,0],[0,0,0,-1,0,0,0,0,0,0,0,0],[0,0,0,0,0,1,0,0,0,0,0,0],[0,0,0,0,0,0,0,1,0,0,0,0],[0,0,0,0,0,0,-1,0,0,0,0,0],[0,0,0,0,0,0,0,0,1,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,0,0,-1,0,0],[0,0,0,0,0,0,0,0,0,0,0,1]]
+
+> Viga X: T = I (sin rotacion)
+> K globales por tipo
+K_col_g = transpose(T_col)*K_loc{1}*T_col
+K_bx_g = K_loc{2}
+K_by_g = transpose(T_by)*K_loc{3}*T_by
+
+---
+## 4. Ensamblaje Global (24 DOFs libres)
+> Nodos libres: 1(1-6), 2(7-12), 3(13-18), 4(19-24)
+> Columnas: base fija -> solo submatriz [7:12,7:12] contribuye
+> Vigas: ambos extremos libres -> K completa contribuye
+
+K_G = zeros(24, 24)
+
+> 4 Columnas: K_col_g[7:12,7:12] a nodos 1,2,3,4
+for nd = 0:3
+for i = 1:6
+for j = 1:6
+K_G[nd*6+i, nd*6+j] = K_G[nd*6+i, nd*6+j] + K_col_g[i+6, j+6]
+end
+end
+end
+
+> Viga X1: nodos 1->2 (DOFs 1-6 -> 7-12)
+for i = 1:6
+for j = 1:6
+K_G[i, j] = K_G[i, j] + K_bx_g[i, j]
+K_G[i, j+6] = K_G[i, j+6] + K_bx_g[i, j+6]
+K_G[i+6, j] = K_G[i+6, j] + K_bx_g[i+6, j]
+K_G[i+6, j+6] = K_G[i+6, j+6] + K_bx_g[i+6, j+6]
+end
+end
+
+> Viga X2: nodos 4->3 (DOFs 19-24 -> 13-18)
+for i = 1:6
+for j = 1:6
+K_G[i+18, j+18] = K_G[i+18, j+18] + K_bx_g[i, j]
+K_G[i+18, j+12] = K_G[i+18, j+12] + K_bx_g[i, j+6]
+K_G[i+12, j+18] = K_G[i+12, j+18] + K_bx_g[i+6, j]
+K_G[i+12, j+12] = K_G[i+12, j+12] + K_bx_g[i+6, j+6]
+end
+end
+
+> Viga Y1: nodos 1->4 (DOFs 1-6 -> 19-24)
+for i = 1:6
+for j = 1:6
+K_G[i, j] = K_G[i, j] + K_by_g[i, j]
+K_G[i, j+18] = K_G[i, j+18] + K_by_g[i, j+6]
+K_G[i+18, j] = K_G[i+18, j] + K_by_g[i+6, j]
+K_G[i+18, j+18] = K_G[i+18, j+18] + K_by_g[i+6, j+6]
+end
+end
+
+> Viga Y2: nodos 2->3 (DOFs 7-12 -> 13-18)
+for i = 1:6
+for j = 1:6
+K_G[i+6, j+6] = K_G[i+6, j+6] + K_by_g[i, j]
+K_G[i+6, j+12] = K_G[i+6, j+12] + K_by_g[i, j+6]
+K_G[i+12, j+6] = K_G[i+12, j+6] + K_by_g[i+6, j]
+K_G[i+12, j+12] = K_G[i+12, j+12] + K_by_g[i+6, j+6]
+end
+end
+
+---
+## 5. Matriz de Masa (Lumped, peso propio)
+> Masa por nodo = gamma/g * A * (L_col/2 + L_bx/2 + L_by/2)
+> Cada nodo tiene: 1 columna + 1 viga X + 1 viga Y
+
+m_node = gamma/g_acc*A_s*(L_col/2 + L_bx/2 + L_by/2)
+
+> Masa solo en DOFs traslacionales (Ux, Uy, Uz)
+M_G = zeros(24, 24)
+for nd = 0:3
+M_G[nd*6+1, nd*6+1] = m_node
+M_G[nd*6+2, nd*6+2] = m_node
+M_G[nd*6+3, nd*6+3] = m_node
+end
+
+---
+## 6. Condensacion Estatica
+> DOFs traslacionales (t): 1,2,3,7,8,9,13,14,15,19,20,21
+> DOFs rotacionales (r): 4,5,6,10,11,12,16,17,18,22,23,24
+> K* = K_tt - K_tr * K_rr^-1 * K_rt
+
+it = [[1],[2],[3],[7],[8],[9],[13],[14],[15],[19],[20],[21]]
+ir = [[4],[5],[6],[10],[11],[12],[16],[17],[18],[22],[23],[24]]
+
+K_tt = zeros(12,12)
+K_tr = zeros(12,12)
+K_rr = zeros(12,12)
+for i = 1:12
+for j = 1:12
+ri = it[i,1]
+rj = it[j,1]
+ci = ir[i,1]
+cj = ir[j,1]
+K_tt[i,j] = K_G[ri, rj]
+K_tr[i,j] = K_G[ri, cj]
+K_rr[i,j] = K_G[ci, cj]
+end
+end
+
+K_star = K_tt - K_tr*inv(K_rr)*transpose(K_tr)
+
+> Masa condensada (12x12 diagonal)
+M_star = zeros(12,12)
+for i = 1:12
+ri = it[i,1]
+M_star[i,i] = M_G[ri, ri]
+end
+
+---
+## 7. Eigenvalores y Eigenvectores
+> K* phi = omega^2 M* phi
+
+ev = eigenvalues(K_star, M_star)
+V = eigenvectors(K_star, M_star)
+
+> Periodos naturales
+omega1 = sqrt(ev.(1))
+T1 = 2*pi/omega1
+f1 = 1/T1
+
+omega2 = sqrt(ev.(2))
+T2 = 2*pi/omega2
+f2 = 1/T2
+
+omega3 = sqrt(ev.(3))
+T3 = 2*pi/omega3
+f3 = 1/T3
+
+---
+## 8. Participacion de Masa con Rz
+> DOFs condensados: [Ux1,Uy1,Uz1, Ux2,Uy2,Uz2, Ux3,Uy3,Uz3, Ux4,Uy4,Uz4]
+
+r_x = [[1],[0],[0],[1],[0],[0],[1],[0],[0],[1],[0],[0]]
+r_y = [[0],[1],[0],[0],[1],[0],[0],[1],[0],[0],[1],[0]]
+
+M_tot = 4*m_node
+n_modes = 12
+
+@{js}
+// Tabla de participacion con Rz
+var rows = [];
+var sumUx = 0, sumUy = 0, sumRz = 0;
+
+// Coordenadas de nodos para Rz
+var nx = [0, 6, 6, 0];
+var ny = [0, 0, 5, 5];
+
+// Centro de masa (masas iguales)
+var xcm = (nx[0]+nx[1]+nx[2]+nx[3])/4;
+var ycm = (ny[0]+ny[1]+ny[2]+ny[3])/4;
+
+// Vector de influencia Rz
+var r_rz = [];
+for (var i = 0; i < 4; i++) {
+  r_rz.push(-(ny[i] - ycm));
+  r_rz.push(nx[i] - xcm);
+  r_rz.push(0);
+}
+
+// r_rz^T M r_rz
+var m_node_val = env.m_node;
+var Iz_total = 0;
+for (var i = 0; i < 12; i++) {
+  Iz_total += r_rz[i] * m_node_val * r_rz[i];
+}
+
+var V = env.V;
+var ev = env.ev;
+
+for (var mode = 0; mode < 12; mode++) {
+  var w2 = ev[mode];
+  var omega = Math.sqrt(Math.abs(w2));
+  var T = omega > 0 ? 2*Math.PI/omega : 999;
+  var f = omega > 0 ? omega/(2*Math.PI) : 0;
+
+  var phi = [];
+  for (var i = 0; i < 12; i++) phi.push(V[i][mode]);
+
+  var Mn = 0;
+  for (var i = 0; i < 12; i++) Mn += phi[i] * m_node_val * phi[i];
+  if (Mn < 1e-20) Mn = 1;
+
+  var Lx = 0, Ly = 0, Lrz = 0;
+  for (var i = 0; i < 12; i++) {
+    if (i % 3 === 0) Lx += phi[i] * m_node_val;
+    if (i % 3 === 1) Ly += phi[i] * m_node_val;
+    Lrz += phi[i] * m_node_val * r_rz[i];
+  }
+
+  var M_tot = 4 * m_node_val;
+  var ratioUx = (Lx*Lx/Mn) / M_tot * 100;
+  var ratioUy = (Ly*Ly/Mn) / M_tot * 100;
+  var ratioRz = Iz_total > 0 ? (Lrz*Lrz/Mn) / Iz_total * 100 : 0;
+
+  sumUx += ratioUx;
+  sumUy += ratioUy;
+  sumRz += ratioRz;
+
+  if (ratioUx > 0.01 || ratioUy > 0.01 || ratioRz > 0.01) {
+    rows.push({mode: mode+1, T: T, f: f, Ux: ratioUx, Uy: ratioUy, Rz: ratioRz,
+               SUx: sumUx, SUy: sumUy, SRz: sumRz});
+  }
+}
+
+var html = '<table style="border-collapse:collapse;margin:10px auto;font-size:12px;width:95%">';
+html += '<tr style="background:#e3f2fd">';
+html += '<th style="padding:5px 8px;border:1px solid #bbb">Modo</th>';
+html += '<th style="padding:5px 8px;border:1px solid #bbb">T (s)</th>';
+html += '<th style="padding:5px 8px;border:1px solid #bbb">f (Hz)</th>';
+html += '<th style="padding:5px 8px;border:1px solid #bbb">Ux %</th>';
+html += '<th style="padding:5px 8px;border:1px solid #bbb">Uy %</th>';
+html += '<th style="padding:5px 8px;border:1px solid #bbb;color:#c00;font-weight:bold">Rz %</th>';
+html += '<th style="padding:5px 8px;border:1px solid #bbb">Sum Ux</th>';
+html += '<th style="padding:5px 8px;border:1px solid #bbb">Sum Uy</th>';
+html += '<th style="padding:5px 8px;border:1px solid #bbb;color:#c00">Sum Rz</th>';
+html += '</tr>';
+
+for (var ri = 0; ri < rows.length; ri++) {
+  var r = rows[ri];
+  var hl = r.Rz > 5 ? 'background:#fff3e0;' : '';
+  var td = 'padding:4px 8px;border:1px solid #ddd;text-align:center';
+  html += '<tr style="' + hl + '">';
+  html += '<td style="' + td + '">' + r.mode + '</td>';
+  html += '<td style="' + td + '">' + r.T.toFixed(4) + '</td>';
+  html += '<td style="' + td + '">' + r.f.toFixed(2) + '</td>';
+  html += '<td style="' + td + '">' + r.Ux.toFixed(2) + '</td>';
+  html += '<td style="' + td + '">' + r.Uy.toFixed(2) + '</td>';
+  html += '<td style="' + td + ';font-weight:bold;color:#c00">' + r.Rz.toFixed(2) + '</td>';
+  html += '<td style="' + td + '">' + r.SUx.toFixed(2) + '</td>';
+  html += '<td style="' + td + '">' + r.SUy.toFixed(2) + '</td>';
+  html += '<td style="' + td + ';color:#c00">' + r.SRz.toFixed(2) + '</td>';
+  html += '</tr>';
+}
+html += '</table>';
+
+html += '<div style="margin:10px auto;max-width:90%;font-size:11px;color:#555;line-height:1.5">';
+html += '<b>Vector de influencia Rz:</b> ';
+html += 'x_cm = ' + xcm.toFixed(1) + ' m, y_cm = ' + ycm.toFixed(1) + ' m<br>';
+html += 'r_rz[Ux_i] = -(y_i - y_cm), r_rz[Uy_i] = +(x_i - x_cm)<br>';
+html += 'Momento de inercia total I_z = ' + Iz_total.toFixed(2) + ' kN*s^2*m';
+html += '</div>';
+
+return html;
+@{end js}
+
+---
+## 9. Resumen
+
+@{text}
+El modo torsional (Rz) aparece desacoplado de los modos traslacionales
+porque el centro de masa coincide con el centro de rigidez en esta
+estructura simetrica. En edificios irregulares, los modos se acoplan
+y cada modo tiene participacion tanto traslacional como torsional.
+
+La participacion Rz se calcula con un vector de influencia que representa
+una rotacion rigida unitaria alrededor del eje Z, pasando por el centro
+de masa. Este vector tiene componentes Ux y Uy porque la rotacion produce
+desplazamientos tangenciales proporcionales a la distancia al centro de masa.
+@{end text}`,
+
+  },
+
 };
 
 
@@ -19922,6 +20662,18 @@ function autoPageBreak() {
 
       if (splitIdx > 0) {
 
+        // Avoid nearly-empty pages: skip split if current page would be less than 40% filled,
+        // or if fewer than 3 visible content elements would remain on current page
+        const contentBeforeSplit = children.slice(0, splitIdx).filter(c =>
+          !c.classList.contains("page-header") && !c.classList.contains("page-footer") &&
+          !c.classList.contains("out-empty") && c.offsetHeight > 0
+        );
+        const lastKeptBottom = children[splitIdx - 1].offsetTop + children[splitIdx - 1].offsetHeight;
+        const fillRatio = (lastKeptBottom - padTop) / maxContentPx;
+        if (fillRatio < 0.4 || contentBeforeSplit.length < 3) {
+          continue; // skip split, let page overflow
+        }
+
         const newPage = document.createElement("div");
 
         newPage.className = page.className; // Inherit eq-black class too
@@ -19962,6 +20714,37 @@ function autoPageBreak() {
 
     if (!didSplit) break;
 
+  }
+
+  // Merge pass: combine nearly-empty pages with the next page
+  // A page is "nearly empty" if its visible content fills less than 40% of page height
+  let mergePass = 5;
+  while (mergePass-- > 0) {
+    const pages = Array.from(wrapper.querySelectorAll(".output-page")) as HTMLElement[];
+    let didMerge = false;
+    for (let pi = 0; pi < pages.length - 1; pi++) {
+      const page = pages[pi];
+      const contentEls = Array.from(page.children).filter(c =>
+        !c.classList.contains("page-header") && !c.classList.contains("page-footer")
+      ) as HTMLElement[];
+      if (contentEls.length === 0) continue;
+      const lastEl = contentEls[contentEls.length - 1];
+      const padTop = parseFloat(getComputedStyle(page).paddingTop) || 0;
+      const contentBottom = lastEl.offsetTop + lastEl.offsetHeight - padTop;
+      const fillRatio = contentBottom / maxContentPx;
+      if (fillRatio < 0.4) {
+        // Merge: move all content from next page into this page
+        const nextPage = pages[pi + 1];
+        const nextContent = Array.from(nextPage.children).filter(c =>
+          !c.classList.contains("page-header") && !c.classList.contains("page-footer")
+        );
+        for (const el of nextContent) page.appendChild(el);
+        nextPage.remove();
+        didMerge = true;
+        break;
+      }
+    }
+    if (!didMerge) break;
   }
 
   // Re-number page headers/footers after auto-splitting
@@ -21595,10 +22378,13 @@ function renderResults(results: LineResult[], sourceCode: string): string {
     let srcLine = sourceLines[r.lineIndex]?.trim() ?? "";
 
     // Strip inline // comments from source line for rendering
-
+    // But preserve the comment text for @{columns} descriptions
     const cmtIdx = srcLine.indexOf("//");
-
-    if (cmtIdx >= 0) srcLine = srcLine.slice(0, cmtIdx).trim();
+    let inlineComment = "";
+    if (cmtIdx >= 0) {
+      inlineComment = srcLine.slice(cmtIdx + 2).trim();
+      srcLine = srcLine.slice(0, cmtIdx).trim();
+    }
 
     // data-line attribute for output?code navigation
 
@@ -21624,9 +22410,9 @@ function renderResults(results: LineResult[], sourceCode: string): string {
 
 
 
-    // Empty line or heading/comment exits columns mode
+    // Empty line or heading exits columns mode (but NOT comment — comments stay in grid)
 
-    if (inColumns && (r.type === "empty" || r.type === "heading" || r.type === "comment")) {
+    if (inColumns && (r.type === "empty" || r.type === "heading")) {
 
       if (columnItems.length > 0) {
 
@@ -21645,9 +22431,34 @@ function renderResults(results: LineResult[], sourceCode: string): string {
     if (inColumns && (r.type === "assignment" || r.type === "expression")) {
 
       columnItems.push({html: renderLineEq(r, srcLine), lineIndex: r.lineIndex});
+      // If there's an inline // comment, add it as a description cell
+      if (inlineComment) {
+        columnItems.push({html: `<span class="eq-comment" style="color:#666;font-style:italic;font-size:0.92em;">${renderInlineText(inlineComment)}</span>`, lineIndex: r.lineIndex});
+      }
 
       continue;
 
+    }
+
+    // Comments ("> text") inside @{columns} become grid cells with description text
+    if (inColumns && r.type === "comment") {
+
+      const commentText = srcLine.replace(/^>\s*/, "");
+
+      columnItems.push({html: `<span class="eq-comment" style="color:#666;font-style:italic;font-size:0.92em;">${renderInlineText(commentText)}</span>`, lineIndex: r.lineIndex});
+
+      continue;
+
+    }
+
+    // Also detect > lines from srcLine (parser renders them as "text" type, not "comment")
+    {
+      const origLine = sourceLines[r.lineIndex]?.trim() ?? "";
+      if (inColumns && origLine.startsWith(">")) {
+        const commentText = origLine.replace(/^>\s*/, "");
+        columnItems.push({html: `<span class="eq-comment" style="color:#666;font-style:italic;font-size:0.92em;">${renderInlineText(commentText)}</span>`, lineIndex: r.lineIndex});
+        continue;
+      }
     }
 
 
@@ -21655,7 +22466,6 @@ function renderResults(results: LineResult[], sourceCode: string): string {
     // Flush remaining columns
 
     if (inColumns && columnItems.length > 0 && r.type !== "assignment" && r.type !== "expression") {
-
       html.push(renderColumnsGrid(columnItems, columnCount));
 
       columnItems = [];
@@ -22175,6 +22985,16 @@ function renderResults(results: LineResult[], sourceCode: string): string {
       }
 
       case "directive": {
+
+        // @{end columns} — flush and close columns mode
+        if (inColumns && (r.display === "end:columns" || /^@\{end\s+columns\}/i.test(srcLine))) {
+          if (columnItems.length > 0) {
+            html.push(renderColumnsGrid(columnItems, columnCount));
+            columnItems = [];
+          }
+          inColumns = false;
+          break;
+        }
 
         // Detect @{pagebreak} ? insert page break marker
 
@@ -23212,7 +24032,7 @@ function renderAwatifBlocks(results: LineResult[]): void {
 
     try {
 
-      renderAwatifBlock(container, r.awatifLines, scope);
+      renderAwatifBlock(container, r.awatifLines, scope, evaluator.pageBackground || "");
 
     } catch (err: any) {
 
@@ -28016,32 +28836,50 @@ ${styles}
 
 // --- Init -----------------------------------------------
 
-// Load default example
+// Load example from URL param or default
+const urlExParam = new URLSearchParams(window.location.search).get("example");
+const exKey = urlExParam || "spaceframe_modal";
 
-const defaultEx = EXAMPLES["fem_verify"];
-
-if (defaultEx) {
-
-  exampleSelect.value = "fem_verify";
-
-  codeInput.value = defaultEx.code;
-
-  editor.loadFromText(defaultEx.code);
-
-} else {
-
+async function loadInitialExample() {
+  // 1) Try inline EXAMPLES first
+  if (EXAMPLES[exKey]) {
+    exampleSelect.value = exKey;
+    codeInput.value = EXAMPLES[exKey].code;
+    editor.loadFromText(EXAMPLES[exKey].code);
+    updateSyntax();
+    setMode("code");
+    runCode();
+    return;
+  }
+  // 2) Try loading from .hcalc file via manifest
+  try {
+    const manifestResp = await fetch("/src/mathcanvas/examples/manifest.json");
+    const manifest: Array<{key:string; name:string; filename:string}> = await manifestResp.json();
+    const entry = manifest.find(e => e.key === exKey);
+    if (entry) {
+      const resp = await fetch(`/src/mathcanvas/examples/${entry.filename}`);
+      const code = await resp.text();
+      // Add to EXAMPLES so dropdown works
+      EXAMPLES[exKey] = { name: entry.name, code };
+      const opt = document.createElement("option");
+      opt.value = exKey;
+      opt.textContent = entry.name;
+      exampleSelect.appendChild(opt);
+      exampleSelect.value = exKey;
+      codeInput.value = code;
+      editor.loadFromText(code);
+      updateSyntax();
+      setMode("code");
+      runCode();
+      return;
+    }
+  } catch (_) { /* ignore fetch errors */ }
+  // 3) Fallback: empty
   exampleSelect.value = "";
-
   codeInput.value = "";
-
   editor.loadFromText("");
-
+  updateSyntax();
+  setMode("code");
 }
-
-updateSyntax();
-
-setMode("code");
-
-// Auto-run the default example so output appears immediately
-runCode();
+loadInitialExample();
 

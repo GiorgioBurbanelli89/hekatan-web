@@ -22,6 +22,8 @@ import {
 } from "awatif-fem";
 import { multiply, transpose, norm, subtract } from "mathjs";
 import { getViewer, getParameters, Parameters } from "awatif-ui";
+import type { ViewerContext3D } from "./viewer/getViewer";
+import { onThemeChange, getThemeName, toggleTheme } from "./theme";
 import type { Settings } from "awatif-ui/viewer/settings/getSettings";
 import { getMesh } from "awatif-mesh";
 import { getQuadMesh, getQuadUniformLoads } from "awatif-mesh/getQuadMesh";
@@ -159,6 +161,7 @@ function parseDSL(lines: string[], scope: Record<string, any>): ParsedModel {
   let solveRequested = false;
   let explicitMode = false;
   const showSettings: Record<string, any> = {};
+  let dslBg = "";  // bg color from DSL (e.g. "bg book" or "bg #f5f0e8")
   const jsLines: string[] = [];
   let inJsMode = false;
   const meshCommands: MeshCommand[] = [];
@@ -464,6 +467,12 @@ function parseDSL(lines: string[], scope: Record<string, any>): ParsedModel {
         break;
       }
 
+      case "bg": {
+        // bg book | bg #f5f0e8 | bg cream
+        dslBg = tokens.slice(1).join(" ").trim();
+        break;
+      }
+
       case "show": {
         // show [deformed] [scale:N] [result:field]
         for (const t of tokens.slice(1)) {
@@ -564,6 +573,7 @@ function parseDSL(lines: string[], scope: Record<string, any>): ParsedModel {
     solveRequested,
     explicitMode,
     showSettings,
+    dslBg,
     jsCode: jsLines.join("\n"),
     patterns,
     patternNames,
@@ -799,6 +809,7 @@ export function renderAwatifBlock(
   container: HTMLElement,
   awatifLines: string[],
   scope: Record<string, any>,
+  pageBg?: string,
 ): void {
   try {
     // ── Inject FEM inspect panel CSS (once) ──
@@ -806,91 +817,184 @@ export function renderAwatifBlock(
       const style = document.createElement('style');
       style.id = 'fem-inspect-styles';
       style.textContent = `
+    /* ── CSS Custom Properties (Dark = default) ── */
+    :root {
+      --fem-bg: rgba(20,20,28,0.97);
+      --fem-text: #ccc;
+      --fem-border: #555;
+      --fem-border-light: #444;
+      --fem-border-cell: #333;
+      --fem-shadow: rgba(0,0,0,0.6);
+      --fem-heading: #0a84ff;
+      --fem-section-title: #ee9b00;
+      --fem-close: #888;
+      --fem-close-hover: #fff;
+      --fem-key: #aaa;
+      --fem-val: #fff;
+      --fem-label: #888;
+      --fem-cell-text: #ddd;
+      --fem-nonzero: #0f0;
+      --fem-header-bg: #222;
+      --fem-eq-text: #e8e8ff;
+      --fem-eq-var: #7cb3ff;
+      --fem-eq-op: #ccc;
+      --fem-eq-sub: #aaa;
+      --fem-eq-border: #888;
+      --fem-eq-dots: #666;
+      --fem-eq-box-bg: rgba(255,255,255,0.05);
+      --fem-eq-box-border: #444;
+      --fem-overlay-bg: rgba(10,10,15,0.97);
+      --fem-section-bg: rgba(30,30,50,0.8);
+      --fem-coeff-bg: rgba(40,35,20,0.8);
+      --fem-numeric-bg: rgba(30,40,30,0.8);
+      --fem-step-bg: rgba(255,255,255,0.03);
+      --fem-coeff-item-bg: rgba(255,255,255,0.04);
+      --fem-btn-bg: #333;
+      --fem-btn-hover: #444;
+      --fem-btn-text: #0a84ff;
+      --fem-btn-hover-text: #fff;
+      --fem-frac-border: #999;
+      --fem-sym-cell: #aad;
+      --fem-sym-nz: #7cb3ff;
+      --fem-diag-bg: rgba(255,255,0,0.06);
+      --fem-vec-inline: #ccc;
+      --fem-full-close-bg: #444;
+      --fem-full-close-border: #666;
+    }
+    /* ── Light theme overrides ── */
+    :root.awatif-light {
+      --fem-bg: rgba(250,250,252,0.97);
+      --fem-text: #333;
+      --fem-border: #bbb;
+      --fem-border-light: #ccc;
+      --fem-border-cell: #ccc;
+      --fem-shadow: rgba(0,0,0,0.15);
+      --fem-heading: #0066cc;
+      --fem-section-title: #b87800;
+      --fem-close: #888;
+      --fem-close-hover: #000;
+      --fem-key: #666;
+      --fem-val: #111;
+      --fem-label: #888;
+      --fem-cell-text: #333;
+      --fem-nonzero: #006600;
+      --fem-header-bg: #e8e8e8;
+      --fem-eq-text: #222;
+      --fem-eq-var: #0055aa;
+      --fem-eq-op: #555;
+      --fem-eq-sub: #777;
+      --fem-eq-border: #999;
+      --fem-eq-dots: #aaa;
+      --fem-eq-box-bg: rgba(0,0,0,0.03);
+      --fem-eq-box-border: #ccc;
+      --fem-overlay-bg: rgba(245,245,248,0.97);
+      --fem-section-bg: rgba(240,240,250,0.9);
+      --fem-coeff-bg: rgba(255,248,230,0.9);
+      --fem-numeric-bg: rgba(240,250,240,0.9);
+      --fem-step-bg: rgba(0,0,0,0.02);
+      --fem-coeff-item-bg: rgba(0,0,0,0.03);
+      --fem-btn-bg: #e0e0e0;
+      --fem-btn-hover: #ccc;
+      --fem-btn-text: #0066cc;
+      --fem-btn-hover-text: #000;
+      --fem-frac-border: #888;
+      --fem-sym-cell: #336;
+      --fem-sym-nz: #0055aa;
+      --fem-diag-bg: rgba(255,255,0,0.08);
+      --fem-vec-inline: #444;
+      --fem-full-close-bg: #ddd;
+      --fem-full-close-border: #aaa;
+    }
     #fem-inspect-panel {
       position: fixed; top: 10px; right: 10px;
-      background: rgba(20,20,28,0.97); color: #ccc;
-      border: 1px solid #555; border-radius: 8px;
+      background: var(--fem-bg); color: var(--fem-text);
+      border: 1px solid var(--fem-border); border-radius: 8px;
       padding: 14px 16px; font-family: monospace; font-size: 11px;
       z-index: 999999; width: 420px; max-height: calc(100vh - 20px);
-      overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      overflow-y: auto; box-shadow: 0 4px 20px var(--fem-shadow);
       pointer-events: auto;
     }
-    #fem-inspect-panel h3 { margin: 0 0 8px 0; color: #0a84ff; font-size: 14px; display: flex; justify-content: space-between; }
-    #fem-inspect-panel .close-btn { background: none; border: none; color: #888; cursor: pointer; font-size: 16px; }
-    #fem-inspect-panel .close-btn:hover { color: #fff; }
-    #fem-inspect-panel .section { margin-top: 10px; border-top: 1px solid #444; padding-top: 8px; }
-    #fem-inspect-panel .section-title { color: #ee9b00; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+    #fem-inspect-panel h3 { margin: 0 0 8px 0; color: var(--fem-heading); font-size: 14px; display: flex; justify-content: space-between; }
+    #fem-inspect-panel .close-btn { background: none; border: none; color: var(--fem-close); cursor: pointer; font-size: 16px; }
+    #fem-inspect-panel .close-btn:hover { color: var(--fem-close-hover); }
+    #fem-inspect-panel .section { margin-top: 10px; border-top: 1px solid var(--fem-border-light); padding-top: 8px; }
+    #fem-inspect-panel .section-title { color: var(--fem-section-title); font-size: 12px; font-weight: bold; margin-bottom: 4px; }
     #fem-inspect-panel .prop-row { display: flex; justify-content: space-between; padding: 1px 0; }
-    #fem-inspect-panel .prop-key { color: #aaa; }
-    #fem-inspect-panel .prop-val { color: #fff; font-weight: bold; }
-    #fem-inspect-panel .matrix-label { color: #888; font-size: 10px; margin-top: 6px; }
+    #fem-inspect-panel .prop-key { color: var(--fem-key); }
+    #fem-inspect-panel .prop-val { color: var(--fem-val); font-weight: bold; }
+    #fem-inspect-panel .matrix-label { color: var(--fem-label); font-size: 10px; margin-top: 6px; }
     #fem-inspect-panel table { border-collapse: collapse; width: 100%; margin-top: 4px; font-size: 10px; }
-    #fem-inspect-panel td { border: 1px solid #333; padding: 2px 4px; text-align: right; color: #ddd; white-space: nowrap; }
-    #fem-inspect-panel td.nonzero { color: #0f0; }
-    #fem-inspect-panel td.header { color: #ee9b00; font-weight: bold; background: #222; text-align: center; }
-    #fem-inspect-panel .result-val { font-size: 13px; color: #0f0; font-weight: bold; }
-    #fem-inspect-panel .dof-labels { color: #888; font-size: 9px; }
+    #fem-inspect-panel td { border: 1px solid var(--fem-border-cell); padding: 2px 4px; text-align: right; color: var(--fem-cell-text); white-space: nowrap; }
+    #fem-inspect-panel td.nonzero { color: var(--fem-nonzero); }
+    #fem-inspect-panel td.header { color: var(--fem-section-title); font-weight: bold; background: var(--fem-header-bg); text-align: center; }
+    #fem-inspect-panel .result-val { font-size: 13px; color: var(--fem-nonzero); font-weight: bold; }
+    #fem-inspect-panel .dof-labels { color: var(--fem-label); font-size: 9px; }
     button.inspect-active { background: #ff4444 !important; color: #fff !important; border-color: #ff4444 !important; }
-    .fem-eq { font-family: 'STIX Two Math','Cambria Math','Times New Roman',serif; font-size: 13px; color: #e8e8ff; line-height: 1.6; margin: 6px 0 8px 0; text-align: center; }
-    .fem-eq .var { color: #7cb3ff; font-style: italic; }
-    .fem-eq .op { color: #ccc; padding: 0 2px; }
+    .fem-eq { font-family: 'STIX Two Math','Cambria Math','Times New Roman',serif; font-size: 13px; color: var(--fem-eq-text); line-height: 1.6; margin: 6px 0 8px 0; text-align: center; }
+    .fem-eq .var { color: var(--fem-eq-var); font-style: italic; }
+    .fem-eq .op { color: var(--fem-eq-op); padding: 0 2px; }
     .fem-eq .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 2px; }
-    .fem-eq .frac-num { border-bottom: 1px solid #999; padding: 0 4px 1px; font-size: 11px; }
+    .fem-eq .frac-num { border-bottom: 1px solid var(--fem-frac-border); padding: 0 4px 1px; font-size: 11px; }
     .fem-eq .frac-den { padding: 1px 4px 0; font-size: 11px; }
-    .fem-eq sub { font-size: 0.75em; vertical-align: sub; color: #aaa; }
+    .fem-eq sub { font-size: 0.75em; vertical-align: sub; color: var(--fem-eq-sub); }
     .fem-eq sup { font-size: 0.75em; vertical-align: super; }
-    .fem-eq .mat-sym { display: inline-grid; border-left: 2px solid #888; border-right: 2px solid #888; padding: 2px 6px; margin: 0 4px; vertical-align: middle; gap: 1px 8px; font-size: 11px; }
+    .fem-eq .mat-sym { display: inline-grid; border-left: 2px solid var(--fem-eq-border); border-right: 2px solid var(--fem-eq-border); padding: 2px 6px; margin: 0 4px; vertical-align: middle; gap: 1px 8px; font-size: 11px; }
     .fem-eq .mat-sym .cell { text-align: center; }
-    .fem-eq .mat-sym .dots { color: #666; }
-    .fem-eq .highlight { color: #0f0; font-weight: bold; }
-    .fem-eq .eq-box { background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 4px; padding: 6px 10px; margin: 4px 0; }
-    .fem-full-overlay { position: fixed; inset: 0; background: rgba(10,10,15,0.97); z-index: 9999999; overflow: auto; padding: 20px; }
-    .fem-full-overlay .close-full { position: fixed; top: 12px; right: 16px; background: #444; color: #fff; border: 1px solid #666; border-radius: 4px; padding: 6px 14px; cursor: pointer; font-size: 13px; z-index: 10000000; }
-    .fem-full-overlay .close-full:hover { background: #666; }
-    .fem-full-overlay h2 { color: #ee9b00; margin: 0 0 16px 0; font-size: 18px; font-family: monospace; }
+    .fem-eq .mat-sym .dots { color: var(--fem-eq-dots); }
+    .fem-eq .highlight { color: var(--fem-nonzero); font-weight: bold; }
+    .fem-eq .eq-box { background: var(--fem-eq-box-bg); border: 1px solid var(--fem-eq-box-border); border-radius: 4px; padding: 6px 10px; margin: 4px 0; }
+    .fem-full-overlay { position: fixed; inset: 0; background: var(--fem-overlay-bg); z-index: 9999999; overflow: auto; padding: 20px; }
+    .fem-full-overlay .close-full { position: fixed; top: 12px; right: 16px; background: var(--fem-full-close-bg); color: var(--fem-val); border: 1px solid var(--fem-full-close-border); border-radius: 4px; padding: 6px 14px; cursor: pointer; font-size: 13px; z-index: 10000000; }
+    .fem-full-overlay .close-full:hover { background: var(--fem-btn-hover); }
+    .fem-full-overlay h2 { color: var(--fem-section-title); margin: 0 0 16px 0; font-size: 18px; font-family: monospace; }
     .fem-full-sections { display: flex; flex-direction: column; gap: 20px; }
-    .fem-full-sections .full-section { background: rgba(30,30,50,0.8); border: 1px solid #555; border-radius: 6px; padding: 16px; overflow-x: auto; }
-    .fem-full-sections .full-section.coeff { background: rgba(40,35,20,0.8); }
-    .fem-full-sections .full-section.numeric { background: rgba(30,40,30,0.8); }
-    .fem-full-sections .side-title { font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .fem-full-sections .full-section { background: var(--fem-section-bg); border: 1px solid var(--fem-border); border-radius: 6px; padding: 16px; overflow-x: auto; }
+    .fem-full-sections .full-section.coeff { background: var(--fem-coeff-bg); }
+    .fem-full-sections .full-section.numeric { background: var(--fem-numeric-bg); }
+    .fem-full-sections .side-title { font-size: 13px; color: var(--fem-label); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
     .fem-full-sections table { border-collapse: collapse; font-family: monospace; font-size: 11px; }
-    .fem-full-sections td { border: 1px solid #333; padding: 3px 6px; text-align: right; color: #ddd; white-space: nowrap; }
-    .fem-full-sections td.nz { color: #0f0; }
-    .fem-full-sections td.hdr { color: #ee9b00; font-weight: bold; background: #222; text-align: center; }
-    .fem-full-sections td.diag { background: rgba(255,255,0,0.06); }
+    .fem-full-sections td { border: 1px solid var(--fem-border-cell); padding: 3px 6px; text-align: right; color: var(--fem-cell-text); white-space: nowrap; }
+    .fem-full-sections td.nz { color: var(--fem-nonzero); }
+    .fem-full-sections td.hdr { color: var(--fem-section-title); font-weight: bold; background: var(--fem-header-bg); text-align: center; }
+    .fem-full-sections td.diag { background: var(--fem-diag-bg); }
     .fem-full-sections .coeff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
-    .fem-full-sections .coeff-item { background: rgba(255,255,255,0.04); border: 1px solid #444; border-radius: 4px; padding: 8px 12px; font-family: 'STIX Two Math','Cambria Math','Times New Roman',serif; font-size: 13px; color: #e8e8ff; line-height: 1.6; }
-    .fem-full-sections .coeff-item .var { color: #7cb3ff; font-style: italic; }
+    .fem-full-sections .coeff-item { background: var(--fem-coeff-item-bg); border: 1px solid var(--fem-eq-box-border); border-radius: 4px; padding: 8px 12px; font-family: 'STIX Two Math','Cambria Math','Times New Roman',serif; font-size: 13px; color: var(--fem-eq-text); line-height: 1.6; }
+    .fem-full-sections .coeff-item .var { color: var(--fem-eq-var); font-style: italic; }
     .fem-full-sections .coeff-item .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 2px; }
-    .fem-full-sections .coeff-item .frac-num { border-bottom: 1px solid #999; padding: 0 4px 1px; font-size: 11px; }
+    .fem-full-sections .coeff-item .frac-num { border-bottom: 1px solid var(--fem-frac-border); padding: 0 4px 1px; font-size: 11px; }
     .fem-full-sections .coeff-item .frac-den { padding: 1px 4px 0; font-size: 11px; }
-    .fem-full-sections .coeff-item .highlight { color: #0f0; font-weight: bold; }
-    .fem-full-sections .coeff-item sub { font-size: 0.75em; vertical-align: sub; color: #aaa; }
+    .fem-full-sections .coeff-item .highlight { color: var(--fem-nonzero); font-weight: bold; }
+    .fem-full-sections .coeff-item sub { font-size: 0.75em; vertical-align: sub; color: var(--fem-eq-sub); }
     .fem-full-sections .coeff-item sup { font-size: 0.75em; vertical-align: super; }
-    .fem-step { background: rgba(255,255,255,0.03); border: 1px solid #444; border-radius: 4px; padding: 8px 12px; margin: 6px 0; font-family: 'STIX Two Math','Cambria Math','Times New Roman',serif; font-size: 12px; color: #e8e8ff; overflow-x: auto; }
-    .fem-step .step-title { color: #ee9b00; font-weight: bold; font-size: 11px; margin-bottom: 4px; font-family: monospace; }
+    .fem-step { background: var(--fem-step-bg); border: 1px solid var(--fem-eq-box-border); border-radius: 4px; padding: 8px 12px; margin: 6px 0; font-family: 'STIX Two Math','Cambria Math','Times New Roman',serif; font-size: 12px; color: var(--fem-eq-text); overflow-x: auto; }
+    .fem-step .step-title { color: var(--fem-section-title); font-weight: bold; font-size: 11px; margin-bottom: 4px; font-family: monospace; }
     .fem-step .step-eq { margin: 4px 0; }
-    .fem-step .var { color: #7cb3ff; font-style: italic; }
-    .fem-step .highlight { color: #0f0; font-weight: bold; }
-    .fem-step .vec-inline { color: #ccc; font-family: monospace; font-size: 11px; }
-    .fem-step sub { font-size: 0.75em; vertical-align: sub; color: #aaa; }
+    .fem-step .var { color: var(--fem-eq-var); font-style: italic; }
+    .fem-step .highlight { color: var(--fem-nonzero); font-weight: bold; }
+    .fem-step .vec-inline { color: var(--fem-vec-inline); font-family: monospace; font-size: 11px; }
+    .fem-step sub { font-size: 0.75em; vertical-align: sub; color: var(--fem-eq-sub); }
     .fem-step .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 2px; }
-    .fem-step .frac-num { border-bottom: 1px solid #999; padding: 0 4px 1px; font-size: 10px; }
+    .fem-step .frac-num { border-bottom: 1px solid var(--fem-frac-border); padding: 0 4px 1px; font-size: 10px; }
     .fem-step .frac-den { padding: 1px 4px 0; font-size: 10px; }
     .fem-full-sym { font-family: 'STIX Two Math','Cambria Math','Times New Roman',serif; }
     .fem-full-sym table { font-family: 'STIX Two Math','Cambria Math',serif; font-size: 13px; }
-    .fem-full-sym td { border: 1px solid #444; padding: 4px 8px; text-align: center; color: #aad; vertical-align: middle; }
-    .fem-full-sym td.nz { color: #7cb3ff; }
+    .fem-full-sym td { border: 1px solid var(--fem-eq-box-border); padding: 4px 8px; text-align: center; color: var(--fem-sym-cell); vertical-align: middle; }
+    .fem-full-sym td.nz { color: var(--fem-sym-nz); }
     .fem-full-sym .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 1px; line-height: 1.2; }
-    .fem-full-sym .frac-num { border-bottom: 1px solid #888; padding: 0 3px 1px; font-size: 11px; white-space: nowrap; }
+    .fem-full-sym .frac-num { border-bottom: 1px solid var(--fem-eq-border); padding: 0 3px 1px; font-size: 11px; white-space: nowrap; }
     .fem-full-sym .frac-den { padding: 1px 3px 0; font-size: 11px; white-space: nowrap; }
-    .fem-full-sym .var { color: #7cb3ff; font-style: italic; }
-    .fem-full-sym sub { font-size: 0.7em; vertical-align: sub; color: #aaa; }
-    .fem-expand-btn { background: #333; color: #0a84ff; border: 1px solid #555; border-radius: 3px; padding: 2px 8px; cursor: pointer; font-size: 10px; margin-left: 8px; }
-    .fem-expand-btn:hover { background: #444; color: #fff; }
+    .fem-full-sym .var { color: var(--fem-sym-nz); font-style: italic; }
+    .fem-full-sym sub { font-size: 0.7em; vertical-align: sub; color: var(--fem-eq-sub); }
+    .fem-expand-btn { background: var(--fem-btn-bg); color: var(--fem-btn-text); border: 1px solid var(--fem-border); border-radius: 3px; padding: 2px 8px; cursor: pointer; font-size: 10px; margin-left: 8px; }
+    .fem-expand-btn:hover { background: var(--fem-btn-hover); color: var(--fem-btn-hover-text); }
       `;
       document.head.appendChild(style);
     }
+    // Apply current theme class + listen for changes
+    if (getThemeName() === "light") document.documentElement.classList.add("awatif-light");
+    onThemeChange((name) => {
+      document.documentElement.classList.toggle("awatif-light", name === "light");
+    });
 
     // 1. Extract $variables and create Parameters (Tweakpane)
     const dollarVars = extractDollarVars(awatifLines);
@@ -948,19 +1052,59 @@ export function renderAwatifBlock(
     }
 
     // 5. Build settings
+    // Auto-compute gridSize from model extent
+    let autoGridSize = 20;
+    if (initial.model.nodes.length > 1) {
+      const mins = [Infinity, Infinity, Infinity];
+      const maxs = [-Infinity, -Infinity, -Infinity];
+      for (const n of initial.model.nodes) {
+        for (let i = 0; i < 3; i++) { mins[i] = Math.min(mins[i], n[i]); maxs[i] = Math.max(maxs[i], n[i]); }
+      }
+      const extent = Math.max(maxs[0] - mins[0], maxs[1] - mins[1], maxs[2] - mins[2], 1);
+      // Round up to next nice number (multiples of 10, 20, 50, 100...)
+      autoGridSize = Math.max(20, Math.ceil(extent * 1.3 / 10) * 10);
+    }
     const showCopy = { ...initial.model.showSettings };
     delete showCopy.scale;
     const settingsObj: Record<string, any> = {
+      gridSize: autoGridSize,
       nodes: true, elements: true, supports: true, loads: true,
       deformScale,
       ...showCopy,
     };
 
     // 6. Create viewer (ONCE — it watches mesh states reactively)
+    // Resolve page background color for the 3D scene
+    const bgColorMap: Record<string, string> = {
+      white: "#ffffff", cream: "#fdf6e3", ivory: "#fffff0",
+      paper: "#f5f0e8", parchment: "#f4e8c1", linen: "#faf0e6",
+      snow: "#fffafa", seashell: "#fff5ee", oldpaper: "#e8dcc8", antique: "#faebd7",
+      light: "#f8f8f8", silver: "#f0f0f0", gray: "#e8e8e8", grey: "#e8e8e8", smoke: "#f5f5f5",
+      sand: "#f5e6ca", peach: "#ffdab9", wheat: "#f5deb3", beige: "#f5f5dc", honey: "#f0e68c",
+      book: "#f5f0e8", notebook: "#fafafa", engineering: "#f0ede4", blueprint: "#e8eef7",
+      black: "#1a1a2e", dark: "#1a1a2e", night: "#0d1117", midnight: "#191970",
+      charcoal: "#2c2c2c", slate: "#2f3640",
+    };
+    // DSL bg overrides pageBg
+    const effectiveBg = initial.model.dslBg || pageBg || "";
+    const resolvedBg = effectiveBg ? (bgColorMap[effectiveBg.toLowerCase()] || effectiveBg) : "";
+    if (resolvedBg) {
+      settingsObj.backgroundColor = resolvedBg;
+    }
     const viewerDiv = getViewer({ mesh, settingsObj });
     viewerDiv.style.position = "relative";
     viewerDiv.style.width = "100%";
     viewerDiv.style.height = "100%";
+    // Auto-switch to light theme if pageBg is a light color
+    if (resolvedBg) {
+      const c = new THREE.Color(resolvedBg);
+      const luminance = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
+      if (luminance > 0.5 && getThemeName() === "dark") {
+        toggleTheme(); // dark → light
+      } else if (luminance <= 0.5 && getThemeName() === "light") {
+        toggleTheme(); // light → dark
+      }
+    }
 
     // 7. Mount UI
     container.innerHTML = "";
@@ -1020,6 +1164,21 @@ export function renderAwatifBlock(
     btnInspect.style.cssText = "font-size:11px;padding:2px 8px;";
     toolbar.appendChild(btnInspect);
 
+    // Theme toggle button
+    const btnTheme = document.createElement("button");
+    btnTheme.className = "awatif-btn-theme";
+    btnTheme.title = "Tema claro/oscuro";
+    btnTheme.textContent = getThemeName() === "dark" ? "\u2600" : "\u263E";
+    btnTheme.style.cssText = "font-size:14px;padding:2px 8px;";
+    btnTheme.addEventListener("click", () => {
+      toggleTheme();
+    });
+    // Keep label in sync
+    onThemeChange((name) => {
+      btnTheme.textContent = name === "dark" ? "\u2600" : "\u263E";
+    });
+    toolbar.appendChild(btnTheme);
+
     // Maximize button
     const btnMax = document.createElement("button");
     btnMax.className = "awatif-btn-maximize";
@@ -1045,17 +1204,17 @@ export function renderAwatifBlock(
       const cols = Math.min(m[0]?.length || 0, 12);
       let html = `<table style="border-collapse:collapse;width:100%;font-size:10px;margin-top:4px;">`;
       if (labels) {
-        html += `<tr><td style="border:1px solid #333;padding:2px 4px;color:#ee9b00;font-weight:bold;background:#222;text-align:center"></td>`;
-        for (let j = 0; j < cols; j++) html += `<td style="border:1px solid #333;padding:2px 4px;color:#ee9b00;font-weight:bold;background:#222;text-align:center">${labels[j] || j}</td>`;
+        html += `<tr><td class="header"></td>`;
+        for (let j = 0; j < cols; j++) html += `<td class="header">${labels[j] || j}</td>`;
         html += `</tr>`;
       }
       for (let i = 0; i < rows; i++) {
         html += `<tr>`;
-        if (labels) html += `<td style="border:1px solid #333;padding:2px 4px;color:#ee9b00;font-weight:bold;background:#222;text-align:center">${labels[i] || i}</td>`;
+        if (labels) html += `<td class="header">${labels[i] || i}</td>`;
         for (let j = 0; j < cols; j++) {
           const val = m[i][j];
-          const color = Math.abs(val) > 1e-10 ? "#0f0" : "#ddd";
-          html += `<td style="border:1px solid #333;padding:2px 4px;text-align:right;color:${color};white-space:nowrap">${fmtInsp(val, 2)}</td>`;
+          const cls = Math.abs(val) > 1e-10 ? "nonzero" : "";
+          html += `<td class="${cls}">${fmtInsp(val, 2)}</td>`;
         }
         html += `</tr>`;
       }
@@ -1117,7 +1276,7 @@ export function renderAwatifBlock(
       const eiy4 = `${frac("4·"+vv("E")+"·"+vv("I","y"), vv("L"))}`;
       const eiz4 = `${frac("4·"+vv("E")+"·"+vv("I","z"), vv("L"))}`;
       return `<div class="fem-eq eq-box">
-        <div style="text-align:left;margin-bottom:4px"><strong style="color:#ee9b00">Coeficientes de rigidez:</strong></div>
+        <div style="text-align:left;margin-bottom:4px"><strong style="color:var(--fem-section-title)">Coeficientes de rigidez:</strong></div>
         <div>${ea_l} = ${frac(fmt(E)+"·"+fmt(A), fmt(L))} = <span class="highlight">${fmt(E*A/L)}</span></div>
         <div>${eiz} = ${frac("12·"+fmt(E)+"·"+fmt(Iz), fmt(L)+"³")} = <span class="highlight">${fmt(12*E*Iz/(L**3))}</span></div>
         <div>${eiy} = ${frac("12·"+fmt(E)+"·"+fmt(Iy), fmt(L)+"³")} = <span class="highlight">${fmt(12*E*Iy/(L**3))}</span></div>
@@ -1132,7 +1291,7 @@ export function renderAwatifBlock(
           <span class="cell dots">⋮</span><span class="cell dots">⋮</span><span class="cell dots">⋱</span><span class="cell dots">⋮</span>
           <span class="cell">${frac("−"+vv("EA"),vv("L"))}</span><span class="cell">0</span><span class="cell dots">⋯</span><span class="cell">${frac(vv("EA"),vv("L"))}</span>
         </span>
-        <sub style="color:#888">12×12</sub>
+        <sub style="color:var(--fem-label)">12×12</sub>
       </div>`;
     }
 
@@ -1144,7 +1303,7 @@ export function renderAwatifBlock(
         const L = norm(vec) as number;
         const l = vec[0] / L, m = vec[1] / L, n = vec[2] / L;
         return `<div class="fem-eq eq-box">
-          <div style="text-align:left;margin-bottom:4px"><strong style="color:#ee9b00">Cosenos directores:</strong></div>
+          <div style="text-align:left;margin-bottom:4px"><strong style="color:var(--fem-section-title)">Cosenos directores:</strong></div>
           <div>${vv("l")} = cos(\u03b1) = ${frac("\u0394x",vv("L"))} = ${frac(fmt(vec[0]),fmt(L))} = <span class="highlight">${fmt(l)}</span></div>
           <div>${vv("m")} = cos(\u03b2) = ${frac("\u0394y",vv("L"))} = ${frac(fmt(vec[1]),fmt(L))} = <span class="highlight">${fmt(m)}</span></div>
           <div>${vv("n")} = cos(\u03b3) = ${frac("\u0394z",vv("L"))} = ${frac(fmt(vec[2]),fmt(L))} = <span class="highlight">${fmt(n)}</span></div>
@@ -1158,7 +1317,7 @@ export function renderAwatifBlock(
           &nbsp; donde ${vv("D")} = \u221a(${vv("l")}\u00b2 + ${vv("m")}\u00b2)
         </div>
         <div class="fem-eq">
-          ${vv("T")} = ${vv("I","4")} \u2297 \u03bb &nbsp; <sub style="color:#888">(Kronecker, 12\u00d712)</sub>
+          ${vv("T")} = ${vv("I","4")} \u2297 \u03bb &nbsp; <sub style="color:var(--fem-label)">(Kronecker, 12\u00d712)</sub>
         </div>`;
       }
       return `<div class="fem-eq">${vv("T")} \u2014 sistema local del tri\u00e1ngulo (normal \u00d7 lados) <sub>18\u00d718</sub></div>`;
@@ -1175,7 +1334,7 @@ export function renderAwatifBlock(
     function assemblyFormula(elem: number[]): string {
       const offsets = elem.map(ni => `6·${ni} = ${6*ni}`).join(", ");
       return `<div class="fem-eq eq-box">
-        <div style="text-align:left;margin-bottom:4px"><strong style="color:#ee9b00">Ensamblaje en K global:</strong></div>
+        <div style="text-align:left;margin-bottom:4px"><strong style="color:var(--fem-section-title)">Ensamblaje en K global:</strong></div>
         <div>${vv("K","global")}[${vv("i")}, ${vv("j")}] += ${vv("K","elem")}[${vv("i")}, ${vv("j")}]</div>
         <div style="margin-top:4px">donde ${vv("i")}, ${vv("j")} \u2208 {${offsets}} + (0..5)</div>
       </div>`;
@@ -1185,7 +1344,7 @@ export function renderAwatifBlock(
     function forceRecoveryFormula(isFrame: boolean): string {
       if (isFrame) {
         return `<div class="fem-eq eq-box">
-          <div style="text-align:left;margin-bottom:4px"><strong style="color:#ee9b00">Recuperaci\u00f3n de fuerzas:</strong></div>
+          <div style="text-align:left;margin-bottom:4px"><strong style="color:var(--fem-section-title)">Recuperaci\u00f3n de fuerzas:</strong></div>
           <div>${vv("u","local")} = ${vv("T")} · ${vv("u","global")}</div>
           <div>${vv("f","local")} = ${vv("k","local")} · ${vv("u","local")}</div>
           <div style="margin-top:4px;color:#aaa">
@@ -1194,7 +1353,7 @@ export function renderAwatifBlock(
         </div>`;
       }
       return `<div class="fem-eq eq-box">
-        <div style="text-align:left;margin-bottom:4px"><strong style="color:#ee9b00">Esfuerzos en placa:</strong></div>
+        <div style="text-align:left;margin-bottom:4px"><strong style="color:var(--fem-section-title)">Esfuerzos en placa:</strong></div>
         <div>\u03c3 = ${frac("1","2"+vv("A"))} · ${vv("D")} · ${vv("B")} · ${vv("u")}</div>
         <div>${vv("N","xx")} = \u03c3<sub>xx</sub> · ${vv("t")} &nbsp;&nbsp; ${vv("M","xx")} = \u03c3<sub>xx</sub> · ${frac(vv("t")+"\u00b3","12")}</div>
       </div>`;
@@ -1587,7 +1746,9 @@ export function renderAwatifBlock(
     let highlightObj: THREE.LineSegments | null = null;
 
     function getViewerCtx() {
-      return (viewerDiv as any).__ctx as { scene: THREE.Scene; camera: THREE.Camera; controls: any; renderer: THREE.WebGLRenderer; render: () => void } | undefined;
+      const raw = (viewerDiv as any).__ctx as ViewerContext3D | undefined;
+      if (!raw) return undefined;
+      return { scene: raw.scene, controls: raw.controls, renderer: raw.renderer, render: raw.render };
     }
 
     function cleanupInspect() {
@@ -1631,7 +1792,7 @@ export function renderAwatifBlock(
         -((ev.clientY - rect.top) / rect.height) * 2 + 1
       );
       const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(mouse, ctx.camera);
+      raycaster.setFromCamera(mouse, ctx.controls.object as THREE.Camera);
       const nodes_arr = mesh.nodes!.val;
       const elements_arr = mesh.elements!.val;
       if (nodes_arr.length === 0 || elements_arr.length === 0) return -1;
@@ -1686,7 +1847,7 @@ export function renderAwatifBlock(
     btnInspect.addEventListener("click", (e) => {
       e.stopPropagation();
       inspectActive = !inspectActive;
-      btnInspect.classList.toggle("active", inspectActive);
+      btnInspect.classList.toggle("inspect-active", inspectActive);
       if (!inspectActive) {
         cleanupInspect();
         viewerDiv.style.cursor = "default";
@@ -1694,12 +1855,33 @@ export function renderAwatifBlock(
     });
 
     // 7c. Parameters panel (Tweakpane — awatif v2 pattern)
-    if (hasParams) {
+    // Only show if no pageBg override (book mode hides panels)
+    if (hasParams && !pageBg) {
       const paramsDiv = getParameters(parameters);
       container.appendChild(paramsDiv);
     }
 
     container.appendChild(viewerDiv);
+
+    // When pageBg is set: hide Analysis panels and override 3D background color
+    if (pageBg) {
+      requestAnimationFrame(() => {
+        // Hide Analysis Inputs/Outputs folders from Tweakpane
+        viewerDiv.querySelectorAll('.tp-fldv_t').forEach(el => {
+          const text = el.textContent?.trim() || '';
+          if (text === 'Analysis Inputs' || text === 'Analysis Outputs') {
+            const folder = el.closest('.tp-fldv');
+            if (folder) (folder as HTMLElement).style.display = 'none';
+          }
+        });
+        // Override Three.js renderer background to match page bg
+        const ctx = (viewerDiv as any).__ctx as ViewerContext3D | undefined;
+        if (ctx && resolvedBg) {
+          ctx.renderer.setClearColor(new THREE.Color(resolvedBg), 1);
+          ctx.render();
+        }
+      });
+    }
 
     // 7d. Touch-friendly settings panel (direct VanJS state)
     const settingsPanel = document.createElement("div");
