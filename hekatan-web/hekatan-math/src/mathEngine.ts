@@ -485,6 +485,10 @@ math.import({
   // ── Row max/min of absolute values (for time history post-processing) ──
   // rowmax(M, row) → max of absolute values in row `row` of matrix M
   rowmax: function (M: any, row: number) {
+    // Fast path for newmark result
+    if (M && M.__newmark) {
+      return M.umax[row - 1] ?? 0; // pre-computed max
+    }
     const data = (M as any).toArray();
     const r = data[row - 1]; // 1-indexed
     if (!r) return 0;
@@ -510,9 +514,11 @@ math.import({
     const nSteps = Math.round(tdur / dt) + 1;
     // Newmark parameters (average acceleration)
     const gamma = 0.5, beta = 0.25;
-    // Convert to arrays for speed
-    const Marr: number[][] = (M as any).toArray();
-    const Karr: number[][] = (K as any).toArray();
+    // Convert to 2D arrays for speed (handle 1x1 case)
+    const rawM = (M as any).toArray();
+    const rawK = (K as any).toArray();
+    const Marr: number[][] = Array.isArray(rawM[0]) ? rawM : rawM.map((v: number) => [v]);
+    const Karr: number[][] = Array.isArray(rawK[0]) ? rawK : rawK.map((v: number) => [v]);
     const Farr: number[] = [];
     const fData = (F as any).toArray();
     for (let i = 0; i < nDof; i++) {
@@ -575,20 +581,16 @@ math.import({
       }
       return x;
     }
-    // Time integration
-    const u: number[][] = Array.from({length: nDof}, () => new Array(nSteps).fill(0));
-    const v: number[][] = Array.from({length: nDof}, () => new Array(nSteps).fill(0));
-    const a: number[][] = Array.from({length: nDof}, () => new Array(nSteps).fill(0));
-    const tArr: number[] = new Array(nSteps);
-    // Initial conditions: u0=0, v0=0, a0 = M^-1 * F(0)
-    tArr[0] = 0;
-    const F0 = Farr.slice(); // F at t=0 (tload > 0 assumed)
-    // a(0) = M^-1 * F(0) — solve M*a = F
-    const Meff: number[][] = [];
-    for (let i = 0; i < nDof; i++) { Meff.push(Marr[i].slice()); }
-    // Simple solve for initial acceleration (Gaussian elimination on M)
+    // Time integration (use Float64Array for speed)
+    const u: Float64Array[] = Array.from({length: nDof}, () => new Float64Array(nSteps));
+    const v = new Array(nDof).fill(0).map(() => 0); // current velocity per DOF
+    const ac = new Array(nDof).fill(0); // current acceleration per DOF
+    const umax = new Float64Array(nDof); // max |u| per DOF
+    // Initial conditions: u0=0, v0=0
+    const ucur = new Float64Array(nDof); // current displacement
+    // a(0) = M^-1 * F(0) — solve M*a = F via Gaussian elimination
     const Ma = Array.from({length: nDof}, (_, i) => [...Marr[i]]);
-    const Mb = F0.slice();
+    const Mb = Farr.slice();
     for (let k = 0; k < nDof; k++) {
       let mx = Math.abs(Ma[k][k]), mr = k;
       for (let i = k+1; i < nDof; i++) if (Math.abs(Ma[i][k]) > mx) { mx = Math.abs(Ma[i][k]); mr = i; }
@@ -600,38 +602,38 @@ math.import({
       }
     }
     for (let i = nDof-1; i >= 0; i--) {
-      a[i][0] = Mb[i];
-      for (let j = i+1; j < nDof; j++) a[i][0] -= Ma[i][j] * a[j][0];
-      a[i][0] /= Ma[i][i];
+      ac[i] = Mb[i];
+      for (let j = i+1; j < nDof; j++) ac[i] -= Ma[i][j] * ac[j];
+      ac[i] /= Ma[i][i];
     }
     // Time stepping
+    const Feff = new Float64Array(nDof);
     for (let n = 0; n < nSteps - 1; n++) {
       const t_next = (n + 1) * dt;
-      tArr[n + 1] = t_next;
-      // Force at t_next
-      const Fn: number[] = t_next <= tload ? Farr.slice() : new Array(nDof).fill(0);
-      // Effective force: Feff = F(n+1) + M*(a0*u(n) + a2*v(n) + a3*a(n))
-      const Feff: number[] = new Array(nDof).fill(0);
+      const hasForce = t_next <= tload;
+      // Effective force: Feff = Fn + M*(a0*u + a2*v + a3*a)
       for (let i = 0; i < nDof; i++) {
         let Mu_i = 0;
         for (let j = 0; j < nDof; j++) {
-          Mu_i += Marr[i][j] * (a0 * u[j][n] + a2 * v[j][n] + a3 * a[j][n]);
+          Mu_i += Marr[i][j] * (a0 * ucur[j] + a2 * v[j] + a3 * ac[j]);
         }
-        Feff[i] = Fn[i] + Mu_i;
+        Feff[i] = (hasForce ? Farr[i] : 0) + Mu_i;
       }
-      // Solve Keff * u(n+1) = Feff
-      const u_next = luSolve(Feff);
+      // Solve Keff * u_new = Feff
+      const u_next = luSolve(Array.from(Feff));
       for (let i = 0; i < nDof; i++) {
+        const a_new = a0 * (u_next[i] - ucur[i]) - a2 * v[i] - a3 * ac[i];
+        v[i] = v[i] + dt * ((1 - gamma) * ac[i] + gamma * a_new);
+        ac[i] = a_new;
+        ucur[i] = u_next[i];
         u[i][n + 1] = u_next[i];
-        // Update acceleration and velocity
-        const a_new = a0 * (u[i][n+1] - u[i][n]) - a2 * v[i][n] - a3 * a[i][n];
-        const v_new = v[i][n] + dt * ((1 - gamma) * a[i][n] + gamma * a_new);
-        a[i][n + 1] = a_new;
-        v[i][n + 1] = v_new;
+        const absU = Math.abs(u_next[i]);
+        if (absU > umax[i]) umax[i] = absU;
       }
     }
-    // Return displacement matrix (nDof x nSteps) as math.js matrix
-    return (math as any).matrix(u);
+    // Return lightweight object (not math.js matrix — too slow for large nSteps)
+    // __newmark flag lets rowmax() access raw data without matrix conversion
+    return { __newmark: true, nDof, nSteps, data: u, umax: Array.from(umax), dt, tdur };
   },
 
 }, { override: true });

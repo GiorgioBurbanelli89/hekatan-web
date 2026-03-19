@@ -41,7 +41,7 @@ emcc "$SCRIPT_DIR/eigen_sparse.cpp" \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s MODULARIZE=1 \
     -s EXPORT_ES6=1 \
-    -s EXPORTED_FUNCTIONS=_malloc,_free,_sparse_lu_solve,_sparse_cholesky_solve,_dense_solve,_dense_inverse,_dense_det,_eigenvalues,_eigen_decompose,_svd,_dense_multiply,_sparse_multiply \
+    -s EXPORTED_FUNCTIONS=_malloc,_free,_sparse_lu_solve,_sparse_cholesky_solve,_dense_solve,_dense_inverse,_dense_det,_eigenvalues,_eigen_decompose,_svd,_dense_multiply,_sparse_multiply,_newmark_solve \
     -s EXPORTED_RUNTIME_METHODS=HEAPF64,HEAP32,HEAPU8 \
     -s INITIAL_MEMORY=16777216 \
     -I "$EIGEN_DIR" \

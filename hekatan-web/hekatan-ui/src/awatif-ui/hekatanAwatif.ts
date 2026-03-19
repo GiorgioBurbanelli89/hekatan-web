@@ -473,6 +473,19 @@ function parseDSL(lines: string[], scope: Record<string, any>): ParsedModel {
         break;
       }
 
+      case "camera": {
+        // camera x y z [target tx ty tz]
+        // Sets initial camera position (and optional look-at target)
+        const nums = tokens.slice(1).map(t => resolveValue(t, scope));
+        if (nums.length >= 3) {
+          showSettings._cameraPos = [nums[0], nums[1], nums[2]];
+          if (nums.length >= 6) {
+            showSettings._cameraTarget = [nums[3], nums[4], nums[5]];
+          }
+        }
+        break;
+      }
+
       case "show": {
         // show [deformed] [scale:N] [result:field]
         for (const t of tokens.slice(1)) {
@@ -1104,6 +1117,31 @@ export function renderAwatifBlock(
       } else if (luminance <= 0.5 && getThemeName() === "light") {
         toggleTheme(); // light → dark
       }
+    }
+
+    // Apply custom camera position from DSL (camera x y z [target tx ty tz])
+    const camPos = initial.model.showSettings._cameraPos;
+    const camTarget = initial.model.showSettings._cameraTarget;
+    if (camPos) {
+      requestAnimationFrame(() => {
+        const ctx = (viewerDiv as any).__ctx as ViewerContext3D | undefined;
+        if (ctx) {
+          (ctx as any).perspCamera?.position?.set(camPos[0], camPos[1], camPos[2]);
+          if (camTarget) {
+            ctx.controls.target.set(camTarget[0], camTarget[1], camTarget[2]);
+          } else {
+            // Default target: center of nodes
+            const nodes = initial.model.nodes;
+            if (nodes.length > 0) {
+              let cx = 0, cy = 0, cz = 0;
+              for (const n of nodes) { cx += n[0]; cy += n[1]; cz += n[2]; }
+              ctx.controls.target.set(cx / nodes.length, cy / nodes.length, cz / nodes.length);
+            }
+          }
+          ctx.controls.update();
+          ctx.render();
+        }
+      });
     }
 
     // 7. Mount UI

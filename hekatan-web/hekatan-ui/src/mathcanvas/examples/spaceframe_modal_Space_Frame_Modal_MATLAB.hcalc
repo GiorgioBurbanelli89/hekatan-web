@@ -166,6 +166,8 @@ dof = nNod*nDof_nod
 > Elemento 4: nodos 1->5, aux=2 (Member type 2)
 
 @{awatif 700 500}
+camera 400 300 400
+
 # Nodos (0-indexed)
 node 0 0 0
 node 0 200 0
@@ -347,20 +349,26 @@ T4 = T.(4); T5 = T.(5); T6 = T.(6);
 
 > Carga: F = 5000 lb en z (nodo 1), aplicada durante 0.1 s
 > Integracion Newmark-beta (gamma=0.5, beta=0.25)
-> dt = 0.0001 s, duracion total = 1 s (10001 pasos)
+> dt = 0.0001 s, duracion total = 5 s (50001 pasos)
 
-u_hist = newmark(Kf, Mf, Ff, 1, 0.0001, 0.1)
+u_hist = newmark(Kf, Mf, Ff, 5, 0.0001, 0.1)
 
-> Desplazamientos maximos del nodo 1:
+> Desplazamientos maximos del nodo 1 (6 DOFs):
 @{columns 3}
 u1_max = rowmax(u_hist, 1)
-> u_1 max (in)
+> dx max (in)
 u2_max = rowmax(u_hist, 2)
-> u_2 max (in)
+> dy max (in)
 u3_max = rowmax(u_hist, 3)
-> u_3 max (rad)
+> dz max (in)
+u4_max = rowmax(u_hist, 4)
+> rx max (rad)
+u5_max = rowmax(u_hist, 5)
+> ry max (rad)
+u6_max = rowmax(u_hist, 6)
+> rz max (rad)
 @{end columns}
 
-> Referencia MATLAB (Paz & Leigh):
+> Referencia MATLAB (Paz & Leigh, Fig 13.4):
 > u1_max = 8.814e-5 in, u2_max = 2.6552e-7 in, u3_max = 0.9827 rad
 

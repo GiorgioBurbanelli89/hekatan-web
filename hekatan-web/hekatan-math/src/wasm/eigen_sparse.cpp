@@ -261,4 +261,88 @@ extern "C"
 
         std::memcpy(y_out, result.data(), m * sizeof(double));
     }
+
+    /**
+     * Newmark-beta time integration: M*u'' + K*u = F(t)
+     * F(t) = F for t <= tload, F(t) = 0 for t > tload
+     * gamma = 0.5, beta = 0.25 (average acceleration, unconditionally stable)
+     *
+     * @param M_in   mass matrix (n x n, column-major)
+     * @param K_in   stiffness matrix (n x n, column-major)
+     * @param F_in   force vector (n)
+     * @param n      number of DOFs
+     * @param dt     time step
+     * @param nSteps number of time steps
+     * @param tload  load duration (force applied for t <= tload)
+     * @param u_out  displacement history (n x nSteps, row-major: u[dof][step])
+     * @param umax_out  max absolute displacement per DOF (n)
+     */
+    void newmark_solve(const double *M_in, const double *K_in, const double *F_in,
+                       int n, double dt, int nSteps, double tload,
+                       double *u_out, double *umax_out)
+    {
+        // Map inputs (column-major for Eigen)
+        Eigen::Map<const Eigen::MatrixXd> M(M_in, n, n);
+        Eigen::Map<const Eigen::MatrixXd> K(K_in, n, n);
+        Eigen::Map<const Eigen::VectorXd> F(F_in, n);
+
+        // Newmark parameters
+        const double gamma = 0.5, beta = 0.25;
+        const double a0 = 1.0 / (beta * dt * dt);
+        const double a1 = gamma / (beta * dt);
+        const double a2 = 1.0 / (beta * dt);
+        const double a3 = 1.0 / (2.0 * beta) - 1.0;
+
+        // Effective stiffness: Keff = K + a0*M
+        Eigen::MatrixXd Keff = K + a0 * M;
+
+        // LU factorization (once — Keff is constant)
+        Eigen::PartialPivLU<Eigen::MatrixXd> lu(Keff);
+
+        // Initial conditions
+        Eigen::VectorXd u = Eigen::VectorXd::Zero(n);
+        Eigen::VectorXd v = Eigen::VectorXd::Zero(n);
+        // a(0) = M^-1 * F(0)
+        Eigen::VectorXd a = M.partialPivLu().solve(F);
+
+        // Initialize max tracker
+        Eigen::VectorXd umax = Eigen::VectorXd::Zero(n);
+
+        // Store step 0
+        for (int i = 0; i < n; i++) {
+            u_out[i * nSteps + 0] = u(i);
+        }
+
+        // Time stepping
+        for (int step = 1; step < nSteps; step++) {
+            double t = step * dt;
+
+            // Force at t
+            Eigen::VectorXd Fn = (t <= tload) ? F : Eigen::VectorXd::Zero(n);
+
+            // Effective force: Feff = Fn + M*(a0*u + a2*v + a3*a)
+            Eigen::VectorXd Feff = Fn + M * (a0 * u + a2 * v + a3 * a);
+
+            // Solve: Keff * u_new = Feff
+            Eigen::VectorXd u_new = lu.solve(Feff);
+
+            // Update acceleration and velocity
+            Eigen::VectorXd a_new = a0 * (u_new - u) - a2 * v - a3 * a;
+            Eigen::VectorXd v_new = v + dt * ((1.0 - gamma) * a + gamma * a_new);
+
+            u = u_new;
+            v = v_new;
+            a = a_new;
+
+            // Store and track max
+            for (int i = 0; i < n; i++) {
+                u_out[i * nSteps + step] = u(i);
+                double absU = std::abs(u(i));
+                if (absU > umax(i)) umax(i) = absU;
+            }
+        }
+
+        // Copy max values
+        std::memcpy(umax_out, umax.data(), n * sizeof(double));
+    }
 }
