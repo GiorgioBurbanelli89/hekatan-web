@@ -1,0 +1,28 @@
+#include draw_lib.cpd
+#hide
+"Calcpad PURE fem library — malla / contorno FEM con el colormap Rainbow de Calcpad (invertido)
+"Incluye draw_lib. El usuario itera nodos/elementos con #for ... #loop bajo #val y llama fem4 / femcell.
+"colormap = Rainbow nativo de Calcpad (MapPlotter) INVERTIDO: max = azul, min = rojo (+ es -, - es +)
+tnorm(v; a; b) = min(1; max(0; (v - a)/(b - a)))
+tinv(v; a; b) = 1 - tnorm(v; a; b)
+cr(v; a; b) = round(255*min(1; max(0; (tinv(v; a; b) - 0.5)*4)))
+cg(v; a; b) = round(255*min(1; max(0; min(tinv(v; a; b)*4; (1 - tinv(v; a; b))*4))))
+cb(v; a; b) = round(255*min(1; max(0; (0.5 - tinv(v; a; b))*4)))
+"helpers de proyeccion isometrica (Fem3D): proyectar nodo (x,y,z) 3D a pantalla 2D
+iso_x(x; y; z) = (x - z)*0.866
+iso_y(x; y; z) = (x + z)*0.5 - y
+"--- elemento cuadrilatero coloreado (Fem2D, con borde para ver la malla) ---
+#def fem4$(x1$; y1$; x2$; y2$; x3$; y3$; x4$; y4$; v$; a$; b$) = '<polygon points="'x1$','y1$' 'x2$','y2$' 'x3$','y3$' 'x4$','y4$'" fill="rgb('cr(v$; a$; b$)','cg(v$; a$; b$)','cb(v$; a$; b$)')" stroke="#555" stroke-width="0.4"/>
+"--- celda de contorno SUAVE: sin borde visible (stroke = fill) para raster continuo ---
+#def femcell$(x1$; y1$; x2$; y2$; x3$; y3$; x4$; y4$; v$; a$; b$) = '<polygon points="'x1$','y1$' 'x2$','y2$' 'x3$','y3$' 'x4$','y4$'" fill="rgb('cr(v$; a$; b$)','cg(v$; a$; b$)','cb(v$; a$; b$)')" stroke="rgb('cr(v$; a$; b$)','cg(v$; a$; b$)','cb(v$; a$; b$)')" stroke-width="0.7"/>
+"--- elemento triangular coloreado (Fem2D, malla tri) ---
+#def fem3$(x1$; y1$; x2$; y2$; x3$; y3$; v$; a$; b$) = '<polygon points="'x1$','y1$' 'x2$','y2$' 'x3$','y3$'" fill="rgb('cr(v$; a$; b$)','cg(v$; a$; b$)','cb(v$; a$; b$)')" stroke="#555" stroke-width="0.4"/>
+"--- suavizado: envolver el loop de celdas en blur gaussiano + clip al rectangulo (bx,by,bw,bh; r=radio) ---
+"para bordes a todo color, dibujar las celdas con un anillo extra (i=-1..nx, j=-1..ny); el clip recorta.
+#def femsmooth_begin$(bx$; by$; bw$; bh$; r$) = '<defs><filter id="sm" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="'r$'"/></filter><clipPath id="smc"><rect x="'bx$'" y="'by$'" width="'bw$'" height="'bh$'"/></clipPath></defs><g clip-path="url(#smc)"><g filter="url(#sm)">
+#def femsmooth_end$ = '</g></g>
+"--- nodo (punto) ---
+#def femnode$(x$; y$) = '<circle cx="'x$'" cy="'y$'" r="2.5" fill="#222"/>
+"--- barra de color Rainbow invertida (max=azul arriba, min=rojo abajo) con etiquetas a y b ---
+#def jetbar$(x$; y$; w$; h$; a$; b$) = '<defs><linearGradient id="cbar" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="rgb(255,0,0)"/><stop offset="0.25" stop-color="rgb(255,255,0)"/><stop offset="0.5" stop-color="rgb(0,255,0)"/><stop offset="0.75" stop-color="rgb(0,255,255)"/><stop offset="1" stop-color="rgb(0,0,255)"/></linearGradient></defs><rect x="'x$'" y="'y$'" width="'w$'" height="'h$'" fill="url(#cbar)" stroke="#333" stroke-width="0.5"/><text x="'x$ + w$ + 4'" y="'y$ + 8'" font-size="9" fill="#333">'b$'</text><text x="'x$ + w$ + 4'" y="'y$ + h$'" font-size="9" fill="#333">'a$'</text>
+#show

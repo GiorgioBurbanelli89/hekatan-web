@@ -1,0 +1,7 @@
+#include hekatan_lib.cpd
+"=== Mesa a torsion — 2D interactivo (planta losa, canvas puro, hover bilineal) ===
+#val
+hekatan_begin$(m2d)
+hk_mesa$(6; 6; 4; 5; 24.85e9; 0.20; 0.10; 0.40; 0.40; 0.30; 0.50; 6000)
+hekatan_end2d$(m2d)
+#equ

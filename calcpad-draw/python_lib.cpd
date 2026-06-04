@@ -1,0 +1,18 @@
+#hide
+"Calcpad PURE python library — corre Python real en el navegador via Pyodide (CDN). Solo display.
+"REGLAS: (1) Python con comillas DOBLES (no apostrofo). (2) cada linea Python termina en @@ (separador).
+#def pyodide_cdn$ = '<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+#def python_begin$(id$) = '<div id="id$" style="font-family:Consolas,monospace;white-space:pre-wrap;border:1px solid #ccc;padding:8px;background:#fafafa;border-radius:4px">Cargando Python (Pyodide)...</div><script>(async function(){try{var src=String.raw`
+#def python_end$(id$) = '`.split("@@").join(String.fromCharCode(10));var py=await loadPyodide();var r=await py.runPythonAsync(src);document.getElementById("id$").innerText=String(r);}catch(e){document.getElementById("id$").innerText="Error Python: "+e;}})();</script>
+#show
+#hide
+"--- matplotlib: corre matplotlib+numpy en Pyodide, captura la figura como PNG base64 ---
+"Uso: pyodide_cdn  ;  mpl_begin(id)  ;  codigo de ploteo (cada linea @@)  ;  mpl_end(id)
+#def mpl_begin$(id$) = '<div id="id$" style="border:1px solid #ccc;padding:6px;min-height:40px">Cargando Python + matplotlib...</div><script>(async function(){try{var py=await loadPyodide();await py.loadPackage(["numpy","matplotlib"]);var src=String.raw`import matplotlib@@matplotlib.use("AGG")@@import matplotlib.pyplot as plt@@import numpy as np@@import io, base64@@
+#def mpl_end$(id$) = '@@buf = io.BytesIO()@@plt.savefig(buf, format="png", dpi=110, bbox_inches="tight")@@base64.b64encode(buf.getvalue()).decode()`.split("@@").join(String.fromCharCode(10));var b64=await py.runPythonAsync(src);document.getElementById("id$").innerHTML="<img src=\"data:image/png;base64,"+b64+"\" style=\"max-width:100%\">";}catch(e){document.getElementById("id$").innerText="Error matplotlib: "+e;}})();</script>
+#show
+#hide
+"--- CAS simbolico real con SymPy (Pyodide) + render LaTeX con KaTeX. El usuario deja el resultado en R ---
+#def cas_begin$(id$) = '<div id="id$" style="border:1px solid #ccc;padding:10px;min-height:36px">Cargando SymPy (CAS)...</div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/><script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script><script>(async function(){try{var py=await loadPyodide();await py.loadPackage("sympy");var src=String.raw`from sympy import *@@
+#def cas_end$(id$) = '@@latex(R)`.split("@@").join(String.fromCharCode(10));var tex=await py.runPythonAsync(src);katex.render(tex,document.getElementById("id$"),{displayMode:true,throwOnError:false});}catch(e){document.getElementById("id$").innerText="Error CAS: "+e;}})();</script>
+#show

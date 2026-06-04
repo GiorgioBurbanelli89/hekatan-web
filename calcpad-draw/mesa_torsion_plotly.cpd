@@ -1,0 +1,11 @@
+#include hekatan_lib.cpd
+"=== Mesa a torsion — viewer 3D con Plotly mesh3d (barra de color + valores al hover) ===
+"
+"Mismos parametros que hk_mesa (ver mesa_torsion_3d.cpd para la leyenda completa):
+"  Lx; Ly; H; nMesh; E[Pa]; nu; tLosa; bCol; hCol; bViga; hViga; q[N/m2]
+"
+#val
+hekatan_begin$(mesaplt)
+hk_mesa$(6; 6; 4; 5; 24.85e9; 0.20; 0.10; 0.40; 0.40; 0.30; 0.50; 6000)
+hekatan_end3d_plotly$(mesaplt)
+#equ

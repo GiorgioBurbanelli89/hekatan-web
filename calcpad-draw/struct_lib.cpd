@@ -1,0 +1,33 @@
+#include draw_lib.cpd
+#hide
+"Calcpad PURE struct library — simbolos estructurales tipo Struct de Calcpad-Symbolic (SVG crudo)
+"Incluye draw_lib (svg_begin/end + primitivas + marcador de flecha). Coords SVG (y hacia abajo).
+"Uso: envolver en val ... svg_begin(w;h) ... simbolos ... svg_end ... equ
+"helpers de geometria: punto a parametro t sobre la linea, con offset perpendicular s*a
+Lstr(x1; y1; x2; y2) = sqrt((x2 - x1)^2 + (y2 - y1)^2)
+pxs(x1; y1; x2; y2; t; s; a) = x1 + (x2 - x1)*t - s*a*(y2 - y1)/Lstr(x1; y1; x2; y2)
+pys(x1; y1; x2; y2; t; s; a) = y1 + (y2 - y1)*t + s*a*(x2 - x1)/Lstr(x1; y1; x2; y2)
+"--- bar / beam (Struct: bar,x1,y1,x2,y2 / beam,...) ---
+#def bar$(x1$; y1$; x2$; y2$) = '<line x1="'x1$'" y1="'y1$'" x2="'x2$'" y2="'y2$'" stroke="#333" stroke-width="2"/>
+#def beam$(x1$; y1$; x2$; y2$) = '<line x1="'x1$'" y1="'y1$'" x2="'x2$'" y2="'y2$'" stroke="#444" stroke-width="6" stroke-linecap="round"/>
+"--- spring (Struct: spring,x1,y1,x2,y2) zigzag con leads rectos ---
+#def spring$(x1$; y1$; x2$; y2$) = '<polyline points="'pxs(x1$;y1$;x2$;y2$;0;0;8)','pys(x1$;y1$;x2$;y2$;0;0;8)' 'pxs(x1$;y1$;x2$;y2$;0.2;0;8)','pys(x1$;y1$;x2$;y2$;0.2;0;8)' 'pxs(x1$;y1$;x2$;y2$;0.3;1;8)','pys(x1$;y1$;x2$;y2$;0.3;1;8)' 'pxs(x1$;y1$;x2$;y2$;0.4;-1;8)','pys(x1$;y1$;x2$;y2$;0.4;-1;8)' 'pxs(x1$;y1$;x2$;y2$;0.5;1;8)','pys(x1$;y1$;x2$;y2$;0.5;1;8)' 'pxs(x1$;y1$;x2$;y2$;0.6;-1;8)','pys(x1$;y1$;x2$;y2$;0.6;-1;8)' 'pxs(x1$;y1$;x2$;y2$;0.7;1;8)','pys(x1$;y1$;x2$;y2$;0.7;1;8)' 'pxs(x1$;y1$;x2$;y2$;0.8;0;8)','pys(x1$;y1$;x2$;y2$;0.8;0;8)' 'pxs(x1$;y1$;x2$;y2$;1;0;8)','pys(x1$;y1$;x2$;y2$;1;0;8)'" fill="none" stroke="#222" stroke-width="2"/>
+"--- damper / dashpot (Struct: damper,x1,y1,x2,y2) ---
+#def damper$(x1$; y1$; x2$; y2$) = '<g fill="none" stroke="#333" stroke-width="2"><line x1="'x1$'" y1="'y1$'" x2="'pxs(x1$;y1$;x2$;y2$;0.5;0;0)'" y2="'pys(x1$;y1$;x2$;y2$;0.5;0;0)'"/><polyline points="'pxs(x1$;y1$;x2$;y2$;0.38;1;11)','pys(x1$;y1$;x2$;y2$;0.38;1;11)' 'pxs(x1$;y1$;x2$;y2$;0.72;1;11)','pys(x1$;y1$;x2$;y2$;0.72;1;11)' 'pxs(x1$;y1$;x2$;y2$;0.72;-1;11)','pys(x1$;y1$;x2$;y2$;0.72;-1;11)' 'pxs(x1$;y1$;x2$;y2$;0.38;-1;11)','pys(x1$;y1$;x2$;y2$;0.38;-1;11)'"/><line x1="'pxs(x1$;y1$;x2$;y2$;0.5;1;9)'" y1="'pys(x1$;y1$;x2$;y2$;0.5;1;9)'" x2="'pxs(x1$;y1$;x2$;y2$;0.5;-1;9)'" y2="'pys(x1$;y1$;x2$;y2$;0.5;-1;9)'"/><line x1="'pxs(x1$;y1$;x2$;y2$;0.72;0;0)'" y1="'pys(x1$;y1$;x2$;y2$;0.72;0;0)'" x2="'x2$'" y2="'y2$'"/></g>
+"--- mass (Struct: mass,x,y,size) cuadrado centrado ---
+#def mass$(x$; y$; s$) = '<rect x="'x$ - s$/2'" y="'y$ - s$/2'" width="'s$'" height="'s$'" fill="#e8e8e8" stroke="#333" stroke-width="2"/>
+"--- wall (Struct: wall,x,y1,y2) linea + rayado a la izquierda ---
+#def wall$(x$; y1$; y2$) = '<g stroke="#555" stroke-width="1.5"><line x1="'x$'" y1="'y1$'" x2="'x$'" y2="'y2$'"/><line x1="'x$'" y1="'y1$ + (y2$ - y1$)*0.1'" x2="'x$ - 9'" y2="'y1$ + (y2$ - y1$)*0.1 + 9'"/><line x1="'x$'" y1="'y1$ + (y2$ - y1$)*0.3'" x2="'x$ - 9'" y2="'y1$ + (y2$ - y1$)*0.3 + 9'"/><line x1="'x$'" y1="'y1$ + (y2$ - y1$)*0.5'" x2="'x$ - 9'" y2="'y1$ + (y2$ - y1$)*0.5 + 9'"/><line x1="'x$'" y1="'y1$ + (y2$ - y1$)*0.7'" x2="'x$ - 9'" y2="'y1$ + (y2$ - y1$)*0.7 + 9'"/><line x1="'x$'" y1="'y1$ + (y2$ - y1$)*0.9'" x2="'x$ - 9'" y2="'y1$ + (y2$ - y1$)*0.9 + 9'"/></g>
+"--- node (Struct: node,x,y) ---
+#def node$(x$; y$) = '<circle cx="'x$'" cy="'y$'" r="4" fill="#333"/>
+"--- supports: pin / fixed / roller (Struct: pin,x,y | fixed,x,y | roller,x,y) ---
+#def pin$(x$; y$) = '<g fill="none" stroke="#333" stroke-width="2"><polygon points="'x$','y$' 'x$ - 14','y$ + 20' 'x$ + 14','y$ + 20'"/><line x1="'x$ - 22'" y1="'y$ + 20'" x2="'x$ + 22'" y2="'y$ + 20'"/></g>
+#def fixed$(x$; y$) = '<g fill="none" stroke="#333" stroke-width="2"><line x1="'x$ - 22'" y1="'y$'" x2="'x$ + 22'" y2="'y$'"/><line x1="'x$ - 16'" y1="'y$'" x2="'x$ - 24'" y2="'y$ + 8'"/><line x1="'x$ - 6'" y1="'y$'" x2="'x$ - 14'" y2="'y$ + 8'"/><line x1="'x$ + 4'" y1="'y$'" x2="'x$ - 4'" y2="'y$ + 8'"/><line x1="'x$ + 14'" y1="'y$'" x2="'x$ + 6'" y2="'y$ + 8'"/></g>
+#def roller$(x$; y$) = '<g fill="none" stroke="#333" stroke-width="2"><polygon points="'x$','y$' 'x$ - 14','y$ + 18' 'x$ + 14','y$ + 18'"/><circle cx="'x$ - 7'" cy="'y$ + 23'" r="3"/><circle cx="'x$ + 7'" cy="'y$ + 23'" r="3"/><line x1="'x$ - 22'" y1="'y$ + 27'" x2="'x$ + 22'" y2="'y$ + 27'"/></g>
+"--- force (Struct: force,x,y,dir) — flecha con cabeza en (x,y), vector (dx,dy) ---
+#def force$(x$; y$; dx$; dy$) = '<line x1="'x$ - dx$'" y1="'y$ - dy$'" x2="'x$'" y2="'y$'" stroke="crimson" stroke-width="2.5" marker-end="url(#ah)"/>
+"--- moment (Struct: moment,x,y) — arco 270 grados con cabeza ---
+#def moment$(x$; y$; r$) = '<path d="M 'x$ + r$' 'y$' A 'r$' 'r$' 0 1 1 'x$' 'y$ - r$'" fill="none" stroke="crimson" stroke-width="2.5" marker-end="url(#ah)"/>
+"--- label (Struct: label,x,y,text) ---
+#def label$(x$; y$; s$) = '<text x="'x$'" y="'y$'" font-size="13" fill="#222" text-anchor="middle" font-weight="bold">s$</text>
+#show

@@ -1,0 +1,23 @@
+#include hekatan_lib.cpd
+"=== Mesa a torsion — viewer 3D estilo awatif (Three.js) en Calcpad puro ===
+"
+"Parametros de hk_mesa (en este orden, separados por ; y en unidades SI):
+"  1) Lx     = largo de la losa en X                 [m]     -> 6
+"  2) Ly     = largo de la losa en Y                 [m]     -> 6
+"  3) H      = altura de las columnas                [m]     -> 4
+"  4) nMesh  = divisiones de malla (nMesh x nMesh shells)    -> 5
+"  5) E      = modulo de elasticidad                 [Pa]    -> 24.85e9   (= 24.85 GPa)
+"  6) nu     = coeficiente de Poisson                [-]     -> 0.20
+"  7) tLosa  = espesor de la losa                    [m]     -> 0.10
+"  8) bCol   = ancho de columna                      [m]     -> 0.40
+"  9) hCol   = peralte (alto) de columna             [m]     -> 0.40
+" 10) bViga  = ancho de viga perimetral              [m]     -> 0.30
+" 11) hViga  = peralte (alto) de viga perimetral     [m]     -> 0.50
+" 12) q      = carga vertical sobre la losa          [N/m2]  -> 6000     (= 6 kN/m2)
+"
+"           Lx Ly  H  nM   E       nu   tL    bC    hC    bV    hV    q
+#val
+hekatan_begin$(mesa3d)
+hk_mesa$(6; 6; 4; 5; 24.85e9; 0.20; 0.10; 0.40; 0.40; 0.30; 0.50; 6000)
+hekatan_end3d$(mesa3d)
+#equ

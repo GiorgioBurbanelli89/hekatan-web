@@ -1,0 +1,45 @@
+#hide
+"Calcpad PURE drawing library — replica la API Draw de Calcpad-Symbolic con def + SVG crudo
+"Firmas alineadas 1 a 1 con VizParser.GenerateDraw: el orden de args coincide con Draw type, ...
+"Uso: include draw_lib.cpd ; envolver en val ... svg_begin(w; h) ... shapes ... svg_end equ
+"Coords SVG (origen arriba-izq, y hacia abajo). Colores/anchor: tokens de texto (red, none, middle...).
+"--- bloque (marker de flecha con orient auto-start-reverse: sirve para arrow Y darrow) ---
+#def svg_begin$(w$; h$) = '<svg viewBox="0 0 'w$' 'h$'" xmlns="http://www.w3.org/2000/svg" style="width:'w$'pt; height:'h$'pt"><defs><marker id="ah" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0,0 L7,3 L0,6 Z" fill="context-stroke"/></marker></defs>
+#def svg_end$ = '</svg>
+"--- line / dashed   (Draw: line,x1,y1,x2,y2,color,lw  y  dashed,...,dashLen) ---
+#def line$(x1$; y1$; x2$; y2$; col$; lw$) = '<line x1="'x1$'" y1="'y1$'" x2="'x2$'" y2="'y2$'" stroke="col$" stroke-width="'lw$'"/>
+#def dashed$(x1$; y1$; x2$; y2$; col$; lw$; dl$) = '<line x1="'x1$'" y1="'y1$'" x2="'x2$'" y2="'y2$'" stroke="col$" stroke-width="'lw$'" stroke-dasharray="'dl$','dl$'"/>
+"--- rect / fillrect  (Draw: rect,...,color,lw  y  fillrect,...,fill,color,lw) ---
+#def rect$(x1$; y1$; x2$; y2$; col$; lw$) = '<rect x="'min(x1$; x2$)'" y="'min(y1$; y2$)'" width="'abs(x2$ - x1$)'" height="'abs(y2$ - y1$)'" fill="none" stroke="col$" stroke-width="'lw$'"/>
+#def fillrect$(x1$; y1$; x2$; y2$; fill$; col$; lw$) = '<rect x="'min(x1$; x2$)'" y="'min(y1$; y2$)'" width="'abs(x2$ - x1$)'" height="'abs(y2$ - y1$)'" fill="fill$" stroke="col$" stroke-width="'lw$'"/>
+"--- circle / ellipse / arc  (Draw: circle,x,y,r,color,fill,lw  y  arc,x,y,r,a1,a2,color,lw) ---
+#def circle$(x$; y$; r$; col$; fill$; lw$) = '<circle cx="'x$'" cy="'y$'" r="'r$'" fill="fill$" stroke="col$" stroke-width="'lw$'"/>
+#def ellipse$(x$; y$; rx$; ry$; col$; fill$; lw$) = '<ellipse cx="'x$'" cy="'y$'" rx="'rx$'" ry="'ry$'" fill="fill$" stroke="col$" stroke-width="'lw$'"/>
+#def arc$(x$; y$; r$; a1$; a2$; col$; lw$) = '<path d="M 'x$ + r$*cos(a1$)' 'y$ + r$*sin(a1$)' A 'r$' 'r$' 0 0 1 'x$ + r$*cos(a2$)' 'y$ + r$*sin(a2$)'" fill="none" stroke="col$" stroke-width="'lw$'"/>
+"--- arrow / darrow  (Draw: arrow,x1,y1,x2,y2,color,lw,headSize) — headSize fijo en puro ---
+#def arrow$(x1$; y1$; x2$; y2$; col$; lw$) = '<line x1="'x1$'" y1="'y1$'" x2="'x2$'" y2="'y2$'" stroke="col$" stroke-width="'lw$'" marker-end="url(#ah)"/>
+#def darrow$(x1$; y1$; x2$; y2$; col$; lw$) = '<line x1="'x1$'" y1="'y1$'" x2="'x2$'" y2="'y2$'" stroke="col$" stroke-width="'lw$'" marker-start="url(#ah)" marker-end="url(#ah)"/>
+"--- polyline (abierta, sin relleno)  (Draw: polyline,x1,y1,...,xn,yn,color,lw) — aridad fija 3/4/5 ---
+#def polyline3$(x1$; y1$; x2$; y2$; x3$; y3$; col$; lw$) = '<polyline points="'x1$','y1$' 'x2$','y2$' 'x3$','y3$'" fill="none" stroke="col$" stroke-width="'lw$'"/>
+#def polyline4$(x1$; y1$; x2$; y2$; x3$; y3$; x4$; y4$; col$; lw$) = '<polyline points="'x1$','y1$' 'x2$','y2$' 'x3$','y3$' 'x4$','y4$'" fill="none" stroke="col$" stroke-width="'lw$'"/>
+#def polyline5$(x1$; y1$; x2$; y2$; x3$; y3$; x4$; y4$; x5$; y5$; col$; lw$) = '<polyline points="'x1$','y1$' 'x2$','y2$' 'x3$','y3$' 'x4$','y4$' 'x5$','y5$'" fill="none" stroke="col$" stroke-width="'lw$'"/>
+"--- polygon (cerrado + relleno)  (Draw: polygon,x1,y1,...,xn,yn,color,fill,lw) — aridad fija 3/4/5 ---
+#def polygon3$(x1$; y1$; x2$; y2$; x3$; y3$; col$; fill$; lw$) = '<polygon points="'x1$','y1$' 'x2$','y2$' 'x3$','y3$'" fill="fill$" stroke="col$" stroke-width="'lw$'"/>
+#def polygon4$(x1$; y1$; x2$; y2$; x3$; y3$; x4$; y4$; col$; fill$; lw$) = '<polygon points="'x1$','y1$' 'x2$','y2$' 'x3$','y3$' 'x4$','y4$'" fill="fill$" stroke="col$" stroke-width="'lw$'"/>
+#def polygon5$(x1$; y1$; x2$; y2$; x3$; y3$; x4$; y4$; x5$; y5$; col$; fill$; lw$) = '<polygon points="'x1$','y1$' 'x2$','y2$' 'x3$','y3$' 'x4$','y4$' 'x5$','y5$'" fill="fill$" stroke="col$" stroke-width="'lw$'"/>
+"--- alias retro-compat: tri es polygon3 / quad es polygon4, pero con orden viejo (fill, col, lw) ---
+#def tri$(x1$; y1$; x2$; y2$; x3$; y3$; fill$; col$; lw$) = '<polygon points="'x1$','y1$' 'x2$','y2$' 'x3$','y3$'" fill="fill$" stroke="col$" stroke-width="'lw$'"/>
+#def quad$(x1$; y1$; x2$; y2$; x3$; y3$; x4$; y4$; fill$; col$; lw$) = '<polygon points="'x1$','y1$' 'x2$','y2$' 'x3$','y3$' 'x4$','y4$'" fill="fill$" stroke="col$" stroke-width="'lw$'"/>
+"--- texto  (Draw: text,x,y,content,fontSize,color,anchor,fontWeight) ---
+#def text$(x$; y$; s$; sz$; col$; anc$) = '<text x="'x$'" y="'y$'" font-size="'sz$'" fill="col$" text-anchor="anc$">s$</text>
+#def textb$(x$; y$; s$; sz$; col$; anc$) = '<text x="'x$'" y="'y$'" font-size="'sz$'" fill="col$" text-anchor="anc$" font-weight="bold">s$</text>
+"--- acotacion  (Draw: dim / hdim / vdim, todas x1,y1,x2,y2,offset,text) — firma unificada de 6 args ---
+"hdim: cota horizontal; linea de cota a y de y1 mas offset, extensiones desde los dos puntos.
+#def hdim$(x1$; y1$; x2$; y2$; off$; s$) = '<g stroke="goldenrod" stroke-width="1" fill="none"><line x1="'x1$'" y1="'y1$'" x2="'x1$'" y2="'y1$ + off$'"/><line x1="'x2$'" y1="'y2$'" x2="'x2$'" y2="'y2$ + off$'"/><line x1="'x1$'" y1="'y1$ + off$'" x2="'x2$'" y2="'y1$ + off$'" marker-start="url(#ah)" marker-end="url(#ah)"/></g><text x="'(x1$ + x2$)/2'" y="'y1$ + off$ - 4'" font-size="11" fill="goldenrod" text-anchor="middle">s$</text>
+"vdim: cota vertical; linea de cota a x de x1 mas offset, extensiones desde los dos puntos.
+#def vdim$(x1$; y1$; x2$; y2$; off$; s$) = '<g stroke="goldenrod" stroke-width="1" fill="none"><line x1="'x1$'" y1="'y1$'" x2="'x1$ + off$'" y2="'y1$'"/><line x1="'x2$'" y1="'y2$'" x2="'x1$ + off$'" y2="'y2$'"/><line x1="'x1$ + off$'" y1="'y1$'" x2="'x1$ + off$'" y2="'y2$'" marker-start="url(#ah)" marker-end="url(#ah)"/></g><text x="'x1$ + off$ - 4'" y="'(y1$ + y2$)/2'" font-size="11" fill="goldenrod" text-anchor="end">s$</text>
+"dim: cota alineada; offset perpendicular a la linea de los dos puntos.
+#def dim$(x1$; y1$; x2$; y2$; off$; s$) = '<g stroke="goldenrod" stroke-width="1" fill="none"><line x1="'x1$'" y1="'y1$'" x2="'x1$ - off$*(y2$ - y1$)/sqrt((x2$ - x1$)^2 + (y2$ - y1$)^2)'" y2="'y1$ + off$*(x2$ - x1$)/sqrt((x2$ - x1$)^2 + (y2$ - y1$)^2)'"/><line x1="'x2$'" y1="'y2$'" x2="'x2$ - off$*(y2$ - y1$)/sqrt((x2$ - x1$)^2 + (y2$ - y1$)^2)'" y2="'y2$ + off$*(x2$ - x1$)/sqrt((x2$ - x1$)^2 + (y2$ - y1$)^2)'"/><line x1="'x1$ - off$*(y2$ - y1$)/sqrt((x2$ - x1$)^2 + (y2$ - y1$)^2)'" y1="'y1$ + off$*(x2$ - x1$)/sqrt((x2$ - x1$)^2 + (y2$ - y1$)^2)'" x2="'x2$ - off$*(y2$ - y1$)/sqrt((x2$ - x1$)^2 + (y2$ - y1$)^2)'" y2="'y2$ + off$*(x2$ - x1$)/sqrt((x2$ - x1$)^2 + (y2$ - y1$)^2)'" marker-start="url(#ah)" marker-end="url(#ah)"/></g><text x="'(x1$ + x2$)/2 - off$*(y2$ - y1$)/sqrt((x2$ - x1$)^2 + (y2$ - y1$)^2)'" y="'(y1$ + y2$)/2 + off$*(x2$ - x1$)/sqrt((x2$ - x1$)^2 + (y2$ - y1$)^2) - 4'" font-size="11" fill="goldenrod" text-anchor="middle">s$</text>
+"--- hatch (rayado 45)  (Draw: hatch,x1,y1,x2,y2,color) ---
+#def hatch$(x1$; y1$; x2$; y2$; col$) = '<pattern id="ht" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="col$" stroke-width="1"/></pattern><rect x="'min(x1$; x2$)'" y="'min(y1$; y2$)'" width="'abs(x2$ - x1$)'" height="'abs(y2$ - y1$)'" fill="url(#ht)" stroke="col$" stroke-width="1"/>
+#show
